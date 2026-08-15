@@ -28,6 +28,152 @@ Content-Type: application/json
 GET http://localhost:5000/api/auth/me
 Content-Type: application/json
 
-### 5. Logout Admin
+### 5. Bulk Ingest Leads (Net-New Prospects for Tax Year 2025)
+POST http://localhost:5000/api/admin/leads/bulk-import
+Content-Type: application/json
+
+{
+  "taxYear": 2025,
+  "leads": [
+    {
+      "firstName": "Robert",
+      "lastName": "Chen",
+      "email": "robert.chen@acme.corp",
+      "phone": "+1 (555) 234-5678",
+      "ssnTin": "XXX-XX-4812",
+      "filingType": "INDIVIDUAL",
+      "city": "San Francisco",
+      "state": "CA",
+      "zipCode": "94105",
+      "addressLine1": "100 Market St"
+    },
+    {
+      "firstName": "Sarah",
+      "lastName": "Jenkins",
+      "email": "sarah.j@techstart.io",
+      "phone": "+1 (555) 876-5432",
+      "ssnTin": "XXX-XX-9120",
+      "filingType": "CORPORATE",
+      "city": "Austin",
+      "state": "TX",
+      "zipCode": "78701",
+      "addressLine1": "200 Congress Ave"
+    },
+    {
+      "firstName": "Michael",
+      "lastName": "Vance",
+      "email": "m.vance@financial.com",
+      "phone": "+1 (555) 345-6789",
+      "ssnTin": "XXX-XX-3341",
+      "filingType": "INDIVIDUAL",
+      "city": "Seattle",
+      "state": "WA",
+      "zipCode": "98101",
+      "addressLine1": "456 Pike St"
+    }
+  ]
+}
+
+### 6. Test Deduplication (Re-importing Same Leads for Same Tax Year 2025 -> Should Skip Duplicates)
+POST http://localhost:5000/api/admin/leads/bulk-import
+Content-Type: application/json
+
+{
+  "taxYear": 2025,
+  "leads": [
+    {
+      "firstName": "Robert",
+      "lastName": "Chen",
+      "email": "robert.chen@acme.corp",
+      "phone": "+1 (555) 234-5678",
+      "ssnTin": "XXX-XX-4812",
+      "filingType": "INDIVIDUAL",
+      "city": "San Francisco",
+      "state": "CA",
+      "zipCode": "94105"
+    }
+  ]
+}
+
+### 7. Test Multi-Year Retention (Importing Same Lead for New Tax Year 2026 -> Links to Existing Profile)
+POST http://localhost:5000/api/admin/leads/bulk-import
+Content-Type: application/json
+
+{
+  "taxYear": 2026,
+  "leads": [
+    {
+      "firstName": "Robert",
+      "lastName": "Chen",
+      "email": "robert.chen@acme.corp",
+      "phone": "+1 (555) 234-5678",
+      "ssnTin": "XXX-XX-4812",
+      "filingType": "INDIVIDUAL",
+      "city": "San Francisco",
+      "state": "CA",
+      "zipCode": "94105"
+    }
+  ]
+}
+
+### 8. List Operational Staff & KPI Metrics
+GET http://localhost:5000/api/admin/employees
+Content-Type: application/json
+
+### 9. Create Single Staff Member (Documenter Agent)
+POST http://localhost:5000/api/admin/employees
+Content-Type: application/json
+
+{
+  "firstName": "Arjun",
+  "lastName": "Varma",
+  "email": "arjun.v@taxcrm.com",
+  "mobile": "+15550192831",
+  "role": "DOC_MANAGER",
+  "isActive": true
+}
+
+### 10. Bulk Onboard Multiple Staff Members Across Departments
+POST http://localhost:5000/api/admin/employees/bulk-onboard
+Content-Type: application/json
+
+{
+  "employees": [
+    {
+      "firstName": "Priya",
+      "lastName": "Sharma",
+      "email": "priya.s@taxcrm.com",
+      "mobile": "+15550194820",
+      "role": "DOC_AGENT",
+      "isActive": true
+    },
+    {
+      "firstName": "Vikram",
+      "lastName": "Singhania",
+      "email": "vikram.s@taxcrm.com",
+      "mobile": "+15550193389",
+      "role": "SALES_MANAGER",
+      "isActive": true
+    },
+    {
+      "firstName": "Siddharth",
+      "lastName": "Rao",
+      "email": "siddharth.r@taxcrm.com",
+      "mobile": "+15550195510",
+      "role": "FILE_OP_MANAGER",
+      "isActive": true
+    }
+  ]
+}
+
+### 11. Toggle Staff Active Status
+PATCH http://localhost:5000/api/admin/employees/SOME_USER_ID/toggle-status
+Content-Type: application/json
+
+### 12. Reset / Generate Staff Credentials OTP
+POST http://localhost:5000/api/admin/employees/SOME_USER_ID/reset-credentials
+Content-Type: application/json
+
+### 13. Logout Admin
 POST http://localhost:5000/api/auth/logout
 Content-Type: application/json

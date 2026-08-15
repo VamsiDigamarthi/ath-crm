@@ -4,6 +4,7 @@ import { AppSidebar } from '@/shared/components/AppSidebar';
 import { AdminStatsOverview } from '../components/AdminStatsOverview';
 import { AdminRecentActivity } from '../components/AdminRecentActivity';
 import { BulkLeadImportScreen } from './BulkLeadImportScreen';
+import { EmployeeManagementScreen } from './EmployeeManagementScreen';
 import { FileSpreadsheet, ShieldCheck, LogOut, Bell } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 
@@ -20,6 +21,8 @@ export const AdminDashboardScreen: React.FC = () => {
 
   const getHeaderTitle = () => {
     switch (activeTab) {
+      case 'employees':
+        return 'Staff & Team Directory';
       case 'prospects':
         return 'Bulk Lead Import & Deduplication';
       case 'documenter':
@@ -99,7 +102,9 @@ export const AdminDashboardScreen: React.FC = () => {
 
         {/* Scrollable Right Main Content */}
         <main className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
-          {activeTab === 'prospects' ? (
+          {activeTab === 'employees' ? (
+            <EmployeeManagementScreen />
+          ) : activeTab === 'prospects' ? (
             <BulkLeadImportScreen />
           ) : (
             <>
@@ -131,4 +136,3 @@ export const AdminDashboardScreen: React.FC = () => {
     </div>
   );
 };
-

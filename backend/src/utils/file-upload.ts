@@ -27,7 +27,7 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: any) => {
   const ext = path.extname(file.originalname).toLowerCase();
   
   // 1. Allowed Extensions
-  const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".pdf", ".docx", ".txt"];
+  const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".pdf", ".docx", ".txt", ".csv", ".xlsx"];
   
   // 2. Prohibited Dangerous Extensions (Blacklist as a second layer)
   const dangerousExtensions = [".php", ".php3", ".php4", ".php5", ".phtml", ".exe", ".bat", ".sh", ".js", ".html", ".htm"];

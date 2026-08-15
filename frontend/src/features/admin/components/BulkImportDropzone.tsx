@@ -45,7 +45,7 @@ export const BulkImportDropzone: React.FC<BulkImportDropzoneProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel"
+        accept=".csv,.xlsx,.xls"
         onChange={onFileInputChange}
         className="hidden"
       />

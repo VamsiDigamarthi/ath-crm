@@ -1,0 +1,206 @@
+{
+  "_description": "Sample Database Records demonstrating 3-Tier DB Architecture in TaxCRM Engine",
+  "scenario_1": {
+    "title": "Scenario 1: Net-New Prospect Moving Through Entire Lifecycle to Permanent Customer",
+    "tables": {
+      "CustomerProfile": {
+        "id": "c1a2b3c4-0001-4000-8000-000000000001",
+        "userId": "u1a2b3c4-client-4000-8000-000000000001",
+        "ssnTin": "XXX-XX-1111",
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@gmail.com",
+        "phone": "+1 (555) 123-4567",
+        "addressLine1": "123 Congress Ave",
+        "city": "Austin",
+        "state": "TX",
+        "zipCode": "78701",
+        "isConvertedCustomer": true,
+        "createdAt": "2026-01-10T10:00:00.000Z",
+        "updatedAt": "2026-01-15T16:30:00.000Z"
+      },
+      "User_Client_Auth": {
+        "id": "u1a2b3c4-client-4000-8000-000000000001",
+        "email": "john.doe@gmail.com",
+        "mobile": "+1 (555) 123-4567",
+        "role": "TAXPAYER_USER",
+        "isActive": true,
+        "createdAt": "2026-01-11T11:15:00.000Z",
+        "note": "Created lazily ONLY after Documenter confirmed consent during call"
+      },
+      "TaxApplication": {
+        "id": "app-2025-000000000001",
+        "customerId": "c1a2b3c4-0001-4000-8000-000000000001",
+        "taxYear": 2025,
+        "filingType": "INDIVIDUAL",
+        "currentStage": "FILING_SUCCESS",
+        "assignedDocAgentId": "staff-doc-agent-uuid-01",
+        "assignedSalesAgentId": "staff-sales-agent-uuid-01",
+        "assignedFileOpId": "staff-cpa-agent-uuid-01",
+        "taxDraftSummary": {
+          "totalW2Income": 85000,
+          "taxWithheld": 12400,
+          "estimatedRefund": 2150,
+          "deductionsClaimed": "Standard Deduction ($14,600)"
+        },
+        "createdAt": "2026-01-10T10:00:00.000Z",
+        "updatedAt": "2026-01-15T16:30:00.000Z"
+      },
+      "StageHistories": [
+        {
+          "id": "hist-001",
+          "applicationId": "app-2025-000000000001",
+          "fromStage": null,
+          "toStage": "RAW_PROSPECT",
+          "movedByUserId": "admin-user-uuid",
+          "remarks": "Initial Bulk Ingestion from 2025 Tax Leads CSV",
+          "createdAt": "2026-01-10T10:00:00.000Z"
+        },
+        {
+          "id": "hist-002",
+          "applicationId": "app-2025-000000000001",
+          "fromStage": "RAW_PROSPECT",
+          "toStage": "DOC_OUTREACH",
+          "movedByUserId": "staff-doc-agent-uuid-01",
+          "remarks": "Documenter started call outreach",
+          "createdAt": "2026-01-11T10:30:00.000Z"
+        },
+        {
+          "id": "hist-003",
+          "applicationId": "app-2025-000000000001",
+          "fromStage": "DOC_OUTREACH",
+          "toStage": "DOC_PREP",
+          "movedByUserId": "staff-doc-agent-uuid-01",
+          "remarks": "Client agreed. Portal account created and W-2 uploaded",
+          "createdAt": "2026-01-11T11:15:00.000Z"
+        },
+        {
+          "id": "hist-004",
+          "applicationId": "app-2025-000000000001",
+          "fromStage": "DOC_PREP",
+          "toStage": "SALES_PITCH_QUEUE",
+          "movedByUserId": "staff-doc-agent-uuid-01",
+          "remarks": "Tax draft prepared ($2,150 refund). Moved to Sales Queue",
+          "createdAt": "2026-01-12T14:00:00.000Z"
+        },
+        {
+          "id": "hist-005",
+          "applicationId": "app-2025-000000000001",
+          "fromStage": "SALES_PITCH_QUEUE",
+          "toStage": "FILING_QUEUE",
+          "movedByUserId": "staff-sales-agent-uuid-01",
+          "remarks": "Client approved $199 fee quote via portal. Sent to CPA Filing",
+          "createdAt": "2026-01-13T16:45:00.000Z"
+        },
+        {
+          "id": "hist-006",
+          "applicationId": "app-2025-000000000001",
+          "fromStage": "FILING_QUEUE",
+          "toStage": "FILING_SUCCESS",
+          "movedByUserId": "staff-cpa-agent-uuid-01",
+          "remarks": "IRS E-file Accepted. Acknowledgment receipt uploaded",
+          "createdAt": "2026-01-15T16:30:00.000Z"
+        }
+      ],
+      "CallLogs": [
+        {
+          "id": "call-001",
+          "applicationId": "app-2025-000000000001",
+          "agentId": "staff-doc-agent-uuid-01",
+          "disposition": "CONNECTED",
+          "callSummary": "Spoke with John. He has 1 W-2 and wants direct deposit refund. Generated login credentials for his portal access.",
+          "createdAt": "2026-01-11T11:10:00.000Z"
+        },
+        {
+          "id": "call-002",
+          "applicationId": "app-2025-000000000001",
+          "agentId": "staff-sales-agent-uuid-01",
+          "disposition": "CONNECTED",
+          "callSummary": "Pitched $199 filing fee with audit protection. John reviewed on portal and clicked Approve.",
+          "createdAt": "2026-01-13T16:30:00.000Z"
+        }
+      ],
+      "TaxDocuments": [
+        {
+          "id": "doc-001",
+          "applicationId": "app-2025-000000000001",
+          "uploadedByUserId": "u1a2b3c4-client-4000-8000-000000000001",
+          "fileName": "John_Doe_W2_2025.pdf",
+          "filePath": "uploads/tax-docs/w2-john-doe-2025.pdf",
+          "documentCategory": "W2",
+          "verificationStatus": "VERIFIED",
+          "createdAt": "2026-01-11T11:45:00.000Z"
+        },
+        {
+          "id": "doc-002",
+          "applicationId": "app-2025-000000000001",
+          "uploadedByUserId": "staff-cpa-agent-uuid-01",
+          "fileName": "IRS_1040_Filing_Acknowledgment.pdf",
+          "filePath": "uploads/tax-docs/ack-john-doe-2025.pdf",
+          "documentCategory": "ACK_RECEIPT",
+          "verificationStatus": "VERIFIED",
+          "createdAt": "2026-01-15T16:30:00.000Z"
+        }
+      ],
+      "SalesQuotes": [
+        {
+          "id": "quote-001",
+          "applicationId": "app-2025-000000000001",
+          "salesAgentId": "staff-sales-agent-uuid-01",
+          "quoteAmount": "199.00",
+          "discountAmount": "0.00",
+          "status": "APPROVED_BY_USER",
+          "userFeedback": "Approved via Client Portal",
+          "createdAt": "2026-01-13T15:00:00.000Z"
+        }
+      ]
+    }
+  },
+  "scenario_2": {
+    "title": "Scenario 2: Returning Customer with Multi-Year Filings (2025 Completed + 2026 Active)",
+    "description": "Notice how Sarah Jenkins has ONLY ONE CustomerProfile and ONE User account, but TWO TaxApplications (one for 2025 and one for 2026). Zero duplication!",
+    "tables": {
+      "CustomerProfile": {
+        "id": "c2b3c4d5-0002-4000-8000-000000000002",
+        "userId": "u2b3c4d5-client-4000-8000-000000000002",
+        "ssnTin": "XXX-XX-9120",
+        "firstName": "Sarah",
+        "lastName": "Jenkins",
+        "email": "sarah.j@techstart.io",
+        "phone": "+1 (555) 876-5432",
+        "addressLine1": "200 Congress Ave",
+        "city": "Austin",
+        "state": "TX",
+        "zipCode": "78701",
+        "isConvertedCustomer": true,
+        "createdAt": "2025-02-01T09:00:00.000Z",
+        "updatedAt": "2026-01-16T10:00:00.000Z"
+      },
+      "TaxApplication_Year_2025_Completed": {
+        "id": "app-2025-000000000002",
+        "customerId": "c2b3c4d5-0002-4000-8000-000000000002",
+        "taxYear": 2025,
+        "filingType": "CORPORATE",
+        "currentStage": "FILING_SUCCESS",
+        "assignedDocAgentId": "staff-doc-agent-uuid-01",
+        "assignedSalesAgentId": "staff-sales-agent-uuid-01",
+        "assignedFileOpId": "staff-cpa-agent-uuid-01",
+        "createdAt": "2025-02-01T09:00:00.000Z",
+        "updatedAt": "2025-02-15T18:00:00.000Z"
+      },
+      "TaxApplication_Year_2026_In_Progress": {
+        "id": "app-2026-000000000002",
+        "customerId": "c2b3c4d5-0002-4000-8000-000000000002",
+        "taxYear": 2026,
+        "filingType": "CORPORATE",
+        "currentStage": "DOC_OUTREACH",
+        "assignedDocAgentId": "staff-doc-agent-uuid-02",
+        "assignedSalesAgentId": null,
+        "assignedFileOpId": null,
+        "createdAt": "2026-01-16T10:00:00.000Z",
+        "updatedAt": "2026-01-16T10:00:00.000Z",
+        "note": "Automatically linked to Sarah's existing profile during 2026 CSV Ingestion!"
+      }
+    }
+  }
+}

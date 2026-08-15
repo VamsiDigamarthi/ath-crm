@@ -7,6 +7,7 @@ import {
   Users,
   DollarSign,
   FileCheck,
+  UserPlus,
   Settings,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -14,7 +15,7 @@ import toast from 'react-hot-toast';
 export const useAdminDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<string>('prospects');
+  const [activeTab, setActiveTab] = useState<string>('employees');
 
   const handleLogout = async () => {
     try {
@@ -29,6 +30,7 @@ export const useAdminDashboard = () => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Main' },
     { id: 'prospects', label: 'Bulk Lead Import', icon: FileSpreadsheet, section: 'Operations', badge: '1,248' },
+    { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', badge: '8' },
     { id: 'documenter', label: 'Documenter Dept', icon: Users, section: 'Operations', badge: '432' },
     { id: 'sales', label: 'Sales Pitches', icon: DollarSign, section: 'Operations', badge: '289' },
     { id: 'filing', label: 'File Operator', icon: FileCheck, section: 'Operations', badge: '527' },

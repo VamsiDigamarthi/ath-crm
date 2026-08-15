@@ -1,0 +1,229 @@
+import { prisma } from "../../config/db.js";
+import { ApplicationStage } from "@prisma/client";
+
+export interface LeadImportItem {
+  firstName: string;
+  lastName: string;
+  email?: string | null;
+  phone: string;
+  ssnTin?: string | null;
+  filingType?: string;
+  addressLine1?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+}
+
+export interface BulkImportOptions {
+  taxYear: number;
+  leads: LeadImportItem[];
+  adminUserId?: string;
+}
+
+export interface BulkImportResult {
+  totalReceived: number;
+  validProcessed: number;
+  newProfilesCreated: number;
+  existingProfilesLinked: number;
+  duplicatesSkipped: number;
+  taxYear: number;
+  processingTimeMs: number;
+}
+
+const BATCH_SIZE = 500;
+
+export class LeadIngestionService {
+  /**
+   * High-Performance Bulk Lead Ingestion Engine
+   * Processes large batches (10k+ rows) in transactional chunks with automatic
+   * master customer deduplication and multi-year tax application linking.
+   */
+  public static async processBulkImport(options: BulkImportOptions): Promise<BulkImportResult> {
+    const startTime = Date.now();
+    const { taxYear, leads, adminUserId } = options;
+
+    let newProfilesCreated = 0;
+    let existingProfilesLinked = 0;
+    let duplicatesSkipped = 0;
+    let validProcessed = 0;
+
+    // Filter out invalid/empty rows
+    const cleanedLeads = leads.filter(
+      (l) => l && (l.firstName?.trim() || l.lastName?.trim()) && l.phone?.trim()
+    );
+
+    // Process in chunks to prevent database memory spikes and locking
+    for (let i = 0; i < cleanedLeads.length; i += BATCH_SIZE) {
+      const chunk = cleanedLeads.slice(i, i + BATCH_SIZE);
+
+      await prisma.$transaction(
+        async (tx) => {
+          // 1. Gather all SSNs and emails in this chunk
+          const ssns = Array.from(
+            new Set(
+              chunk
+                .map((l) => l.ssnTin?.trim())
+                .filter((s): s is string => Boolean(s && s.length > 0))
+            )
+          );
+
+          const emails = Array.from(
+            new Set(
+              chunk
+                .map((l) => l.email?.trim().toLowerCase())
+                .filter((e): e is string => Boolean(e && e.length > 0))
+            )
+          );
+
+          // 2. Fetch existing customer profiles matching SSN or Email in single query
+          const existingProfiles = await tx.customerProfile.findMany({
+            where: {
+              OR: [
+                ...(ssns.length > 0 ? [{ ssnTin: { in: ssns } }] : []),
+                ...(emails.length > 0 ? [{ email: { in: emails } }] : []),
+              ],
+            },
+            include: {
+              applications: {
+                where: { taxYear },
+                select: { id: true, taxYear: true },
+              },
+            },
+          });
+
+          // Build quick lookup maps
+          const profileBySsn = new Map<string, typeof existingProfiles[0]>();
+          const profileByEmail = new Map<string, typeof existingProfiles[0]>();
+
+          for (const profile of existingProfiles) {
+            if (profile.ssnTin) profileBySsn.set(profile.ssnTin, profile);
+            if (profile.email) profileByEmail.set(profile.email.toLowerCase(), profile);
+          }
+
+          // Track in-memory duplicates inside current chunk
+          const seenSsnsInChunk = new Set<string>();
+          const seenEmailsInChunk = new Set<string>();
+
+          for (const lead of chunk) {
+            const ssn = lead.ssnTin?.trim() || null;
+            const email = lead.email?.trim().toLowerCase() || null;
+            const phone = lead.phone.trim();
+            const firstName = lead.firstName.trim();
+            const lastName = lead.lastName.trim();
+            const filingType = lead.filingType?.trim() || "INDIVIDUAL";
+
+            // In-chunk deduplication
+            if (ssn && seenSsnsInChunk.has(ssn)) {
+              duplicatesSkipped++;
+              continue;
+            }
+            if (email && seenEmailsInChunk.has(email)) {
+              duplicatesSkipped++;
+              continue;
+            }
+
+            if (ssn) seenSsnsInChunk.add(ssn);
+            if (email) seenEmailsInChunk.add(email);
+
+            // Check if profile exists in database
+            const matchedProfile = (ssn ? profileBySsn.get(ssn) : null) || (email ? profileByEmail.get(email) : null);
+
+            if (matchedProfile) {
+              // Existing master customer profile found!
+              const hasExistingAppForTaxYear = matchedProfile.applications.some(
+                (app) => app.taxYear === taxYear
+              );
+
+              if (hasExistingAppForTaxYear) {
+                // Application already exists for this tax year -> Skip duplicate
+                duplicatesSkipped++;
+              } else {
+                // Multi-Year retention! Link new TaxApplication for target tax year to existing profile
+                const newApp = await tx.taxApplication.create({
+                  data: {
+                    customerId: matchedProfile.id,
+                    taxYear,
+                    filingType,
+                    currentStage: ApplicationStage.RAW_PROSPECT,
+                  },
+                });
+
+                if (adminUserId) {
+                  await tx.stageHistory.create({
+                    data: {
+                      applicationId: newApp.id,
+                      toStage: ApplicationStage.RAW_PROSPECT,
+                      movedByUserId: adminUserId,
+                      remarks: `Ingested & Linked to Existing Master Profile (${matchedProfile.firstName} ${matchedProfile.lastName}) for Tax Year ${taxYear}`,
+                    },
+                  });
+                }
+
+                existingProfilesLinked++;
+                validProcessed++;
+              }
+            } else {
+              // Net-new prospect -> Create CustomerProfile + TaxApplication
+              const newProfile = await tx.customerProfile.create({
+                data: {
+                  ssnTin: ssn,
+                  email,
+                  phone,
+                  firstName,
+                  lastName,
+                  addressLine1: lead.addressLine1?.trim() || null,
+                  city: lead.city?.trim() || null,
+                  state: lead.state?.trim() || null,
+                  zipCode: lead.zipCode?.trim() || null,
+                  isConvertedCustomer: false,
+                },
+              });
+
+              // Add to lookup maps in case subsequent leads in same batch share identifiers
+              if (ssn) profileBySsn.set(ssn, { ...newProfile, applications: [] } as any);
+              if (email) profileByEmail.set(email, { ...newProfile, applications: [] } as any);
+
+              const newApp = await tx.taxApplication.create({
+                data: {
+                  customerId: newProfile.id,
+                  taxYear,
+                  filingType,
+                  currentStage: ApplicationStage.RAW_PROSPECT,
+                },
+              });
+
+              if (adminUserId) {
+                await tx.stageHistory.create({
+                  data: {
+                    applicationId: newApp.id,
+                    toStage: ApplicationStage.RAW_PROSPECT,
+                    movedByUserId: adminUserId,
+                    remarks: `Initial Bulk Ingestion for Tax Year ${taxYear}`,
+                  },
+                });
+              }
+
+              newProfilesCreated++;
+              validProcessed++;
+            }
+          }
+        },
+        {
+          timeout: 30000, // 30s transaction timeout for heavy batches
+        }
+      );
+    }
+
+    const processingTimeMs = Date.now() - startTime;
+
+    return {
+      totalReceived: leads.length,
+      validProcessed,
+      newProfilesCreated,
+      existingProfilesLinked,
+      duplicatesSkipped,
+      taxYear,
+      processingTimeMs,
+    };
+  }
+}

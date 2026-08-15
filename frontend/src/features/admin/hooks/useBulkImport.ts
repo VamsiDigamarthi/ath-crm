@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import type { ParsedLeadRow, BulkImportStatsData } from '../types/bulk-import.types';
 import { useCSVFileUpload } from './useCSVFileUpload';
 import { useLeadTableFilters, type StatusFilterType } from './useLeadTableFilters';
+import { adminService } from '../services/admin-service';
 import toast from 'react-hot-toast';
 
 export type { StatusFilterType };
@@ -110,22 +111,61 @@ export const useBulkImport = () => {
       toast.error('No lead records available to ingest');
       return;
     }
+    const validCount = rows.filter((r) => r.validationStatus === 'VALID').length;
+    if (validCount === 0) {
+      toast.error('No valid leads found in the dataset. Please fix validation errors.');
+      return;
+    }
     setShowConfirmModal(true);
-  }, [rows.length]);
+  }, [rows]);
 
   // Confirm and execute ingestion pipeline
-  const handleConfirmIngestion = useCallback(() => {
+  const handleConfirmIngestion = useCallback(async () => {
     setShowConfirmModal(false);
     setIsIngesting(true);
 
-    setTimeout(() => {
-      setIsIngesting(false);
+    try {
+      const validRows = rows.filter((r) => r.validationStatus === 'VALID');
+      const payloadLeads = validRows.map((r) => ({
+        firstName: r.firstName,
+        lastName: r.lastName,
+        email: r.email || null,
+        phone: r.phone,
+        ssnTin: r.ssnTin || null,
+        filingType: r.filingType,
+        addressLine1: r.addressLine1 || null,
+        city: r.city || null,
+        state: r.state || null,
+        zipCode: r.zipCode || null,
+      }));
+
+      const res = await adminService.bulkImportLeads({
+        taxYear,
+        leads: payloadLeads,
+      });
+
+      const metrics = res?.data;
+      const validCount = metrics?.validProcessed ?? validRows.length;
+      const newProfiles = metrics?.newProfilesCreated ?? 0;
+      const linkedProfiles = metrics?.existingProfilesLinked ?? 0;
+      const skippedCount = metrics?.duplicatesSkipped ?? 0;
+
       toast.success(
-        `Successfully ingested ${stats.valid} leads for Tax Year ${taxYear}! Server deduplicated against master customer profiles.`,
-        { duration: 5000 }
+        res?.message ||
+          `Successfully imported ${validCount} leads for Tax Year ${taxYear}! (${newProfiles} new, ${linkedProfiles} multi-year linked, ${skippedCount} duplicates skipped)`,
+        { duration: 6000 }
       );
-    }, 1200);
-  }, [stats.valid, taxYear]);
+
+      // Clean up after successful import
+      handleClearFile();
+    } catch (error: any) {
+      const errorMsg =
+        error?.response?.data?.message || error?.message || 'Failed to ingest leads to server';
+      toast.error(errorMsg, { duration: 5000 });
+    } finally {
+      setIsIngesting(false);
+    }
+  }, [rows, taxYear, handleClearFile]);
 
   // ---------------------------------------------------------------------------
   // 6. CLEARLY DOCUMENTED RETURN OBJECT

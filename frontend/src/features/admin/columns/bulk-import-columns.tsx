@@ -1,4 +1,3 @@
-import React from 'react';
 import type { ColumnDef } from '@/shared/components/AppTable';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { 

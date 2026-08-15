@@ -49,7 +49,10 @@ export const verifyOtp = async (req: Request, res: Response) => {
   const query = email ? { email } : { mobile };
 
   const user = await prisma.user.findFirst({
-    where: query as any,
+    where: {
+      isDeleted: false,
+      ...(email ? { email } : { mobile }),
+    },
   });
 
   if (!user || user.otp !== otp || !user.otpExpiresAt || user.otpExpiresAt < new Date()) {

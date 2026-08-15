@@ -5,7 +5,7 @@ import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { Button } from '@/shared/components/Button';
 import { Send, Trash2 } from 'lucide-react';
 import type { ParsedLeadRow, BulkImportStatsData } from '../types/bulk-import.types';
-import type { StatusFilterType } from '../hooks/useBulkImport';
+import type { StatusFilterType } from '../hooks/useLeadTableFilters';
 import { getBulkImportColumns } from '../columns/bulk-import-columns';
 
 interface BulkImportTableProps {
@@ -32,7 +32,6 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
   totalRawRows,
   stats,
   selectedRows,
-  onSelectionChange,
   searchQuery,
   onSearchChange,
   statusFilter,
@@ -104,7 +103,7 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
           </div>
         </div>
 
-        {/* Right Side: Primary Ingestion Button & Batch Operations */}
+        {/* Right Side: Primary Import Button & Batch Operations */}
         <div className="flex items-center gap-3 justify-end">
           {selectedRows.length > 0 && (
             <Button
@@ -129,12 +128,12 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
             className="px-5 shadow-sm"
           >
             <Send className="w-4 h-4 mr-2" />
-            Ingest {stats.valid} Leads
+            Import {stats.valid} Leads
           </Button>
         </div>
       </div>
 
-      {/* Reusable AppTable with Pagination, Status Indicators, and Sorting */}
+      {/* Reusable AppTable with Pagination, Status Indicators, and Sorting (No Checkboxes) */}
       <AppTable<ParsedLeadRow>
         title="Parsed Lead Dataset Preview"
         description={`Displaying records from CSV upload for Tax Year ${taxYear}. Records will be deduplicated against master customer profiles upon server ingestion.`}
@@ -152,10 +151,10 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
         isOpen={showConfirmModal}
         onClose={onCloseConfirmModal}
         onConfirm={onConfirmIngestion}
-        title="Confirm Lead Ingestion Pipeline"
+        title="Confirm Lead Import Pipeline"
         description={`You are about to submit ${stats.valid} lead records to the server for Tax Year ${taxYear}. The server deduplication engine will check existing SSN/email profiles and route new records to the Documenter Outreach queue.`}
-        confirmLabel={`Ingest ${stats.valid} Leads`}
-        variant="primary"
+        confirmLabel={`Import ${stats.valid} Leads`}
+        variant="success"
         isLoading={isIngesting}
       />
     </div>

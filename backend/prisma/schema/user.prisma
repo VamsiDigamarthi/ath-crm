@@ -14,8 +14,10 @@ enum Role {
 
 model User {
   id           String    @id @default(uuid())
-  email        String?   @unique
-  mobile       String?   @unique
+  firstName    String?
+  lastName     String?
+  email        String?
+  mobile       String?
   otp          String?
   otpExpiresAt DateTime?
   role         Role      @default(TAXPAYER_USER)
@@ -23,6 +25,18 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  customerProfile CustomerProfile?
+
+  assignedDocApps   TaxApplication[] @relation("DocAgentApps")
+  assignedSalesApps TaxApplication[] @relation("SalesAgentApps")
+  assignedFileApps  TaxApplication[] @relation("FileOpApps")
+
+  stageHistories StageHistory[]
+  callLogs       CallLog[]
+  uploadedDocs   TaxDocument[]
+  salesQuotes    SalesQuote[]
+
   @@index([email])
   @@index([mobile])
+  @@index([isActive])
 }

@@ -1,0 +1,348 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Tax Leads 2025</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+<style>
+  th {
+    background-color: #16A34A !important;
+    color: #FFFFFF !important;
+    font-family: 'Poppins', Calibri, Arial, sans-serif !important;
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+    text-align: left !important;
+    padding: 10px 14px !important;
+    border: 1px solid #15803D !important;
+  }
+  td {
+    font-family: 'Poppins', Calibri, Arial, sans-serif !important;
+    font-size: 10pt !important;
+    color: #1E293B !important;
+    padding: 8px 12px !important;
+    border: 1px solid #CBD5E1 !important;
+  }
+</style>
+</head>
+<body>
+  <table>
+    <thead>
+      <tr>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Email Address</th>
+        <th>Phone Number</th>
+        <th>SSN / TIN</th>
+        <th>Tax Year</th>
+        <th>Filing Type</th>
+        <th>Street Address</th>
+        <th>City</th>
+        <th>State</th>
+        <th>Zip Code</th>
+        <th>Estimated Income</th>
+        <th>Lead Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Michael</td>
+        <td>Patterson</td>
+        <td>michael.p@gmail.com</td>
+        <td>+1 (415) 555-0142</td>
+        <td>123-45-6789</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>742 Evergreen Terrace</td>
+        <td>Springfield</td>
+        <td>IL</td>
+        <td>62704</td>
+        <td>$85,000</td>
+        <td>Facebook Ads Campaign</td>
+      </tr>
+      <tr>
+        <td>Amanda</td>
+        <td>Rodriguez</td>
+        <td>amanda.rod@outlook.com</td>
+        <td>+1 (312) 555-0199</td>
+        <td>987-65-4321</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>1044 Michigan Ave</td>
+        <td>Chicago</td>
+        <td>IL</td>
+        <td>60611</td>
+        <td>$115,000</td>
+        <td>Google Search Ads</td>
+      </tr>
+      <tr>
+        <td>David</td>
+        <td>Kowalski</td>
+        <td>dkowalski@apextech.io</td>
+        <td>+1 (206) 555-0187</td>
+        <td>12-3456789</td>
+        <td>2025</td>
+        <td>CORPORATE</td>
+        <td>400 Pine St Suite 900</td>
+        <td>Seattle</td>
+        <td>WA</td>
+        <td>98101</td>
+        <td>$320,000</td>
+        <td>CPA Referral Partner</td>
+      </tr>
+      <tr>
+        <td>Jessica</td>
+        <td>Taylor</td>
+        <td>jtaylor.design@yahoo.com</td>
+        <td>+1 (512) 555-0134</td>
+        <td>456-78-1234</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>1200 Congress Ave</td>
+        <td>Austin</td>
+        <td>TX</td>
+        <td>78701</td>
+        <td>$92,000</td>
+        <td>Tax Season Outreach</td>
+      </tr>
+      <tr>
+        <td>Robert</td>
+        <td>Sterling</td>
+        <td>robert.sterling@gmail.com</td>
+        <td>+1 (617) 555-0165</td>
+        <td>234-56-7890</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>85 Beacon St</td>
+        <td>Boston</td>
+        <td>MA</td>
+        <td>02108</td>
+        <td>$145,000</td>
+        <td>Direct Mailer List</td>
+      </tr>
+      <tr>
+        <td>Elena</td>
+        <td>Vasquez</td>
+        <td>elena.vasquez@gmail.com</td>
+        <td>+1 (786) 555-0120</td>
+        <td>345-67-8901</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>200 Biscayne Blvd</td>
+        <td>Miami</td>
+        <td>FL</td>
+        <td>33132</td>
+        <td>$108,000</td>
+        <td>Instagram Sponsored</td>
+      </tr>
+      <tr>
+        <td>Samantha</td>
+        <td>Reed</td>
+        <td>samantha.reed@gmail.com</td>
+        <td>+1 (303) 555-0111</td>
+        <td>567-89-0123</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>1600 California St</td>
+        <td>Denver</td>
+        <td>CO</td>
+        <td>80202</td>
+        <td>$74,000</td>
+        <td>Bulk Lead Ingestion</td>
+      </tr>
+      <tr>
+        <td>Katherine</td>
+        <td>Chen</td>
+        <td>k.chen@biovanguard.com</td>
+        <td>+1 (858) 555-0144</td>
+        <td>23-4567890</td>
+        <td>2025</td>
+        <td>CORPORATE</td>
+        <td>10200 Torrey Pines Rd</td>
+        <td>La Jolla</td>
+        <td>CA</td>
+        <td>92037</td>
+        <td>$490,000</td>
+        <td>Corporate Referral</td>
+      </tr>
+      <tr>
+        <td>Sophia</td>
+        <td>Martinez</td>
+        <td>smartinez@solardynamics.io</td>
+        <td>+1 (702) 555-0198</td>
+        <td>34-5678901</td>
+        <td>2025</td>
+        <td>CORPORATE</td>
+        <td>3883 Howard Hughes Pkwy</td>
+        <td>Las Vegas</td>
+        <td>NV</td>
+        <td>89169</td>
+        <td>$280,000</td>
+        <td>B2B Trade Show</td>
+      </tr>
+      <tr>
+        <td>Brian</td>
+        <td>O'Connor</td>
+        <td>brian.oc@verizon.net</td>
+        <td>+1 (215) 555-0132</td>
+        <td>678-90-1234</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>1800 JFK Blvd</td>
+        <td>Philadelphia</td>
+        <td>PA</td>
+        <td>19103</td>
+        <td>$88,000</td>
+        <td>Referral Program</td>
+      </tr>
+      <tr>
+        <td>Daniel</td>
+        <td>Hayes</td>
+        <td>dhayes@hayeslogistics.com</td>
+        <td>+1 (614) 555-0155</td>
+        <td>45-6789012</td>
+        <td>2025</td>
+        <td>CORPORATE</td>
+        <td>250 West St</td>
+        <td>Columbus</td>
+        <td>OH</td>
+        <td>43215</td>
+        <td>$350,000</td>
+        <td>LinkedIn InMail</td>
+      </tr>
+      <tr>
+        <td>Rachel</td>
+        <td>Goldman</td>
+        <td>rachel.goldman@nyu.edu</td>
+        <td>+1 (212) 555-0167</td>
+        <td>789-01-2345</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>70 Washington Square S</td>
+        <td>New York</td>
+        <td>NY</td>
+        <td>10012</td>
+        <td>$128,000</td>
+        <td>University Alumni List</td>
+      </tr>
+      <tr>
+        <td>Jason</td>
+        <td>Miller</td>
+        <td>jmiller@quantumhealth.org</td>
+        <td>+1 (615) 555-0189</td>
+        <td>56-7890123</td>
+        <td>2025</td>
+        <td>CORPORATE</td>
+        <td>2100 West End Ave</td>
+        <td>Nashville</td>
+        <td>TN</td>
+        <td>37203</td>
+        <td>$410,000</td>
+        <td>Healthcare CPA Partner</td>
+      </tr>
+      <tr>
+        <td>Laura</td>
+        <td>Bennett</td>
+        <td>laura.b@comcast.net</td>
+        <td>+1 (503) 555-0122</td>
+        <td>890-12-3456</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>1120 SW 5th Ave</td>
+        <td>Portland</td>
+        <td>OR</td>
+        <td>97204</td>
+        <td>$96,000</td>
+        <td>Organic Web Search</td>
+      </tr>
+      <tr>
+        <td>Kevin</td>
+        <td>Zhang</td>
+        <td>kevin.zhang@nexusai.co</td>
+        <td>+1 (408) 555-0176</td>
+        <td>67-8901234</td>
+        <td>2025</td>
+        <td>CORPORATE</td>
+        <td>3000 Sand Hill Rd</td>
+        <td>Menlo Park</td>
+        <td>CA</td>
+        <td>94025</td>
+        <td>$550,000</td>
+        <td>Tech Founder Network</td>
+      </tr>
+      <tr>
+        <td>Megan</td>
+        <td>Sullivan</td>
+        <td>megan.sullivan@gmail.com</td>
+        <td>+1 (704) 555-0143</td>
+        <td>901-23-4567</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>200 S Tryon St</td>
+        <td>Charlotte</td>
+        <td>NC</td>
+        <td>28202</td>
+        <td>$82,000</td>
+        <td>Local Tax Workshop</td>
+      </tr>
+      <tr>
+        <td>Anthony</td>
+        <td>Rossi</td>
+        <td>arossi@rossiauto.com</td>
+        <td>+1 (313) 555-0188</td>
+        <td>78-9012345</td>
+        <td>2025</td>
+        <td>CORPORATE</td>
+        <td>100 Renaissance Center</td>
+        <td>Detroit</td>
+        <td>MI</td>
+        <td>48243</td>
+        <td>$290,000</td>
+        <td>Automotive Chamber</td>
+      </tr>
+      <tr>
+        <td>Olivia</td>
+        <td>Kim</td>
+        <td>olivia.kim@stanford.alumni.org</td>
+        <td>+1 (650) 555-0191</td>
+        <td>012-34-5678</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>450 Serra Mall</td>
+        <td>Stanford</td>
+        <td>CA</td>
+        <td>94305</td>
+        <td>$165,000</td>
+        <td>Alumni Network</td>
+      </tr>
+      <tr>
+        <td>Thomas</td>
+        <td>Wright</td>
+        <td>twright@wrightlaw.com</td>
+        <td>+1 (202) 555-0114</td>
+        <td>89-0123456</td>
+        <td>2025</td>
+        <td>CORPORATE</td>
+        <td>1201 Pennsylvania Ave NW</td>
+        <td>Washington</td>
+        <td>DC</td>
+        <td>20004</td>
+        <td>$620,000</td>
+        <td>Legal Directory</td>
+      </tr>
+      <tr>
+        <td>Hannah</td>
+        <td>Abbott</td>
+        <td>hannah.abbott@icloud.com</td>
+        <td>+1 (480) 555-0170</td>
+        <td>123-89-4567</td>
+        <td>2025</td>
+        <td>INDIVIDUAL</td>
+        <td>7135 E Camelback Rd</td>
+        <td>Scottsdale</td>
+        <td>AZ</td>
+        <td>85251</td>
+        <td>$105,000</td>
+        <td>Real Estate Referral</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>

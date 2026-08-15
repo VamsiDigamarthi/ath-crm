@@ -42,6 +42,7 @@ export interface AppTableProps<T extends Record<string, unknown>> {
   emptyText?: string
   className?: string
   pagination?: TablePaginationProps
+  rowClassName?: (item: T, index: number) => string | undefined
 }
 
 const DENSITY_CELL: Record<TableDensity, string> = {
@@ -75,6 +76,7 @@ export function AppTable<T extends Record<string, unknown>>({
   emptyText = 'No data available.',
   className,
   pagination,
+  rowClassName,
 }: AppTableProps<T>) {
 
   const [search, setSearch]       = useState('')
@@ -302,6 +304,7 @@ export function AppTable<T extends Record<string, unknown>>({
                           : striped && ri % 2 !== 0
                             ? 'bg-gray-50/50 hover:bg-blue-50/20'
                             : 'hover:bg-blue-50/20',
+                        rowClassName?.(item, ri)
                       )}
                     >
                       {selectable && (

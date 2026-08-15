@@ -1,0 +1,23 @@
+model CustomerProfile {
+  id                  String   @id @default(uuid())
+  userId              String?  @unique
+  user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ssnTin              String?  @unique
+  firstName           String
+  lastName            String
+  email               String?
+  phone               String
+  addressLine1        String?
+  city                String?
+  state               String?
+  zipCode             String?
+  isConvertedCustomer Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  applications TaxApplication[]
+
+  @@index([ssnTin])
+  @@index([email])
+  @@index([phone])
+}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { ParsedLeadRow } from '../types/bulk-import.types';
 
 export type StatusFilterType = 'ALL' | 'VALID' | 'INVALID';
