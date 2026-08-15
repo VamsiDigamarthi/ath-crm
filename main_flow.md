@@ -253,7 +253,76 @@ ORDER BY tax_year DESC;
 
 ---
 
-## 8. Multi-Year & Retention Lifecycle (Year-over-Year Retention)
+## 8. Comprehensive Tax Intake & Client Organizer Architecture (`Rahul - Copy.docx` Specification)
+
+The TaxCRM platform bridges high-volume lead ingestion with high-precision tax filing through a **2-Phase Intake Model**:
+
+```mermaid
+graph TD
+    A[Phase 1: Admin Bulk CSV Ingestion] -->|Basic Contact Info Only| B(RAW_PROSPECT in CustomerProfile & TaxApplication)
+    B -->|Manager Distributes Leads| C[Documenter Agent Call Outreach]
+    C -->|Prospect Agrees & Consents| D[Phase 2: Digital Tax Organizer in Client Portal / Documenter Intake]
+    D -->|Client fills 9 Comprehensive Modules & Uploads W2/1099| E[Documenter Generates Tax Draft Computation]
+    E -->|Route to Sales| F[Sales Fee Pitch & Quotation]
+```
+
+### Phase 1 vs Phase 2 Data Separation
+
+| Stage | Trigger & Channel | Data Scope Collected |
+| :--- | :--- | :--- |
+| **Phase 1: Admin Bulk Ingestion** | Admin CSV / Excel Upload | **Basic Contact Info**: First Name, Last Name, Phone, Email, SSN/TIN (optional), Filing Status, State, Tax Year. |
+| **Phase 2: Digital Tax Organizer** | Client Portal / Documenter Call | **Full 9-Section Comprehensive Filing Intake** as specified in `Rahul - Copy.docx`. |
+
+---
+
+### The 9 Core Modules of the Digital Tax Organizer (`Rahul - Copy.docx`):
+
+#### 1. 👥 Primary & Family Demographics
+* **Primary Taxpayer, Spouse, Children & Dependents**:
+  * First, Middle, Last Name (as per SSN)
+  * Date of Birth (`MM/DD/YYYY`), SSN / ITIN, Occupation, Mobile, Work Phone, Email
+  * Relationship with Primary (`Son / Daughter / Parents`)
+  * VISA Type as of Dec 31 (`H-1B, L-1, F-1 OPT, Green Card, Citizen, etc.`) + Date of any VISA status changes
+  * Marital Status (`Single / Married / Widowed / Separated / Divorced`) & Marriage Date
+  * Current US Residential Address & Zip Code
+  * First Port of Entry Date in US, Months stayed in US, Stay > 6 months in upcoming year (`Yes/No`)
+  * **Substantial Presence Test**: Total physical presence days in US for preceding 3 years (2023, 2024, 2025) to determine Federal & State Tax Residency status (Resident Alien vs Non-Resident Alien).
+
+#### 2. 🗺️ Multi-State Residency & Local Taxes
+* Resided / Residing States from `Date` to `Date` for Taxpayer & Spouse.
+* City / County Tax Filing flags (e.g., Kentucky, Michigan, New York, Ohio, Pennsylvania, Indiana, Iowa, Maryland).
+
+#### 3. 🏠 Rental Deductions (State-Specific)
+* State-level rent credit deductions for California, Arizona, Minnesota, Massachusetts, Wisconsin, Indiana, New Jersey (Months rented, Rent per month $, Total).
+
+#### 4. 🏦 Direct Deposit / Debit Bank Account Details
+* Bank Name, Routing Number (Electronic ACH), Account Number, Account Type (`Checking / Savings`), Account Owner Name (Used for IRS direct refund deposit or electronic tax due withdrawal).
+
+#### 5. 🏢 Real Estate & Rental Property Income
+* Property Type (`Residential / Commercial`), Property Address
+* Months rented vs Months personal use, Ownership (`Taxpayer / Spouse / Joint`)
+* Purchase Date, Property Cost Basis, Total Gross Rental Income, Rental Expenses Incurred.
+
+#### 6. 👶 Child & Dependent Daycare Expenses
+* Dependent Name, Institution / Caregiver Person Name, Federal Tax ID / SSN of Provider, Address, Total Expenditure Amount, Employer Reimbursement / FSA Amount.
+
+#### 7. 💰 HSA, Traditional IRA, Roth IRA & Deductions
+* HSA Contributions (with supporting 5498-SA / 1099-SA).
+* Traditional IRA vs Roth IRA contributions.
+* Charitable Donations (Institution Name + Amount).
+* Itemized Deductions: Home Mortgage Interest & Points (`Form 1098`), US & Indian Property Taxes, Educator Expenses, Medical Expenses, Energy Saving Equipment (Solar, Heat Pump, etc.), Capital Gains/Losses & Loss Carryforwards.
+
+#### 8. 📁 Tax Source Forms Checklist & Upload Vault
+* Checklist & secure file attachments for: `W-2`, `1098` (Mortgage), `1098-T` (Tuition), `1098-E` (Student Loan), `1099-B` (Brokerage / ESPP / RSU / 3921 / 3922), `1099-DIV`, `1099-INT`, `1099-MISC`, `1099-K`, `1099-G` (Unemployment), `1099-R` (401k / Pension), `1099-SA` (HSA), `W-2G` (Gambling), `1095-A` (Marketplace Healthcare), `MA 1099-HC`.
+
+#### 9. 🇮🇳 FBAR, FATCA & Foreign (India) Income Reporting
+* **FBAR**: Foreign financial accounts balance > $10,000 at any time during the tax year (`Yes/No`).
+* **FATCA**: Foreign financial assets balance > $50,000 (`Yes/No`).
+* **Foreign Income**: Indian Salary, Dividends, Bank Fixed Deposit / Savings Interest, Rental Income, Foreign Taxes Withheld / Paid in India (for Foreign Tax Credit calculation).
+
+---
+
+## 9. Multi-Year & Retention Lifecycle (Year-over-Year Retention)
 
 When the 2026 tax year ends and the 2027 tax season starts:
 1. Admin uploads the new 2027 leads CSV.
@@ -266,7 +335,7 @@ When the 2026 tax year ends and the 2027 tax season starts:
 
 ---
 
-## 9. Complete Multi-File Prisma Schema Architecture
+## 10. Complete Multi-File Prisma Schema Architecture
 
 ### `prisma/schema/base.prisma`
 ```prisma
@@ -321,6 +390,7 @@ model User {
 
   @@index([email])
   @@index([mobile])
+  @@index([isActive])
 }
 ```
 
@@ -381,19 +451,21 @@ model TaxApplication {
   assignedSalesAgentId String?
   assignedSalesAgent   User?   @relation("SalesAgentApps", fields: [assignedSalesAgentId], references: [id])
 
-  assignedFileOpId String?
-  assignedFileOp   User?   @relation("FileOpApps", fields: [assignedFileOpId], references: [id])
+  assignedFileOpAgentId String?
+  assignedFileOpAgent   User?   @relation("FileOpApps", fields: [assignedFileOpAgentId], references: [id])
 
   taxDraftSummary Json?
+  filingNotes     String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   stageHistories StageHistory[]
   callLogs       CallLog[]
-  documents      TaxDocument[]
-  quotes         SalesQuote[]
+  uploadedDocs   TaxDocument[]
+  salesQuotes    SalesQuote[]
 
   @@unique([customerId, taxYear])
+  @@index([customerId])
   @@index([currentStage])
   @@index([taxYear])
 }
@@ -402,11 +474,11 @@ model StageHistory {
   id            String           @id @default(uuid())
   applicationId String
   application   TaxApplication   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  fromStage     ApplicationStage?
+  fromStage     ApplicationStage
   toStage       ApplicationStage
+  notes         String?
   movedByUserId String
   movedByUser   User             @relation(fields: [movedByUserId], references: [id])
-  remarks       String?
   createdAt     DateTime         @default(now())
 
   @@index([applicationId])
@@ -459,12 +531,13 @@ model SalesQuote {
 
 ---
 
-## 10. Implementation Checklist & Architectural Constraints
+## 11. Implementation Checklist & Architectural Constraints
 
 When writing or modifying code across the application, verify compliance against this checklist:
 - [ ] **No Monolithic User Creation**: Do not create a `User` entity on initial CSV ingestion.
 - [ ] **3-Tier Hierarchy in All Departments**: Every department supports `Manager`, `Team Lead`, and `Agent` roles.
 - [ ] **Hybrid Lead Assignment Flow**: Support Manager-to-Team-Lead delegation, Manager-to-Agent direct assignment, and Auto Round-Robin.
+- [ ] **2-Phase Intake Alignment**: Admin CSV captures basic contact leads; Digital Tax Organizer captures the full 9 filing modules (`Rahul - Copy.docx`).
 - [ ] **State-Driven Routing**: Department views must always filter `tax_applications` by `current_stage` rather than creating separate tables per department.
 - [ ] **Audit Trail Integrity**: Every stage change must write an entry to `StageHistory` with `fromStage`, `toStage`, and `movedByUserId`.
 - [ ] **Multi-Year Resiliency**: All customer filing lookups must be scoped to `(customerId, taxYear)`.

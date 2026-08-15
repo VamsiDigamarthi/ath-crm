@@ -4,9 +4,14 @@ model CustomerProfile {
   user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   ssnTin              String?  @unique
   firstName           String
+  middleName          String?
   lastName            String
   email               String?
   phone               String
+  dob                 String?
+  occupation          String?
+  visaType            String?
+  maritalStatus       String?
   addressLine1        String?
   city                String?
   state               String?

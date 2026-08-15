@@ -128,10 +128,15 @@ export const useBulkImport = () => {
       const validRows = rows.filter((r) => r.validationStatus === 'VALID');
       const payloadLeads = validRows.map((r) => ({
         firstName: r.firstName,
+        middleName: r.middleName || null,
         lastName: r.lastName,
         email: r.email || null,
         phone: r.phone,
         ssnTin: r.ssnTin || null,
+        dob: r.dob || null,
+        occupation: r.occupation || null,
+        visaType: r.visaType || null,
+        maritalStatus: r.maritalStatus || null,
         filingType: r.filingType,
         addressLine1: r.addressLine1 || null,
         city: r.city || null,

@@ -12,10 +12,15 @@ export interface BulkImportPayload {
   taxYear: number;
   leads: {
     firstName: string;
+    middleName?: string | null;
     lastName: string;
     email?: string | null;
     phone: string;
     ssnTin?: string | null;
+    dob?: string | null;
+    occupation?: string | null;
+    visaType?: string | null;
+    maritalStatus?: string | null;
     filingType?: string;
     addressLine1?: string | null;
     city?: string | null;

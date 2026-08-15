@@ -1,12 +1,18 @@
 import { prisma } from "../../config/db.js";
 import { ApplicationStage } from "@prisma/client";
+import { normalizeVisaType } from "./admin-validator.js";
 
 export interface LeadImportItem {
   firstName: string;
+  middleName?: string | null;
   lastName: string;
   email?: string | null;
   phone: string;
   ssnTin?: string | null;
+  dob?: string | null;
+  occupation?: string | null;
+  visaType?: string | null;
+  maritalStatus?: string | null;
   filingType?: string;
   addressLine1?: string | null;
   city?: string | null;
@@ -47,9 +53,11 @@ export class LeadIngestionService {
     let duplicatesSkipped = 0;
     let validProcessed = 0;
 
-    // Filter out invalid/empty rows
+    // Filter out invalid/empty rows (min 2 chars name, min 7 digits phone)
     const cleanedLeads = leads.filter(
-      (l) => l && (l.firstName?.trim() || l.lastName?.trim()) && l.phone?.trim()
+      (l) => l && (l.firstName?.trim() && l.firstName.trim().length >= 2) &&
+                  (l.lastName?.trim() && l.lastName.trim().length >= 2) &&
+                  (l.phone?.trim() && l.phone.trim().length >= 7)
     );
 
     // Process in chunks to prevent database memory spikes and locking
@@ -109,7 +117,12 @@ export class LeadIngestionService {
             const email = lead.email?.trim().toLowerCase() || null;
             const phone = lead.phone.trim();
             const firstName = lead.firstName.trim();
+            const middleName = lead.middleName?.trim() || null;
             const lastName = lead.lastName.trim();
+            const dob = lead.dob?.trim() || null;
+            const occupation = lead.occupation?.trim() || null;
+            const visaType = normalizeVisaType(lead.visaType) || lead.visaType?.trim() || null;
+            const maritalStatus = lead.maritalStatus?.trim() || null;
             const filingType = lead.filingType?.trim() || "INDIVIDUAL";
 
             // In-chunk deduplication
@@ -152,9 +165,10 @@ export class LeadIngestionService {
                   await tx.stageHistory.create({
                     data: {
                       applicationId: newApp.id,
+                      fromStage: ApplicationStage.RAW_PROSPECT,
                       toStage: ApplicationStage.RAW_PROSPECT,
                       movedByUserId: adminUserId,
-                      remarks: `Ingested & Linked to Existing Master Profile (${matchedProfile.firstName} ${matchedProfile.lastName}) for Tax Year ${taxYear}`,
+                      remarks: `Ingested & Linked to Master Profile (${matchedProfile.firstName} ${matchedProfile.lastName}) for Tax Year ${taxYear}`,
                     },
                   });
                 }
@@ -170,7 +184,12 @@ export class LeadIngestionService {
                   email,
                   phone,
                   firstName,
+                  middleName,
                   lastName,
+                  dob,
+                  occupation,
+                  visaType,
+                  maritalStatus,
                   addressLine1: lead.addressLine1?.trim() || null,
                   city: lead.city?.trim() || null,
                   state: lead.state?.trim() || null,
@@ -196,6 +215,7 @@ export class LeadIngestionService {
                 await tx.stageHistory.create({
                   data: {
                     applicationId: newApp.id,
+                    fromStage: ApplicationStage.RAW_PROSPECT,
                     toStage: ApplicationStage.RAW_PROSPECT,
                     movedByUserId: adminUserId,
                     remarks: `Initial Bulk Ingestion for Tax Year ${taxYear}`,

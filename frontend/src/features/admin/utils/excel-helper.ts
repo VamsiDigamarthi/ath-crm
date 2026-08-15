@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs';
-import type { ParsedLeadRow, LeadValidationStatus } from '../types/bulk-import.types';
+import type { ParsedLeadRow } from '../types/bulk-import.types';
+import { validateLeadRow } from './lead-validator';
 
 /**
  * Generates and downloads a native Excel (.xlsx) file with Emerald Green background (#16A34A) and Bold 700 font
@@ -15,11 +16,16 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
 
   // Define columns with generous widths to prevent text clipping in Excel
   worksheet.columns = [
-    { header: 'First Name', key: 'firstName', width: 18 },
-    { header: 'Last Name', key: 'lastName', width: 18 },
-    { header: 'Email Address', key: 'email', width: 28 },
-    { header: 'Phone Number', key: 'phone', width: 22 },
-    { header: 'SSN / TIN', key: 'ssnTin', width: 18 },
+    { header: 'First Name *', key: 'firstName', width: 18 },
+    { header: 'Middle Name', key: 'middleName', width: 16 },
+    { header: 'Last Name *', key: 'lastName', width: 18 },
+    { header: 'Email Address *', key: 'email', width: 28 },
+    { header: 'Phone Number *', key: 'phone', width: 22 },
+    { header: 'SSN / ITIN', key: 'ssnTin', width: 18 },
+    { header: 'Date of Birth (MM/DD/YYYY)', key: 'dob', width: 24 },
+    { header: 'Occupation', key: 'occupation', width: 20 },
+    { header: 'Visa Type (H-1B, L-1, OPT, GC)', key: 'visaType', width: 24 },
+    { header: 'Marital Status', key: 'maritalStatus', width: 18 },
     { header: 'Tax Year', key: 'taxYear', width: 14 },
     { header: 'Filing Type', key: 'filingType', width: 18 },
     { header: 'Street Address', key: 'addressLine1', width: 30 },
@@ -35,14 +41,12 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
   headerRow.height = 32;
 
   headerRow.eachCell((cell) => {
-    // Background Fill: Tax Emerald Green #16A34A
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FF16A34A' },
     };
 
-    // Font: 700 Bold, Size 11, White Text
     cell.font = {
       name: 'Poppins',
       family: 2,
@@ -51,14 +55,12 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
       color: { argb: 'FFFFFFFF' },
     };
 
-    // Alignment: Centered vertically and horizontally
     cell.alignment = {
       vertical: 'middle',
       horizontal: 'center',
       wrapText: true,
     };
 
-    // Solid border around header cells
     cell.border = {
       top: { style: 'thin', color: { argb: 'FF15803D' } },
       left: { style: 'thin', color: { argb: 'FF15803D' } },
@@ -67,29 +69,39 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
     };
   });
 
-  // Sample data rows
+  // Sample data rows with realistic tax organizer details
   const sampleData = [
     {
-      firstName: 'Michael',
-      lastName: 'Patterson',
-      email: 'michael.p@gmail.com',
+      firstName: 'Arjun',
+      middleName: 'K.',
+      lastName: 'Varma',
+      email: 'arjun.varma@gmail.com',
       phone: '+1 (415) 555-0142',
       ssnTin: '123-45-6789',
+      dob: '05/14/1988',
+      occupation: 'Software Engineer',
+      visaType: 'H-1B',
+      maritalStatus: 'Married',
       taxYear: taxYear,
       filingType: 'INDIVIDUAL',
       addressLine1: '742 Evergreen Terrace',
       city: 'Springfield',
       state: 'IL',
       zipCode: '62704',
-      estimatedIncome: '$85,000',
-      source: 'Facebook Ads',
+      estimatedIncome: '$145,000',
+      source: 'Client Referral',
     },
     {
-      firstName: 'Amanda',
-      lastName: 'Rodriguez',
-      email: 'amanda.rod@outlook.com',
+      firstName: 'Priya',
+      middleName: '',
+      lastName: 'Sharma',
+      email: 'priya.sharma@outlook.com',
       phone: '+1 (312) 555-0199',
       ssnTin: '987-65-4321',
+      dob: '09/22/1992',
+      occupation: 'Data Scientist',
+      visaType: 'F-1 OPT',
+      maritalStatus: 'Single',
       taxYear: taxYear,
       filingType: 'INDIVIDUAL',
       addressLine1: '1044 Michigan Ave',
@@ -97,14 +109,19 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
       state: 'IL',
       zipCode: '60611',
       estimatedIncome: '$115,000',
-      source: 'Google Search',
+      source: 'Google Search Ads',
     },
     {
-      firstName: 'David',
-      lastName: 'Kowalski',
-      email: 'dkowalski@apextech.io',
+      firstName: 'Vikram',
+      middleName: 'S.',
+      lastName: 'Singhania',
+      email: 'vikram.s@apextech.io',
       phone: '+1 (206) 555-0187',
       ssnTin: '12-3456789',
+      dob: '11/04/1982',
+      occupation: 'VP of Engineering',
+      visaType: 'L-1',
+      maritalStatus: 'Married',
       taxYear: taxYear,
       filingType: 'CORPORATE',
       addressLine1: '400 Pine St Suite 900',
@@ -115,11 +132,16 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
       source: 'CPA Referral Partner',
     },
     {
-      firstName: 'Jessica',
-      lastName: 'Taylor',
-      email: 'jtaylor.design@yahoo.com',
+      firstName: 'Sneha',
+      middleName: '',
+      lastName: 'Patel',
+      email: 'sneha.patel@yahoo.com',
       phone: '+1 (512) 555-0134',
       ssnTin: '456-78-1234',
+      dob: '03/18/1990',
+      occupation: 'Financial Analyst',
+      visaType: 'GREEN_CARD',
+      maritalStatus: 'Single',
       taxYear: taxYear,
       filingType: 'INDIVIDUAL',
       addressLine1: '1200 Congress Ave',
@@ -137,7 +159,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
     row.height = 24;
 
     const isEven = index % 2 === 1;
-    row.eachCell((cell, colNumber) => {
+    row.eachCell((cell) => {
       cell.font = {
         name: 'Poppins',
         size: 10,
@@ -146,7 +168,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
 
       cell.alignment = {
         vertical: 'middle',
-        horizontal: colNumber === 6 || colNumber === 7 || colNumber === 10 ? 'center' : 'left',
+        horizontal: 'left',
       };
 
       cell.border = {
@@ -175,7 +197,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `tax_lead_template_${taxYear}.xlsx`);
+  link.setAttribute('download', `tax_leads_template_${taxYear}.xlsx`);
   document.body.appendChild(link);
   link.click();
 
@@ -191,11 +213,16 @@ export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promi
 function normalizeHeaderKey(header: string): string {
   const clean = header.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (/^(firstname|first|fname)$/.test(clean) || clean.includes('firstname')) return 'firstName';
+  if (/^(middlename|middle|mname)$/.test(clean) || clean.includes('middlename') || clean.includes('middle')) return 'middleName';
   if (/^(lastname|last|lname)$/.test(clean) || clean.includes('lastname')) return 'lastName';
   if (/^(name|fullname|clientname|taxpayername)$/.test(clean) || clean.includes('taxpayer')) return 'fullName';
   if (/^(email|emailaddress|mail)$/.test(clean) || clean.includes('email')) return 'email';
   if (/^(phone|phonenumber|mobile|contact|cell)$/.test(clean) || clean.includes('phone') || clean.includes('mobile')) return 'phone';
   if (/^(ssn|tin|ssntin|taxid|ssnnumber|ssnortin)$/.test(clean) || clean.includes('ssn') || clean.includes('tin')) return 'ssnTin';
+  if (/^(dob|dateofbirth|birthdate)$/.test(clean) || clean.includes('birth')) return 'dob';
+  if (/^(occupation|job|profession|role)$/.test(clean) || clean.includes('occupation')) return 'occupation';
+  if (/^(visatype|visa|status|visastatus)$/.test(clean) || clean.includes('visa')) return 'visaType';
+  if (/^(maritalstatus|marital|married)$/.test(clean) || clean.includes('marital')) return 'maritalStatus';
   if (/^(taxyear|year|filingyear)$/.test(clean) || clean.includes('year')) return 'taxYear';
   if (/^(filingtype|type|category)$/.test(clean) || clean.includes('filingtype')) return 'filingType';
   if (/^(address|addressline1|street|streetaddress|addressline)$/.test(clean) || clean.includes('address') || clean.includes('street')) return 'addressLine1';
@@ -208,7 +235,7 @@ function normalizeHeaderKey(header: string): string {
 }
 
 /**
- * Parses native Excel (.xlsx / .xls) buffer into ParsedLeadRow array
+ * Parses native Excel (.xlsx / .xls) buffer into ParsedLeadRow array with strict validations
  */
 export async function parseExcelFileBuffer(
   arrayBuffer: ArrayBuffer,
@@ -250,10 +277,11 @@ export async function parseExcelFileBuffer(
       rawObj[header] = row[colIdx] || '';
     });
 
-    let firstName = rawObj.firstName || '';
-    let lastName = rawObj.lastName || '';
+    let firstName = (rawObj.firstName || '').trim();
+    const middleName = (rawObj.middleName || '').trim();
+    let lastName = (rawObj.lastName || '').trim();
     if (!firstName && rawObj.fullName) {
-      const parts = rawObj.fullName.split(' ');
+      const parts = rawObj.fullName.trim().split(/\s+/);
       firstName = parts[0] || '';
       lastName = parts.slice(1).join(' ') || '';
     }
@@ -261,42 +289,46 @@ export async function parseExcelFileBuffer(
     const email = (rawObj.email || '').trim().toLowerCase();
     const phone = (rawObj.phone || '').trim();
     const ssnTin = (rawObj.ssnTin || '').trim();
+    const dob = (rawObj.dob || '').trim();
+    const occupation = (rawObj.occupation || '').trim();
+    const visaType = (rawObj.visaType || '').trim();
+    const maritalStatus = (rawObj.maritalStatus || '').trim();
     const parsedYear = parseInt(rawObj.taxYear, 10);
     const taxYear = !isNaN(parsedYear) && parsedYear > 2000 ? parsedYear : defaultTaxYear;
     const filingType = (
       rawObj.filingType?.toUpperCase() === 'CORPORATE' ? 'CORPORATE' : 'INDIVIDUAL'
     ) as 'INDIVIDUAL' | 'CORPORATE';
-    const addressLine1 = rawObj.addressLine1 || '';
-    const city = rawObj.city || '';
-    const state = rawObj.state || '';
-    const zipCode = rawObj.zipCode || '';
-    const estimatedIncome = rawObj.estimatedIncome || '';
-    const source = rawObj.source || 'Excel Import';
+    const addressLine1 = (rawObj.addressLine1 || '').trim();
+    const city = (rawObj.city || '').trim();
+    const state = (rawObj.state || '').trim();
+    const zipCode = (rawObj.zipCode || '').trim();
+    const estimatedIncome = (rawObj.estimatedIncome || '').trim();
+    const source = (rawObj.source || 'Excel Import').trim();
 
-    let validationStatus: LeadValidationStatus = 'VALID';
-    let validationMessage = 'Valid & ready for server ingest';
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
-      validationStatus = 'INVALID_EMAIL';
-      validationMessage = 'Invalid or missing email syntax';
-    } else if (!phone || phone.replace(/\D/g, '').length < 7) {
-      validationStatus = 'INVALID_PHONE';
-      validationMessage = 'Invalid contact phone number';
-    } else if (!firstName && !lastName && !rawObj.fullName) {
-      validationStatus = 'MISSING_DATA';
-      validationMessage = 'Missing taxpayer name';
-    }
+    // Perform strict row validation
+    const valResult = validateLeadRow({
+      firstName,
+      lastName,
+      email,
+      phone,
+      visaType,
+      state,
+    });
 
     return {
       id: `LEAD-${String(index + 1).padStart(4, '0')}`,
       rowNumber: index + 1,
       firstName,
+      middleName,
       lastName,
-      fullName: `${firstName} ${lastName}`.trim() || 'Unnamed Lead',
+      fullName: [firstName, middleName, lastName].filter(Boolean).join(' ') || 'Unnamed Lead',
       email,
       phone,
       ssnTin: ssnTin || 'N/A',
+      dob,
+      occupation,
+      visaType: valResult.normalizedVisa || visaType,
+      maritalStatus,
       taxYear,
       filingType,
       addressLine1,
@@ -305,8 +337,8 @@ export async function parseExcelFileBuffer(
       zipCode,
       estimatedIncome,
       source,
-      validationStatus,
-      validationMessage,
+      validationStatus: valResult.status,
+      validationMessage: valResult.message,
     };
   });
 }

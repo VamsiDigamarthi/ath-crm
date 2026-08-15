@@ -5,7 +5,8 @@ import {
   User, 
   CheckCircle2, 
   AlertCircle, 
-  Lock 
+  Lock,
+  Globe
 } from 'lucide-react';
 import type { ParsedLeadRow, LeadValidationStatus } from '../types/bulk-import.types';
 
@@ -27,10 +28,35 @@ export const renderStatusIcon = (status: LeadValidationStatus, message?: string)
   return (
     <div 
       className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shadow-2xs transition-transform hover:scale-105" 
-      title={message || "Formatting Issue"}
+      title={message || "Validation Error"}
     >
       <AlertCircle className="w-4 h-4 text-rose-600" />
     </div>
+  );
+};
+
+/**
+ * Renders tailored visa badge
+ */
+export const renderVisaBadge = (visaType?: string, status?: LeadValidationStatus) => {
+  if (!visaType || visaType.trim() === '') {
+    return <span className="text-xs text-slate-400 font-normal">N/A</span>;
+  }
+
+  if (status === 'INVALID_VISA') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200" title="Invalid Visa Type">
+        <AlertCircle className="w-3 h-3 text-rose-600" />
+        {visaType}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+      <Globe className="w-3 h-3 text-indigo-500" />
+      {visaType}
+    </span>
   );
 };
 
@@ -43,7 +69,7 @@ export const renderValidationBadge = (status: LeadValidationStatus, message?: st
       <div className="flex flex-col items-start gap-0.5">
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
           <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />
-          Ready for Ingestion
+          Valid & Ready
         </span>
         <span className="text-[10px] text-slate-400">Server deduplication pending</span>
       </div>
@@ -54,9 +80,9 @@ export const renderValidationBadge = (status: LeadValidationStatus, message?: st
     <div className="flex flex-col items-start gap-0.5">
       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
         <AlertCircle className="w-3 h-3 text-rose-600" />
-        Syntax Alert
+        Validation Issue
       </span>
-      {message && <span className="text-[10px] text-rose-600 font-medium">{message}</span>}
+      {message && <span className="text-[10px] text-rose-600 font-medium max-w-[200px] leading-tight">{message}</span>}
     </div>
   );
 };
@@ -93,7 +119,7 @@ export const getBulkImportColumns = (): ColumnDef<ParsedLeadRow>[] => [
             {item.fullName}
             {item.filingType === 'CORPORATE' ? (
               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                <Building2 className="w-2.5 h-2.5" /> Corporate
+                <Building2 className="w-2.5 h-2.5" /> Corp
               </span>
             ) : (
               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600">
@@ -101,7 +127,10 @@ export const getBulkImportColumns = (): ColumnDef<ParsedLeadRow>[] => [
               </span>
             )}
           </div>
-          <div className="text-[11px] text-slate-400">{item.source || 'Bulk Lead Ingestion'}</div>
+          <div className="text-[11px] text-slate-500 font-medium">
+            {item.occupation ? `${item.occupation} • ` : ''}
+            {item.dob ? `DOB: ${item.dob}` : item.source || 'Bulk Ingestion'}
+          </div>
         </div>
       </div>
     ),
@@ -119,6 +148,12 @@ export const getBulkImportColumns = (): ColumnDef<ParsedLeadRow>[] => [
         <div className="text-[11px] text-slate-500 font-medium">{item.phone || 'No phone provided'}</div>
       </div>
     ),
+  },
+  {
+    header: 'Visa Status',
+    accessorKey: 'visaType',
+    sortable: true,
+    render: (item) => renderVisaBadge(item.visaType, item.validationStatus),
   },
   {
     header: 'SSN / TIN',
@@ -143,13 +178,7 @@ export const getBulkImportColumns = (): ColumnDef<ParsedLeadRow>[] => [
     ),
   },
   {
-    header: 'Estimated Income',
-    accessorKey: 'estimatedIncome',
-    sortable: true,
-    cellClassName: 'text-xs font-bold text-slate-800',
-  },
-  {
-    header: 'Validation & Ingestion State',
+    header: 'Validation Diagnosis',
     accessorKey: 'validationStatus',
     sortable: true,
     render: (item) => renderValidationBadge(item.validationStatus, item.validationMessage),
