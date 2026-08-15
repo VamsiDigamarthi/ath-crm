@@ -224,10 +224,10 @@ export function AppTable<T extends Record<string, unknown>>({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead className={cn(stickyHeader && 'sticky top-0 z-10')}>
-            <tr className="bg-gray-50/60">
+            <tr className="bg-slate-100/90 border-b border-slate-200">
               {/* Select-all checkbox */}
               {selectable && (
-                <th className={cn(headPad, 'border-b border-gray-100 w-10')}>
+                <th className={cn(headPad, 'border-b border-slate-200 w-10')}>
                   <Checkbox
                     checked={allSelected}
                     indeterminate={someSelected}
@@ -244,8 +244,8 @@ export function AppTable<T extends Record<string, unknown>>({
                     onClick={() => handleSort(col)}
                     className={cn(
                       headPad,
-                      'text-[0.7rem] font-bold text-gray-500 tracking-widest border-b border-gray-100 select-none',
-                      col.sortable && 'cursor-pointer hover:text-gray-800 transition-colors',
+                      'text-xs font-bold text-slate-700 border-b border-slate-200 select-none',
+                      col.sortable && 'cursor-pointer hover:text-slate-900 transition-colors',
                       col.headerClassName,
                     )}
                   >

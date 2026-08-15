@@ -8,14 +8,14 @@ interface Props {
   month: number
   viewMode: ViewMode
   yearRangeStart: number
-  accentColor: string
+  accentColor?: string
   onPrev: () => void
   onNext: () => void
   onClickMonth: () => void
   onClickYear: () => void
 }
 
-export function CalendarHeader({ year, month, viewMode, yearRangeStart, accentColor, onPrev, onNext, onClickMonth, onClickYear }: Props) {
+export function CalendarHeader({ year, month, viewMode, yearRangeStart, accentColor: _accentColor, onPrev, onNext, onClickMonth, onClickYear }: Props) {
   return (
     <div className="flex items-center justify-between mb-3">
       <button

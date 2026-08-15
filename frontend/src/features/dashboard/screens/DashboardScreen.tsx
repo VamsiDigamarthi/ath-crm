@@ -12,11 +12,10 @@ import {
   TrendingUp,
   Clock,
   CheckCircle2,
-  AlertTriangle,
   Plus,
 } from 'lucide-react';
 
-interface MockLead {
+interface MockLead extends Record<string, unknown> {
   id: string;
   name: string;
   email: string;

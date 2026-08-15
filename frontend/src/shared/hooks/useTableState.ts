@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { TableDensity } from '@/shared/components/table'
+import type { TableDensity } from '@/shared/components/AppTable'
 
 export function useTableState() {
   const [isLoading, setIsLoading]           = useState(false)

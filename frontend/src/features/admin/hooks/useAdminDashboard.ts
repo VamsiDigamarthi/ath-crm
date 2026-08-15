@@ -14,7 +14,7 @@ import toast from 'react-hot-toast';
 export const useAdminDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState<string>('prospects');
 
   const handleLogout = async () => {
     try {
