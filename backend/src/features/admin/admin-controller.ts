@@ -59,13 +59,15 @@ export const bulkImportLeads = async (req: Request, res: Response) => {
 };
 
 export const getEmployees = async (req: Request, res: Response) => {
-  const { search, department, role, isActive } = req.query;
+  const { search, department, role, isActive, page, limit } = req.query;
 
   const result = await EmployeeService.listEmployees({
     search: typeof search === 'string' ? search : undefined,
     department: typeof department === 'string' ? (department as any) : undefined,
     role: typeof role === 'string' ? role : undefined,
     isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+    page: page ? Number(page) : undefined,
+    limit: limit ? Number(limit) : undefined,
   });
 
   return SuccessHandler.handle(res, "Employees fetched successfully", result, 200);

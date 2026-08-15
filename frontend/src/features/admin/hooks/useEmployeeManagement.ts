@@ -17,6 +17,12 @@ export const useEmployeeManagement = () => {
   const [activeDepartment, setActiveDepartment] = useState<DepartmentType>('ALL');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
 
+  // Pagination State (Server-Side)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalItems, setTotalItems] = useState<number>(0);
+
   // Add / Edit Drawer State
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [editingEmployee, setEditingEmployee] = useState<EmployeeItem | null>(null);
@@ -41,7 +47,7 @@ export const useEmployeeManagement = () => {
     onConfirm: () => {},
   });
 
-  // Fetch employees from live server
+  // Fetch employees with server pagination
   const fetchEmployees = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -49,11 +55,17 @@ export const useEmployeeManagement = () => {
         search: searchQuery.trim() || undefined,
         department: activeDepartment !== 'ALL' ? activeDepartment : undefined,
         role: roleFilter !== 'ALL' ? roleFilter : undefined,
+        page: currentPage,
+        limit: itemsPerPage,
       });
 
       if (res?.data) {
         setEmployees(res.data.employees || []);
         setServerStats(res.data.stats || null);
+        if (res.data.pagination) {
+          setTotalPages(res.data.pagination.totalPages || 1);
+          setTotalItems(res.data.pagination.totalItems || 0);
+        }
       }
     } catch (error: any) {
       const msg = error?.message || 'Failed to load staff members from server';
@@ -61,16 +73,32 @@ export const useEmployeeManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, activeDepartment, roleFilter]);
+  }, [searchQuery, activeDepartment, roleFilter, currentPage, itemsPerPage]);
 
-  // Trigger fetch on filter change
+  // Trigger fetch on filter or page change (debounced for search)
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchEmployees();
-    }, 250);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [fetchEmployees]);
+
+  // Reset to page 1 whenever filters change
+  const handleDepartmentChange = useCallback((dept: DepartmentType) => {
+    setActiveDepartment(dept);
+    setCurrentPage(1);
+  }, []);
+
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  }, []);
+
+  const handlePerPageChange = useCallback((newLimit: number) => {
+    setItemsPerPage(newLimit);
+    setCurrentPage(1);
+  }, []);
 
   // Derived KPI Stats
   const stats: EmployeeStats = useMemo(() => {
@@ -91,15 +119,15 @@ export const useEmployeeManagement = () => {
     });
 
     return {
-      total: employees.length,
+      total: totalItems || employees.length,
       documenters,
       sales,
       fileOperators,
       admins,
       activeCount,
-      inactiveCount: employees.length - activeCount,
+      inactiveCount: (totalItems || employees.length) - activeCount,
     };
-  }, [employees, serverStats]);
+  }, [employees, serverStats, totalItems]);
 
   // Open Drawer for new employee
   const handleOpenAddDrawer = useCallback(() => {
@@ -205,11 +233,19 @@ export const useEmployeeManagement = () => {
     isLoading,
     isSaving,
     searchQuery,
-    setSearchQuery,
+    setSearchQuery: handleSearchChange,
     activeDepartment,
-    setActiveDepartment,
+    setActiveDepartment: handleDepartmentChange,
     roleFilter,
     setRoleFilter,
+    // Pagination
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage: handlePerPageChange,
+    totalPages,
+    totalItems,
+    // Drawers & Modals
     isDrawerOpen,
     setIsDrawerOpen,
     editingEmployee,

@@ -26,6 +26,8 @@ export interface ListEmployeesQuery {
   department?: 'ALL' | 'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN';
   role?: string;
   isActive?: boolean;
+  page?: number;
+  limit?: number;
 }
 
 export class EmployeeService {
@@ -79,10 +81,14 @@ export class EmployeeService {
   }
 
   /**
-   * List all operational staff members with filters and workload stats
+   * List all operational staff members with filters, pagination, and workload stats
    */
   public static async listEmployees(query: ListEmployeesQuery) {
-    const { search, department, role, isActive } = query;
+    const { search, department, role, isActive, page: queryPage, limit: queryLimit } = query;
+
+    const page = Math.max(1, Number(queryPage) || 1);
+    const limit = Math.max(1, Math.min(100, Number(queryLimit) || 10));
+    const skip = (page - 1) * limit;
 
     // Filter staff members only (exclude client TAXPAYER_USER)
     const where: Prisma.UserWhereInput = {
@@ -116,19 +122,24 @@ export class EmployeeService {
       ];
     }
 
-    const users = await prisma.user.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: {
-            assignedDocApps: true,
-            assignedSalesApps: true,
-            assignedFileApps: true,
+    const [totalCount, users] = await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          _count: {
+            select: {
+              assignedDocApps: true,
+              assignedSalesApps: true,
+              assignedFileApps: true,
+            },
           },
         },
-      },
-    });
+      }),
+    ]);
 
     // Calculate global department stats across all staff
     const allStaff = await prisma.user.findMany({
@@ -162,6 +173,8 @@ export class EmployeeService {
       activeCount,
       inactiveCount: allStaff.length - activeCount,
     };
+
+    const totalPages = Math.ceil(totalCount / limit) || 1;
 
     // Format staff items for frontend
     const employees = users.map((u) => {
@@ -198,6 +211,12 @@ export class EmployeeService {
     return {
       employees,
       stats,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: totalCount,
+        itemsPerPage: limit,
+      },
     };
   }
 

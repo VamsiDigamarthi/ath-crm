@@ -17,6 +17,14 @@ interface EmployeeTableProps {
   onOpenBulkModal?: () => void;
   onEditEmployee: (employee: EmployeeItem) => void;
   onToggleStatus: (employee: EmployeeItem) => void;
+  // Pagination
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
+  onPerPageChange: (perPage: number) => void;
+  isLoading?: boolean;
 }
 
 export const EmployeeTable: React.FC<EmployeeTableProps> = ({
@@ -30,6 +38,13 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   onOpenBulkModal: _onOpenBulkModal,
   onEditEmployee,
   onToggleStatus,
+  currentPage,
+  totalPages,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+  onPerPageChange,
+  isLoading = false,
 }) => {
   const columns = useMemo(
     () =>
@@ -122,7 +137,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           </div>
         </div>
 
-        {/* Right: Add Staff & Bulk Upload Action Buttons */}
+        {/* Right: Add Staff Action Button */}
         <div className="flex items-center gap-3 justify-end">
           {/* <Button
             type="button"
@@ -148,12 +163,13 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
         </div>
       </div>
 
-      {/* Directory Table */}
+      {/* Directory Table with Built-in Server Pagination */}
       <AppTable<EmployeeItem>
         title="Staff & Team Member Directory"
         description="Manage active operational personnel, department assignments, and login permissions."
         columns={columns}
         data={employees}
+        isLoading={isLoading}
         selectable={false}
         searchable={false}
         density="comfortable"
@@ -163,6 +179,17 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             ? 'opacity-60 bg-slate-100/80 hover:opacity-90 transition-opacity'
             : undefined
         }
+        pagination={{
+          currentPage,
+          totalPages,
+          totalItems,
+          itemsPerPage,
+          onPageChange,
+          onPerPageChange,
+          perPageOptions: [5, 10, 20, 50],
+          activeBg: 'bg-[#16A34A]',
+          activeText: 'text-white font-bold',
+        }}
         emptyText="No staff members found matching active filters."
       />
     </div>

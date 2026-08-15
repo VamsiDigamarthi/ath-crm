@@ -10,13 +10,21 @@ import { Button } from '@/shared/components/Button';
 
 export const EmployeeManagementScreen: React.FC = () => {
   const {
-    employees,
     filteredEmployees,
     stats,
+    isLoading,
     searchQuery,
     setSearchQuery,
     activeDepartment,
     setActiveDepartment,
+    // Pagination
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+    totalPages,
+    totalItems,
+    // Drawers & Modals
     isDrawerOpen,
     setIsDrawerOpen,
     editingEmployee,
@@ -67,10 +75,10 @@ export const EmployeeManagementScreen: React.FC = () => {
       {/* KPI Stats Overview */}
       <EmployeeStatsCards stats={stats} />
 
-      {/* Directory Table */}
+      {/* Directory Table with Pagination */}
       <EmployeeTable
         employees={filteredEmployees}
-        totalEmployeesCount={employees.length}
+        totalEmployeesCount={stats.total}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeDepartment={activeDepartment}
@@ -79,6 +87,13 @@ export const EmployeeManagementScreen: React.FC = () => {
         onOpenBulkModal={() => setIsBulkModalOpen(true)}
         onEditEmployee={handleOpenEditDrawer}
         onToggleStatus={handleToggleStatus}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+        onPerPageChange={setItemsPerPage}
+        isLoading={isLoading}
       />
 
       {/* Add / Edit Staff Drawer */}

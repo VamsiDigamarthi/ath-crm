@@ -44,6 +44,12 @@ export interface EmployeesListApiResponse {
   data: {
     employees: EmployeeItem[];
     stats: EmployeeStats;
+    pagination?: {
+      currentPage: number;
+      totalPages: number;
+      totalItems: number;
+      itemsPerPage: number;
+    };
   };
 }
 
@@ -77,6 +83,8 @@ export const adminService = {
     department?: DepartmentType;
     role?: string;
     isActive?: boolean;
+    page?: number;
+    limit?: number;
   }): Promise<EmployeesListApiResponse> => {
     return apiClient.get('/admin/employees', { params });
   },
