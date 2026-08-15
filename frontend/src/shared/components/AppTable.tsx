@@ -244,7 +244,7 @@ export function AppTable<T extends Record<string, unknown>>({
                     onClick={() => handleSort(col)}
                     className={cn(
                       headPad,
-                      'text-[0.7rem] font-bold text-gray-500 uppercase tracking-widest border-b border-gray-100 select-none',
+                      'text-[0.7rem] font-bold text-gray-500 tracking-widest border-b border-gray-100 select-none',
                       col.sortable && 'cursor-pointer hover:text-gray-800 transition-colors',
                       col.headerClassName,
                     )}

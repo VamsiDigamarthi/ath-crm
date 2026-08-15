@@ -1,0 +1,33 @@
+### 1. Register Super Admin
+POST http://localhost:5000/api/admin/register
+Content-Type: application/json
+
+{
+  "email": "admin@taxcrm.com",
+  "mobile": "9876543210"
+}
+
+### 2. Request OTP for Admin Login
+POST http://localhost:5000/api/auth/request-otp
+Content-Type: application/json
+
+{
+  "email": "admin@taxcrm.com"
+}
+
+### 3. Verify OTP for Admin Login
+POST http://localhost:5000/api/auth/verify-otp
+Content-Type: application/json
+
+{
+  "email": "admin@taxcrm.com",
+  "otp": "123456"
+}
+
+### 4. Get Current Admin Profile
+GET http://localhost:5000/api/auth/me
+Content-Type: application/json
+
+### 5. Logout Admin
+POST http://localhost:5000/api/auth/logout
+Content-Type: application/json

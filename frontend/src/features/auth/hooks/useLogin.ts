@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useNavigate } from 'react-router-dom';
 import { loginSchema, otpSchema, type LoginInput, type OtpInput } from '../validations/auth-schema';
 import { useAuthStore } from '../store/auth-store';
 import toast from 'react-hot-toast';
@@ -10,6 +11,7 @@ export const useLogin = () => {
   const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, verify } = useAuthStore();
+  const navigate = useNavigate();
 
   const loginForm = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -40,6 +42,13 @@ export const useLogin = () => {
       setLoading(true);
       await verify(identifier, data.otp);
       toast.success('Login successful!');
+      
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast.error(error?.message || 'Invalid OTP');
     } finally {

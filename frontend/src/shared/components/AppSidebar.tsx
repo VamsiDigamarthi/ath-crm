@@ -110,7 +110,7 @@ export function AppSidebar({
           <div key={si} className={si > 0 ? 'pt-3' : ''}>
             {sec.label && !collapsed && (
               <div className={cn(
-                'px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest',
+                'px-3 pb-1 text-[10px] font-semibold tracking-widest',
                 theme.sectionLabel,
               )}>
                 {sec.label}

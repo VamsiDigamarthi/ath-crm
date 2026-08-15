@@ -29,11 +29,11 @@ export const LoginScreen: React.FC = () => {
         
         {/* Mobile Brand Bar */}
         <div className="flex lg:hidden items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#16A34A] flex items-center justify-center text-white font-bold shadow-md shadow-emerald-600/20">
+          <div className="w-9 h-9 rounded-xl bg-[#16A34A] flex items-center justify-center text-white font-bold">
             <FileSpreadsheet size={18} />
           </div>
           <div>
-            <span className="font-bold text-gray-900 text-lg font-mono">TaxCRM</span>
+            <span className="font-bold text-gray-900 text-lg">TaxCRM</span>
             <p className="text-[10px] text-gray-500">Tax Filing Operations</p>
           </div>
         </div>
@@ -45,7 +45,7 @@ export const LoginScreen: React.FC = () => {
               <KeyRound className="w-3.5 h-3.5" />
               Secure OTP Authentication
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
               Sign in to TaxCRM
             </h2>
             <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">

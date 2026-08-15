@@ -9,8 +9,10 @@ import { EmailService } from "../../utils/email-service.js";
 export const requestOtp = async (req: Request, res: Response) => {
   const { email, mobile } = req.body;
 
-  // const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otp = "123456";
+  const isStaticOtp = process.env.STATIC_OTP === "true";
+  const otp = isStaticOtp
+    ? "123456"
+    : Math.floor(100000 + Math.random() * 900000).toString();
   const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   const query = email ? { email } : { mobile };
@@ -26,7 +28,7 @@ export const requestOtp = async (req: Request, res: Response) => {
       mobile,
       otp,
       otpExpiresAt,
-      role: "USER",
+      role: "TAXPAYER_USER",
     },
   });
 

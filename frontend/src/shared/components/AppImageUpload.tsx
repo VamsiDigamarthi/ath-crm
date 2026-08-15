@@ -234,7 +234,7 @@ export const AppImageUpload: React.FC<AppImageUploadProps> = ({
                 title="Add more files"
               >
                 <Plus className="w-6 h-6 stroke-[1.8] mb-0.5" />
-                <span className="text-[10px] font-bold uppercase tracking-wider font-sans">Add More</span>
+                <span className="text-[10px] font-bold tracking-wider font-sans">Add More</span>
               </div>
             </div>
           </div>

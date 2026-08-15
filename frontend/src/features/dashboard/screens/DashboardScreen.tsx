@@ -87,7 +87,7 @@ export const DashboardScreen = () => {
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex flex-col text-right">
             <span className="text-sm font-semibold text-slate-200">{user?.email || user?.phone || 'Operator'}</span>
-            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">
+            <span className="text-[10px] font-bold text-indigo-400 tracking-widest">
               Role: {user?.role || 'SUPER_ADMIN'}
             </span>
           </div>

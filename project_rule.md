@@ -65,7 +65,9 @@
 - **Role-Based Access Control (RBAC)**: Use the `allowedRoles` prop on `ProtectedRoute` (e.g., `<ProtectedRoute allowedRoles={['ADMIN']} />`) to restrict access to specific roles. Avoid hardcoding access logic inside screen components.
 ## 11. UI & Styling
 - **Primary Color**: The primary brand and action color for the entire application is **Tax Emerald Green (`#16A34A` / `emerald-600`)**. All primary buttons, active tabs, focus rings, status badges, and brand highlights MUST utilize this green accent palette (`#16A34A` primary, `#15803D` hover, `#DCFCE7` light background tint).
-- **Typography**: The primary font family for the application is **Poppins**. This is configured globally via CSS variables (`--font-sans`) and Tailwind CSS.
+- **Typography & Font Family**: The font family for the entire application is strictly **Poppins** (`font-sans`). Do **NOT** use `font-mono`, `font-serif`, or any secondary font family anywhere in the codebase.
+- **Font Weight Constraints**: The maximum allowed font-weight across any screen or component is **`700` (`font-bold`)**. Using `font-extrabold` (800) or `font-black` (900) is strictly prohibited.
+- **No Uppercase Rule**: Using `uppercase` CSS transformation or forced ALL-CAPS text styling for labels, headers, badges, or buttons is strictly prohibited across the entire application. Always use standard Title Case or Sentence case text.
 - **Consistency**: If the font family or primary color palette needs to be changed in the future, it **MUST** be updated globally in `index.css` and `index.html` rather than hardcoded in individual components.
 
 

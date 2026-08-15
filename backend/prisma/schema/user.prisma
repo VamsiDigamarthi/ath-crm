@@ -1,16 +1,25 @@
 enum Role {
   ADMIN
-  USER
+  DOC_MANAGER
+  DOC_TEAM_LEAD
+  DOC_AGENT
+  SALES_MANAGER
+  SALES_TEAM_LEAD
+  SALES_AGENT
+  FILE_OP_MANAGER
+  FILE_OP_TEAM_LEAD
+  FILE_OP_AGENT
+  TAXPAYER_USER
 }
 
 model User {
   id           String    @id @default(uuid())
   email        String?   @unique
   mobile       String?   @unique
-  password     String?   // Optional as we are using OTP-based login
   otp          String?
   otpExpiresAt DateTime?
-  role         Role      @default(USER)
+  role         Role      @default(TAXPAYER_USER)
+  isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

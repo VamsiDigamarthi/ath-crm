@@ -3,7 +3,7 @@ import { ProtectedRoute } from './guards/ProtectedRoute';
 import { PublicRoute } from './guards/PublicRoute';
 import { LoginScreen } from '@/features/auth/screens/LoginScreen';
 import { DashboardScreen } from '@/features/dashboard/screens/DashboardScreen';
-import { AdminScreen } from '@/features/dashboard/screens/AdminScreen';
+import { AdminDashboardScreen } from '@/features/admin/screens/AdminDashboardScreen';
 import { UnauthorizedScreen } from '@/features/auth/screens/UnauthorizedScreen';
 
 export const router = createBrowserRouter([
@@ -26,19 +26,21 @@ export const router = createBrowserRouter([
         path: '/dashboard',
         element: <DashboardScreen />,
       },
-      // Add more standard protected routes here (e.g., profile, settings)
     ],
   },
 
-  // 3. Role-Based Protected Routes (Accessible ONLY to specific roles)
+  // 3. Role-Based Protected Routes (Accessible ONLY to ADMIN role)
   {
     element: <ProtectedRoute allowedRoles={['ADMIN']} />,
     children: [
       {
         path: '/admin',
-        element: <AdminScreen />,
+        element: <AdminDashboardScreen />,
       },
-      // Add more admin-only routes here
+      {
+        path: '/admin/dashboard',
+        element: <AdminDashboardScreen />,
+      },
     ],
   },
 
@@ -49,7 +51,6 @@ export const router = createBrowserRouter([
   },
   {
     path: '*',
-    // Redirect unknown routes to dashboard if logged in, otherwise ProtectedRoute handles the redirect to login
-    element: <Navigate to="/dashboard" replace />,
+    element: <Navigate to="/login" replace />,
   },
 ]);

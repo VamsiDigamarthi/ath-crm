@@ -17,13 +17,13 @@ export const AuthBrandShowcase: React.FC = () => {
       {/* Brand Header */}
       <div className="relative z-10 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#16A34A] flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
+          <div className="w-10 h-10 rounded-xl bg-[#16A34A] flex items-center justify-center text-white">
             <FileSpreadsheet className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xl font-black tracking-tight text-white font-mono">TaxCRM</span>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className="text-xl font-bold tracking-tight text-white">TaxCRM</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 PRO ENTERPRISE
               </span>
             </div>
@@ -45,7 +45,7 @@ export const AuthBrandShowcase: React.FC = () => {
           Professional Tax Solution Suite
         </div>
 
-        <h1 className="text-3xl xl:text-4xl font-extrabold text-white tracking-tight leading-snug mb-4">
+        <h1 className="text-3xl xl:text-4xl font-bold text-white tracking-tight leading-snug mb-4">
           Accurate, CPA-Backed Tax Preparation & Filing.
         </h1>
 
@@ -72,7 +72,7 @@ export const AuthBrandShowcase: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             </div>
-            <div className="text-xl font-bold text-white font-mono">$48.5M+</div>
+            <div className="text-xl font-bold text-white">$48.5M+</div>
             <div className="text-[11px] text-slate-400">Refunds Processed</div>
           </div>
 
@@ -80,7 +80,7 @@ export const AuthBrandShowcase: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-2">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
             </div>
-            <div className="text-xl font-bold text-white font-mono">99.8%</div>
+            <div className="text-xl font-bold text-white">99.8%</div>
             <div className="text-[11px] text-slate-400">Compliance Rate</div>
           </div>
 
@@ -88,7 +88,7 @@ export const AuthBrandShowcase: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
             </div>
-            <div className="text-xl font-bold text-white font-mono">AES-256</div>
+            <div className="text-xl font-bold text-white">AES-256</div>
             <div className="text-[11px] text-slate-400">Encrypted Vault</div>
           </div>
         </div>

@@ -8,13 +8,15 @@ const apiClient = axios.create({
   },
 });
 
-// Response interceptor to handle errors globally
+// Response interceptor to handle backend success and error formats
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    const message = error.response?.data?.message || 'Something went wrong';
-    // You can integrate a toast library here later
-    return Promise.reject(new Error(message));
+    const backendError =
+      error.response?.data?.errors?.[0]?.message ||
+      error.response?.data?.message ||
+      'Something went wrong';
+    return Promise.reject(new Error(backendError));
   }
 );
 
