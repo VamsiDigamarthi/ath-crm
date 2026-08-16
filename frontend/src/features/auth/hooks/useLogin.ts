@@ -50,6 +50,8 @@ export const useLogin = () => {
         navigate('/documenter/manager');
       } else if (currentUser?.role === 'DOC_TEAM_LEAD' || currentUser?.role === 'DOC_AGENT') {
         navigate('/documenter/agent');
+      } else if (currentUser?.role === 'TAXPAYER_USER') {
+        navigate('/customer');
       } else {
         navigate('/dashboard');
       }

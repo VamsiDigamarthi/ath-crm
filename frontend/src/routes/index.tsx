@@ -19,6 +19,12 @@ import { DocumenterLayout } from '@/features/documenter/layouts/DocumenterLayout
 import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
 import { AdminSettingsScreen } from '@/features/admin/screens/AdminSettingsScreen';
+import { CustomerLayout } from '@/features/customer/layouts/CustomerLayout';
+import { CustomerDashboardScreen } from '@/features/customer/screens/CustomerDashboardScreen';
+import { CustomerOrganizerScreen } from '@/features/customer/screens/CustomerOrganizerScreen';
+import { CustomerDocumentsScreen } from '@/features/customer/screens/CustomerDocumentsScreen';
+import { CustomerBillingScreen } from '@/features/customer/screens/CustomerBillingScreen';
+import { CustomerExpertScreen } from '@/features/customer/screens/CustomerExpertScreen';
 import { UnauthorizedScreen } from '@/features/auth/screens/UnauthorizedScreen';
 
 export const router = createBrowserRouter([
@@ -32,7 +38,7 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  
+
   // 2. Protected Routes (Common / Fallback Dashboard)
   {
     element: <ProtectedRoute />,
@@ -136,7 +142,40 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // 5. Common & Fallback Routes
+  // 5. Customer / Taxpayer Lifetime Portal (/customer/*)
+  {
+    element: <ProtectedRoute allowedRoles={['TAXPAYER_USER', 'ADMIN']} />,
+    children: [
+      {
+        path: '/customer',
+        element: <CustomerLayout />,
+        children: [
+          {
+            index: true,
+            element: <CustomerDashboardScreen />,
+          },
+          {
+            path: 'organizer',
+            element: <CustomerOrganizerScreen />,
+          },
+          {
+            path: 'documents',
+            element: <CustomerDocumentsScreen />,
+          },
+          {
+            path: 'billing',
+            element: <CustomerBillingScreen />,
+          },
+          {
+            path: 'expert',
+            element: <CustomerExpertScreen />,
+          },
+        ],
+      },
+    ],
+  },
+
+  // 6. Common & Fallback Routes
   {
     path: '/unauthorized',
     element: <UnauthorizedScreen />,
