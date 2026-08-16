@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
@@ -11,7 +11,9 @@ import {
   PhoneOff,
   User,
   Globe,
-  MapPin
+  MapPin,
+  Clock,
+  History
 } from 'lucide-react';
 import type { DocumenterLeadItem, CallDisposition } from '../types/documenter.types';
 
@@ -39,9 +41,32 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
   const [callSummary, setCallSummary] = useState<string>('');
   const [callbackDate, setCallbackDate] = useState<string>('');
 
+  // Auto-bind / pre-fill previous call notes & callback time when modal opens
+  useEffect(() => {
+    if (lead && isOpen) {
+      const log = lead.lastCallLog || (lead as any).callLogs?.[0];
+      if (log) {
+        setSelectedDisposition((log.disposition as CallDisposition) || 'CONNECTED_INTERESTED');
+        setCallSummary(log.callSummary || '');
+        if (log.callbackScheduledAt) {
+          const d = new Date(log.callbackScheduledAt);
+          const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+          setCallbackDate(localIso);
+        } else {
+          setCallbackDate('');
+        }
+      } else {
+        setSelectedDisposition('CONNECTED_INTERESTED');
+        setCallSummary('');
+        setCallbackDate('');
+      }
+    }
+  }, [lead, isOpen]);
+
   if (!lead) return null;
 
   const customer = lead.customer;
+  const previousLog = lead.lastCallLog || (lead as any).callLogs?.[0];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,7 +155,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
               size="sm"
               onClick={handleSubmit}
               disabled={isLoading || (selectedDisposition === 'CONNECTED_CALLBACK' && !callbackDate)}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold px-4"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold px-4 cursor-pointer"
             >
               {isLoading ? 'Saving...' : 'Save Disposition & Update'}
             </Button>
@@ -175,6 +200,29 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
           </div>
         </div>
 
+        {/* Previous Call Log History Banner (Auto-detected if exists) */}
+        {previousLog && (
+          <div className="p-3.5 rounded-xl bg-purple-50/80 border border-purple-200 text-xs text-purple-900 space-y-1 shadow-2xs">
+            <div className="flex items-center justify-between font-bold text-[11px] text-purple-900">
+              <span className="flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5 text-purple-600" />
+                Previous Call Status: <strong>{previousLog.disposition?.replace(/_/g, ' ')}</strong>
+              </span>
+              {previousLog.callbackScheduledAt && (
+                <span className="flex items-center gap-1 text-amber-700">
+                  <Clock className="w-3 h-3 text-amber-600" />
+                  Scheduled: {new Date(previousLog.callbackScheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({new Date(previousLog.callbackScheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })})
+                </span>
+              )}
+            </div>
+            {previousLog.callSummary && (
+              <div className="text-[11px] text-purple-800 font-medium pl-5">
+                Notes: "{previousLog.callSummary}"
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Disposition Selector */}
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
@@ -190,7 +238,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
                   onClick={() => setSelectedDisposition(item.id)}
                   className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
                     isSelected
-                      ? item.activeClass + ' shadow-2xs font-semibold'
+                      ? item.activeClass + ' shadow-2xs font-semibold ring-1 ring-current'
                       : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
@@ -244,9 +292,16 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
 
         {/* Call Summary Notes */}
         <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-            Agent Call Notes & Summary
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Agent Call Notes & Summary
+            </label>
+            {previousLog?.callSummary && (
+              <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                Pre-filled from last call
+              </span>
+            )}
+          </div>
           <textarea
             rows={3}
             value={callSummary}

@@ -125,17 +125,10 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-200">
-      {/* 1. Executive Hero Header */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200/90 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* Header & Quick Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#16A34A] animate-pulse" />
-            <span className="text-xs font-bold text-slate-500">Live Executive Intelligence</span>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              Tax Season TY2025 Active
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Documenter Operations Command Center
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
@@ -145,14 +138,14 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Time Range Pills */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold">
+          <div className="flex items-center bg-white p-1 rounded-lg border border-slate-200 text-xs font-bold shadow-2xs">
             {(['TODAY', 'WEEK', 'SEASON'] as const).map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
                 className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
                   timeRange === range
-                    ? 'bg-white text-[#16A34A] shadow-2xs font-bold'
+                    ? 'bg-slate-100 text-[#16A34A] font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -166,7 +159,7 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
             size="sm"
             onClick={refreshData}
             disabled={isLoading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 h-9"
+            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Sync Live</span>
@@ -177,7 +170,7 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
               size="sm"
               onClick={handleAutoRoundRobin}
               disabled={isActionLoading}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs h-9"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
             >
               <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
               <span>Auto Split Pool ({stats.unassigned})</span>

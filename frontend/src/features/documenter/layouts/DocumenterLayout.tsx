@@ -41,9 +41,10 @@ export const DocumenterLayout: React.FC = () => {
         { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: '20', path: '/documenter/manager/queue' },
       ]
     : [
-        { id: 'assigned', label: 'My Assigned Leads', icon: PhoneCall, section: 'Calling Workspace', path: '/documenter/workspace' },
-        { id: 'callbacks', label: 'My Callbacks', icon: Clock, section: 'Calling Workspace', path: '/documenter/workspace' },
-        { id: 'prep', label: 'Tax Prep Active', icon: FileCheck2, section: 'Intake', path: '/documenter/workspace' },
+        { id: 'agent_dashboard', label: 'Calling Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
+        { id: 'agent_queue', label: 'My Calling Queue', icon: PhoneCall, section: 'Calling Workspace', badge: '20', path: '/documenter/agent/queue' },
+        { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', badge: '3', path: '/documenter/agent/callbacks' },
+        { id: 'agent_prep', label: 'Tax Prep Active', icon: FileCheck2, section: 'Intake Pipeline', badge: '4', path: '/documenter/agent/prep' },
       ];
 
   const currentPath = location.pathname;
@@ -51,7 +52,11 @@ export const DocumenterLayout: React.FC = () => {
     if (currentPath.includes('/documenter/manager/scorecards')) return 'scorecards';
     if (currentPath.includes('/documenter/manager/queue')) return 'caseload';
     if (currentPath.includes('/documenter/manager')) return 'dashboard';
-    return 'assigned';
+    if (currentPath.includes('/documenter/agent/queue')) return 'agent_queue';
+    if (currentPath.includes('/documenter/agent/callbacks')) return 'agent_callbacks';
+    if (currentPath.includes('/documenter/agent/prep')) return 'agent_prep';
+    if (currentPath.includes('/documenter/agent')) return 'agent_dashboard';
+    return 'agent_dashboard';
   };
 
   const activeId = getActiveId();
@@ -66,14 +71,17 @@ export const DocumenterLayout: React.FC = () => {
   const getRoleBadgeLabel = () => {
     if (user?.role === 'DOC_MANAGER') return 'Documenter Manager';
     if (user?.role === 'DOC_TEAM_LEAD') return 'Documenter Team Lead';
-    return 'Documenter Agent';
+    return 'Calling Agent';
   };
 
   const getHeaderTitle = () => {
     if (activeId === 'scorecards') return 'Calling Agent Scorecards & Workload Health';
     if (activeId === 'caseload') return 'Department Caseload Queue & Pipeline';
     if (activeId === 'dashboard') return 'Documenter Operations Command Center';
-    return 'Documenter Calling Workspace';
+    if (activeId === 'agent_queue') return 'My Active Calling Queue';
+    if (activeId === 'agent_callbacks') return 'Scheduled Callbacks & Follow-ups';
+    if (activeId === 'agent_prep') return 'Active W-2 Tax Preparation Intakes';
+    return 'Calling Agent Performance Hub';
   };
 
   return (
@@ -85,7 +93,7 @@ export const DocumenterLayout: React.FC = () => {
         accentColor="#16A34A"
         brand={{
           title: 'TaxCRM Engine',
-          subtitle: 'Documenter Dept',
+          subtitle: isManager ? 'Doc Manager Portal' : 'Calling Agent Portal',
           logo: (
             <div className="w-7 h-7 rounded-lg bg-[#16A34A] flex items-center justify-center text-white font-bold">
               <Headphones className="w-4 h-4 text-white" />
@@ -129,7 +137,7 @@ export const DocumenterLayout: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-red-600 text-xs flex items-center gap-2 transition-colors"
+              className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-red-600 text-xs flex items-center gap-2 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Logout</span>

@@ -10,12 +10,14 @@ import { documenterService } from '../services/documenter-service';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import toast from 'react-hot-toast';
 
-export const useDocumenterWorkspace = () => {
+export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   const { user } = useAuthStore();
   const isAgent = user?.role === 'DOC_AGENT';
 
   // 1. Filter & Pagination State
-  const [activeTab, setActiveTab] = useState<DocumenterTab>(isAgent ? 'MY_LEADS' : 'UNASSIGNED');
+  const [activeTab, setActiveTab] = useState<DocumenterTab>(
+    defaultTab || (isAgent ? 'ALL' : 'UNASSIGNED')
+  );
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [visaFilter, setVisaFilter] = useState<string>('ALL');

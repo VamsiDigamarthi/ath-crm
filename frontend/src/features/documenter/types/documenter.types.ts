@@ -63,6 +63,10 @@ export interface DocumenterStats {
   callbacks: number;
   total: number;
   totalDepartment?: number;
+  todayDials?: number;
+  todayConnected?: number;
+  contactRatePct?: number;
+  nextCallbackAt?: string | null;
 }
 
 export interface DocumenterAgentItem {

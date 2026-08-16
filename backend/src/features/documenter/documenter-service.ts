@@ -31,8 +31,8 @@ export class DocumenterService {
       where.taxYear = Number(taxYear);
     }
 
-    // Role-based restrictions: If regular DOC_AGENT, default to their leads unless searching ALL
-    if (currentUserRole === Role.DOC_AGENT && tab === 'MY_LEADS') {
+    // Role-based restrictions: If regular DOC_AGENT, strictly scope to their assigned leads
+    if (currentUserRole === Role.DOC_AGENT) {
       where.assignedDocAgentId = currentUserId;
     } else if (agentId) {
       where.assignedDocAgentId = agentId;
@@ -97,8 +97,29 @@ export class DocumenterService {
       };
     }
 
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const agentCallLogsWhere: any = {
+      createdAt: { gte: startOfToday },
+    };
+    if (currentUserRole === Role.DOC_AGENT && currentUserId) {
+      agentCallLogsWhere.agentId = currentUserId;
+    }
+
     // 2. Query data and counts in parallel
-    const [leads, totalItems, unassignedCount, outreachCount, prepCount, myLeadsCount, callbacksCount] = await Promise.all([
+    const [
+      leads, 
+      totalItems, 
+      unassignedCount, 
+      outreachCount, 
+      prepCount, 
+      myLeadsCount, 
+      callbacksCount,
+      todayDialsCount,
+      todayConnectedCount,
+      upcomingCallback
+    ] = await Promise.all([
       prisma.taxApplication.findMany({
         where,
         skip,
@@ -132,10 +153,16 @@ export class DocumenterService {
         },
       }),
       prisma.taxApplication.count({
-        where: { currentStage: ApplicationStage.DOC_OUTREACH },
+        where: {
+          currentStage: ApplicationStage.DOC_OUTREACH,
+          ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { assignedDocAgentId: currentUserId } : {}),
+        },
       }),
       prisma.taxApplication.count({
-        where: { currentStage: ApplicationStage.DOC_PREP },
+        where: {
+          currentStage: ApplicationStage.DOC_PREP,
+          ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { assignedDocAgentId: currentUserId } : {}),
+        },
       }),
       currentUserId
         ? prisma.taxApplication.count({
@@ -144,6 +171,7 @@ export class DocumenterService {
         : 0,
       prisma.taxApplication.count({
         where: {
+          ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { assignedDocAgentId: currentUserId } : {}),
           callLogs: {
             some: {
               callbackScheduledAt: { not: null },
@@ -151,12 +179,39 @@ export class DocumenterService {
           },
         },
       }),
+      prisma.callLog.count({
+        where: agentCallLogsWhere,
+      }),
+      prisma.callLog.count({
+        where: {
+          ...agentCallLogsWhere,
+          disposition: {
+            in: ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'],
+          },
+        },
+      }),
+      prisma.callLog.findFirst({
+        where: {
+          ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { agentId: currentUserId } : {}),
+          callbackScheduledAt: { gte: new Date() },
+        },
+        orderBy: { callbackScheduledAt: 'asc' },
+        select: { callbackScheduledAt: true },
+      }),
     ]);
 
     const totalPages = Math.ceil(totalItems / limit) || 1;
+    const contactRatePct = todayDialsCount > 0 
+      ? Number(((todayConnectedCount / todayDialsCount) * 100).toFixed(1)) 
+      : 0;
+
+    const mappedLeads = leads.map((app) => ({
+      ...app,
+      lastCallLog: app.callLogs?.[0] || null,
+    }));
 
     return {
-      leads,
+      leads: mappedLeads,
       pagination: {
         currentPage: page,
         totalPages,
@@ -170,6 +225,10 @@ export class DocumenterService {
         callbacks: callbacksCount,
         myLeads: myLeadsCount,
         totalDepartment: unassignedCount + outreachCount + prepCount,
+        todayDials: todayDialsCount,
+        todayConnected: todayConnectedCount,
+        contactRatePct,
+        nextCallbackAt: upcomingCallback?.callbackScheduledAt ? upcomingCallback.callbackScheduledAt.toISOString() : null,
       },
     };
   }

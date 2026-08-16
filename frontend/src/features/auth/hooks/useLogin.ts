@@ -49,7 +49,7 @@ export const useLogin = () => {
       } else if (currentUser?.role === 'DOC_MANAGER') {
         navigate('/documenter/manager');
       } else if (currentUser?.role === 'DOC_TEAM_LEAD' || currentUser?.role === 'DOC_AGENT') {
-        navigate('/documenter/workspace');
+        navigate('/documenter/agent');
       } else {
         navigate('/dashboard');
       }

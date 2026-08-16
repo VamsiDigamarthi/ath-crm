@@ -24,26 +24,17 @@ export const requestOtp = async (req: Request, res: Response) => {
     },
   });
 
-  if (existingUser) {
-    await prisma.user.update({
-      where: { id: existingUser.id },
-      data: {
-        otp,
-        otpExpiresAt,
-      },
-    });
-  } else {
-    await prisma.user.create({
-      data: {
-        email: cleanEmail || null,
-        mobile: cleanMobile || null,
-        otp,
-        otpExpiresAt,
-        role: "TAXPAYER_USER",
-        isActive: true,
-      },
-    });
+  if (!existingUser) {
+    throw new BadRequestError("Account not found. Only registered staff and authorized clients can log in.");
   }
+
+  await prisma.user.update({
+    where: { id: existingUser.id },
+    data: {
+      otp,
+      otpExpiresAt,
+    },
+  });
 
   // Send OTP via Email if email is provided
   if (cleanEmail) {

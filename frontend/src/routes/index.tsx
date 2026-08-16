@@ -11,6 +11,10 @@ import { DocumenterDepartmentScreen } from '@/features/documenter/screens/Docume
 import { DocumenterManagerDashboardScreen } from '@/features/documenter/screens/DocumenterManagerDashboardScreen';
 import { ManagerScorecardsScreen } from '@/features/documenter/screens/ManagerScorecardsScreen';
 import { ManagerQueueScreen } from '@/features/documenter/screens/ManagerQueueScreen';
+import { DocumenterAgentDashboardScreen } from '@/features/documenter/screens/DocumenterAgentDashboardScreen';
+import { DocumenterAgentQueueScreen } from '@/features/documenter/screens/DocumenterAgentQueueScreen';
+import { DocumenterAgentCallbacksScreen } from '@/features/documenter/screens/DocumenterAgentCallbacksScreen';
+import { DocumenterAgentPrepScreen } from '@/features/documenter/screens/DocumenterAgentPrepScreen';
 import { DocumenterLayout } from '@/features/documenter/layouts/DocumenterLayout';
 import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
@@ -95,8 +99,9 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/documenter/workspace" replace />,
+            element: <Navigate to="/documenter/agent" replace />,
           },
+          // Manager Routes
           {
             path: 'manager',
             element: <DocumenterManagerDashboardScreen />,
@@ -109,9 +114,22 @@ export const router = createBrowserRouter([
             path: 'manager/queue',
             element: <ManagerQueueScreen />,
           },
+          // Calling Agent Routes
           {
-            path: 'workspace',
-            element: <DocumenterDepartmentScreen />,
+            path: 'agent',
+            element: <DocumenterAgentDashboardScreen />,
+          },
+          {
+            path: 'agent/queue',
+            element: <DocumenterAgentQueueScreen />,
+          },
+          {
+            path: 'agent/callbacks',
+            element: <DocumenterAgentCallbacksScreen />,
+          },
+          {
+            path: 'agent/prep',
+            element: <DocumenterAgentPrepScreen />,
           },
         ],
       },
