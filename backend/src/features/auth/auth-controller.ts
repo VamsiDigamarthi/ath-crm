@@ -3,7 +3,6 @@ import { prisma } from "../../config/db.js";
 import { TokenManager } from "../../utils/token-manager.js";
 import { BadRequestError } from "../../errors/bad-request-error.js";
 import { SuccessHandler } from "../../utils/success-handler.js";
-
 import { EmailService } from "../../utils/email-service.js";
 
 export const requestOtp = async (req: Request, res: Response) => {
@@ -15,29 +14,43 @@ export const requestOtp = async (req: Request, res: Response) => {
     : Math.floor(100000 + Math.random() * 900000).toString();
   const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-  const query = email ? { email } : { mobile };
+  const cleanEmail = email ? email.trim().toLowerCase() : undefined;
+  const cleanMobile = mobile ? mobile.trim() : undefined;
 
-  await prisma.user.upsert({
-    where: query as any,
-    update: {
-      otp,
-      otpExpiresAt,
-    },
-    create: {
-      email,
-      mobile,
-      otp,
-      otpExpiresAt,
-      role: "TAXPAYER_USER",
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      isActive: true,
+      ...(cleanEmail ? { email: cleanEmail } : { mobile: cleanMobile }),
     },
   });
 
+  if (existingUser) {
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: {
+        otp,
+        otpExpiresAt,
+      },
+    });
+  } else {
+    await prisma.user.create({
+      data: {
+        email: cleanEmail || null,
+        mobile: cleanMobile || null,
+        otp,
+        otpExpiresAt,
+        role: "TAXPAYER_USER",
+        isActive: true,
+      },
+    });
+  }
+
   // Send OTP via Email if email is provided
-  if (email) {
-    await EmailService.sendOTP(email, otp);
-  } else if (mobile) {
+  if (cleanEmail) {
+    await EmailService.sendOTP(cleanEmail, otp);
+  } else if (cleanMobile) {
     // In a real app, you would use an SMSService here
-    console.log(`[SMS SIMULATION] OTP for ${mobile}: ${otp}`);
+    console.log(`[SMS SIMULATION] OTP for ${cleanMobile}: ${otp}`);
   }
 
   return SuccessHandler.handle(res, "OTP sent successfully");
@@ -46,12 +59,13 @@ export const requestOtp = async (req: Request, res: Response) => {
 export const verifyOtp = async (req: Request, res: Response) => {
   const { email, mobile, otp } = req.body;
 
-  const query = email ? { email } : { mobile };
+  const cleanEmail = email ? email.trim().toLowerCase() : undefined;
+  const cleanMobile = mobile ? mobile.trim() : undefined;
 
   const user = await prisma.user.findFirst({
     where: {
-      isDeleted: false,
-      ...(email ? { email } : { mobile }),
+      isActive: true,
+      ...(cleanEmail ? { email: cleanEmail } : { mobile: cleanMobile }),
     },
   });
 
@@ -68,7 +82,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
     id: user.id,
     email: user.email,
     mobile: user.mobile,
-    role: user.role
+    role: user.role,
   });
 
   const isProduction = process.env.NODE_ENV === "production";

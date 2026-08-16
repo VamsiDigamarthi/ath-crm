@@ -5,6 +5,7 @@ import { AdminStatsOverview } from '../components/AdminStatsOverview';
 import { AdminRecentActivity } from '../components/AdminRecentActivity';
 import { BulkLeadImportScreen } from './BulkLeadImportScreen';
 import { EmployeeManagementScreen } from './EmployeeManagementScreen';
+import { DocumenterDepartmentScreen } from '@/features/documenter/screens/DocumenterDepartmentScreen';
 import { FileSpreadsheet, ShieldCheck, LogOut, Bell } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 
@@ -106,6 +107,8 @@ export const AdminDashboardScreen: React.FC = () => {
             <EmployeeManagementScreen />
           ) : activeTab === 'prospects' ? (
             <BulkLeadImportScreen />
+          ) : activeTab === 'documenter' ? (
+            <DocumenterDepartmentScreen />
           ) : (
             <>
               {/* Welcome Hero Banner */}

@@ -1,0 +1,74 @@
+export type DocumenterTab = 
+  | 'UNASSIGNED'
+  | 'OUTREACH'
+  | 'PREP'
+  | 'MY_LEADS'
+  | 'CALLBACKS'
+  | 'ALL';
+
+export type CallDisposition = 
+  | 'CONNECTED_INTERESTED'
+  | 'CONNECTED_CALLBACK'
+  | 'CONNECTED_NOT_INTERESTED'
+  | 'NO_ANSWER_VOICEMAIL'
+  | 'INVALID_DISCONNECTED';
+
+export interface DocumenterLeadCustomer {
+  id: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  fullName: string;
+  email?: string | null;
+  phone: string;
+  ssnTin?: string | null;
+  dob?: string | null;
+  occupation?: string | null;
+  visaType?: string | null;
+  maritalStatus?: string | null;
+  addressLine1?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+}
+
+export interface DocumenterLeadItem extends Record<string, unknown> {
+  id: string;
+  customerId: string;
+  taxYear: number;
+  filingType: string;
+  currentStage: string;
+  customer: DocumenterLeadCustomer;
+  assignedDocAgent?: {
+    id: string;
+    email: string;
+    mobile: string;
+    role: string;
+  } | null;
+  lastCallLog?: {
+    disposition: string;
+    callSummary?: string | null;
+    callbackScheduledAt?: string | null;
+    createdAt: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumenterStats {
+  unassigned: number;
+  activeOutreach: number;
+  inPrep: number;
+  myLeads: number;
+  callbacks: number;
+  total: number;
+  totalDepartment?: number;
+}
+
+export interface DocumenterAgentItem {
+  id: string;
+  email: string;
+  mobile: string;
+  role: string;
+  activeLoad: number;
+}
