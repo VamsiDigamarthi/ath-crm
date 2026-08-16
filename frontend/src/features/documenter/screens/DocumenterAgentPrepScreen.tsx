@@ -1,94 +1,57 @@
-import React, { useMemo } from 'react';
+import React, { useState } from 'react';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
-import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import { TaxPrepDetailModal } from '../components/prep/TaxPrepDetailModal';
 import { Button } from '@/shared/components/Button';
+import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { 
   FileCheck2, 
-  ArrowRight, 
-  CheckCircle2, 
-  Clock, 
-  Upload, 
-  Send,
+  Send, 
+  RefreshCw, 
+  ArrowRight,
+  Calculator,
+  FileText,
   Sparkles,
-  RefreshCw,
-  Eye
+  DollarSign
 } from 'lucide-react';
-import toast from 'react-hot-toast';
-
-interface PrepItem {
-  id: string;
-  taxpayerName: string;
-  phone: string;
-  email: string;
-  visaType: string;
-  organizerProgress: number; // 0 to 100%
-  completedModules: string;
-  docsUploaded: number;
-  totalExpectedDocs: number;
-  estRefund: string;
-  stageStatus: 'ORGANIZER_IN_PROGRESS' | 'DOCS_PENDING' | 'READY_FOR_SALES';
-}
+import { renderVisaBadge } from '../columns/documenter-columns';
+import type { DocumenterLeadItem } from '../types/documenter.types';
 
 export const DocumenterAgentPrepScreen: React.FC = () => {
-  const { isLoading, refreshData } = useDocumenterWorkspace();
+  const {
+    leads,
+    stats,
+    isLoading,
+    refreshData,
+  } = useDocumenterWorkspace('PREP');
 
-  const prepList: PrepItem[] = useMemo(() => [
-    {
-      id: 'prep-1',
-      taxpayerName: 'Siddharth Varma',
-      phone: '+1 (555) 789-0123',
-      email: 'siddharth.varma@gmail.com',
-      visaType: 'H-1B',
-      organizerProgress: 100,
-      completedModules: '9 of 9 Modules Completed',
-      docsUploaded: 4,
-      totalExpectedDocs: 4,
-      estRefund: '$2,840 Fed • $680 State',
-      stageStatus: 'READY_FOR_SALES',
-    },
-    {
-      id: 'prep-2',
-      taxpayerName: 'Divya Reddy',
-      phone: '+1 (555) 890-1234',
-      email: 'divya.reddy@tech.com',
-      visaType: 'F-1 OPT',
-      organizerProgress: 78,
-      completedModules: '7 of 9 Modules Completed',
-      docsUploaded: 2,
-      totalExpectedDocs: 3,
-      estRefund: '$1,420 Fed • Non-Resident',
-      stageStatus: 'DOCS_PENDING',
-    },
-    {
-      id: 'prep-3',
-      taxpayerName: 'Karthik Rao',
-      phone: '+1 (555) 901-2345',
-      email: 'karthik.rao@cloud.io',
-      visaType: 'L-1',
-      organizerProgress: 55,
-      completedModules: '5 of 9 Modules Completed',
-      docsUploaded: 1,
-      totalExpectedDocs: 4,
-      estRefund: 'Pending W-2 upload',
-      stageStatus: 'ORGANIZER_IN_PROGRESS',
-    },
-    {
-      id: 'prep-4',
-      taxpayerName: 'Sneha Patel',
-      phone: '+1 (555) 012-3456',
-      email: 'sneha.patel@global.com',
-      visaType: 'H-1B',
-      organizerProgress: 100,
-      completedModules: '9 of 9 Modules Completed',
-      docsUploaded: 5,
-      totalExpectedDocs: 5,
-      estRefund: '$3,150 Fed • $890 State',
-      stageStatus: 'READY_FOR_SALES',
-    },
-  ], []);
+  const [selectedLeadForPrep, setSelectedLeadForPrep] = useState<DocumenterLeadItem | null>(null);
+  const [isPrepModalOpen, setIsPrepModalOpen] = useState<boolean>(false);
 
-  const handleSendToSales = (taxpayerName: string) => {
-    toast.success(`Draft computation for ${taxpayerName} submitted to Sales Pitch Queue!`);
+  const prepLeads = leads.filter((l) => l.currentStage === 'DOC_PREP');
+
+  // Real count of leads with prepared draft calculations
+  const readyForSalesCount = React.useMemo(() => {
+    return prepLeads.filter((l) => Boolean((l.taxDraftSummary as any)?.estimatedFedRefund)).length;
+  }, [prepLeads]);
+
+  // Real average calculated ONLY from saved draft summaries
+  const avgEstimatedRefund = React.useMemo(() => {
+    const calculatedLeads = prepLeads.filter((l) => typeof (l.taxDraftSummary as any)?.estimatedFedRefund === 'number');
+    if (calculatedLeads.length === 0) return 0;
+    const total = calculatedLeads.reduce((acc, lead) => {
+      return acc + Number((lead.taxDraftSummary as any).estimatedFedRefund);
+    }, 0);
+    return Math.round(total / calculatedLeads.length);
+  }, [prepLeads]);
+
+  const handleOpenPrep = (lead: DocumenterLeadItem) => {
+    setSelectedLeadForPrep(lead);
+    setIsPrepModalOpen(true);
+  };
+
+  const handleClosePrep = () => {
+    setSelectedLeadForPrep(null);
+    setIsPrepModalOpen(false);
   };
 
   return (
@@ -97,10 +60,10 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Active W-2 Tax Preparation Intakes
+            Active W-2 Tax Preparation & Client Intakes
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Review uploaded W-2/1099 tax forms, verify 9-module organizer completions, compute tax estimates, and move to Sales.
+            Review taxpayer wage forms, compute preliminary tax refunds, and transfer qualified files to the Sales Pitch Queue.
           </p>
         </div>
 
@@ -110,140 +73,173 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
             size="sm"
             onClick={refreshData}
             disabled={isLoading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5"
+            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            <span>Refresh</span>
           </Button>
         </div>
       </div>
 
       {/* 2. Top Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center font-bold">
-            <FileCheck2 className="w-5 h-5" />
+        {/* Card 1: Active Intakes */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">
+              Active Tax Prep Intakes
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 font-bold">
+              <FileCheck2 className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">4 Clients in Prep</div>
-            <div className="text-xs text-slate-500 font-medium">Currently reviewing files</div>
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {stats.inPrep || prepLeads.length}
+            </div>
+            <div className="text-xs text-purple-600 font-medium mt-1">
+              Qualified taxpayers ready for computation
+            </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold">
-            <CheckCircle2 className="w-5 h-5" />
+        {/* Card 2: Ready for Sales */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">
+              Ready for Sales Pitch
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100 font-bold">
+              <Send className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">2 Ready for Sales</div>
-            <div className="text-xs text-slate-500 font-medium">100% complete organizer drafts</div>
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {readyForSalesCount}
+            </div>
+            <div className="text-xs text-[#16A34A] font-medium mt-1 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-[#16A34A]" />
+              <span>{readyForSalesCount > 0 ? `${readyForSalesCount} draft computations ready` : 'Awaiting computation'}</span>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold">
-            <Upload className="w-5 h-5" />
+        {/* Card 3: Avg Estimated Refund */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">
+              Avg Estimated Federal Refund
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 font-bold">
+              <DollarSign className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <div className="text-xl font-bold text-slate-900">12 Documents Verified</div>
-            <div className="text-xs text-slate-500 font-medium">W-2, 1099-INT, 1098 Mortgage</div>
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {avgEstimatedRefund > 0 ? `+$${avgEstimatedRefund.toLocaleString()}` : '$0'}
+            </div>
+            <div className="text-xs text-blue-600 font-medium mt-1">
+              {avgEstimatedRefund > 0 ? 'Computed from saved drafts' : 'Pending agent calculation'}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 3. Prep Intakes Cards List */}
-      <div className="space-y-4">
-        {prepList.map((item) => (
-          <div
-            key={item.id}
-            className={`p-5 rounded-xl border transition-all bg-white flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs ${
-              item.stageStatus === 'READY_FOR_SALES'
-                ? 'border-emerald-300 ring-2 ring-emerald-500/20 bg-emerald-50/10'
-                : 'border-slate-200/90 hover:border-slate-300'
-            }`}
-          >
-            <div className="space-y-2.5 flex-1">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="text-base font-bold text-slate-900">{item.taxpayerName}</span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {item.visaType}
-                </span>
-                {item.stageStatus === 'READY_FOR_SALES' ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    Ready for Sales Handoff
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    Intake In-Progress
-                  </span>
-                )}
-              </div>
+      {/* 3. Real Active Preps List */}
+      {prepLeads.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-xs">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto mb-3 border border-purple-100 font-bold">
+            <FileCheck2 className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-slate-900">No Active Tax Preps</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+            When you call an outreach prospect and mark them as <strong>Connected - Interested</strong>, their file will automatically move here for tax calculation.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {prepLeads.map((lead) => {
+            const customer = lead.customer;
+            const draft = lead.taxDraftSummary as any;
+            const hasDraft = typeof draft?.estimatedFedRefund === 'number';
+            const locationStr = customer?.city && customer?.state 
+              ? `${customer.city}, ${customer.state}` 
+              : (customer?.state || customer?.city || 'US');
 
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 font-medium">
-                <span>Phone: <strong className="text-slate-900">{item.phone}</strong></span>
-                <AppCopyButton text={item.phone} size="sm" />
-                <span className="text-slate-300">•</span>
-                <span>Email: <strong className="text-slate-900">{item.email}</strong></span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70">
-                  <div className="text-[11px] text-slate-500 font-medium">9-Module Organizer:</div>
-                  <div className="font-bold text-slate-900 mt-0.5 flex items-center justify-between">
-                    <span>{item.completedModules}</span>
-                    <span className="text-[#16A34A]">{item.organizerProgress}%</span>
+            return (
+              <div
+                key={lead.id}
+                className="p-5 rounded-xl border border-slate-200 bg-white shadow-xs hover:border-[#16A34A]/60 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="space-y-2.5 flex-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="text-base font-bold text-slate-900">
+                      {customer?.fullName || `${customer?.firstName} ${customer?.lastName}`}
+                    </span>
+                    {renderVisaBadge(customer?.visaType)}
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#16A34A] text-white">
+                      Stage: DOC_PREP
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                      TY {lead.taxYear}
+                    </span>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1.5 overflow-hidden">
-                    <div className="bg-[#16A34A] h-full rounded-full" style={{ width: `${item.organizerProgress}%` }} />
+
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 font-medium">
+                    <span>Phone: <strong className="text-slate-900">{customer?.phone}</strong></span>
+                    {customer?.phone && <AppCopyButton text={customer.phone} size="sm" />}
+                    <span className="text-slate-300">•</span>
+                    <span>Email: <strong className="text-slate-900">{customer?.email || 'No email'}</strong></span>
+                    {customer?.email && <AppCopyButton text={customer.email} size="sm" />}
+                    <span className="text-slate-300">•</span>
+                    <span>Location: <strong className="text-slate-900">{locationStr}</strong></span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
+                    {hasDraft ? (
+                      <div className="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold flex items-center gap-1.5">
+                        <Calculator className="w-3.5 h-3.5 text-[#16A34A]" />
+                        <span>Est. Fed Refund: <strong className="text-emerald-700 font-bold">+${draft.estimatedFedRefund.toLocaleString()}</strong></span>
+                      </div>
+                    ) : (
+                      <div className="px-3 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 font-semibold flex items-center gap-1.5">
+                        <Calculator className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Draft Refund: <strong>Pending Calculation</strong></span>
+                      </div>
+                    )}
+                    <div className="px-3 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-semibold flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Documents: <strong>Awaiting Client Upload</strong></span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/70">
-                  <div className="text-[11px] text-slate-500 font-medium">Uploaded Documents:</div>
-                  <div className="font-bold text-slate-900 mt-0.5">
-                    {item.docsUploaded} of {item.totalExpectedDocs} Verified
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-1">W-2, 1099, ID Attachments</div>
-                </div>
-
-                <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-200/80">
-                  <div className="text-[11px] text-emerald-800 font-medium">Estimated Draft Refund:</div>
-                  <div className="font-bold text-emerald-950 mt-0.5 text-xs sm:text-sm">
-                    {item.estRefund}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col lg:items-end justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>View Forms</span>
-                </Button>
-
-                {item.stageStatus === 'READY_FOR_SALES' && (
+                <div className="flex items-center gap-2 shrink-0">
                   <Button
-                    size="sm"
-                    onClick={() => handleSendToSales(item.taxpayerName)}
-                    className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                    size="md"
+                    onClick={() => handleOpenPrep(lead)}
+                    className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-2 shadow-2xs cursor-pointer px-4"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Send to Sales</span>
+                    <Calculator className="w-4 h-4" />
+                    <span>Open Tax Prep & Send to Sales</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
-                )}
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tax Prep Workspace Modal */}
+      <TaxPrepDetailModal
+        isOpen={isPrepModalOpen}
+        onClose={handleClosePrep}
+        lead={selectedLeadForPrep}
+        onSuccessHandoff={() => {
+          refreshData();
+        }}
+      />
     </div>
   );
 };

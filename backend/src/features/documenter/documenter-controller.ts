@@ -123,3 +123,52 @@ export const logCallDisposition = async (
     next(error);
   }
 };
+
+export const saveTaxDraft = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { applicationId, taxDraftSummary } = req.body;
+
+    const result = await DocumenterService.saveTaxDraft({
+      applicationId,
+      taxDraftSummary,
+      agentUserId: req.currentUser?.id || 'SYSTEM',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Draft tax computation saved successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendToSales = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { applicationId, taxDraftSummary, remarks } = req.body;
+
+    const result = await DocumenterService.sendToSales({
+      applicationId,
+      taxDraftSummary,
+      remarks,
+      agentUserId: req.currentUser?.id || 'SYSTEM',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Tax application submitted to Sales Pitch Queue successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

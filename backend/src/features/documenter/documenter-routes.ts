@@ -1,14 +1,16 @@
-import { Router } from 'express';
 import {
   getDocumenterLeads,
   getDocumenterAgents,
   assignLeadsBulk,
   autoRoundRobinAssign,
   logCallDisposition,
+  saveTaxDraft,
+  sendToSales,
 } from './documenter-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
 import { Role } from '../../types/index.js';
+import { Router } from 'express';
 
 const router = Router();
 
@@ -57,6 +59,22 @@ router.post(
   requireAuth,
   authorize(...DOCUMENTER_ROLES),
   logCallDisposition
+);
+
+// 6. Save draft tax calculation
+router.post(
+  '/tax-draft',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  saveTaxDraft
+);
+
+// 7. Send lead to Sales Pitch Queue (Handoff)
+router.post(
+  '/send-to-sales',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  sendToSales
 );
 
 export { router as documenterRouter };

@@ -205,6 +205,93 @@ export class DocumenterService {
       ? Number(((todayConnectedCount / todayDialsCount) * 100).toFixed(1)) 
       : 0;
 
+    // Query actual call logs created this week for real charts
+    const startOfWeek = new Date();
+    startOfWeek.setDate(startOfWeek.getDate() - 6);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const recentCallLogs = await prisma.callLog.findMany({
+      where: {
+        ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { agentId: currentUserId } : {}),
+        createdAt: { gte: startOfWeek },
+      },
+      select: {
+        id: true,
+        disposition: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Generate active hourly timeline dynamically:
+    // 1. Always include hours where calls actually happened today
+    // 2. Plus standard workday hours (9 AM - 5 PM)
+    const activeHoursSet = new Set<number>([9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    
+    recentCallLogs.forEach((log) => {
+      const logDate = new Date(log.createdAt);
+      if (logDate >= startOfToday) {
+        activeHoursSet.add(logDate.getHours());
+      }
+    });
+
+    const sortedHours = Array.from(activeHoursSet).sort((a, b) => a - b);
+
+    const formatHourLabel = (hr: number): string => {
+      const period = hr >= 12 ? 'PM' : 'AM';
+      const displayHour = hr % 12 === 0 ? 12 : hr % 12;
+      return `${displayHour} ${period}`;
+    };
+
+    const hoursMap: Record<number, { hour: string; dials: number; connected: number }> = {};
+    sortedHours.forEach((hr) => {
+      hoursMap[hr] = { hour: formatHourLabel(hr), dials: 0, connected: 0 };
+    });
+
+    const connectedDispositions = ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'];
+
+    recentCallLogs.forEach((log) => {
+      const logDate = new Date(log.createdAt);
+      if (logDate >= startOfToday) {
+        const hr = logDate.getHours();
+        if (hoursMap[hr]) {
+          hoursMap[hr].dials += 1;
+          if (connectedDispositions.includes(log.disposition)) {
+            hoursMap[hr].connected += 1;
+          }
+        }
+      }
+    });
+
+    const hourlyBreakdown = Object.values(hoursMap);
+
+    // Compute real daily buckets for last 5 days
+    const daysMap: Record<string, { day: string; dials: number; connected: number; prep: number }> = {};
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dayKey = i === 0 ? 'Today' : dayNames[d.getDay()];
+      const dateStr = d.toISOString().slice(0, 10);
+      daysMap[dateStr] = { day: dayKey, dials: 0, connected: 0, prep: 0 };
+    }
+
+    recentCallLogs.forEach((log) => {
+      const dateStr = new Date(log.createdAt).toISOString().slice(0, 10);
+      if (daysMap[dateStr]) {
+        daysMap[dateStr].dials += 1;
+        if (connectedDispositions.includes(log.disposition)) {
+          daysMap[dateStr].connected += 1;
+        }
+        if (log.disposition === 'CONNECTED_INTERESTED') {
+          daysMap[dateStr].prep += 1;
+        }
+      }
+    });
+
+    const weeklyBreakdown = Object.values(daysMap);
+
     const mappedLeads = leads.map((app) => ({
       ...app,
       lastCallLog: app.callLogs?.[0] || null,
@@ -229,6 +316,8 @@ export class DocumenterService {
         todayConnected: todayConnectedCount,
         contactRatePct,
         nextCallbackAt: upcomingCallback?.callbackScheduledAt ? upcomingCallback.callbackScheduledAt.toISOString() : null,
+        hourlyBreakdown,
+        weeklyBreakdown,
       },
     };
   }
@@ -530,6 +619,84 @@ export class DocumenterService {
       }
 
       return results;
+    });
+  }
+
+  /**
+   * Save / Update draft tax computation summary for a lead in DOC_PREP
+   */
+  public static async saveTaxDraft(options: {
+    applicationId: string;
+    taxDraftSummary: any;
+    agentUserId: string;
+  }) {
+    const { applicationId, taxDraftSummary, agentUserId } = options;
+
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const updated = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary,
+        assignedDocAgentId: app.assignedDocAgentId || agentUserId,
+      },
+      include: {
+        customer: true,
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Transition lead from DOC_PREP to SALES_PITCH_QUEUE (Send to Sales)
+   */
+  public static async sendToSales(options: {
+    applicationId: string;
+    taxDraftSummary?: any;
+    remarks?: string;
+    agentUserId: string;
+  }) {
+    const { applicationId, taxDraftSummary, remarks, agentUserId } = options;
+
+    return await prisma.$transaction(async (tx) => {
+      const app = await tx.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: { customer: true },
+      });
+
+      if (!app) {
+        throw new Error('Application not found');
+      }
+
+      const updated = await tx.taxApplication.update({
+        where: { id: applicationId },
+        data: {
+          currentStage: ApplicationStage.SALES_PITCH_QUEUE,
+          ...(taxDraftSummary ? { taxDraftSummary } : {}),
+        },
+        include: {
+          customer: true,
+        },
+      });
+
+      await tx.stageHistory.create({
+        data: {
+          applicationId: app.id,
+          fromStage: app.currentStage,
+          toStage: ApplicationStage.SALES_PITCH_QUEUE,
+          movedByUserId: agentUserId,
+          remarks: remarks || `Tax draft completed. Sent to Sales Pitch Queue for fee quotation.`,
+        },
+      });
+
+      return updated;
     });
   }
 }

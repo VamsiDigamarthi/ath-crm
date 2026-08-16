@@ -80,4 +80,25 @@ export const documenterService = {
   }): Promise<any> {
     return apiClient.post('/documenter/dispositions', payload);
   },
+
+  /**
+   * Save / update draft tax computation
+   */
+  async saveTaxDraft(payload: {
+    applicationId: string;
+    taxDraftSummary: any;
+  }): Promise<any> {
+    return apiClient.post('/documenter/tax-draft', payload);
+  },
+
+  /**
+   * Transition lead to Sales Pitch Queue (Handoff to Sales)
+   */
+  async sendToSales(payload: {
+    applicationId: string;
+    taxDraftSummary?: any;
+    remarks?: string;
+  }): Promise<any> {
+    return apiClient.post('/documenter/send-to-sales', payload);
+  },
 };

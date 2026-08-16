@@ -67,6 +67,8 @@ export interface DocumenterStats {
   todayConnected?: number;
   contactRatePct?: number;
   nextCallbackAt?: string | null;
+  hourlyBreakdown?: Array<{ hour: string; dials: number; connected: number }>;
+  weeklyBreakdown?: Array<{ day: string; dials: number; connected: number; prep: number }>;
 }
 
 export interface DocumenterAgentItem {
