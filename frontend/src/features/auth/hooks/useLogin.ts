@@ -46,6 +46,10 @@ export const useLogin = () => {
       const currentUser = useAuthStore.getState().user;
       if (currentUser?.role === 'ADMIN') {
         navigate('/admin/dashboard');
+      } else if (currentUser?.role === 'DOC_MANAGER') {
+        navigate('/documenter/manager');
+      } else if (currentUser?.role === 'DOC_TEAM_LEAD' || currentUser?.role === 'DOC_AGENT') {
+        navigate('/documenter/workspace');
       } else {
         navigate('/dashboard');
       }
