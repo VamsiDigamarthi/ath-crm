@@ -140,7 +140,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
     >
       <div className="space-y-5">
         {/* Taxpayer Contact Card */}
-        <div className="p-4 rounded-2xl bg-slate-900 text-white border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-slate-950/20">
+        <div className="p-4 rounded-xl bg-slate-900 text-white border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-slate-950/20">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-[#16A34A] border border-emerald-500/30 flex items-center justify-center font-bold text-sm">
               <User className="w-5 h-5 text-emerald-400" />

@@ -29,7 +29,7 @@ export const AppEmptyState: React.FC<AppEmptyStateProps> = ({
 }) => {
   return (
     <div className={cn(
-      "w-full flex flex-col items-center justify-center text-center p-8 sm:p-12 bg-white rounded-2xl border border-dashed border-gray-200/80 shadow-sm transition-all duration-300 hover:border-gray-300",
+      "w-full flex flex-col items-center justify-center text-center p-8 sm:p-12 bg-white rounded-xl border border-dashed border-gray-200/80 shadow-sm transition-all duration-300 hover:border-gray-300",
       className
     )}>
       {/* Animated Pulsing Icon Ring */}

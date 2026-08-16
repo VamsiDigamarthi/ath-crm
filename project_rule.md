@@ -68,6 +68,7 @@
 - **Typography & Font Family**: The font family for the entire application is strictly **Poppins** (`font-sans`). Do **NOT** use `font-mono`, `font-serif`, or any secondary font family anywhere in the codebase.
 - **Font Weight Constraints**: The maximum allowed font-weight across any screen or component is **`700` (`font-bold`)**. Using `font-extrabold` (800) or `font-black` (900) is strictly prohibited.
 - **No Uppercase Rule**: Using `uppercase` CSS transformation or forced ALL-CAPS text styling for labels, headers, badges, or buttons is strictly prohibited across the entire application. Always use standard Title Case or Sentence case text.
+- **Maximum Border Radius Constraint**: The maximum allowed border-radius across the entire application for cards, tables, hero banners, filter containers, dialogs, drawers, and modal containers is strictly **`rounded-xl` (`12px` / `0.75rem`)**. Using `rounded-2xl`, `rounded-3xl`, or custom larger radii on cards, panels, and layouts is strictly prohibited (only small pills and circular avatars may use `rounded-full`).
 - **Consistency**: If the font family or primary color palette needs to be changed in the future, it **MUST** be updated globally in `index.css` and `index.html` rather than hardcoded in individual components.
 
 

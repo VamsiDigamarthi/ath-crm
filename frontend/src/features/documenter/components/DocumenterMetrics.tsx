@@ -16,7 +16,7 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. Unassigned Leads Card with Quick Action Button */}
-      <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
+      <div className="relative overflow-hidden rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
             Unassigned Pool
@@ -47,7 +47,7 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
       </div>
 
       {/* 2. Active Outreach Card */}
-      <div className="rounded-2xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
+      <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
             In Outreach
@@ -65,7 +65,7 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
       </div>
 
       {/* 3. In Tax Prep Card */}
-      <div className="rounded-2xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
+      <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
             In Tax Prep
@@ -83,7 +83,7 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
       </div>
 
       {/* 4. Callbacks Scheduled Card */}
-      <div className="rounded-2xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
+      <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
             Callbacks Due

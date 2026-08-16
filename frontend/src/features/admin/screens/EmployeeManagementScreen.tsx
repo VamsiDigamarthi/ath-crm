@@ -5,7 +5,7 @@ import { EmployeeTable } from '../components/EmployeeTable';
 import { AddEmployeeDrawer } from '../components/AddEmployeeDrawer';
 import { BulkEmployeeImportModal } from '../components/BulkEmployeeImportModal';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
-import { Users, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 
 export const EmployeeManagementScreen: React.FC = () => {
@@ -40,35 +40,27 @@ export const EmployeeManagementScreen: React.FC = () => {
   } = useEmployeeManagement();
 
   return (
-    <div className="space-y-6 pb-12 font-sans">
-      {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-[#16A34A] to-emerald-700 p-6 sm:p-7 text-white border border-emerald-600 shadow-sm">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-950 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200 mb-3">
-              <Users className="w-3.5 h-3.5 text-[#16A34A]" />
-              Human Resources & Access Governance
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              Staff & Team Directory
-            </h2>
-            <p className="text-xs sm:text-sm text-emerald-50 mt-1.5 leading-relaxed">
-              Manage employee credentials, department roles, and active operational status across Documenters, Sales Executives, and CPA File Operators.
-            </p>
-          </div>
+    <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+      {/* Header & Quick Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            Staff & Team Directory
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
+            Manage employee credentials, department roles, and active operational status across Documenters, Sales Executives, and CPA File Operators.
+          </p>
+        </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={handleOpenAddDrawer}
-              className="bg-white/10 hover:bg-white/20 border-white/30 text-white shadow-sm text-xs font-semibold"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Quick Add Staff
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={handleOpenAddDrawer}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Add Staff Member
+          </Button>
         </div>
       </div>
 

@@ -58,7 +58,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   return (
     <div className="space-y-4">
       {/* Search & Actions Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
         {/* Left: Search & Department Tabs */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
           <div className="w-full sm:w-72">

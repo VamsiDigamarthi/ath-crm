@@ -21,7 +21,7 @@ export const FloatingActionBar: React.FC<FloatingActionBarProps> = ({
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-5 duration-200">
-      <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/95 backdrop-blur-md text-white border border-slate-700 shadow-2xl shadow-slate-950/40">
+      <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-900/95 backdrop-blur-md text-white border border-slate-700 shadow-2xl shadow-slate-950/40">
         <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
           <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-[#16A34A] border border-emerald-500/30 flex items-center justify-center font-bold text-xs">
             <CheckSquare className="w-4 h-4 text-emerald-400" />

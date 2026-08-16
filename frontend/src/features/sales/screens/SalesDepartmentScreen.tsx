@@ -16,7 +16,7 @@ export const SalesDepartmentScreen: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-4">
+        <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center font-bold">
             <DollarSign className="w-6 h-6" />
           </div>
@@ -26,7 +26,7 @@ export const SalesDepartmentScreen: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-4">
+        <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center font-bold">
             <Send className="w-6 h-6" />
           </div>
@@ -36,7 +36,7 @@ export const SalesDepartmentScreen: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center gap-4">
+        <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold">
             <CheckCircle2 className="w-6 h-6" />
           </div>
@@ -47,8 +47,8 @@ export const SalesDepartmentScreen: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-12 text-center rounded-2xl bg-white border border-slate-200 shadow-xs">
-        <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto mb-3">
+      <div className="p-12 text-center rounded-xl bg-white border border-slate-200 shadow-xs">
+        <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto mb-3">
           <FileText className="w-6 h-6" />
         </div>
         <h4 className="text-sm font-bold text-slate-800">Sales Queue Ready</h4>

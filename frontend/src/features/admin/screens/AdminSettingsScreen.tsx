@@ -16,7 +16,7 @@ export const AdminSettingsScreen: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+        <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold">
               <Database className="w-5 h-5" />
@@ -34,7 +34,7 @@ export const AdminSettingsScreen: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+        <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold">
               <Shield className="w-5 h-5" />

@@ -7,16 +7,16 @@ import { CallOutreachModal } from '../components/CallOutreachModal';
 import { getDocumenterColumns } from '../columns/documenter-columns';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
-import { 
-  Users, 
-  PhoneCall, 
-  FileCheck2, 
-  Clock, 
-  UserCheck, 
-  ListFilter, 
-  Zap, 
-  RefreshCw, 
-  Globe 
+import {
+  Users,
+  PhoneCall,
+  FileCheck2,
+  Clock,
+  UserCheck,
+  ListFilter,
+  Zap,
+  RefreshCw,
+  Globe
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
@@ -68,18 +68,18 @@ export const DocumenterDepartmentScreen: React.FC = () => {
   // Role-specific Tabs Configuration
   const tabs = isAgent
     ? [
-        { id: 'MY_LEADS' as DocumenterTab, label: 'My Assigned Leads', count: stats.myLeads, icon: UserCheck },
-        { id: 'CALLBACKS' as DocumenterTab, label: 'My Callbacks', count: stats.callbacks, icon: Clock },
-        { id: 'PREP' as DocumenterTab, label: 'Tax Prep Active', count: stats.inPrep, icon: FileCheck2 },
-        { id: 'ALL' as DocumenterTab, label: 'All My Leads', count: stats.total, icon: ListFilter },
-      ]
+      { id: 'MY_LEADS' as DocumenterTab, label: 'My Assigned Leads', count: stats.myLeads, icon: UserCheck },
+      { id: 'CALLBACKS' as DocumenterTab, label: 'My Callbacks', count: stats.callbacks, icon: Clock },
+      { id: 'PREP' as DocumenterTab, label: 'Tax Prep Active', count: stats.inPrep, icon: FileCheck2 },
+      { id: 'ALL' as DocumenterTab, label: 'All My Leads', count: stats.total, icon: ListFilter },
+    ]
     : [
-        { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
-        { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
-        { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
-        { id: 'CALLBACKS' as DocumenterTab, label: 'Scheduled Callbacks', count: stats.callbacks, icon: Clock },
-        { id: 'ALL' as DocumenterTab, label: 'All Department Leads', count: stats.totalDepartment || totalItems, icon: ListFilter },
-      ];
+      { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
+      { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
+      { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
+      { id: 'CALLBACKS' as DocumenterTab, label: 'Scheduled Callbacks', count: stats.callbacks, icon: Clock },
+      { id: 'ALL' as DocumenterTab, label: 'All Department Leads', count: stats.totalDepartment || totalItems, icon: ListFilter },
+    ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
@@ -129,8 +129,8 @@ export const DocumenterDepartmentScreen: React.FC = () => {
         isDistributing={isActionLoading}
       />
 
-      {/* Main Workspace Card */}
-      <div className="rounded-2xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
+      {/* 1. Tabs & Search Bar Card */}
+      <div className="rounded-xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
         {/* Navigation Tabs Header */}
         <div className="border-b border-slate-200 px-6 pt-3 flex items-center justify-between overflow-x-auto">
           <div className="flex items-center gap-1 sm:gap-2">
@@ -141,20 +141,18 @@ export const DocumenterDepartmentScreen: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap cursor-pointer ${
-                    isActive
+                  className={`flex items-center gap-2 px-3.5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap cursor-pointer ${isActive
                       ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/40 rounded-t-lg'
                       : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <Icon className={`w-4 h-4 ${isActive ? 'text-[#16A34A]' : 'text-slate-400'}`} />
                   <span>{tab.label}</span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      isActive
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive
                         ? 'bg-[#16A34A] text-white'
                         : 'bg-slate-100 text-slate-600'
-                    }`}
+                      }`}
                   >
                     {tab.count}
                   </span>
@@ -165,7 +163,7 @@ export const DocumenterDepartmentScreen: React.FC = () => {
         </div>
 
         {/* Filter & Search Bar */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="w-full sm:w-80">
             <AppSearchInput
               value={searchQuery}
@@ -207,34 +205,34 @@ export const DocumenterDepartmentScreen: React.FC = () => {
             )}
           </div>
         </div>
-
-        {/* Lead Table */}
-        <div className="p-2 sm:p-4">
-          <AppTable<DocumenterLeadItem>
-            data={leads}
-            columns={columns}
-            selectable={!isAgent}
-            onSelectionChange={(selected) => setSelectedRows(selected)}
-            isLoading={isLoading}
-            emptyText={
-              activeTab === 'UNASSIGNED'
-                ? 'All leads have been distributed to staff, or no new bulk leads are unassigned.'
-                : activeTab === 'MY_LEADS'
-                ? 'No leads are currently assigned to you. Leads will appear here once assigned by your Team Lead or Manager.'
-                : 'No leads match the selected filter criteria.'
-            }
-            pagination={{
-              currentPage: page,
-              totalPages,
-              totalItems,
-              itemsPerPage: limit,
-              perPageOptions: [5, 10, 20, 50],
-              onPageChange: handlePageChange,
-              onPerPageChange: handleLimitChange,
-            }}
-          />
-        </div>
       </div>
+
+      {/* Separate Dedicated Table Section */}
+      <AppTable<DocumenterLeadItem>
+        data={leads}
+        columns={columns}
+        selectable={!isAgent}
+        selectedRows={selectedRows}
+        rowKey="id"
+        onSelectionChange={(selected) => setSelectedRows(selected)}
+        isLoading={isLoading}
+        emptyText={
+          activeTab === 'UNASSIGNED'
+            ? 'All leads have been distributed to staff, or no new bulk leads are unassigned.'
+            : activeTab === 'MY_LEADS'
+              ? 'No leads are currently assigned to you. Leads will appear here once assigned by your Team Lead or Manager.'
+              : 'No leads match the selected filter criteria.'
+        }
+        pagination={{
+          currentPage: page,
+          totalPages,
+          totalItems,
+          itemsPerPage: limit,
+          perPageOptions: [5, 10, 20, 50],
+          onPageChange: handlePageChange,
+          onPerPageChange: handleLimitChange,
+        }}
+      />
 
       {/* Floating Emerald Action Bar when rows are checked */}
       {!isAgent && (

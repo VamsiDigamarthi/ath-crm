@@ -73,7 +73,7 @@ export function AppModal({
       <div
         style={panelStyle}
         className={cn(
-          'relative z-10 flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden',
+          'relative z-10 flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden',
           'w-full max-w-[90vw] max-h-[90vh]',
           className
         )}

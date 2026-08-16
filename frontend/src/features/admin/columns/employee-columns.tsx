@@ -101,7 +101,6 @@ export const getEmployeeColumns = (actions: ColumnActionsProps): ColumnDef<Emplo
   {
     header: 'Contact Information',
     accessorKey: 'email',
-    sortable: true,
     render: (row) => (
       <div className="space-y-1 text-xs">
         <div className="flex items-center gap-1.5 text-slate-700">
@@ -120,13 +119,11 @@ export const getEmployeeColumns = (actions: ColumnActionsProps): ColumnDef<Emplo
   {
     header: 'Department & Role',
     accessorKey: 'department',
-    sortable: true,
     render: (row) => renderDepartmentBadge(row.department, row.roleLabel),
   },
   {
     header: 'Active Cases',
     accessorKey: 'assignedCasesCount',
-    sortable: true,
     render: (row) => (
       <div className="space-y-1">
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
@@ -141,7 +138,6 @@ export const getEmployeeColumns = (actions: ColumnActionsProps): ColumnDef<Emplo
   {
     header: 'Account Status',
     accessorKey: 'isActive',
-    sortable: true,
     render: (row) => (
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${

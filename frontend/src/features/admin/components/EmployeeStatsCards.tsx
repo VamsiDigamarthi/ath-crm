@@ -10,7 +10,7 @@ export const EmployeeStatsCards: React.FC<EmployeeStatsCardsProps> = ({ stats })
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. Total Staff */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
             Total Staff Directory
@@ -31,7 +31,7 @@ export const EmployeeStatsCards: React.FC<EmployeeStatsCardsProps> = ({ stats })
       </div>
 
       {/* 2. Documenter Dept */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
             Documenter Dept
@@ -51,7 +51,7 @@ export const EmployeeStatsCards: React.FC<EmployeeStatsCardsProps> = ({ stats })
       </div>
 
       {/* 3. Sales Dept */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
             Sales Dept
@@ -71,7 +71,7 @@ export const EmployeeStatsCards: React.FC<EmployeeStatsCardsProps> = ({ stats })
       </div>
 
       {/* 4. File Operators */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
             File Operator / CPAs

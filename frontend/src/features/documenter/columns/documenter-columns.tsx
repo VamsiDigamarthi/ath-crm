@@ -76,7 +76,6 @@ export const getDocumenterColumns = ({
   {
     header: 'Taxpayer Client',
     accessorKey: 'customer.fullName',
-    sortable: true,
     render: (item) => {
       const c = item.customer;
       const initial = c.firstName?.[0] || 'T';
@@ -102,7 +101,6 @@ export const getDocumenterColumns = ({
   {
     header: 'Contact Information',
     accessorKey: 'customer.email',
-    sortable: true,
     render: (item) => (
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-1.5">
@@ -119,7 +117,6 @@ export const getDocumenterColumns = ({
   {
     header: 'Location & Year',
     accessorKey: 'customer.state',
-    sortable: true,
     render: (item) => (
       <div className="text-xs text-slate-700">
         <div className="font-semibold text-slate-800">
@@ -134,7 +131,6 @@ export const getDocumenterColumns = ({
   {
     header: 'Assigned Staff',
     accessorKey: 'assignedDocAgent.email',
-    sortable: true,
     render: (item) => {
       if (!item.assignedDocAgent) {
         return (
@@ -168,7 +164,6 @@ export const getDocumenterColumns = ({
   {
     header: 'Outreach Stage',
     accessorKey: 'currentStage',
-    sortable: true,
     render: (item) => renderStageBadge(item.currentStage),
   },
   {

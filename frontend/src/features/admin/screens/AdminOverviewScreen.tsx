@@ -62,7 +62,7 @@ export const AdminOverviewScreen: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
       {/* Welcome Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-[#16A34A] to-emerald-700 p-6 sm:p-8 text-white border border-emerald-600 shadow-sm">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-emerald-600 via-[#16A34A] to-emerald-700 p-6 sm:p-8 text-white border border-emerald-600 shadow-sm">
         <div className="relative z-10 max-w-2xl">
           <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-950 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200 mb-3">
             <ShieldCheck className="w-4 h-4 text-[#16A34A]" />
