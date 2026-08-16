@@ -97,3 +97,29 @@ export const autoRoundRobinAssign = async (
     next(error);
   }
 };
+
+export const logCallDisposition = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { applicationIds, disposition, callSummary, callbackDate } = req.body;
+
+    const result = await DocumenterService.logCallDisposition({
+      applicationIds,
+      disposition,
+      callSummary,
+      callbackDate,
+      agentUserId: req.currentUser?.id || 'SYSTEM',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Call outcome logged successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

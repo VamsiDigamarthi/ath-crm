@@ -3,7 +3,14 @@ import { ProtectedRoute } from './guards/ProtectedRoute';
 import { PublicRoute } from './guards/PublicRoute';
 import { LoginScreen } from '@/features/auth/screens/LoginScreen';
 import { DashboardScreen } from '@/features/dashboard/screens/DashboardScreen';
-import { AdminDashboardScreen } from '@/features/admin/screens/AdminDashboardScreen';
+import { AdminLayout } from '@/features/admin/layouts/AdminLayout';
+import { AdminOverviewScreen } from '@/features/admin/screens/AdminOverviewScreen';
+import { BulkLeadImportScreen } from '@/features/admin/screens/BulkLeadImportScreen';
+import { EmployeeManagementScreen } from '@/features/admin/screens/EmployeeManagementScreen';
+import { DocumenterDepartmentScreen } from '@/features/documenter/screens/DocumenterDepartmentScreen';
+import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
+import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
+import { AdminSettingsScreen } from '@/features/admin/screens/AdminSettingsScreen';
 import { UnauthorizedScreen } from '@/features/auth/screens/UnauthorizedScreen';
 
 export const router = createBrowserRouter([
@@ -29,17 +36,47 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // 3. Role-Based Protected Routes (Accessible ONLY to ADMIN role)
+  // 3. Role-Based Protected Routes (Accessible ONLY to ADMIN role with dedicated URL paths)
   {
     element: <ProtectedRoute allowedRoles={['ADMIN']} />,
     children: [
       {
         path: '/admin',
-        element: <AdminDashboardScreen />,
-      },
-      {
-        path: '/admin/dashboard',
-        element: <AdminDashboardScreen />,
+        element: <AdminLayout />,
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/admin/dashboard" replace />,
+          },
+          {
+            path: 'dashboard',
+            element: <AdminOverviewScreen />,
+          },
+          {
+            path: 'prospects',
+            element: <BulkLeadImportScreen />,
+          },
+          {
+            path: 'employees',
+            element: <EmployeeManagementScreen />,
+          },
+          {
+            path: 'documenter',
+            element: <DocumenterDepartmentScreen />,
+          },
+          {
+            path: 'sales',
+            element: <SalesDepartmentScreen />,
+          },
+          {
+            path: 'filing',
+            element: <FilingDepartmentScreen />,
+          },
+          {
+            path: 'settings',
+            element: <AdminSettingsScreen />,
+          },
+        ],
       },
     ],
   },

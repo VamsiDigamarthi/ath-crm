@@ -4,6 +4,7 @@ import {
   getDocumenterAgents,
   assignLeadsBulk,
   autoRoundRobinAssign,
+  logCallDisposition,
 } from './documenter-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
@@ -48,6 +49,14 @@ router.post(
   requireAuth,
   authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
   autoRoundRobinAssign
+);
+
+// 5. Log outreach call outcome / disposition (All Documenter staff)
+router.post(
+  '/dispositions',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  logCallDisposition
 );
 
 export { router as documenterRouter };

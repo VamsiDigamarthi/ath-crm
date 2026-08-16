@@ -98,7 +98,7 @@ export class DocumenterService {
     }
 
     // 2. Query data and counts in parallel
-    const [leads, totalItems, unassignedCount, outreachCount, prepCount, myLeadsCount] = await Promise.all([
+    const [leads, totalItems, unassignedCount, outreachCount, prepCount, myLeadsCount, callbacksCount] = await Promise.all([
       prisma.taxApplication.findMany({
         where,
         skip,
@@ -142,6 +142,15 @@ export class DocumenterService {
             where: { assignedDocAgentId: currentUserId },
           })
         : 0,
+      prisma.taxApplication.count({
+        where: {
+          callLogs: {
+            some: {
+              callbackScheduledAt: { not: null },
+            },
+          },
+        },
+      }),
     ]);
 
     const totalPages = Math.ceil(totalItems / limit) || 1;
@@ -158,6 +167,7 @@ export class DocumenterService {
         unassigned: unassignedCount,
         activeOutreach: outreachCount,
         inPrep: prepCount,
+        callbacks: callbacksCount,
         myLeads: myLeadsCount,
         totalDepartment: unassignedCount + outreachCount + prepCount,
       },
@@ -345,6 +355,122 @@ export class DocumenterService {
         agentsCount: activeAgents.length,
         distribution: distributionMap,
       };
+    });
+  }
+
+  /**
+   * Log outreach call disposition, schedule callbacks, or advance to DOC_PREP with lazy taxpayer user provisioning
+   */
+  public static async logCallDisposition(options: {
+    applicationIds: string[];
+    disposition: string;
+    callSummary?: string;
+    callbackDate?: string;
+    agentUserId: string;
+  }) {
+    const { applicationIds, disposition, callSummary, callbackDate, agentUserId } = options;
+
+    if (!applicationIds || applicationIds.length === 0) {
+      throw new Error('No applications provided');
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const results = [];
+
+      for (const appId of applicationIds) {
+        const app = await tx.taxApplication.findUnique({
+          where: { id: appId },
+          include: { customer: true },
+        });
+
+        if (!app) continue;
+
+        let targetStage: ApplicationStage = app.currentStage;
+        let auditRemark = `Call outcome logged: ${disposition}`;
+
+        // 1. Handle disposition transitions
+        if (disposition === 'CONNECTED_INTERESTED') {
+          targetStage = ApplicationStage.DOC_PREP;
+          auditRemark = `Lead connected & interested. Moved to Tax Prep & provisioned Client Portal access.`;
+
+          // Lazy Taxpayer User Provisioning
+          if (!app.customer.userId && (app.customer.email || app.customer.phone)) {
+            const existingUser = await tx.user.findFirst({
+              where: {
+                isActive: true,
+                ...(app.customer.email ? { email: app.customer.email.toLowerCase() } : { mobile: app.customer.phone }),
+              },
+            });
+
+            if (existingUser) {
+              await tx.customerProfile.update({
+                where: { id: app.customer.id },
+                data: { userId: existingUser.id, isConvertedCustomer: true },
+              });
+            } else {
+              const newUser = await tx.user.create({
+                data: {
+                  email: app.customer.email ? app.customer.email.toLowerCase() : null,
+                  mobile: app.customer.phone,
+                  role: Role.TAXPAYER_USER,
+                  isActive: true,
+                },
+              });
+              await tx.customerProfile.update({
+                where: { id: app.customer.id },
+                data: { userId: newUser.id, isConvertedCustomer: true },
+              });
+            }
+          }
+        } else if (disposition === 'CONNECTED_CALLBACK') {
+          targetStage = ApplicationStage.DOC_OUTREACH;
+          auditRemark = `Callback scheduled for ${callbackDate ? new Date(callbackDate).toLocaleString() : 'later'}.`;
+        } else if (disposition === 'CONNECTED_NOT_INTERESTED') {
+          targetStage = ApplicationStage.DROPPED_CANCELLED;
+          auditRemark = `Lead not interested. Stage marked as DROPPED_CANCELLED.`;
+        } else if (disposition === 'INVALID_DISCONNECTED') {
+          targetStage = ApplicationStage.CORRECTION_NEEDED;
+          auditRemark = `Invalid/disconnected contact number. Stage marked as CORRECTION_NEEDED.`;
+        } else if (disposition === 'NO_ANSWER_VOICEMAIL') {
+          targetStage = ApplicationStage.DOC_OUTREACH;
+          auditRemark = `No answer / voicemail left. Retained in outreach.`;
+        }
+
+        // 2. Create CallLog entry
+        const callLog = await tx.callLog.create({
+          data: {
+            applicationId: app.id,
+            agentId: agentUserId,
+            disposition,
+            callSummary: callSummary || null,
+            callbackScheduledAt: callbackDate ? new Date(callbackDate) : null,
+          },
+        });
+
+        // 3. Update application stage
+        await tx.taxApplication.update({
+          where: { id: app.id },
+          data: {
+            currentStage: targetStage,
+            assignedDocAgentId: app.assignedDocAgentId || agentUserId,
+          },
+        });
+
+        // 4. Create StageHistory entry
+        await tx.stageHistory.create({
+          data: {
+            applicationId: app.id,
+            fromStage: app.currentStage,
+            toStage: targetStage,
+            movedByUserId: agentUserId,
+            remarks: auditRemark,
+          },
+        });
+
+        results.push({ applicationId: app.id, callLogId: callLog.id, stage: targetStage });
+      }
+
+      return results;
     });
   }
 }

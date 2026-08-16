@@ -6,6 +6,7 @@ import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { getDocumenterColumns } from '../columns/documenter-columns';
 import { AppTable } from '@/shared/components/AppTable';
+import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { 
   Users, 
   PhoneCall, 
@@ -13,10 +14,9 @@ import {
   Clock, 
   UserCheck, 
   ListFilter, 
-  Search, 
   Zap, 
-  RefreshCw,
-  Globe
+  RefreshCw, 
+  Globe 
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
@@ -166,14 +166,12 @@ export const DocumenterDepartmentScreen: React.FC = () => {
 
         {/* Filter & Search Bar */}
         <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search by taxpayer name, phone, email, SSN..."
+          <div className="w-full sm:w-80">
+            <AppSearchInput
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#16A34A] bg-white font-medium shadow-2xs"
+              onChange={setSearchQuery}
+              placeholder="Search by taxpayer name, phone, email, SSN..."
+              debounceMs={300}
             />
           </div>
 

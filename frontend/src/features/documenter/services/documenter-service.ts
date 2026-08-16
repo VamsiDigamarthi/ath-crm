@@ -40,16 +40,14 @@ export const documenterService = {
     visaType?: string;
     taxYear?: number;
   }): Promise<DocumenterLeadsResponse> {
-    const res = await apiClient.get<DocumenterLeadsResponse>('/documenter/leads', { params });
-    return res.data;
+    return apiClient.get('/documenter/leads', { params });
   },
 
   /**
    * Fetch active documenter agents with live workload stats
    */
   async getAgents(): Promise<DocumenterAgentsResponse> {
-    const res = await apiClient.get<DocumenterAgentsResponse>('/documenter/agents');
-    return res.data;
+    return apiClient.get('/documenter/agents');
   },
 
   /**
@@ -58,9 +56,8 @@ export const documenterService = {
   async assignBulk(payload: {
     applicationIds: string[];
     targetAgentId: string;
-  }) {
-    const res = await apiClient.post('/documenter/assign-bulk', payload);
-    return res.data;
+  }): Promise<any> {
+    return apiClient.post('/documenter/assign-bulk', payload);
   },
 
   /**
@@ -68,9 +65,8 @@ export const documenterService = {
    */
   async autoRoundRobin(payload: {
     applicationIds?: string[];
-  }) {
-    const res = await apiClient.post('/documenter/assign-round-robin', payload);
-    return res.data;
+  }): Promise<any> {
+    return apiClient.post('/documenter/assign-round-robin', payload);
   },
 
   /**
@@ -81,8 +77,7 @@ export const documenterService = {
     disposition: CallDisposition;
     callSummary?: string;
     callbackDate?: string;
-  }) {
-    const res = await apiClient.post('/documenter/dispositions', payload);
-    return res.data;
+  }): Promise<any> {
+    return apiClient.post('/documenter/dispositions', payload);
   },
 };
