@@ -553,7 +553,7 @@ export class DocumenterService {
             if (existingUser) {
               await tx.customerProfile.update({
                 where: { id: app.customer.id },
-                data: { userId: existingUser.id, isConvertedCustomer: true },
+                data: { userId: existingUser.id, isConvertedCustomer: false },
               });
             } else {
               const newUser = await tx.user.create({
@@ -566,7 +566,7 @@ export class DocumenterService {
               });
               await tx.customerProfile.update({
                 where: { id: app.customer.id },
-                data: { userId: newUser.id, isConvertedCustomer: true },
+                data: { userId: newUser.id, isConvertedCustomer: false },
               });
             }
           }

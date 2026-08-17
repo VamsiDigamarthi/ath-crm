@@ -11,17 +11,24 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import toast from 'react-hot-toast';
+import { useOutletContext } from 'react-router-dom';
 
 export const CustomerExpertContact: React.FC = () => {
+  const { customerProfile } = useOutletContext<{ customerProfile?: any }>() || {};
+  const docAgent = customerProfile?.applications?.[0]?.assignedDocAgent;
+  const agentName = docAgent?.firstName ? `${docAgent.firstName} ${docAgent.lastName || ''}`.trim() : 'Kavya R';
+  const agentEmail = docAgent?.email || 'kavya.r@taxcrm.com';
+  const agentInitials = docAgent?.firstName ? `${docAgent.firstName[0]}${docAgent.lastName?.[0] || ''}`.toUpperCase() : 'KR';
+
   const [messages, setMessages] = useState<Array<{ sender: 'CLIENT' | 'AGENT'; text: string; time: string }>>([
     {
       sender: 'AGENT',
-      text: 'Hello Naveen! I have initiated your TY 2025 W-2 tax preparation. Please let me know if you traded stocks on Robinhood this year.',
+      text: `Hello! I have initiated your TY 2025 W-2 tax preparation. Please let me know if you traded stocks or have RSUs this year.`,
       time: 'Today 11:30 AM',
     },
     {
       sender: 'CLIENT',
-      text: 'Hi Kavya, yes I have RSUs and 1099-B from Robinhood. I am uploading the statement to my vault now.',
+      text: 'Hi, yes I have RSUs and 1099-B from Robinhood. I am uploading the statement to my vault now.',
       time: 'Today 11:45 AM',
     },
     {
@@ -46,11 +53,11 @@ export const CustomerExpertContact: React.FC = () => {
       },
     ]);
     setInputMsg('');
-    toast.success('Message sent to Kavya! She will respond shortly.');
+    toast.success(`Message sent to ${agentName}! They will respond shortly.`);
   };
 
   const handleRequestCallback = () => {
-    toast.success('Callback requested! Kavya will call you within 15 minutes.');
+    toast.success(`Callback requested! ${agentName} will call you within 15 minutes.`);
   };
 
   return (
@@ -63,11 +70,11 @@ export const CustomerExpertContact: React.FC = () => {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-[#16A34A] border border-emerald-500/30 flex items-center justify-center font-bold text-base">
-                  KR
+                  {agentInitials}
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <h4 className="text-sm font-bold text-slate-900">Kavya R</h4>
+                    <h4 className="text-sm font-bold text-slate-900">{agentName}</h4>
                     <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-50 text-[#16A34A] border border-emerald-200">
                       Assigned Agent
                     </span>
@@ -82,7 +89,7 @@ export const CustomerExpertContact: React.FC = () => {
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 space-y-1.5 text-xs text-slate-600">
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-slate-400" />
-                <span>Email: <strong className="text-slate-800">kavya.r@taxcrm.com</strong></span>
+                <span>Email: <strong className="text-slate-800">{agentEmail}</strong></span>
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 text-slate-400" />

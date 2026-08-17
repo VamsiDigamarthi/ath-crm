@@ -85,7 +85,38 @@ export const verifyOtp = async (req: Request, res: Response) => {
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
-  return SuccessHandler.handle(res, "Login successful", {
+  const authUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      mobile: true,
+      role: true,
+      isActive: true,
+      customerProfile: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          visaType: true,
+          isConvertedCustomer: true,
+          applications: {
+            select: {
+              id: true,
+              taxYear: true,
+              currentStage: true,
+            },
+            orderBy: { taxYear: "desc" },
+          },
+        },
+      },
+    },
+  });
+
+  return SuccessHandler.handle(res, "Login successful", authUser || {
     id: user.id,
     email: user.email,
     mobile: user.mobile,
@@ -105,8 +136,43 @@ export const logout = async (req: Request, res: Response) => {
   return SuccessHandler.handle(res, "Logged out successfully");
 };
 
-export const getCurrentUser = (req: Request, res: Response) => {
+export const getCurrentUser = async (req: Request, res: Response) => {
+  if (!req.currentUser) {
+    return SuccessHandler.handle(res, "Current user fetched", { user: null });
+  }
+
+  const authUser = await prisma.user.findUnique({
+    where: { id: req.currentUser.id },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      mobile: true,
+      role: true,
+      isActive: true,
+      customerProfile: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          visaType: true,
+          isConvertedCustomer: true,
+          applications: {
+            select: {
+              id: true,
+              taxYear: true,
+              currentStage: true,
+            },
+            orderBy: { taxYear: "desc" },
+          },
+        },
+      },
+    },
+  });
+
   return SuccessHandler.handle(res, "Current user fetched", {
-    user: req.currentUser || null,
+    user: authUser || req.currentUser,
   });
 };

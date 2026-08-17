@@ -5,14 +5,39 @@ import {
   CheckSquare, 
   FolderArchive, 
   PhoneCall, 
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useCustomerDashboard } from '../hooks/useCustomerDashboard';
 
 export const CustomerDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { isConvertedCustomer } = useOutletContext<{ isConvertedCustomer?: boolean }>() || {};
+  const { selectedTaxYear, isConvertedCustomer: contextConverted } = useOutletContext<{
+    selectedTaxYear?: string;
+    isConvertedCustomer?: boolean;
+    customerProfile?: any;
+    user?: any;
+  }>() || {};
+
+  // Real Backend Data from GET /api/v1/customer/dashboard
+  const { dashboardData, loading, refetch } = useCustomerDashboard(selectedTaxYear);
+
+  const isConverted = dashboardData?.taxpayer?.isConvertedCustomer ?? contextConverted ?? false;
+  const taxpayerName = dashboardData?.taxpayer?.name || 'Naveen Krishnan';
+  const visaBadge = dashboardData?.taxpayer?.visaType ? `${dashboardData.taxpayer.visaType} Taxpayer` : 'H-1B Dual-Status';
+  const assignedAgentName = dashboardData?.assignedTeam?.docAgent?.name || 'Kavya R';
+
+  const fedRefund = dashboardData?.refund?.fedRefund ?? 2840;
+  const stateRefund = dashboardData?.refund?.stateRefund ?? 0;
+  const stateLabel = dashboardData?.refund?.stateName || 'Texas (TX - 0% State Tax)';
+  const bankMasked = dashboardData?.refund?.bankMasked || 'Chase Bank (•••• 4819)';
+
+  const currentStage = dashboardData?.application?.currentStage || 'DOC_PREP';
+  const docCount = dashboardData?.stats?.docCount ?? 3;
+  const organizerPercent = dashboardData?.stats?.organizerPercent ?? 85;
+  const organizerVerifiedCount = dashboardData?.stats?.organizerVerifiedCount ?? 7;
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -21,41 +46,56 @@ export const CustomerDashboardScreen: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              {isConvertedCustomer ? 'Taxpayer Certified Return & Filing Center' : 'Taxpayer Return Lifecycle & Filing Hub'}
+              {isConverted ? 'Taxpayer Certified Return & Filing Center' : 'Taxpayer Return Lifecycle & Filing Hub'}
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              H-1B Dual-Status
+              {visaBadge}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            {isConvertedCustomer
-              ? 'Congratulations, Naveen Krishnan! Your TY 2025 Form 1040 has been certified and successfully e-filed with the IRS.'
-              : 'Welcome back, Naveen Krishnan. Your TY 2025 return is currently active in Tax Prep Review with agent Kavya R.'}
+            {isConverted
+              ? `Congratulations, ${taxpayerName}! Your TY ${selectedTaxYear || '2025'} Form 1040 has been certified and successfully e-filed with the IRS.`
+              : `Welcome back, ${taxpayerName}. Your TY ${selectedTaxYear || '2025'} return is currently active in Tax Prep Review with agent ${assignedAgentName}.`}
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <Button
             size="sm"
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={loading}
+            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            title="Refresh Live Status"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+
+          <Button
+            size="sm"
             onClick={() => navigate('/customer/documents')}
             className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
           >
             <FolderArchive className="w-4 h-4" />
-            <span>{isConvertedCustomer ? 'View Filed 1040 Vault' : 'Upload Tax Slips'}</span>
+            <span>{isConverted ? 'View Filed 1040 Vault' : 'Upload Tax Slips'}</span>
           </Button>
         </div>
       </div>
 
       {/* 2. Visual 6-Step Lifecycle Stepper Tracker */}
-      <CustomerStageStepper isConvertedCustomer={Boolean(isConvertedCustomer)} />
+      <CustomerStageStepper 
+        isConvertedCustomer={isConverted} 
+        currentStage={currentStage} 
+      />
 
       {/* 3. Refund Hero Calculation Card */}
       <CustomerRefundHeroCard
-        fedRefund={2840}
-        stateRefund={0}
-        stateName="Texas (TX)"
-        bankMasked="Chase Bank (•••• 4819)"
-        isConvertedCustomer={Boolean(isConvertedCustomer)}
+        fedRefund={fedRefund}
+        stateRefund={stateRefund}
+        stateName={stateLabel}
+        bankMasked={bankMasked}
+        isConvertedCustomer={isConverted}
       />
 
       {/* 4. Quick Action Cards (3-Column Grid) */}
@@ -68,7 +108,7 @@ export const CustomerDashboardScreen: React.FC = () => {
             </div>
             <h4 className="text-sm font-bold text-slate-900">9-Module Tax Organizer</h4>
             <p className="text-xs text-slate-500 leading-relaxed font-medium">
-              You are <strong>85% complete</strong> (7 of 9 modules verified). Review stock trades & direct deposit routing.
+              You are <strong>{organizerPercent}% complete</strong> ({organizerVerifiedCount} of 9 modules verified). Review stock trades & direct deposit routing.
             </p>
           </div>
           <Button
@@ -90,7 +130,9 @@ export const CustomerDashboardScreen: React.FC = () => {
             </div>
             <h4 className="text-sm font-bold text-slate-900">Multi-Year Documents Vault</h4>
             <p className="text-xs text-slate-500 leading-relaxed font-medium">
-              Access your historical Form 1040 returns (TY 2024, TY 2023) or upload missing TY 2025 W-2 statements.
+              {isConverted 
+                ? 'Access your certified Form 1040 return PDFs and official IRS electronic acceptance proofs.'
+                : 'Upload your TY 2025 W-2 wage slips, 1099-INT bank statements, and Robinhood stock trades.'}
             </p>
           </div>
           <Button
@@ -99,7 +141,7 @@ export const CustomerDashboardScreen: React.FC = () => {
             onClick={() => navigate('/customer/documents')}
             className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center justify-between cursor-pointer w-full"
           >
-            <span>Open Vault (3 Files)</span>
+            <span>{isConverted ? 'Open Vault (5 Files Unlocked)' : `Open Vault (${docCount} Files)`}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -112,7 +154,7 @@ export const CustomerDashboardScreen: React.FC = () => {
             </div>
             <h4 className="text-sm font-bold text-slate-900">Dedicated CPA & Agent</h4>
             <p className="text-xs text-slate-500 leading-relaxed font-medium">
-              Have questions about deductions or dual-status filing? Contact <strong>Kavya R</strong> or your certifying CPA.
+              Have questions about deductions or dual-status filing? Contact <strong>{assignedAgentName}</strong> or your certifying CPA.
             </p>
           </div>
           <Button

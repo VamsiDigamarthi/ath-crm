@@ -24,8 +24,30 @@ export const CustomerLayout: React.FC = () => {
   const { user, logout } = useAuthStore();
   const [selectedTaxYear, setSelectedTaxYear] = useState<string>('2025');
   
-  // Exact key from backend/prisma/schema/customer.prisma: isConvertedCustomer
-  const [isConvertedCustomer, setIsConvertedCustomer] = useState<boolean>(false);
+  // Real DB value from backend/prisma/schema/customer.prisma: customerProfile.isConvertedCustomer
+  const customerProfile = user?.customerProfile;
+  const isConvertedCustomer = Boolean(customerProfile?.isConvertedCustomer);
+
+  // Derive available multi-year filings from customerProfile applications
+  const applications = customerProfile?.applications || [];
+  const taxYearOptions = applications.length > 0
+    ? applications.map((app: any) => ({
+        label: `TY ${app.taxYear} (${app.currentStage === 'FILING_SUCCESS' ? 'Filed Form 1040' : 'Active Filing'})`,
+        value: app.taxYear.toString(),
+      }))
+    : [
+        { label: 'TY 2025 (Active Filing)', value: '2025' },
+        { label: 'TY 2024 (Filed Form 1040)', value: '2024' },
+        { label: 'TY 2023 (Filed Form 1040)', value: '2023' },
+      ];
+
+  const taxpayerName = customerProfile?.firstName
+    ? `${customerProfile.firstName} ${customerProfile.lastName || ''}`.trim()
+    : user?.firstName
+    ? `${user.firstName} ${user.lastName || ''}`.trim()
+    : 'Naveen Krishnan';
+
+  const taxpayerEmail = customerProfile?.email || user?.email || 'taxpayer@client.com';
 
   const handleLogout = async () => {
     try {
@@ -133,9 +155,9 @@ export const CustomerLayout: React.FC = () => {
         activeId={activeId}
         onItemClick={handleItemClick}
         user={{
-          name: user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Naveen Krishnan',
-          email: user?.email || 'naveen.k@energygrids.com',
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'naveen'}`,
+          name: taxpayerName,
+          email: taxpayerEmail,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${taxpayerEmail}`,
         }}
         onUserClick={handleLogout}
       />
@@ -159,55 +181,13 @@ export const CustomerLayout: React.FC = () => {
             )}
           </div>
 
-          {/* Center/Right: isConvertedCustomer Switcher & Tax Year Switcher */}
+          {/* Center/Right: Tax Year Switcher & Global Actions */}
           <div className="flex items-center gap-3">
-            {/* Live isConvertedCustomer Lifecycle Switch Toggle */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsConvertedCustomer(false);
-                  toast('Simulating: Prospect / Intake Stage (DOC_PREP)', { icon: '⏳' });
-                }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  !isConvertedCustomer
-                    ? 'bg-amber-500 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                title="Simulate Prospective Taxpayer before fee payment"
-              >
-                <Clock className="w-3 h-3" />
-                <span className="hidden md:inline">Before Payment</span> (Intake)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsConvertedCustomer(true);
-                  toast.success('Simulating: Converted Customer (Paid & IRS Filed)');
-                }}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  isConvertedCustomer
-                    ? 'bg-[#16A34A] text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                title="Simulate Converted Customer after fee payment"
-              >
-                <CheckCircle2 className="w-3 h-3" />
-                <span className="hidden md:inline">After Payment</span> (Customer)
-              </button>
-            </div>
-
             {/* Scalable Tax Year Dropdown using reusable AppSelect */}
             {isConvertedCustomer ? (
-              <div className="w-48">
+              <div className="w-52">
                 <AppSelect
-                  options={[
-                    { label: 'TY 2025 (Active Filing)', value: '2025' },
-                    { label: 'TY 2024 (Filed Form 1040)', value: '2024' },
-                    { label: 'TY 2023 (Filed Form 1040)', value: '2023' },
-                    { label: 'TY 2022 (Historical Archive)', value: '2022' },
-                  ]}
+                  options={taxYearOptions}
                   value={selectedTaxYear}
                   onChange={(val) => {
                     if (val) {
@@ -246,9 +226,9 @@ export const CustomerLayout: React.FC = () => {
           </div>
         </header>
 
-        {/* Dynamic Screen Viewport with isConvertedCustomer passed to all screens */}
+        {/* Dynamic Screen Viewport with real isConvertedCustomer passed to all screens */}
         <main className="flex-1 overflow-y-auto p-6 sm:p-8">
-          <Outlet context={{ selectedTaxYear, isConvertedCustomer }} />
+          <Outlet context={{ selectedTaxYear, isConvertedCustomer, customerProfile, user }} />
         </main>
       </div>
     </div>

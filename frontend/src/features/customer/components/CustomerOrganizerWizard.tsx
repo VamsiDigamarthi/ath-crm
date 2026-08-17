@@ -15,7 +15,9 @@ import {
   ArrowLeft,
   Sparkles,
   Building2,
-  Lock
+  Lock,
+  Gift,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSelect } from '@/shared/components/AppSelect';
@@ -24,6 +26,8 @@ import toast from 'react-hot-toast';
 export const CustomerOrganizerWizard: React.FC = () => {
   const [selectedModId, setSelectedModId] = useState<string>('m6');
   const [accountType, setAccountType] = useState<string>('CHECKING');
+  const [tradedStocks, setTradedStocks] = useState<boolean>(true);
+  const [hasFbar, setHasFbar] = useState<boolean>(true);
 
   const modules = [
     {
@@ -39,8 +43,8 @@ export const CustomerOrganizerWizard: React.FC = () => {
       id: 'm2',
       number: 2,
       section: 'Demographics & Family',
-      title: 'Spouse & Dependents',
-      description: 'Spouse details, Child Tax Credit eligibility ($2,000/child)',
+      title: 'Spouse & Daycare Expenses',
+      description: 'Spouse details, Child Tax Credit ($2k/child) & Daycare expenses',
       icon: Users,
       status: 'COMPLETED',
     },
@@ -48,8 +52,8 @@ export const CustomerOrganizerWizard: React.FC = () => {
       id: 'm3',
       number: 3,
       section: 'Residency & Visa',
-      title: 'US Visa & Substantial Presence',
-      description: 'H-1B arrival history to determine Form 1040 vs 1040-NR',
+      title: 'Substantial Presence & States',
+      description: 'US present days (2025/2024/2023) & Resided states history',
       icon: Globe,
       status: 'COMPLETED',
     },
@@ -57,8 +61,8 @@ export const CustomerOrganizerWizard: React.FC = () => {
       id: 'm4',
       number: 4,
       section: 'Wages & Income',
-      title: 'W-2 Wages & Employment',
-      description: 'Energy Grids LLC wage statements & withholdings',
+      title: 'W-2 Wage Statements & Employer',
+      description: 'Energy Grids LLC wage statements & Federal/State withholdings',
       icon: FileSpreadsheet,
       status: 'COMPLETED',
     },
@@ -75,26 +79,26 @@ export const CustomerOrganizerWizard: React.FC = () => {
       id: 'm6',
       number: 6,
       section: 'Wages & Income',
-      title: '1099-B Stocks, Crypto & RSUs',
-      description: 'Robinhood, Fidelity, ESPP capital gains (Schedule D)',
+      title: '1099-B Stocks, ESPP & RSUs',
+      description: 'Robinhood, Fidelity, Form 3921/3922, Capital loss carryforwards',
       icon: TrendingUp,
       status: 'IN_PROGRESS',
     },
     {
       id: 'm7',
       number: 7,
-      section: 'Foreign & Deductions',
-      title: 'Foreign Accounts & FBAR',
-      description: 'Indian NRE/NRO bank accounts (FinCEN 114 reporting)',
+      section: 'Foreign & FBAR',
+      title: 'FBAR / FATCA & Indian Income',
+      description: 'Foreign accounts >$10k (FinCEN 114), NRE/NRO interest in INR',
       icon: ShieldCheck,
       status: 'COMPLETED',
     },
     {
       id: 'm8',
       number: 8,
-      section: 'Foreign & Deductions',
-      title: 'Deductions & Credits (HSA/1098)',
-      description: 'HSA contributions (Form 8889), student loan interest',
+      section: 'Deductions & Credits',
+      title: 'Mortgage 1098, HSA & Solar Energy',
+      description: 'Form 1098 Mortgage, HSA Form 8889, Clean Energy credits',
       icon: Receipt,
       status: 'COMPLETED',
     },
@@ -103,7 +107,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
       number: 9,
       section: 'IRS Refund Payout',
       title: 'Bank Direct Deposit Routing',
-      description: 'Checking account and routing numbers for IRS refund',
+      description: 'Checking account and routing numbers for direct IRS payout',
       icon: Landmark,
       status: 'IN_PROGRESS',
     },
@@ -119,7 +123,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
     if (currentModIndex < modules.length - 1) {
       setSelectedModId(modules[currentModIndex + 1].id);
     } else {
-      toast.success('All 9 modules reviewed! Your organizer is ready for CPA audit.');
+      toast.success('All 9 intake modules reviewed! Ready for CPA return preparation.');
     }
   };
 
@@ -149,7 +153,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Review and complete all 9 IRS intake modules to ensure maximum tax deductions for TY 2025.
+            ATH Tax Services IRS-compliant intake wizard. Complete all 9 sections to maximize your TY 2025 deductions.
           </p>
         </div>
 
@@ -179,7 +183,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
         <div className="lg:col-span-4 space-y-2 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
           <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Intake Checklist
+              IRS Intake Checklist
             </span>
             <span className="text-xs font-extrabold text-[#16A34A]">{completedCount}/9 Done</span>
           </div>
@@ -235,6 +239,17 @@ export const CustomerOrganizerWizard: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Referral Reward Promo Banner */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 space-y-1.5 mt-3">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#16A34A]">
+              <Gift className="w-4 h-4" />
+              <span>Earn $10 Per Paid Referral</span>
+            </div>
+            <p className="text-[11px] text-slate-600 font-medium">
+              Refer friends & colleagues filing US taxes with ATH Tax Services.
+            </p>
+          </div>
         </div>
 
         {/* Right Column: Focused Interactive Workspace Canvas (8 Cols) */}
@@ -277,7 +292,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
               </div>
             </div>
 
-            {/* Dynamic Interactive Module Workspace */}
+            {/* Module 1: Personal Demographics */}
             {currentMod.id === 'm1' && (
               <div className="space-y-4">
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
@@ -305,54 +320,187 @@ export const CustomerOrganizerWizard: React.FC = () => {
               </div>
             )}
 
+            {/* Module 2: Spouse & Daycare */}
+            {currentMod.id === 'm2' && (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
+                  <HelpCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Child & Dependent Care Expenses:</strong> Day-care expenses can be claimed if your spouse is working or a full-time student. Qualifying children receive up to $2,000/child Child Tax Credit.
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1">
+                    <span className="text-[11px] text-slate-400 font-semibold">Marital Status</span>
+                    <div className="text-xs font-bold text-slate-900">Single / No Dependents Claimed</div>
+                  </div>
+                  <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1">
+                    <span className="text-[11px] text-slate-400 font-semibold">Child Tax Credit Eligibility</span>
+                    <div className="text-xs font-bold text-slate-900">$0.00 (Single Filer)</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Module 3: Substantial Presence & States */}
+            {currentMod.id === 'm3' && (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 flex items-start gap-2.5">
+                  <Globe className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Substantial Presence Test:</strong> We calculate your days present in the US (2025: 365 days, 2024: 360 days, 2023: 350 days) to confirm Form 1040 Resident Alien status.
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl border border-slate-200 bg-white text-center">
+                    <span className="text-[11px] text-slate-400 font-bold block">TY 2025 US Days</span>
+                    <strong className="text-sm text-slate-900">365 Days</strong>
+                  </div>
+                  <div className="p-3 rounded-xl border border-slate-200 bg-white text-center">
+                    <span className="text-[11px] text-slate-400 font-bold block">TY 2024 US Days</span>
+                    <strong className="text-sm text-slate-900">360 Days</strong>
+                  </div>
+                  <div className="p-3 rounded-xl border border-slate-200 bg-white text-center">
+                    <span className="text-[11px] text-slate-400 font-bold block">TY 2023 US Days</span>
+                    <strong className="text-sm text-slate-900">350 Days</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Module 6: 1099-B Stocks, ESPP & RSUs */}
             {currentMod.id === 'm6' && (
               <div className="space-y-4">
                 <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
                   <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <div>
-                    <strong>1099-B Stock & Crypto Transactions</strong> — IRS Form 1040 Schedule D requires reporting capital gains/losses from Robinhood, Fidelity, E*TRADE, or employer RSUs.
+                    <strong>1099-B Stock & Crypto Statements (Schedule D):</strong> IRS requires reporting capital gains/losses from Robinhood, Fidelity, E*TRADE, plus employer stock ESPP/RSU Form 3921/3922.
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
                     <label className="flex items-center gap-2.5 text-xs font-bold text-slate-900 cursor-pointer">
-                      <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#16A34A] focus:ring-[#16A34A]" />
-                      <span>I traded US stocks, ETFs, or Crypto during TY 2025</span>
+                      <input 
+                        type="checkbox" 
+                        checked={tradedStocks}
+                        onChange={(e) => setTradedStocks(e.target.checked)}
+                        className="w-4 h-4 rounded text-[#16A34A] focus:ring-[#16A34A]" 
+                      />
+                      <span>I traded US stocks, ETFs, RSUs or Crypto during TY 2025</span>
                     </label>
                     <p className="text-[11px] text-slate-500 pl-6">
                       Check this box so your CPA includes IRS Schedule D & Form 8949 in your return.
                     </p>
                   </div>
 
+                  {tradedStocks && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700">Brokerage Platform Name</label>
+                        <input
+                          type="text"
+                          defaultValue="Robinhood Financial LLC"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700">Estimated Total Capital Gain / (Loss) ($)</label>
+                        <input
+                          type="number"
+                          defaultValue="3450"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700">Employer Stock RSUs / ESPP Form 3921</label>
+                        <input
+                          type="text"
+                          defaultValue="Energy Grids LLC RSU Payout"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700">Prior Year Capital Loss Carryforward ($)</label>
+                        <input
+                          type="number"
+                          defaultValue="0"
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Module 7: Foreign & FBAR */}
+            {currentMod.id === 'm7' && (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200 text-xs text-purple-900 flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>FBAR & FATCA Compliance:</strong> FinCEN Form 114 is mandatory if aggregate foreign Indian bank balances exceeded $10,000 at any point during 2025. FATCA Form 8938 applies over $50,000.
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                  <label className="flex items-center gap-2.5 text-xs font-bold text-slate-900 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={hasFbar}
+                      onChange={(e) => setHasFbar(e.target.checked)}
+                      className="w-4 h-4 rounded text-[#16A34A] focus:ring-[#16A34A]" 
+                    />
+                    <span>I had over $10,000 aggregate in Indian bank accounts (NRE/NRO/FDs)</span>
+                  </label>
+                </div>
+
+                {hasFbar && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700">Brokerage Platform Name</label>
-                      <input
-                        type="text"
-                        defaultValue="Robinhood Financial LLC"
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
-                      />
+                    <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-1">
+                      <span className="text-[11px] text-slate-400 font-semibold">Indian Bank Name & Branch</span>
+                      <div className="text-xs font-bold text-slate-900">State Bank of India (SBI NRE Account)</div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700">Estimated Total Capital Gain / (Loss) ($)</label>
-                      <input
-                        type="number"
-                        defaultValue="3450"
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
-                      />
+                    <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-1">
+                      <span className="text-[11px] text-slate-400 font-semibold">Peak Year Balance (INR)</span>
+                      <div className="text-xs font-bold text-slate-900">₹14,50,000 (Approx $17,200 USD)</div>
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Module 8: Deductions & Credits */}
+            {currentMod.id === 'm8' && (
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
+                  <Receipt className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Tax Deductions & Clean Energy Credits:</strong> HSA contributions (Form 8889), Form 1098 Mortgage Interest, and Energy Saving Equipment (Solar/Heat Pump) reduce your taxable income.
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-1">
+                    <span className="text-[11px] text-slate-400 font-semibold">HSA Contribution (Form 8889)</span>
+                    <div className="text-xs font-bold text-slate-900">$4,150.00 (Max Individual Deduction)</div>
+                  </div>
+                  <div className="p-3 rounded-xl border border-slate-200 bg-white space-y-1">
+                    <span className="text-[11px] text-slate-400 font-semibold">Student Loan Interest (1098-E)</span>
+                    <div className="text-xs font-bold text-slate-900">$1,200.00 Claimed</div>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* Module 9: Direct Deposit */}
             {currentMod.id === 'm9' && (
               <div className="space-y-4">
                 <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
                   <Building2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
                   <div>
-                    <strong>IRS Direct Deposit</strong> — Providing your checking routing & account numbers enables the IRS to deposit your <strong>+$2,840 refund</strong> directly into your account in 14-21 days.
+                    <strong>IRS Direct Deposit:</strong> Providing your checking routing & account numbers enables the IRS to deposit your <strong>+$2,840 refund</strong> directly into your account in 14-21 days.
                   </div>
                 </div>
 
@@ -382,7 +530,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
                     <input
                       type="text"
                       defaultValue="111000614"
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
                     />
                   </div>
                   <div className="space-y-1">
@@ -390,21 +538,22 @@ export const CustomerOrganizerWizard: React.FC = () => {
                     <input
                       type="text"
                       defaultValue="•••• •••• 4819"
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
                     />
                   </div>
                 </div>
               </div>
             )}
 
-            {currentMod.id !== 'm1' && currentMod.id !== 'm6' && currentMod.id !== 'm9' && (
+            {/* Other Modules fallback */}
+            {currentMod.id !== 'm1' && currentMod.id !== 'm2' && currentMod.id !== 'm3' && currentMod.id !== 'm6' && currentMod.id !== 'm7' && currentMod.id !== 'm8' && currentMod.id !== 'm9' && (
               <div className="p-6 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-2">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center mx-auto border border-emerald-200 font-bold">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <h4 className="text-xs font-bold text-slate-900">{currentMod.title} Completed</h4>
                 <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                  All documents and wage figures for this section have been verified by your assigned intake specialist Kavya R.
+                  All documents and figures for this section have been verified by your assigned intake specialist.
                 </p>
               </div>
             )}
