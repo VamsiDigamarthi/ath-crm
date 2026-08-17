@@ -1,5 +1,7 @@
 import { prisma } from '../../config/db.js';
 import { ApplicationStage, Role } from '@prisma/client';
+import { NotFoundError } from '../../errors/not-found-error.js';
+import { StorageService } from '../../utils/storage-service.js';
 
 export interface DocumenterLeadQuery {
   page?: number;
@@ -143,6 +145,7 @@ export class DocumenterService {
             orderBy: { createdAt: 'desc' },
             take: 1,
           },
+          documents: true,
         },
       }),
       prisma.taxApplication.count({ where }),
@@ -675,7 +678,7 @@ export class DocumenterService {
         throw new Error('Application not found');
       }
 
-      const updated = await tx.taxApplication.update({
+      const updatedApp = await tx.taxApplication.update({
         where: { id: applicationId },
         data: {
           currentStage: ApplicationStage.SALES_PITCH_QUEUE,
@@ -696,7 +699,52 @@ export class DocumenterService {
         },
       });
 
-      return updated;
+      return updatedApp;
     });
+  }
+
+  /**
+   * Get physical file path for agent document download/view
+   */
+  static async getDocumentDownloadInfo(documentId: string) {
+    const doc = await prisma.taxDocument.findUnique({
+      where: { id: documentId },
+    });
+
+    if (!doc) {
+      throw new NotFoundError('Tax document not found');
+    }
+
+    const absolutePath = StorageService.getAbsoluteFilePath(doc.filePath);
+    if (!StorageService.fileExists(doc.filePath)) {
+      throw new NotFoundError('Physical document file not found on storage server');
+    }
+
+    return {
+      absolutePath,
+      fileName: doc.fileName,
+    };
+  }
+
+  /**
+   * Mark document as verified / rejected
+   */
+  static async verifyDocument(documentId: string, status: 'VERIFIED' | 'REJECTED') {
+    const doc = await prisma.taxDocument.findUnique({
+      where: { id: documentId },
+    });
+
+    if (!doc) {
+      throw new NotFoundError('Tax document not found');
+    }
+
+    const updated = await prisma.taxDocument.update({
+      where: { id: documentId },
+      data: {
+        verificationStatus: status,
+      },
+    });
+
+    return updated;
   }
 }

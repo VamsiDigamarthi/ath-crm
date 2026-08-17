@@ -22,4 +22,10 @@ router.post('/documents/upload', uploadTaxDocument.single('file'), CustomerContr
 router.delete('/documents/:id', CustomerController.deleteDocument);
 router.get('/documents/:id/download', CustomerController.downloadDocument);
 
+/**
+ * 9-Module Intake Organizer Routes
+ */
+router.get('/organizer', CustomerController.getOrganizer);
+router.put('/organizer', CustomerController.saveOrganizer);
+
 export { router as customerRouter };

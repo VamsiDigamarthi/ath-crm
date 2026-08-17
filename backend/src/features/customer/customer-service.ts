@@ -297,4 +297,205 @@ export class CustomerService {
       fileName: doc.fileName,
     };
   }
+
+  /**
+   * Get 9-Module Organizer data for active tax return
+   */
+  static async getOrganizer(userId: string, taxYearQuery?: string) {
+    const profile = await prisma.customerProfile.findFirst({
+      where: { userId },
+      include: {
+        applications: {
+          orderBy: { taxYear: 'desc' },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Taxpayer customer profile not found');
+    }
+
+    const selectedYear = taxYearQuery ? parseInt(taxYearQuery, 10) : 2025;
+    const activeApp = profile.applications.find((a) => a.taxYear === selectedYear) || profile.applications[0];
+
+    if (!activeApp) {
+      throw new NotFoundError(`No tax return found for year ${selectedYear}`);
+    }
+
+    const draft = (activeApp.taxDraftSummary as any) || {};
+    const organizer = draft.organizer || {};
+
+    // Real customer data from CustomerProfile and saved TaxDraftSummary
+    const defaultOrganizer = {
+      m1_demographics: organizer.m1_demographics || {
+        fullName: `${profile.firstName} ${profile.lastName || ''}`.trim(),
+        ssnMasked: profile.ssnTin ? `•••-••-${profile.ssnTin.slice(-4)}` : '',
+        dob: profile.dob || '',
+        occupation: profile.occupation || '',
+        filingStatus: profile.maritalStatus === 'Married' ? 'Married Filing Jointly' : 'Single',
+        residentialAddress: profile.addressLine1 || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        zipCode: profile.zipCode || '',
+      },
+      m2_dependents: organizer.m2_dependents || {
+        hasDependents: false,
+        spouseName: '',
+        spouseSsn: '',
+        childCount: 0,
+        daycareExpensesClaimed: false,
+        daycareProviderName: '',
+        daycareProviderEin: '',
+        daycareAmount: 0,
+        employerReimbursedAmount: 0,
+      },
+      m3_presence: organizer.m3_presence || {
+        days2025: 365,
+        days2024: 0,
+        days2023: 0,
+        visaType: profile.visaType || 'H-1B',
+        residedStates: [{ state: profile.state || 'TX', fromDate: '01/01/2025', toDate: '12/31/2025' }],
+        cityCountyTaxesRequired: false,
+      },
+      m4_wages: organizer.m4_wages || {
+        hasW2: false,
+        employerName: '',
+        estimatedWages: 0,
+      },
+      m5_interest: organizer.m5_interest || {
+        hasInterestDividends: false,
+        bankName: '',
+        interestAmount: 0,
+        dividendAmount: 0,
+      },
+      m6_stocks: organizer.m6_stocks || {
+        tradedStocks: false,
+        brokerName: '',
+        totalCapitalGain: 0,
+        esppRsuReported: false,
+        lossCarryforward: 0,
+      },
+      m7_foreign: organizer.m7_foreign || {
+        hasFbar: false,
+        indianBankName: '',
+        peakBalanceInr: 0,
+        foreignInterestInr: 0,
+        foreignSalaryInr: 0,
+      },
+      m8_deductions: organizer.m8_deductions || {
+        hsaContribution: 0,
+        mortgageInterest1098: 0,
+        propertyTaxesUs: 0,
+        propertyTaxesIndia: 0,
+        studentLoanInterest: 0,
+        cleanEnergyEquipment: '',
+        cleanEnergyCost: 0,
+        charitableDonations: 0,
+      },
+      m9_directDeposit: organizer.m9_directDeposit || {
+        bankName: '',
+        accountType: 'CHECKING',
+        routingNumber: '',
+        accountNumber: '',
+        accountOwnerName: `${profile.firstName} ${profile.lastName || ''}`.trim(),
+      },
+    };
+
+    // Calculate real completion progress
+    let completedCount = 0;
+    if (defaultOrganizer.m1_demographics.fullName && defaultOrganizer.m1_demographics.city) completedCount++;
+    if (organizer.m2_dependents) completedCount++;
+    if (defaultOrganizer.m3_presence.days2025 > 0) completedCount++;
+    if (organizer.m4_wages && (defaultOrganizer.m4_wages.hasW2 || defaultOrganizer.m4_wages.employerName)) completedCount++;
+    if (organizer.m5_interest) completedCount++;
+    if (organizer.m6_stocks) completedCount++;
+    if (organizer.m7_foreign) completedCount++;
+    if (organizer.m8_deductions) completedCount++;
+    if (organizer.m9_directDeposit && defaultOrganizer.m9_directDeposit.routingNumber) completedCount++;
+
+    const progressPercent = Math.round((completedCount / 9) * 100);
+
+    return {
+      taxYear: activeApp.taxYear,
+      applicationId: activeApp.id,
+      organizer: defaultOrganizer,
+      progressPercent,
+      completedCount,
+      totalModules: 9,
+    };
+  }
+
+  /**
+   * Save 9-Module Organizer data into TaxApplication
+   */
+  static async saveOrganizer(userId: string, body: any) {
+    const { taxYear, organizerData } = body;
+
+    const profile = await prisma.customerProfile.findFirst({
+      where: { userId },
+      include: {
+        applications: {
+          orderBy: { taxYear: 'desc' },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Taxpayer customer profile not found');
+    }
+
+    const selectedYear = taxYear ? parseInt(taxYear, 10) : 2025;
+    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
+
+    if (!activeApp) {
+      activeApp = await prisma.taxApplication.create({
+        data: {
+          customerId: profile.id,
+          taxYear: selectedYear,
+          currentStage: 'DOC_PREP',
+          filingType: 'INDIVIDUAL',
+        },
+      });
+    }
+
+    const currentDraft = (activeApp.taxDraftSummary as any) || {};
+
+    // Calculate completion
+    let completedCount = 0;
+    if (organizerData.m1_demographics?.fullName) completedCount++;
+    if (organizerData.m2_dependents) completedCount++;
+    if (organizerData.m3_presence?.days2025 > 0) completedCount++;
+    if (organizerData.m4_wages) completedCount++;
+    if (organizerData.m5_interest) completedCount++;
+    if (organizerData.m6_stocks) completedCount++;
+    if (organizerData.m7_foreign) completedCount++;
+    if (organizerData.m8_deductions) completedCount++;
+    if (organizerData.m9_directDeposit?.routingNumber) completedCount++;
+
+    const progressPercent = Math.round((completedCount / 9) * 100);
+
+    const updatedSummary = {
+      ...currentDraft,
+      organizer: organizerData,
+      organizerPercent: progressPercent,
+      organizerVerifiedCount: completedCount,
+      lastSavedAt: new Date().toISOString(),
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: activeApp.id },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    return {
+      taxYear: updatedApp.taxYear,
+      applicationId: updatedApp.id,
+      organizer: organizerData,
+      progressPercent,
+      completedCount,
+      message: 'Organizer saved successfully to your tax filing file',
+    };
+  }
 }

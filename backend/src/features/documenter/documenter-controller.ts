@@ -172,3 +172,39 @@ export const sendToSales = async (
     next(error);
   }
 };
+
+export const downloadDocument = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const downloadInfo = await DocumenterService.getDocumentDownloadInfo(id);
+
+    res.download(downloadInfo.absolutePath, downloadInfo.fileName);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyDocument = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const { status } = req.body;
+
+    const result = await DocumenterService.verifyDocument(id, status || 'VERIFIED');
+
+    res.status(200).json({
+      success: true,
+      message: `Document marked as ${status || 'VERIFIED'} successfully`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

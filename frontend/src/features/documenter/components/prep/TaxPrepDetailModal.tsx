@@ -13,6 +13,7 @@ import type { DocumenterLeadItem } from '../../types/documenter.types';
 import { TaxPrepDraftCalculator } from './TaxPrepDraftCalculator';
 import type { TaxDraftComputation } from './TaxPrepDraftCalculator';
 import { TaxPrepDocumentVault } from './TaxPrepDocumentVault';
+import { TaxPrepOrganizerReview } from './TaxPrepOrganizerReview';
 import { documenterService } from '../../services/documenter-service';
 import toast from 'react-hot-toast';
 
@@ -175,6 +176,9 @@ export const TaxPrepDetailModal: React.FC<TaxPrepDetailModalProps> = ({
         {activeTab === 'CALCULATOR' && (
           <TaxPrepDraftCalculator
             initialDraft={initialDraft}
+            organizer={(lead.taxDraftSummary as any)?.organizer}
+            customerMaritalStatus={customer.maritalStatus || undefined}
+            taxYear={lead.taxYear || 2025}
             onSaveDraft={handleSaveDraft}
             onSendToSales={handleSendToSales}
             isSaving={isSaving}
@@ -184,52 +188,15 @@ export const TaxPrepDetailModal: React.FC<TaxPrepDetailModalProps> = ({
         {activeTab === 'DOCUMENTS' && (
           <TaxPrepDocumentVault
             customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+            documents={(lead as any).documents || []}
           />
         )}
 
         {activeTab === 'ORGANIZER' && (
-          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  9-Module Taxpayer Intake Checklist
-                </h4>
-                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                  Tick and review items while discussing with {customer.firstName} on the call.
-                </p>
-              </div>
-              <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
-                Interactive Intake
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { id: 'm1', name: '1. Personal Info & SSN/ITIN', defaultStatus: 'Verified' },
-                { id: 'm2', name: '2. Spouse & Dependents', defaultStatus: 'Applicable' },
-                { id: 'm3', name: '3. Visa & Residency (1040 vs 1040-NR)', defaultStatus: 'Verified' },
-                { id: 'm4', name: '4. W-2 Wages & Withholding', defaultStatus: 'Verified' },
-                { id: 'm5', name: '5. 1099-INT/DIV Bank Interest', defaultStatus: 'Applicable' },
-                { id: 'm6', name: '6. 1099-B Stocks / Crypto Gains', defaultStatus: 'Pending Review' },
-                { id: 'm7', name: '7. Foreign Income & FBAR Status', defaultStatus: 'Not Applicable' },
-                { id: 'm8', name: '8. Itemized / Standard Deductions', defaultStatus: 'Standard' },
-                { id: 'm9', name: '9. Direct Deposit Bank Routing', defaultStatus: 'Pending Upload' },
-              ].map((mod) => (
-                <div 
-                  key={mod.id} 
-                  className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-all flex flex-col justify-between gap-2"
-                >
-                  <span className="font-bold text-xs text-slate-800">{mod.name}</span>
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                    <span className="text-[10px] text-slate-500 font-medium">Status:</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-                      {mod.defaultStatus}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <TaxPrepOrganizerReview
+            customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+            taxDraftSummary={lead.taxDraftSummary}
+          />
         )}
       </div>
     </AppModal>

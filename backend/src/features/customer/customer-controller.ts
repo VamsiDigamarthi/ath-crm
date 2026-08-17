@@ -88,4 +88,33 @@ export class CustomerController {
 
     return res.download(downloadInfo.absolutePath, downloadInfo.fileName);
   }
+
+  /**
+   * GET /api/v1/customer/organizer
+   * Fetch 9-module organizer intake JSON
+   */
+  static async getOrganizer(req: Request, res: Response) {
+    if (!req.currentUser?.id) {
+      throw new NotAuthorizedError();
+    }
+
+    const taxYear = req.query.taxYear as string | undefined;
+    const organizerData = await CustomerService.getOrganizer(req.currentUser.id, taxYear);
+
+    return SuccessHandler.handle(res, 'Organizer data fetched successfully', organizerData);
+  }
+
+  /**
+   * PUT /api/v1/customer/organizer
+   * Save 9-module organizer intake JSON
+   */
+  static async saveOrganizer(req: Request, res: Response) {
+    if (!req.currentUser?.id) {
+      throw new NotAuthorizedError();
+    }
+
+    const result = await CustomerService.saveOrganizer(req.currentUser.id, req.body);
+
+    return SuccessHandler.handle(res, 'Organizer saved successfully', result);
+  }
 }

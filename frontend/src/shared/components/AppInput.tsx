@@ -87,7 +87,7 @@ export function AppInput({
           readOnly={readOnly}
           className={cn(
             'w-full rounded-xl border-[1.5px] bg-white px-3.5 transition-all duration-200 outline-none',
-            'placeholder-gray-400 text-gray-900',
+            'placeholder:text-slate-300 placeholder:font-normal placeholder:italic text-slate-900 font-semibold',
             'hover:border-gray-300',
             'focus:ring-2 focus:ring-emerald-500/15 focus:border-[#16A34A]',
             SIZE_CLS[size],

@@ -6,6 +6,8 @@ import {
   logCallDisposition,
   saveTaxDraft,
   sendToSales,
+  downloadDocument,
+  verifyDocument,
 } from './documenter-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
@@ -75,6 +77,22 @@ router.post(
   requireAuth,
   authorize(...DOCUMENTER_ROLES),
   sendToSales
+);
+
+// 8. Document Download & Preview Stream (All Documenter staff)
+router.get(
+  '/documents/:id/download',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  downloadDocument
+);
+
+// 9. Document Verification Status Update (All Documenter staff)
+router.patch(
+  '/documents/:id/verify',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  verifyDocument
 );
 
 export { router as documenterRouter };

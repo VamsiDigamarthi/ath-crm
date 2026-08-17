@@ -125,4 +125,99 @@ export const customerApi = {
     link.remove();
     window.URL.revokeObjectURL(url);
   },
+
+  getOrganizer: async (taxYear?: string): Promise<{ success: boolean; data: OrganizerResponse }> => {
+    const params = taxYear ? { taxYear } : {};
+    const res: any = await apiClient.get('/customer/organizer', { params });
+    return res;
+  },
+
+  saveOrganizer: async (taxYear: number, organizerData: OrganizerData): Promise<{ success: boolean; data: any }> => {
+    const res: any = await apiClient.put('/customer/organizer', { taxYear, organizerData });
+    return res;
+  },
 };
+
+export interface OrganizerData {
+  m1_demographics: {
+    fullName: string;
+    ssnMasked: string;
+    dob: string;
+    occupation: string;
+    filingStatus: string;
+    residentialAddress: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  m2_dependents: {
+    hasDependents: boolean;
+    spouseName?: string;
+    spouseSsn?: string;
+    childCount: number;
+    daycareExpensesClaimed: boolean;
+    daycareProviderName?: string;
+    daycareProviderEin?: string;
+    daycareAmount?: number;
+    employerReimbursedAmount?: number;
+  };
+  m3_presence: {
+    days2025: number;
+    days2024: number;
+    days2023: number;
+    visaType: string;
+    residedStates: Array<{ state: string; fromDate: string; toDate: string }>;
+    cityCountyTaxesRequired: boolean;
+  };
+  m4_wages: {
+    hasW2: boolean;
+    employerName: string;
+    estimatedWages?: number;
+  };
+  m5_interest: {
+    hasInterestDividends: boolean;
+    bankName?: string;
+    interestAmount?: number;
+    dividendAmount?: number;
+  };
+  m6_stocks: {
+    tradedStocks: boolean;
+    brokerName?: string;
+    totalCapitalGain?: number;
+    esppRsuReported?: boolean;
+    lossCarryforward?: number;
+  };
+  m7_foreign: {
+    hasFbar: boolean;
+    indianBankName?: string;
+    peakBalanceInr?: number;
+    foreignInterestInr?: number;
+    foreignSalaryInr?: number;
+  };
+  m8_deductions: {
+    hsaContribution?: number;
+    mortgageInterest1098?: number;
+    propertyTaxesUs?: number;
+    propertyTaxesIndia?: number;
+    studentLoanInterest?: number;
+    cleanEnergyEquipment?: string;
+    cleanEnergyCost?: number;
+    charitableDonations?: number;
+  };
+  m9_directDeposit: {
+    bankName: string;
+    accountType: string;
+    routingNumber: string;
+    accountNumber: string;
+    accountOwnerName: string;
+  };
+}
+
+export interface OrganizerResponse {
+  taxYear: number;
+  applicationId: string;
+  organizer: OrganizerData;
+  progressPercent: number;
+  completedCount: number;
+  totalModules: number;
+}
