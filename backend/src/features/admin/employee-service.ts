@@ -1,5 +1,5 @@
 import { prisma } from "../../config/db.js";
-import { Role, Prisma } from "@prisma/client";
+import { Role, Prisma, ApplicationStage } from "@prisma/client";
 import { BadRequestError } from "../../errors/bad-request-error.js";
 import { NotFoundError } from "../../errors/not-found-error.js";
 
@@ -137,6 +137,21 @@ export class EmployeeService {
               assignedFileApps: true,
             },
           },
+          assignedDocApps: {
+            select: {
+              currentStage: true,
+            },
+          },
+          assignedSalesApps: {
+            select: {
+              currentStage: true,
+            },
+          },
+          assignedFileApps: {
+            select: {
+              currentStage: true,
+            },
+          },
         },
       }),
     ]);
@@ -185,6 +200,30 @@ export class EmployeeService {
       const lastName = u.lastName || '';
       const fullName = `${firstName} ${lastName}`.trim();
 
+      let completedCases = 0;
+      if (meta.department === 'DOC' && u.assignedDocApps) {
+        completedCases = u.assignedDocApps.filter(
+          (a) =>
+            a.currentStage === ApplicationStage.DOC_PREP ||
+            a.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
+            a.currentStage === ApplicationStage.SALES_PITCHING ||
+            a.currentStage === ApplicationStage.FILING_QUEUE ||
+            a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+            a.currentStage === ApplicationStage.FILING_SUCCESS
+        ).length;
+      } else if (meta.department === 'SALES' && u.assignedSalesApps) {
+        completedCases = u.assignedSalesApps.filter(
+          (a) =>
+            a.currentStage === ApplicationStage.FILING_QUEUE ||
+            a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+            a.currentStage === ApplicationStage.FILING_SUCCESS
+        ).length;
+      } else if (meta.department === 'FILE_OP' && u.assignedFileApps) {
+        completedCases = u.assignedFileApps.filter(
+          (a) => a.currentStage === ApplicationStage.FILING_SUCCESS
+        ).length;
+      }
+
       return {
         id: u.id,
         firstName,
@@ -199,7 +238,7 @@ export class EmployeeService {
         isActive: u.isActive,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}${lastName}`,
         assignedCasesCount: assignedCases,
-        completedCasesCount: 0,
+        completedCasesCount: completedCases,
         createdAt: u.createdAt.toLocaleDateString('en-US', {
           month: 'short',
           day: '2-digit',

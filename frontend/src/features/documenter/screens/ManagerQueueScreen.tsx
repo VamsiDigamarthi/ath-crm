@@ -124,6 +124,7 @@ export const ManagerQueueScreen: React.FC = () => {
         stats={stats}
         onQuickAutoDistribute={handleAutoRoundRobin}
         isDistributing={isActionLoading}
+        showMyLeads={true}
       />
 
       {/* 3. Dedicated Tabs & Search Bar Card */}

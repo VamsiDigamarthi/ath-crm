@@ -12,11 +12,10 @@ import {
   PhoneCall,
   FileCheck2,
   Clock,
-  UserCheck,
   ListFilter,
   Zap,
   RefreshCw,
-  Globe
+  Globe,
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
@@ -65,22 +64,14 @@ export const DocumenterDepartmentScreen: React.FC = () => {
     [handleOpenCallModal, handleOpenAssignModal]
   );
 
-  // Role-specific Tabs Configuration
-  const tabs = isAgent
-    ? [
-      { id: 'MY_LEADS' as DocumenterTab, label: 'My Assigned Leads', count: stats.myLeads, icon: UserCheck },
-      { id: 'CALLBACKS' as DocumenterTab, label: 'My Callbacks', count: stats.callbacks, icon: Clock },
-      { id: 'PREP' as DocumenterTab, label: 'Tax Prep Active', count: stats.inPrep, icon: FileCheck2 },
-      { id: 'ALL' as DocumenterTab, label: 'All My Leads', count: stats.total, icon: ListFilter },
-    ]
-    : [
-      { id: 'MY_LEADS' as DocumenterTab, label: 'My Assigned Leads', count: stats.myLeads || 0, icon: UserCheck },
-      { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
-      { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
-      { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
-      { id: 'CALLBACKS' as DocumenterTab, label: 'Scheduled Callbacks', count: stats.callbacks, icon: Clock },
-      { id: 'ALL' as DocumenterTab, label: 'All Department Leads', count: stats.totalDepartment || totalItems, icon: ListFilter },
-    ];
+  // Super Admin Department Supervision Tabs
+  const tabs = [
+    { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
+    { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
+    { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
+    { id: 'CALLBACKS' as DocumenterTab, label: 'Scheduled Callbacks', count: stats.callbacks, icon: Clock },
+    { id: 'ALL' as DocumenterTab, label: 'All Department Leads', count: stats.totalDepartment || totalItems, icon: ListFilter },
+  ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">

@@ -12,6 +12,41 @@ interface AgentUpcomingCallbacksProps {
   onOpenCallModal: (lead: DocumenterLeadItem) => void;
 }
 
+export const formatScheduledTime = (dateStr?: string | null): string => {
+  if (!dateStr) return 'None';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'None';
+    
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    
+    const tomorrow = new Date();
+    tomorrow.setDate(now.getDate() + 1);
+    const isTomorrow = d.toDateString() === tomorrow.toDateString();
+
+    const yesterday = new Date();
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+
+    const timePart = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (isToday) {
+      return `Today at ${timePart}`;
+    }
+    if (isTomorrow) {
+      return `Tomorrow at ${timePart}`;
+    }
+    if (isYesterday) {
+      return `Yesterday at ${timePart}`;
+    }
+    const datePart = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return `${datePart} at ${timePart}`;
+  } catch {
+    return 'None';
+  }
+};
+
 export const AgentUpcomingCallbacks: React.FC<AgentUpcomingCallbacksProps> = ({
   callbacks,
   callbacksCount,
@@ -27,10 +62,10 @@ export const AgentUpcomingCallbacks: React.FC<AgentUpcomingCallbacksProps> = ({
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-500" />
-              Upcoming Callbacks Due Today
+              Scheduled Callbacks & Follow-ups
             </h3>
             <p className="text-xs text-slate-500 font-medium">
-              Appointments with interested taxpayers
+              Time-sensitive callback commitments with taxpayers
             </p>
           </div>
           <Button
@@ -54,6 +89,8 @@ export const AgentUpcomingCallbacks: React.FC<AgentUpcomingCallbacksProps> = ({
             {callbacks.map((lead) => {
               const log = lead.lastCallLog || (lead as any).callLogs?.[0];
               const customer = lead.customer;
+              const formattedDate = formatScheduledTime(log?.callbackScheduledAt);
+
               return (
                 <div
                   key={lead.id}
@@ -73,14 +110,9 @@ export const AgentUpcomingCallbacks: React.FC<AgentUpcomingCallbacksProps> = ({
                   </div>
 
                   <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
-                    <span className="text-xs font-bold text-amber-800 flex items-center gap-1">
+                    <span className="text-xs font-bold text-amber-900 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-amber-600" />
-                      {log?.callbackScheduledAt
-                        ? new Date(log.callbackScheduledAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : 'Today'}
+                      {formattedDate}
                     </span>
                     <Button
                       size="sm"
@@ -102,12 +134,7 @@ export const AgentUpcomingCallbacks: React.FC<AgentUpcomingCallbacksProps> = ({
         <span>
           Next Callback:{' '}
           <strong className="text-amber-800 font-bold">
-            {nextCallbackAt
-              ? new Date(nextCallbackAt).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-              : 'None'}
+            {formatScheduledTime(nextCallbackAt)}
           </strong>
         </span>
         <span className="text-[#16A34A] font-bold">SLA: On-Time</span>

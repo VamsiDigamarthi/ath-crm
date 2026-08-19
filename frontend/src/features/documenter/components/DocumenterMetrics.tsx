@@ -6,14 +6,16 @@ export interface DocumenterMetricsProps {
   stats: DocumenterStats;
   onQuickAutoDistribute: () => void;
   isDistributing?: boolean;
+  showMyLeads?: boolean;
 }
 
 export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
   stats,
   onQuickAutoDistribute,
   isDistributing = false,
+  showMyLeads = false,
 }) => {
-  const hasMyLeads = stats.myLeads !== undefined;
+  const hasMyLeads = showMyLeads && stats.myLeads !== undefined;
 
   return (
     <div className={`grid grid-cols-1 sm:grid-cols-2 ${hasMyLeads ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>

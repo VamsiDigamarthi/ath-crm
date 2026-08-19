@@ -129,8 +129,10 @@ export const getEmployeeColumns = (actions: ColumnActionsProps): ColumnDef<Emplo
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
           {row.assignedCasesCount} active leads
         </span>
-        <div className="text-[10px] text-slate-400">
-          {row.completedCasesCount} completed filings
+        <div className="text-[10px] font-medium text-slate-500">
+          {row.department === 'DOC'
+            ? `${row.completedCasesCount} completed intakes`
+            : `${row.completedCasesCount} completed filings`}
         </div>
       </div>
     ),
