@@ -270,7 +270,6 @@ export const DocumenterManagerScreen: React.FC = () => {
       {managerView === 'TEAM_PERFORMANCE' && (
         <AgentPerformanceTable
           agents={agentPerformanceData}
-          onAssignToAgent={(_agentId) => handleOpenAssignModal()}
           onFilterByAgent={handleFilterByAgent}
           isLoading={isLoading}
         />

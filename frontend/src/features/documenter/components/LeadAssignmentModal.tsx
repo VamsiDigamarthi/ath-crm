@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { Button } from '@/shared/components/Button';
@@ -36,6 +36,19 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
 
   const leadCount = selectedLeads.length;
 
+  // Find agent IDs that already own any of the selected leads
+  const currentlyAssignedAgentIds = useMemo(() => {
+    if (!selectedLeads || selectedLeads.length === 0) return new Set<string>();
+    const ids = new Set<string>();
+    selectedLeads.forEach((lead) => {
+      const agentId = lead.assignedDocAgentId || (lead.assignedDocAgent && typeof lead.assignedDocAgent === 'object' ? lead.assignedDocAgent.id : undefined);
+      if (agentId && typeof agentId === 'string') {
+        ids.add(agentId);
+      }
+    });
+    return ids;
+  }, [selectedLeads]);
+
   // Auto Round-Robin strictly applies to frontline Calling Agents (DOC_AGENT)
   const callingAgents = agents.filter((a) => a.role === 'DOC_AGENT');
 
@@ -53,7 +66,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
     if (assignmentMode === 'ROUND_ROBIN') {
       onConfirmRoundRobin();
     } else {
-      if (!selectedAgentId) return;
+      if (!selectedAgentId || currentlyAssignedAgentIds.has(selectedAgentId)) return;
       onConfirmDirectAssign(selectedAgentId);
     }
   };
@@ -122,7 +135,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
             <Button
               size="sm"
               onClick={handleConfirm}
-              disabled={isLoading || (assignmentMode === 'DIRECT' && !selectedAgentId)}
+              disabled={isLoading || (assignmentMode === 'DIRECT' && (!selectedAgentId || currentlyAssignedAgentIds.has(selectedAgentId)))}
               className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs px-4 shadow-sm"
             >
               {isLoading ? 'Processing...' : 'Confirm Assignment'}
@@ -252,26 +265,34 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                 </div>
               ) : (
                 filteredStaff.map((agent) => {
+                  const isCurrentlyAssigned = currentlyAssignedAgentIds.has(agent.id);
                   const isSelected = selectedAgentId === agent.id;
                   return (
                     <div
                       key={agent.id}
-                      onClick={() => setSelectedAgentId(agent.id)}
-                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                        isSelected
-                          ? 'bg-emerald-50/80 border-[#16A34A] shadow-xs'
-                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                      onClick={() => {
+                        if (isCurrentlyAssigned) return;
+                        setSelectedAgentId(agent.id);
+                      }}
+                      className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                        isCurrentlyAssigned
+                          ? 'opacity-40 bg-slate-100/80 border-slate-200 cursor-not-allowed select-none'
+                          : isSelected
+                          ? 'bg-emerald-50/80 border-[#16A34A] shadow-xs cursor-pointer'
+                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 cursor-pointer'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                            isSelected
+                            isCurrentlyAssigned
+                              ? 'border-slate-300 bg-slate-200'
+                              : isSelected
                               ? 'border-[#16A34A] bg-[#16A34A]'
                               : 'border-slate-300 bg-white'
                           }`}
                         >
-                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          {isSelected && !isCurrentlyAssigned && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                         </div>
                         <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
                           {agent.email[0].toUpperCase()}
@@ -280,6 +301,11 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                           <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
                             <span>{agent.email}</span>
                             {getRoleBadge(agent.role)}
+                            {isCurrentlyAssigned && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-600 border border-slate-300">
+                                Current Owner
+                              </span>
+                            )}
                           </div>
                           <div className="text-[10px] text-slate-400 font-medium">
                             {agent.mobile || 'No mobile'}

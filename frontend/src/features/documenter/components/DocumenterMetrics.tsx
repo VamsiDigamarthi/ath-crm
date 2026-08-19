@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, PhoneForwarded, FileCheck2, Clock, Zap } from 'lucide-react';
+import { Users, PhoneForwarded, FileCheck2, Clock, Zap, UserCheck } from 'lucide-react';
 import type { DocumenterStats } from '../types/documenter.types';
 
 export interface DocumenterMetricsProps {
@@ -13,8 +13,10 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
   onQuickAutoDistribute,
   isDistributing = false,
 }) => {
+  const hasMyLeads = stats.myLeads !== undefined;
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className={`grid grid-cols-1 sm:grid-cols-2 ${hasMyLeads ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
       {/* 1. Unassigned Leads Card with Quick Action Button */}
       <div className="relative overflow-hidden rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
         <div className="flex items-center justify-between">
@@ -46,7 +48,27 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
         </div>
       </div>
 
-      {/* 2. Active Outreach Card */}
+      {/* 2. My Assigned Leads Card (if applicable) */}
+      {hasMyLeads && (
+        <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-emerald-300">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              My Assigned Leads
+            </span>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#16A34A]">
+              <UserCheck className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 text-2xl sm:text-3xl font-bold text-slate-900 font-sans tracking-tight">
+            {stats.myLeads}
+          </div>
+          <div className="mt-2 text-xs text-[#16A34A] font-medium">
+            Assigned to me directly
+          </div>
+        </div>
+      )}
+
+      {/* 3. Active Outreach Card */}
       <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -64,7 +86,7 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
         </div>
       </div>
 
-      {/* 3. In Tax Prep Card */}
+      {/* 4. In Tax Prep Card */}
       <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -82,7 +104,7 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
         </div>
       </div>
 
-      {/* 4. Callbacks Scheduled Card */}
+      {/* 5. Callbacks Scheduled Card */}
       <div className="rounded-xl bg-white border border-slate-200/80 p-5 shadow-xs transition-all hover:shadow-md hover:border-slate-300">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">

@@ -7,7 +7,7 @@ export const getDocumenterLeads = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { page, limit, tab, search, agentId, visaType, taxYear } = req.query;
+    const { page, limit, tab, search, agentId, visaType, taxYear, timeRange } = req.query;
 
     const query: DocumenterLeadQuery = {
       page: page ? Number(page) : undefined,
@@ -17,6 +17,7 @@ export const getDocumenterLeads = async (
       agentId: (agentId as string) || undefined,
       visaType: (visaType as string) || undefined,
       taxYear: taxYear ? Number(taxYear) : undefined,
+      timeRange: (timeRange as any) || 'TODAY',
       currentUserId: req.currentUser?.id,
       currentUserRole: req.currentUser?.role,
     };
@@ -34,12 +35,13 @@ export const getDocumenterLeads = async (
 };
 
 export const getDocumenterAgents = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const agents = await DocumenterService.listDocumenterAgents();
+    const { timeRange } = req.query;
+    const agents = await DocumenterService.listDocumenterAgents(timeRange as any);
 
     res.status(200).json({
       success: true,

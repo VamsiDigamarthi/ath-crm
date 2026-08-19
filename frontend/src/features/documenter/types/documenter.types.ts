@@ -69,12 +69,19 @@ export interface DocumenterStats {
   nextCallbackAt?: string | null;
   hourlyBreakdown?: Array<{ hour: string; dials: number; connected: number }>;
   weeklyBreakdown?: Array<{ day: string; dials: number; connected: number; prep: number }>;
+  visaDistribution?: Array<{ name: string; value: number; color: string; pct: number }>;
 }
 
 export interface DocumenterAgentItem {
   id: string;
+  name?: string;
   email: string;
   mobile: string;
   role: string;
   activeLoad: number;
+  dials?: number;
+  connected?: number;
+  conv?: number;
+  rate?: string;
+  avatar?: string;
 }

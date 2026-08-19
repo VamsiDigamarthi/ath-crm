@@ -9,8 +9,6 @@ export interface AppPaginationProps {
   perPageOptions?: number[]
   onPageChange: (page: number) => void
   onPerPageChange?: (perPage: number) => void
-  activeBg?: string
-  activeText?: string
   className?: string
 }
 
@@ -38,8 +36,6 @@ export function AppPagination({
   perPageOptions = [5, 10, 20, 50],
   onPageChange,
   onPerPageChange,
-  activeBg = '#16A34A',
-  activeText = '#ffffff',
   className,
 }: AppPaginationProps) {
   const pages = buildPages(currentPage, Math.max(totalPages, 1))
@@ -111,16 +107,11 @@ export function AppPagination({
                   onClick={() => onPageChange(page)}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'w-8 h-8 rounded-lg text-xs font-bold transition-all border cursor-pointer',
+                    'w-8 h-8 rounded-lg text-xs font-bold transition-all border cursor-pointer flex items-center justify-center',
                     isActive
-                      ? 'border-transparent shadow-2xs'
-                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                      ? 'border-transparent shadow-2xs bg-[#16A34A] text-white hover:bg-[#15803D]'
+                      : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-50'
                   )}
-                  style={
-                    isActive
-                      ? { backgroundColor: activeBg, color: activeText }
-                      : undefined
-                  }
                 >
                   {page}
                 </button>

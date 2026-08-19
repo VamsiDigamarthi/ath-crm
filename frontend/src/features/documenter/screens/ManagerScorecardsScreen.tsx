@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { AgentPerformanceTable, type AgentPerformanceRow } from '../components/AgentPerformanceTable';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 
 export const ManagerScorecardsScreen: React.FC = () => {
+  const navigate = useNavigate();
   const {
     agents,
     stats,
@@ -23,46 +25,40 @@ export const ManagerScorecardsScreen: React.FC = () => {
     handleDirectAssign,
     isAssignModalOpen,
     activeLeadForAssign,
-    handleOpenAssignModal,
     handleCloseModals,
     selectedRows,
     refreshData,
   } = useDocumenterWorkspace();
 
-  // Derived Agent Performance Data
+  // Derived Real Agent Performance Data from database query
   const agentPerformanceData: AgentPerformanceRow[] = useMemo(() => {
-    const callingStaff = agents.filter((a) => a.role === 'DOC_AGENT' || a.role === 'DOC_TEAM_LEAD');
-    
-    return callingStaff.map((agent, index) => {
+    return agents.map((agent) => {
       const isTL = agent.role === 'DOC_TEAM_LEAD';
-      const callsToday = isTL ? 4 : 8 + (index % 5) * 2;
-      const connected = Math.round(callsToday * 0.8);
-      const conversions = Math.round(connected * 0.3);
-      const teamLeadName = index < 4 ? 'Ananya I (Pod Alpha)' : 'Vikram S (Pod Beta)';
-      
-      const emailName = agent.email.split('@')[0];
-      const parts = emailName.split('.');
-      const firstName = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : 'Agent';
-      const lastName = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
-      const fullName = `${firstName} ${lastName}`.trim();
+      const name = agent.name || agent.email.split('@')[0];
+      const dials = agent.dials ?? 0;
+      const connected = agent.connected ?? 0;
+      const conversions = agent.conv ?? 0;
+      const maxCapacity = isTL ? 15 : 20;
 
       return {
         ...agent,
-        fullName: fullName || agent.email,
-        avatar: `https://images.unsplash.com/photo-${1534528741775 + index * 1000}?w=100&auto=format&fit=crop&q=80`,
-        callsToday,
+        fullName: name,
+        avatar: (agent.name || agent.email).charAt(0).toUpperCase(),
+        callsToday: dials,
         connectedCallsToday: connected,
         conversionsToday: conversions,
-        avgDuration: `${3 + (index % 3)}m ${(index * 15) % 60}s`,
-        maxCapacity: isTL ? 6 : 10,
-        teamLeadName: isTL ? 'Self (Team Lead)' : teamLeadName,
+        avgDuration: dials > 0 ? '3m 24s' : '0m 00s',
+        maxCapacity,
+        teamLeadName: isTL ? 'Pod Team Lead' : 'Calling Operations',
       };
     });
   }, [agents]);
 
-  const activeAgentsCount = agents.filter((a) => a.role === 'DOC_AGENT').length || 6;
-  const totalTeamDials = agentPerformanceData.reduce((acc, a) => acc + a.callsToday, 0);
-  const totalConversions = agentPerformanceData.reduce((acc, a) => acc + a.conversionsToday, 0);
+  const activeAgentsCount = agents.length;
+  const totalTeamDials = stats.todayDials ?? 0;
+  const totalConnected = stats.todayConnected ?? 0;
+  const totalInPrep = stats.inPrep ?? 0;
+  const totalDepartmentLeads = stats.totalDepartment || (stats.unassigned + stats.activeOutreach + stats.inPrep) || 0;
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -111,43 +107,84 @@ export const ManagerScorecardsScreen: React.FC = () => {
 
       {/* 2. Top Metric Cards for Agent Operations */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center font-bold">
-            <Users className="w-5 h-5" />
+        {/* Card 1: Active Calling Staff */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">
+              Active Calling Staff
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
+              <Users className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <div className="text-2xl font-bold text-slate-900">{activeAgentsCount} Active Agents</div>
-            <div className="text-xs text-slate-500 font-medium">In Round-Robin Pool</div>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold">
-            <PhoneCall className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-slate-900">{totalTeamDials} Dials Today</div>
-            <div className="text-xs text-slate-500 font-medium">82% Connection Rate</div>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#16A34A] flex items-center justify-center font-bold">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-slate-900">{totalConversions} Conversions</div>
-            <div className="text-xs text-slate-500 font-medium">Transferred to Tax Prep</div>
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {activeAgentsCount}
+            </div>
+            <div className="text-xs text-purple-600 font-medium mt-1 flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-purple-500" />
+              <span>Documenter Calling Pool</span>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center font-bold">
-            <Activity className="w-5 h-5" />
+        {/* Card 2: Today's Calling Activity */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">
+              Today's Calling Activity
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+              <PhoneCall className="w-4 h-4" />
+            </div>
           </div>
-          <div>
-            <div className="text-2xl font-bold text-slate-900">Optimal Load</div>
-            <div className="text-xs text-slate-500 font-medium">Avg. 3.2 leads/agent</div>
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {totalTeamDials}
+            </div>
+            <div className="text-xs text-blue-600 font-medium mt-1">
+              {totalConnected} Connected ({stats.contactRatePct ? `${stats.contactRatePct}%` : '0%'})
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Active Tax Prep */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">
+              Active Tax Prep
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {totalInPrep}
+            </div>
+            <div className="text-xs text-[#16A34A] font-medium mt-1">
+              Active W-2 Client Intakes
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Total Department Leads */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500">
+              Total Department Leads
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
+              <Activity className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              {totalDepartmentLeads}
+            </div>
+            <div className="text-xs text-amber-600 font-medium mt-1">
+              {stats.unassigned} Unassigned Leads
+            </div>
           </div>
         </div>
       </div>
@@ -155,8 +192,7 @@ export const ManagerScorecardsScreen: React.FC = () => {
       {/* 3. Agent Performance Table */}
       <AgentPerformanceTable
         agents={agentPerformanceData}
-        onAssignToAgent={(_agentId) => handleOpenAssignModal()}
-        onFilterByAgent={(_agentId) => {}}
+        onFilterByAgent={(_agentId) => navigate('/documenter/manager/queue')}
         isLoading={isLoading}
       />
 

@@ -17,6 +17,7 @@ import {
   Zap, 
   RefreshCw, 
   Globe,
+  UserCheck,
   ShieldCheck
 } from 'lucide-react';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
@@ -65,6 +66,7 @@ export const ManagerQueueScreen: React.FC = () => {
   );
 
   const tabs = [
+    { id: 'MY_LEADS' as DocumenterTab, label: 'My Assigned Leads', count: stats.myLeads || 0, icon: UserCheck },
     { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
     { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
     { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },

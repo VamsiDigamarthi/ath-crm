@@ -11,6 +11,7 @@ export interface DocumenterLeadQuery {
   agentId?: string;
   visaType?: string;
   taxYear?: number;
+  timeRange?: 'TODAY' | 'WEEK' | 'SEASON';
   currentUserId?: string;
   currentUserRole?: string;
 }
@@ -24,7 +25,7 @@ export class DocumenterService {
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
     const skip = (page - 1) * limit;
 
-    const { tab = 'ALL', search, agentId, visaType, taxYear, currentUserId, currentUserRole } = query;
+    const { tab = 'ALL', search, agentId, visaType, taxYear, timeRange = 'TODAY', currentUserId, currentUserRole } = query;
 
     // 1. Build where clause
     const where: any = {};
@@ -99,12 +100,27 @@ export class DocumenterService {
       };
     }
 
-    const startOfToday = new Date();
+    const now = new Date();
+    const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
 
-    const agentCallLogsWhere: any = {
-      createdAt: { gte: startOfToday },
-    };
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(startOfWeek.getDate() - 6);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    let dateFilter: { gte?: Date } | undefined;
+    if (timeRange === 'WEEK') {
+      dateFilter = { gte: startOfWeek };
+    } else if (timeRange === 'SEASON') {
+      dateFilter = undefined;
+    } else {
+      dateFilter = { gte: startOfToday };
+    }
+
+    const agentCallLogsWhere: any = {};
+    if (dateFilter) {
+      agentCallLogsWhere.createdAt = dateFilter;
+    }
     if (currentUserRole === Role.DOC_AGENT && currentUserId) {
       agentCallLogsWhere.agentId = currentUserId;
     }
@@ -209,10 +225,6 @@ export class DocumenterService {
       : 0;
 
     // Query actual call logs created this week for real charts
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - 6);
-    startOfWeek.setHours(0, 0, 0, 0);
-
     const recentCallLogs = await prisma.callLog.findMany({
       where: {
         ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { agentId: currentUserId } : {}),
@@ -295,6 +307,32 @@ export class DocumenterService {
 
     const weeklyBreakdown = Object.values(daysMap);
 
+    // Query real Visa distribution from database
+    const visaGroups = await prisma.customerProfile.groupBy({
+      by: ['visaType'],
+      _count: { id: true },
+    });
+
+    const totalProfiles = visaGroups.reduce((acc, curr) => acc + curr._count.id, 0) || 1;
+    const visaColorMap: Record<string, string> = {
+      'H-1B': '#16A34A',
+      'F-1 OPT': '#3B82F6',
+      'L-1': '#8B5CF6',
+      'GREEN_CARD': '#F59E0B',
+      'US_CITIZEN': '#10B981',
+    };
+
+    const visaDistribution = visaGroups.map((v) => {
+      const type = v.visaType || 'Standard US';
+      const count = v._count.id;
+      return {
+        name: type.replace('_', ' '),
+        value: count,
+        color: visaColorMap[type] || '#64748B',
+        pct: Math.round((count / totalProfiles) * 100),
+      };
+    });
+
     const mappedLeads = leads.map((app) => ({
       ...app,
       lastCallLog: app.callLogs?.[0] || null,
@@ -321,14 +359,34 @@ export class DocumenterService {
         nextCallbackAt: upcomingCallback?.callbackScheduledAt ? upcomingCallback.callbackScheduledAt.toISOString() : null,
         hourlyBreakdown,
         weeklyBreakdown,
+        visaDistribution,
       },
     };
   }
 
   /**
-   * Get all active Documenter department staff with live workload stats
+   * Get all active Documenter department staff with live workload stats and calling performance
    */
-  public static async listDocumenterAgents() {
+  public static async listDocumenterAgents(timeRange?: 'TODAY' | 'WEEK' | 'SEASON') {
+    const now = new Date();
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(startOfWeek.getDate() - 6);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    let dateFilter: { gte?: Date } | undefined;
+    if (timeRange === 'WEEK') {
+      dateFilter = { gte: startOfWeek };
+    } else if (timeRange === 'SEASON') {
+      dateFilter = undefined;
+    } else {
+      dateFilter = { gte: startOfToday };
+    }
+
+    const callLogsFilter = dateFilter ? { createdAt: dateFilter } : {};
+
     const agents = await prisma.user.findMany({
       where: {
         isActive: true,
@@ -341,15 +399,22 @@ export class DocumenterService {
         email: true,
         mobile: true,
         role: true,
+        assignedDocApps: {
+          select: {
+            currentStage: true,
+          },
+        },
         _count: {
           select: {
-            assignedDocApps: {
-              where: {
-                currentStage: {
-                  in: [ApplicationStage.DOC_OUTREACH, ApplicationStage.DOC_PREP],
-                },
-              },
+            callLogs: {
+              where: callLogsFilter,
             },
+          },
+        },
+        callLogs: {
+          where: callLogsFilter,
+          select: {
+            disposition: true,
           },
         },
       },
@@ -359,13 +424,38 @@ export class DocumenterService {
       ],
     });
 
-    return agents.map((agent) => ({
-      id: agent.id,
-      email: agent.email,
-      mobile: agent.mobile,
-      role: agent.role,
-      activeLoad: agent._count.assignedDocApps,
-    }));
+    return agents.map((agent) => {
+      const activeLoad = agent.assignedDocApps.filter((a) =>
+        ([ApplicationStage.DOC_OUTREACH, ApplicationStage.DOC_PREP] as ApplicationStage[]).includes(a.currentStage)
+      ).length;
+      const prepCount = agent.assignedDocApps.filter(
+        (a) => a.currentStage === ApplicationStage.DOC_PREP
+      ).length;
+
+      const dials = agent._count.callLogs;
+      const connected = agent.callLogs.filter((l) =>
+        ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'].includes(l.disposition)
+      ).length;
+      const rate = dials > 0 ? `${((connected / dials) * 100).toFixed(1)}%` : '0.0%';
+
+      const email = agent.email || `agent-${agent.id.slice(0, 4)}@taxcrm.com`;
+      const rawName = email.split('@')[0].replace('.', ' ');
+      const name = rawName.split(' ').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+
+      return {
+        id: agent.id,
+        name,
+        email,
+        mobile: agent.mobile || '',
+        role: agent.role,
+        activeLoad,
+        dials,
+        connected,
+        conv: prepCount,
+        rate,
+        avatar: name.charAt(0).toUpperCase(),
+      };
+    });
   }
 
   /**

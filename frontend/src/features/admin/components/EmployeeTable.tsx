@@ -187,8 +187,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           onPageChange,
           onPerPageChange,
           perPageOptions: [5, 10, 20, 50],
-          activeBg: 'bg-[#16A34A]',
-          activeText: 'text-white font-bold',
         }}
         emptyText="No staff members found matching active filters."
       />

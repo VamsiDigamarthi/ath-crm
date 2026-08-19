@@ -15,6 +15,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   const isAgent = user?.role === 'DOC_AGENT';
 
   // 1. Filter & Pagination State
+  const [timeRange, setTimeRange] = useState<'TODAY' | 'WEEK' | 'SEASON'>('TODAY');
   const [activeTab, setActiveTab] = useState<DocumenterTab>(
     defaultTab || (isAgent ? 'ALL' : 'UNASSIGNED')
   );
@@ -66,6 +67,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
         tab: activeTab,
         search: debouncedSearch || undefined,
         visaType: visaFilter !== 'ALL' ? visaFilter : undefined,
+        timeRange,
       });
 
       if (res?.data) {
@@ -81,19 +83,19 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, activeTab, debouncedSearch, visaFilter]);
+  }, [page, limit, activeTab, debouncedSearch, visaFilter, timeRange]);
 
   // Fetch agents list for assignment
   const fetchAgents = useCallback(async () => {
     try {
-      const res = await documenterService.getAgents();
+      const res = await documenterService.getAgents({ timeRange });
       if (res?.data) {
         setAgents(res.data);
       }
     } catch (err: any) {
       console.error('Failed to fetch documenter agents:', err);
     }
-  }, []);
+  }, [timeRange]);
 
   // Initial load & when dependencies change
   useEffect(() => {
@@ -263,6 +265,8 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     handleOpenCallModal,
     handleOpenAssignModal,
     handleCloseModals,
+    timeRange,
+    setTimeRange,
     handleSaveCallDisposition,
     refreshData: fetchLeads,
   };

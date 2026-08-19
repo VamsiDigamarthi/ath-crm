@@ -176,13 +176,13 @@ export function AppTable<T extends Record<string, unknown>>({
           <div className="flex items-center gap-2.5 self-end sm:self-auto">
             {searchable && (
               <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   placeholder={searchPlaceholder}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8.5 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-gray-400 w-44 sm:w-56"
+                  className="pl-9 pr-3 py-2 text-xs bg-slate-50/80 hover:bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] focus:bg-white transition-all placeholder:text-slate-400 text-slate-900 w-56 sm:w-72 shadow-2xs"
                 />
               </div>
             )}

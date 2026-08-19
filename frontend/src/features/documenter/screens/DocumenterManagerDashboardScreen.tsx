@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { Button } from '@/shared/components/Button';
@@ -9,11 +9,9 @@ import {
   Clock, 
   Zap, 
   RefreshCw, 
-  Award, 
   Sparkles,
   ArrowRight,
   ChevronRight,
-  UserCheck,
   CheckCircle2,
   PieChart as PieIcon,
   BarChart3,
@@ -38,9 +36,10 @@ import {
 
 export const DocumenterManagerDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [timeRange, setTimeRange] = useState<'TODAY' | 'WEEK' | 'SEASON'>('TODAY');
 
   const {
+    timeRange,
+    setTimeRange,
     agents,
     stats,
     isLoading,
@@ -53,52 +52,62 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
     refreshData,
   } = useDocumenterWorkspace();
 
-  // 1. Hourly Calling Outreach Data (for Area & Bar Chart)
-  const hourlyCallingData = [
-    { hour: '9 AM', dials: 14, connected: 11, conversions: 3 },
-    { hour: '10 AM', dials: 28, connected: 23, conversions: 7 },
-    { hour: '11 AM', dials: 45, connected: 38, conversions: 14 }, // Peak
-    { hour: '12 PM', dials: 32, connected: 26, conversions: 9 },
-    { hour: '1 PM', dials: 20, connected: 15, conversions: 4 },
-    { hour: '2 PM', dials: 36, connected: 30, conversions: 11 },
-    { hour: '3 PM', dials: 48, connected: 42, conversions: 16 }, // Peak
-    { hour: '4 PM', dials: 38, connected: 31, conversions: 12 },
-    { hour: '5 PM', dials: 22, connected: 17, conversions: 5 },
-  ];
+  // Dynamic Chart Data derived from real DB stats
+  const hourlyCallingData = useMemo(() => {
+    if (stats?.hourlyBreakdown && stats.hourlyBreakdown.length > 0) {
+      return stats.hourlyBreakdown;
+    }
+    return [
+      { hour: '9 AM', dials: 0, connected: 0 },
+      { hour: '10 AM', dials: 0, connected: 0 },
+      { hour: '11 AM', dials: 0, connected: 0 },
+      { hour: '12 PM', dials: 0, connected: 0 },
+      { hour: '1 PM', dials: 0, connected: 0 },
+      { hour: '2 PM', dials: 0, connected: 0 },
+      { hour: '3 PM', dials: 0, connected: 0 },
+      { hour: '4 PM', dials: 0, connected: 0 },
+      { hour: '5 PM', dials: 0, connected: 0 },
+    ];
+  }, [stats?.hourlyBreakdown]);
 
-  // 2. Weekly Outreach & Conversion Trend Data (for Composed Line/Bar Chart)
-  const weeklyTrendData = [
-    { day: 'Mon', dials: 180, connected: 148, prep: 52, rate: 82.2 },
-    { day: 'Tue', dials: 210, connected: 172, prep: 64, rate: 81.9 },
-    { day: 'Wed', dials: 245, connected: 205, prep: 78, rate: 83.6 },
-    { day: 'Thu', dials: 230, connected: 190, prep: 71, rate: 82.6 },
-    { day: 'Fri', dials: 260, connected: 218, prep: 89, rate: 83.8 },
-    { day: 'Sat', dials: 110, connected: 92, prep: 34, rate: 83.6 },
-    { day: 'Sun', dials: 65, connected: 52, prep: 18, rate: 80.0 },
-  ];
+  const weeklyTrendData = useMemo(() => {
+    if (stats?.weeklyBreakdown && stats.weeklyBreakdown.length > 0) {
+      return stats.weeklyBreakdown;
+    }
+    return [
+      { day: 'Mon', dials: 0, connected: 0, prep: 0 },
+      { day: 'Tue', dials: 0, connected: 0, prep: 0 },
+      { day: 'Wed', dials: 0, connected: 0, prep: 0 },
+      { day: 'Thu', dials: 0, connected: 0, prep: 0 },
+      { day: 'Today', dials: stats.todayDials || 0, connected: stats.todayConnected || 0, prep: stats.inPrep || 0 },
+    ];
+  }, [stats?.weeklyBreakdown, stats.todayDials, stats.todayConnected, stats.inPrep]);
 
-  // 3. Visa Category Distribution Data (for Donut Chart)
-  const visaData = [
-    { name: 'H-1B Speciality', value: 186, color: '#16A34A', pct: 43 },
-    { name: 'F-1 OPT Students', value: 122, color: '#3B82F6', pct: 28 },
-    { name: 'L-1 Intra-Company', value: 68, color: '#8B5CF6', pct: 16 },
-    { name: 'Green Card / US', value: 56, color: '#F59E0B', pct: 13 },
-  ];
+  const visaData = useMemo(() => {
+    if (stats?.visaDistribution && stats.visaDistribution.length > 0) {
+      return stats.visaDistribution;
+    }
+    return [
+      { name: 'H-1B Speciality', value: 1, color: '#16A34A', pct: 100 },
+    ];
+  }, [stats?.visaDistribution]);
 
-  // 4. Team Lead Pod Head-to-Head Performance (for Grouped Bar Chart)
-  const podComparisonData = [
-    { metric: 'Active Calling Staff', podAlpha: 4, podBeta: 4 },
-    { metric: 'Calls Logged (Dials)', podAlpha: 168, podBeta: 144 },
-    { metric: 'Connected Calls', podAlpha: 145, podBeta: 118 },
-    { metric: 'Tax Prep Intakes', podAlpha: 48, podBeta: 39 },
-  ];
-
-  // Top Performing Calling Agents
-  const topAgents = useMemo(() => [
-    { name: 'Kavya R.', email: 'kavya.r@taxcrm.com', dials: 48, connected: 41, conv: 14, rate: '85.4%', avatar: 'K' },
-    { name: 'Manish G.', email: 'manish.g@taxcrm.com', dials: 44, connected: 36, conv: 11, rate: '81.8%', avatar: 'M' },
-    { name: 'Divya S.', email: 'divya.s@taxcrm.com', dials: 40, connected: 33, conv: 9, rate: '82.5%', avatar: 'D' },
-  ], []);
+  // Real Staff Caseload & Calling Workload data (capped to Top 6 for clean readable charts)
+  const agentWorkloadData = useMemo(() => {
+    if (!agents || agents.length === 0) return [];
+    return [...agents]
+      .sort((a, b) => (b.activeLoad || 0) - (a.activeLoad || 0))
+      .slice(0, 6)
+      .map((agent) => {
+        const shortName = (agent.name || agent.email.split('@')[0]).split(' ')[0];
+        return {
+          staffName: shortName,
+          assignedLeads: agent.activeLoad ?? 0,
+          dials: agent.dials ?? 0,
+          connected: agent.connected ?? 0,
+        };
+      });
+  }, [agents]);
 
   // Custom Chart Tooltip Formatter
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -149,7 +158,7 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                {range === 'TODAY' ? 'Today' : range === 'WEEK' ? 'This Week' : 'TY2025 Season'}
+                {range === 'TODAY' ? 'Today' : range === 'WEEK' ? 'This Week' : 'All-Time Season'}
               </button>
             ))}
           </div>
@@ -191,17 +200,22 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">432</span>
+              <span className="text-3xl font-bold text-slate-900">
+                {stats.totalDepartment || (stats.unassigned + stats.activeOutreach + stats.inPrep) || 0}
+              </span>
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                95.3% Assigned
+                {Math.round((((stats.totalDepartment || 1) - stats.unassigned) / (stats.totalDepartment || 1)) * 100)}% Assigned
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1 font-medium">
-              {stats.unassigned} unassigned • 20 in active calling
+              {stats.unassigned} unassigned • {stats.activeOutreach} in outreach
             </p>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-[#16A34A] h-full rounded-full" style={{ width: '95%' }} />
+            <div 
+              className="bg-[#16A34A] h-full rounded-full transition-all duration-300" 
+              style={{ width: `${Math.min(100, Math.round((((stats.totalDepartment || 1) - stats.unassigned) / (stats.totalDepartment || 1)) * 100))}%` }} 
+            />
           </div>
         </div>
 
@@ -215,34 +229,39 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">79.6%</span>
+              <span className="text-3xl font-bold text-slate-900">
+                {stats.contactRatePct ? `${stats.contactRatePct}%` : '0.0%'}
+              </span>
               <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                328 / 412 Dials
+                {stats.todayConnected || 0} / {stats.todayDials || 0} Dials
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1 font-medium flex items-center gap-1">
               <Clock className="w-3 h-3 text-slate-400" />
-              Avg Call: <strong className="text-slate-700">3m 48s</strong>
+              Today's connected calling rate
             </p>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-blue-500 h-full rounded-full" style={{ width: '79.6%' }} />
+            <div 
+              className="bg-blue-500 h-full rounded-full transition-all duration-300" 
+              style={{ width: `${Math.min(100, stats.contactRatePct || 0)}%` }} 
+            />
           </div>
         </div>
 
         {/* Metric 3 */}
         <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Intake to Tax Prep Rate</span>
+            <span className="text-xs font-bold text-slate-500">Tax Prep Active Pipeline</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">43.3%</span>
+              <span className="text-3xl font-bold text-slate-900">{stats.inPrep || 0}</span>
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                142 in Prep
+                DOC_PREP Active
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1 font-medium">
@@ -250,31 +269,31 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
             </p>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-[#16A34A] h-full rounded-full" style={{ width: '43.3%' }} />
+            <div className="bg-[#16A34A] h-full rounded-full" style={{ width: '100%' }} />
           </div>
         </div>
 
         {/* Metric 4 */}
         <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">First-Dial Response SLA</span>
+            <span className="text-xs font-bold text-slate-500">Scheduled Callbacks</span>
             <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center">
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">4.2m</span>
+              <span className="text-3xl font-bold text-slate-900">{stats.callbacks || 0}</span>
               <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-                Target: &lt;10m
+                {stats.nextCallbackAt ? `Next: ${new Date(stats.nextCallbackAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'No Callbacks'}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1 font-medium">
-              Time from ingestion to 1st call
+              Taxpayers scheduled for follow-up
             </p>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-purple-500 h-full rounded-full" style={{ width: '85%' }} />
+            <div className="bg-purple-500 h-full rounded-full" style={{ width: '80%' }} />
           </div>
         </div>
       </div>
@@ -302,105 +321,112 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
 
         {/* 5-Step Pipeline Horizontal Stepper Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
-          {[
-            {
-              step: 1,
-              title: '1. Ingested Leads',
-              count: 432,
-              pct: '100%',
-              sub: 'Raw Ingestion Pool',
-              badge: 'Stage: RAW',
-              color: 'slate',
-              barColor: 'bg-slate-500',
-              active: false,
-            },
-            {
-              step: 2,
-              title: '2. Calling Outreach',
-              count: 412,
-              pct: '95.3%',
-              sub: 'Assigned to Agents',
-              badge: 'Stage: OUTREACH',
-              color: 'blue',
-              barColor: 'bg-blue-500',
-              active: false,
-            },
-            {
-              step: 3,
-              title: '3. Connected Calls',
-              count: 328,
-              pct: '79.6%',
-              sub: 'Contacted Taxpayers',
-              badge: '79.6% Rate',
-              color: 'purple',
-              barColor: 'bg-purple-500',
-              active: false,
-            },
-            {
-              step: 4,
-              title: '4. W-2 Tax Prep',
-              count: 142,
-              pct: '43.3%',
-              sub: 'Intake Computation',
-              badge: 'Stage: PREP',
-              color: 'emerald',
-              barColor: 'bg-[#16A34A]',
-              active: true,
-            },
-            {
-              step: 5,
-              title: '5. Moved to Sales',
-              count: 108,
-              pct: '76.1%',
-              sub: 'Ready for Quotation',
-              badge: 'Stage: SALES',
-              color: 'emerald',
-              barColor: 'bg-emerald-600',
-              active: false,
-            },
-          ].map((item) => (
-            <div
-              key={item.step}
-              className={`p-4 rounded-xl border transition-all relative flex flex-col justify-between ${
-                item.active
-                  ? 'bg-emerald-50/70 border-emerald-300 ring-2 ring-emerald-500/20 shadow-xs'
-                  : 'bg-slate-50/80 border-slate-200/90 hover:bg-white hover:border-slate-300'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between gap-1 mb-2">
-                  <span className="text-xs font-bold text-slate-700 truncate">
-                    {item.title}
-                  </span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                      item.active
-                        ? 'bg-[#16A34A] text-white'
-                        : 'bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {item.pct}
-                  </span>
+          {(() => {
+            const totalLeads = stats.totalDepartment || (stats.unassigned + stats.activeOutreach + stats.inPrep) || 1;
+            const outreachCount = (stats.activeOutreach || 0) + (stats.inPrep || 0);
+            const connectedCount = stats.todayConnected || 0;
+            const prepCount = stats.inPrep || 0;
+
+            const pipelineSteps = [
+              {
+                step: 1,
+                title: '1. Ingested Leads',
+                count: totalLeads,
+                pct: '100%',
+                sub: 'Raw Ingestion Pool',
+                badge: 'Stage: RAW',
+                color: 'slate',
+                barColor: 'bg-slate-500',
+                active: false,
+              },
+              {
+                step: 2,
+                title: '2. Calling Outreach',
+                count: outreachCount,
+                pct: `${Math.min(100, Math.round((outreachCount / totalLeads) * 100))}%`,
+                sub: 'Assigned to Agents',
+                badge: 'Stage: OUTREACH',
+                color: 'blue',
+                barColor: 'bg-blue-500',
+                active: false,
+              },
+              {
+                step: 3,
+                title: '3. Connected Calls',
+                count: connectedCount,
+                pct: `${stats.contactRatePct ? `${stats.contactRatePct}%` : '0%'}`,
+                sub: 'Contacted Taxpayers',
+                badge: `${stats.contactRatePct || 0}% Rate`,
+                color: 'purple',
+                barColor: 'bg-purple-500',
+                active: false,
+              },
+              {
+                step: 4,
+                title: '4. W-2 Tax Prep',
+                count: prepCount,
+                pct: `${Math.min(100, Math.round((prepCount / totalLeads) * 100))}%`,
+                sub: 'Intake Computation',
+                badge: 'Stage: PREP',
+                color: 'emerald',
+                barColor: 'bg-[#16A34A]',
+                active: true,
+              },
+              {
+                step: 5,
+                title: '5. Moved to Sales',
+                count: Math.max(0, totalLeads - stats.unassigned - outreachCount),
+                pct: `${Math.round((Math.max(0, totalLeads - stats.unassigned - outreachCount) / totalLeads) * 100)}%`,
+                sub: 'Ready for Quotation',
+                badge: 'Stage: SALES',
+                color: 'emerald',
+                barColor: 'bg-emerald-600',
+                active: false,
+              },
+            ];
+
+            return pipelineSteps.map((item) => (
+              <div
+                key={item.step}
+                className={`p-4 rounded-xl border transition-all relative flex flex-col justify-between ${
+                  item.active
+                    ? 'bg-emerald-50/70 border-emerald-300 ring-2 ring-emerald-500/20 shadow-xs'
+                    : 'bg-slate-50/80 border-slate-200/90 hover:bg-white hover:border-slate-300'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1 mb-2">
+                    <span className="text-xs font-bold text-slate-700 truncate">
+                      {item.title}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                        item.active
+                          ? 'bg-[#16A34A] text-white'
+                          : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {item.pct}
+                    </span>
+                  </div>
+
+                  <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight my-1">
+                    {item.count}
+                  </div>
+                  <div className="text-[11px] text-slate-500 font-medium truncate">
+                    {item.sub}
+                  </div>
                 </div>
 
-                <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight my-1">
-                  {item.count}
-                </div>
-                <div className="text-[11px] text-slate-500 font-medium truncate">
-                  {item.sub}
-                </div>
-              </div>
-
-              <div className="mt-3 pt-2 border-t border-slate-200/60">
-                <div className="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-slate-200/70 rounded-full h-1.5 overflow-hidden mt-3">
                   <div
-                    className={`${item.barColor} h-full rounded-full transition-all`}
+                    className={`${item.barColor} h-full rounded-full transition-all duration-300`}
                     style={{ width: item.pct }}
                   />
                 </div>
               </div>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
       </div>
 
@@ -554,14 +580,14 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <LineIcon className="w-4 h-4 text-emerald-600" />
-                  7-Day Department Outreach Velocity & Contact Rate %
+                  7-Day Department Outreach Velocity & Intake Trend
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5 font-medium">
                   Weekly trend of volume dialed, calls connected, and conversion velocity
                 </p>
               </div>
               <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
-                Weekly Total: 1,300 Dials
+                {stats.todayDials || 0} Dials Today
               </span>
             </div>
 
@@ -585,22 +611,24 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
             <span className="flex items-center gap-1.5 text-emerald-700 font-bold">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
-              Weekly Intake Velocity Target: 100% On-Track
+              Contact Rate: {stats.contactRatePct ? `${stats.contactRatePct}%` : '0.0%'}
             </span>
-            <span className="font-bold text-slate-700">Friday Peak: 260 Dials</span>
+            <span className="font-bold text-slate-700">{stats.todayConnected || 0} Connected Calls</span>
           </div>
         </div>
 
-        {/* GRAPH 4: Sub-Team Pod Head-to-Head Comparison (Grouped Bar Chart) */}
+        {/* GRAPH 4: Real Staff Caseload & Calling Workload Distribution */}
         <div className="bg-white p-6 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-purple-600" />
-                  Pod Alpha vs Pod Beta Head-to-Head
+                  Staff Caseload & Workload Breakdown
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5 font-medium">Sub-team leadership comparison</p>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                  {agents.length > 6 ? `Top 6 active staff (of ${agents.length} total)` : 'Live lead distribution across calling staff'}
+                </p>
               </div>
               <button
                 onClick={() => navigate('/documenter/manager/scorecards')}
@@ -614,77 +642,25 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
             {/* Recharts Bar Chart */}
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={podComparisonData} layout="vertical" margin={{ top: 5, right: 20, left: 35, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
-                  <XAxis type="number" stroke="#64748B" fontSize={10} />
-                  <YAxis dataKey="metric" type="category" stroke="#334155" fontSize={10} fontWeight={600} width={90} />
+                <BarChart data={agentWorkloadData} margin={{ top: 10, right: 15, left: -15, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                  <XAxis dataKey="staffName" stroke="#64748B" fontSize={10} />
+                  <YAxis stroke="#64748B" fontSize={10} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '5px' }} />
-                  <Bar dataKey="podAlpha" name="Pod Alpha (Ananya I)" fill="#2563EB" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="podBeta" name="Pod Beta (Vikram S)" fill="#9333EA" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="assignedLeads" name="Assigned Leads" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="dials" name="Today's Dials" fill="#16A34A" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex items-center justify-between font-medium">
-            <span>Leadership Contact Rate:</span>
+            <span>Active Calling Staff: <strong>{agents.length}</strong></span>
             <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              Pod Alpha: 86.2% • Pod Beta: 81.5%
+              Avg: {agents.length > 0 ? Math.round((stats.activeOutreach || 0) / agents.length) : 0} Leads/Staff
             </span>
           </div>
-        </div>
-      </div>
-
-      {/* 6. Star Calling Agents Leaderboard */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200/90 shadow-xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-500" />
-              Top Calling Performers Leaderboard
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5 font-medium">
-              Calling agents with highest connection velocity and W-2 intake conversions
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/documenter/manager/scorecards')}
-            className="text-xs font-semibold border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
-          >
-            <UserCheck className="w-3.5 h-3.5 text-slate-500" />
-            <span>Manage All 8 Calling Staff</span>
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {topAgents.map((agent, index) => (
-            <div 
-              key={agent.email} 
-              className="p-4 rounded-xl border border-slate-200/90 bg-slate-50/60 hover:bg-white hover:border-[#16A34A]/50 transition-all flex items-center justify-between gap-3 shadow-2xs"
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
-                  index === 0 ? 'bg-amber-100 text-amber-800 border border-amber-300' :
-                  index === 1 ? 'bg-slate-200 text-slate-800 border border-slate-300' :
-                  'bg-orange-100 text-orange-800 border border-orange-300'
-                }`}>
-                  #{index + 1}
-                </div>
-                <div>
-                  <div className="font-bold text-xs sm:text-sm text-slate-900">{agent.name}</div>
-                  <div className="text-[11px] text-slate-500 font-medium">{agent.dials} dials • {agent.connected} connected</div>
-                </div>
-              </div>
-
-              <div className="text-right">
-                <div className="text-xs font-bold text-[#16A34A]">{agent.conv} in Prep</div>
-                <div className="text-[10px] text-slate-400 font-bold">{agent.rate} Rate</div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 

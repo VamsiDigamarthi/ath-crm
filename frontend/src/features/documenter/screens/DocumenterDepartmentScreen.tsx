@@ -74,6 +74,7 @@ export const DocumenterDepartmentScreen: React.FC = () => {
       { id: 'ALL' as DocumenterTab, label: 'All My Leads', count: stats.total, icon: ListFilter },
     ]
     : [
+      { id: 'MY_LEADS' as DocumenterTab, label: 'My Assigned Leads', count: stats.myLeads || 0, icon: UserCheck },
       { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
       { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
       { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
