@@ -723,6 +723,105 @@ export const validateModule8 = (
 };
 
 /**
+ * Validates Module 9: Direct Deposit & Referrals
+ */
+export const validateModule9 = (
+  data?: OrganizerData['m9_directDeposit'],
+  _selectedTaxYear: number = 2025
+): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) {
+    return { bankName: 'Direct deposit information is required' };
+  }
+
+  // 1. Bank Name
+  const bName = (data.bankName || '').trim();
+  if (!bName) {
+    errors.bankName = 'Bank Name is required for refund direct deposit';
+  } else if (containsXssOrHtml(bName)) {
+    errors.bankName = 'HTML tags or script injections are strictly forbidden!';
+  } else if (bName.length < 2) {
+    errors.bankName = 'Bank Name must be at least 2 characters';
+  }
+
+  // 2. 9-Digit Routing Number
+  const routing = (data.routingNumber || '').trim();
+  if (!routing) {
+    errors.routingNumber = '9-Digit Routing Number is required';
+  } else {
+    const rawRouting = routing.replace(/\D/g, '');
+    if (rawRouting.length !== 9) {
+      errors.routingNumber = 'Routing Number must be exactly 9 digits (e.g. 111000614)';
+    }
+  }
+
+  // 3. Account Number
+  const acct = (data.accountNumber || '').trim();
+  if (!acct) {
+    errors.accountNumber = 'Account Number is required';
+  } else if (containsXssOrHtml(acct)) {
+    errors.accountNumber = 'HTML tags or script injections are strictly forbidden!';
+  } else {
+    const rawAcct = acct.replace(/\D/g, '');
+    if (rawAcct.length < 4 || rawAcct.length > 17) {
+      errors.accountNumber = 'Account number must be between 4 and 17 digits';
+    }
+  }
+
+  // 4. Account Owner Name
+  const owner = (data.accountOwnerName || '').trim();
+  if (!owner) {
+    errors.accountOwnerName = 'Account Owner Name as appears on bank statement is required';
+  } else if (containsXssOrHtml(owner)) {
+    errors.accountOwnerName = 'HTML tags or script injections are strictly forbidden!';
+  } else if (owner.length < 2) {
+    errors.accountOwnerName = 'Account Owner Name must be at least 2 characters';
+  }
+
+  // 5. Notes & Contact Preference Length & XSS Checks
+  const notes = data.notesToPreparer || '';
+  if (notes) {
+    if (containsXssOrHtml(notes)) {
+      errors.notesToPreparer = 'HTML tags or script injections are strictly forbidden!';
+    } else if (notes.length > 5000) {
+      errors.notesToPreparer = `Character limit exceeded! Maximum 5,000 characters allowed (currently ${notes.length} characters).`;
+    }
+  }
+
+  const contact = data.preferredContactTime || '';
+  if (contact) {
+    if (containsXssOrHtml(contact)) {
+      errors.preferredContactTime = 'HTML tags or script injections are strictly forbidden!';
+    } else if (contact.length > 500) {
+      errors.preferredContactTime = `Character limit exceeded! Maximum 500 characters allowed (currently ${contact.length} characters).`;
+    }
+  }
+
+  // 6. Referrals Validation (if any provided)
+  const refs = data.referrals || [];
+  refs.forEach((ref, idx) => {
+    const rName = (ref.name || '').trim();
+    if (rName) {
+      if (containsXssOrHtml(rName)) {
+        errors[`ref_${idx}_name`] = 'HTML tags or script injections are strictly forbidden!';
+      } else if (rName.length < 2) {
+        errors[`ref_${idx}_name`] = 'Referral name must be at least 2 characters';
+      }
+    }
+    const rEmail = (ref.email || '').trim();
+    if (rEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rEmail)) {
+      errors[`ref_${idx}_email`] = 'Please provide a valid referral email address';
+    }
+    const rPhone = (ref.phone || '').trim();
+    if (rPhone && rPhone.replace(/\D/g, '').length < 10) {
+      errors[`ref_${idx}_phone`] = 'Please provide a valid 10-digit phone number';
+    }
+  });
+
+  return errors;
+};
+
+/**
  * Checks if a specific organizer module has been completed and submitted with valid data
  */
 export const isModuleCompleted = (modId: string, organizerData?: OrganizerData | null): boolean => {
@@ -803,6 +902,10 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
           (m8.electricVehicleExpenses ?? 0) > 0 ||
           (m8.studentLoanInterest ?? 0) > 0)
       );
+    }
+    case 'm9': {
+      const m9 = organizerData.m9_directDeposit;
+      return Boolean(m9 && m9.bankName && m9.routingNumber && m9.accountNumber && m9.accountOwnerName);
     }
     default:
       return false;

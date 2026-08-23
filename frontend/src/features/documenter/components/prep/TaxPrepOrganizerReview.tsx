@@ -330,6 +330,8 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               m9={m9}
               showSensitive={showSensitive}
               toggleShow={toggleShow}
+              selectedTaxYear={activeTaxYear}
+              isSubmitted={isModuleCompleted('m9', organizer)}
             />
           )}
 

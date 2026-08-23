@@ -3,7 +3,7 @@ import {
   customerApi,
   type OrganizerData,
 } from '../services/customer-api';
-import { validateModule1, validateModule2, validateModule3, validateModule4, validateModule5, validateModule6, validateModule7, validateModule8, type ValidationErrorMap } from '../components/organizer/utils/organizer-validation';
+import { validateModule1, validateModule2, validateModule3, validateModule4, validateModule5, validateModule6, validateModule7, validateModule8, validateModule9, type ValidationErrorMap } from '../components/organizer/utils/organizer-validation';
 import toast from 'react-hot-toast';
 
 export const useCustomerOrganizer = (taxYearParam?: string) => {
@@ -147,6 +147,16 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
 
     if (selectedModId === 'm8') {
       const errors = validateModule8(organizerData.m8_deductions, selectedTaxYear);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        const errorFieldNames = Object.keys(errors);
+        toast.error(`Please fix validation errors: ${errors[errorFieldNames[0]]}`);
+        return false;
+      }
+    }
+
+    if (selectedModId === 'm9') {
+      const errors = validateModule9(organizerData.m9_directDeposit, selectedTaxYear);
       if (Object.keys(errors).length > 0) {
         setValidationErrors(errors);
         const errorFieldNames = Object.keys(errors);

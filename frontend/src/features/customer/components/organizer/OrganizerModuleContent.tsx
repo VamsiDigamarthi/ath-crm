@@ -178,6 +178,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData.m9_directDeposit}
             updateField={(field, val) => updateModuleField('m9_directDeposit', field, val)}
             selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
           />
         )}
       </div>

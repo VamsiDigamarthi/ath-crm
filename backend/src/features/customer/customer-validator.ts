@@ -415,6 +415,65 @@ export const m8DeductionsSchema = z.object({
 });
 
 /**
+ * Zod Schema for Module 9 Direct Deposit & Referrals
+ */
+export const m9DirectDepositSchema = z.object({
+  bankName: z
+    .string()
+    .trim()
+    .max(150)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  accountType: z.enum(['CHECKING', 'SAVINGS']).optional().default('CHECKING'),
+  routingNumber: z.string().trim().max(30).optional().default(''),
+  accountNumber: z
+    .string()
+    .trim()
+    .max(50)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  accountOwnerName: z
+    .string()
+    .trim()
+    .max(150)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  notesToPreparer: z
+    .string()
+    .trim()
+    .max(10000)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  preferredContactTime: z
+    .string()
+    .trim()
+    .max(1000)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  referrals: z
+    .array(
+      z.object({
+        name: z
+          .string()
+          .trim()
+          .max(150)
+          .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+          .optional()
+          .default(''),
+        email: z.string().trim().email('Invalid referral email address').optional().or(z.literal('')).default(''),
+        phone: z.string().trim().max(30).optional().default(''),
+      })
+    )
+    .optional()
+    .default([]),
+});
+
+/**
  * Root Schema for Saving Organizer
  */
 export const saveOrganizerSchema = z.object({
@@ -429,7 +488,7 @@ export const saveOrganizerSchema = z.object({
       m6_stocks: m6StocksSchema.optional(),
       m7_foreign: m7ForeignSchema.optional(),
       m8_deductions: m8DeductionsSchema.optional(),
-      m9_directDeposit: z.record(z.string(), z.any()).optional(),
+      m9_directDeposit: m9DirectDepositSchema.optional(),
     }),
   }),
 });
