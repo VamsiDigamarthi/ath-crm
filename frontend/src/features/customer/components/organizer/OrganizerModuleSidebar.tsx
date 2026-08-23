@@ -28,73 +28,73 @@ export const ORGANIZER_MODULES: ModuleDefinition[] = [
     id: 'm1',
     number: 1,
     section: 'Demographics & Family',
-    title: 'Personal Info & SSN/ITIN',
-    description: 'Legal name, masked SSN/ITIN, date of birth, filing status',
+    title: 'Personal Info, Visa & Marriage',
+    description: 'Name, SSN/ITIN, Port of Entry, Visa change date & Date of Marriage',
     icon: User,
   },
   {
     id: 'm2',
     number: 2,
     section: 'Demographics & Family',
-    title: 'Spouse & Daycare Expenses',
-    description: 'Spouse details, Child Tax Credit ($2k/child) & Daycare expenses',
+    title: 'Spouse, Dependents & Daycare',
+    description: 'Spouse details, Child Tax Credit & Daycare provider EIN / Address',
     icon: Users,
   },
   {
     id: 'm3',
     number: 3,
     section: 'Residency & Visa',
-    title: 'Substantial Presence & States',
-    description: 'US present days (2025/2024/2023) & Resided states history',
+    title: 'Substantial Presence & Multi-State',
+    description: 'Presence test (2025/2024/2023) & 4-Year State residency history',
     icon: Globe,
   },
   {
     id: 'm4',
     number: 4,
     section: 'Wages & Income',
-    title: 'W-2 Wage Statements & Employer',
-    description: 'Employer wage statements & Federal/State withholdings',
+    title: 'W-2 Wages & Rental Properties',
+    description: 'Employer wage statements & Rental property income & expenses worksheet',
     icon: FileSpreadsheet,
   },
   {
     id: 'm5',
     number: 5,
     section: 'Wages & Income',
-    title: '1099-INT / 1099-DIV Interest',
-    description: 'High-yield savings interest & dividend income',
+    title: '1099-INT / DIV / OID Interest',
+    description: 'High-yield savings interest, dividends & Original Issue Discount',
     icon: Landmark,
   },
   {
     id: 'm6',
     number: 6,
     section: 'Wages & Income',
-    title: '1099-B Stocks, ESPP & RSUs',
-    description: 'Robinhood, Fidelity, Form 3921/3922, Capital loss carryforwards',
+    title: '1099-B Stocks, ESPP, RSU & Losses',
+    description: 'Robinhood/Fidelity, ESPP/RSU (Form 3921/3922) & Loss carryforwards',
     icon: TrendingUp,
   },
   {
     id: 'm7',
     number: 7,
     section: 'Foreign & FBAR',
-    title: 'FBAR / FATCA & Indian Income',
-    description: 'Foreign accounts >$10k (FinCEN 114), NRE/NRO interest in INR',
+    title: 'FBAR / FATCA & Indian Income (INR)',
+    description: 'Foreign accounts >$10k/$50k, Indian Salary, Dividends, NRE/NRO Interest & TDS',
     icon: ShieldCheck,
   },
   {
     id: 'm8',
     number: 8,
     section: 'Deductions & Credits',
-    title: 'Mortgage 1098, HSA & Solar Energy',
-    description: 'Form 1098 Mortgage, HSA Form 8889, Clean Energy credits',
+    title: 'Itemized Deductions & Solar Energy',
+    description: 'State rent deduction, 1098 Mortgage, Indian property tax, Solar/Energy, HSA/IRA',
     icon: Receipt,
   },
   {
     id: 'm9',
     number: 9,
     section: 'IRS Refund Payout',
-    title: 'Bank Direct Deposit Routing',
-    description: 'Checking account and routing numbers for direct IRS payout',
-    icon: Landmark,
+    title: 'Direct Deposit & $10 Referral Program',
+    description: 'Direct IRS deposit routing, Notes to preparer & $10 paid friend referrals',
+    icon: Gift,
   },
 ];
 
@@ -138,15 +138,25 @@ export const OrganizerModuleSidebar: React.FC<OrganizerModuleSidebarProps> = ({
   };
 
   return (
-    <div className="lg:col-span-4 space-y-2 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-      <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-          IRS Intake Checklist
-        </span>
-        <span className="text-xs font-extrabold text-[#16A34A]">{completedCount}/9 Done</span>
+    <div className="w-full bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+      {/* Top Header Row with Status */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
+            9-Module Tax Intake Steps
+          </span>
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+            {completedCount} of 9 Verified
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+          <span>Click any tab below to jump directly to that section</span>
+        </div>
       </div>
 
-      <div className="space-y-1 max-h-[620px] overflow-y-auto pr-1">
+      {/* Horizontal Scrollable Tabs Ribbon */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-slate-200">
         {ORGANIZER_MODULES.map((mod) => {
           const Icon = mod.icon;
           const isSelected = mod.id === selectedModId;
@@ -157,56 +167,47 @@ export const OrganizerModuleSidebar: React.FC<OrganizerModuleSidebarProps> = ({
               key={mod.id}
               type="button"
               onClick={() => onSelectModule(mod.id)}
-              className={`w-full p-3 rounded-xl text-left transition-all cursor-pointer flex items-center justify-between gap-3 ${
+              className={`px-3.5 py-2.5 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2.5 shrink-0 border ${
                 isSelected
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'hover:bg-slate-50 text-slate-700'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : isDone
+                  ? 'bg-emerald-50/50 hover:bg-emerald-50 text-slate-800 border-emerald-200'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
               }`}
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                    isSelected
-                      ? 'bg-emerald-500 text-white'
-                      : isDone
-                      ? 'bg-emerald-50 text-[#16A34A] border border-emerald-200'
-                      : 'bg-slate-100 text-slate-500'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                </div>
+              <div
+                className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                  isSelected
+                    ? 'bg-emerald-500 text-white'
+                    : isDone
+                    ? 'bg-emerald-100 text-[#16A34A]'
+                    : 'bg-white text-slate-500 border border-slate-200'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+              </div>
 
-                <div className="min-w-0">
-                  <div className={`text-xs font-bold truncate ${isSelected ? 'text-white' : 'text-slate-900'}`}>
-                    {mod.title}
-                  </div>
-                  <div className={`text-[10px] truncate ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>
-                    Module 0{mod.number} • {mod.section}
-                  </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[10px] font-extrabold uppercase ${isSelected ? 'text-emerald-400' : 'text-slate-400'}`}>
+                    0{mod.number}
+                  </span>
+                  <span className={`text-xs font-bold whitespace-nowrap ${isSelected ? 'text-white' : 'text-slate-900'}`}>
+                    {mod.title.split(',')[0]}
+                  </span>
                 </div>
               </div>
 
-              <div className="shrink-0">
+              <div className="shrink-0 ml-1">
                 {isDone ? (
-                  <CheckCircle2 className={`w-4 h-4 ${isSelected ? 'text-emerald-400' : 'text-[#16A34A]'}`} />
+                  <CheckCircle2 className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-400' : 'text-[#16A34A]'}`} />
                 ) : (
-                  <Clock className={`w-4 h-4 ${isSelected ? 'text-amber-300' : 'text-amber-500'}`} />
+                  <Clock className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-300' : 'text-amber-500'}`} />
                 )}
               </div>
             </button>
           );
         })}
-      </div>
-
-      {/* Referral Reward Promo Banner */}
-      <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 space-y-1.5 mt-3">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-[#16A34A]">
-          <Gift className="w-4 h-4" />
-          <span>Earn $10 Per Paid Referral</span>
-        </div>
-        <p className="text-[11px] text-slate-600 font-medium">
-          Refer friends & colleagues filing US taxes with ATH Tax Services.
-        </p>
       </div>
     </div>
   );

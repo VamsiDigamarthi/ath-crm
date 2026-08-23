@@ -67,17 +67,16 @@ export const CustomerOrganizerWizard: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Master Split Workspace Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: 9-Module Navigator Sidebar (4 Cols) */}
-        <OrganizerModuleSidebar
-          selectedModId={selectedModId}
-          onSelectModule={(id) => setSelectedModId(id)}
-          completedCount={completedCount}
-          organizerData={organizerData}
-        />
+      {/* 2. Top Horizontal 9-Module Navigator Bar */}
+      <OrganizerModuleSidebar
+        selectedModId={selectedModId}
+        onSelectModule={(id) => setSelectedModId(id)}
+        completedCount={completedCount}
+        organizerData={organizerData}
+      />
 
-        {/* Right Column: Focused Interactive Workspace Canvas (8 Cols) */}
+      {/* 3. Full-Width Interactive Workspace Canvas */}
+      <div className="w-full">
         <OrganizerModuleContent
           selectedModId={selectedModId}
           selectedTaxYear={selectedTaxYear}

@@ -9,7 +9,6 @@ import {
   CheckSquare,
   FolderArchive,
   CreditCard,
-  UserCheck,
   LogOut,
   Bell,
   User,
@@ -92,13 +91,6 @@ export const CustomerLayout: React.FC = () => {
       badge: isConvertedCustomer ? 'Paid Receipt' : '$199 Quote', 
       path: '/customer/billing' 
     },
-    { 
-      id: 'customer_expert', 
-      label: 'My Tax Team & CPA', 
-      icon: UserCheck, 
-      section: 'Expert Support', 
-      path: '/customer/expert' 
-    },
   ];
 
   const currentPath = location.pathname;
@@ -106,7 +98,6 @@ export const CustomerLayout: React.FC = () => {
     if (currentPath.includes('/customer/organizer')) return 'customer_organizer';
     if (currentPath.includes('/customer/documents')) return 'customer_documents';
     if (currentPath.includes('/customer/billing')) return 'customer_billing';
-    if (currentPath.includes('/customer/expert')) return 'customer_expert';
     return 'customer_dashboard';
   };
 
@@ -127,8 +118,6 @@ export const CustomerLayout: React.FC = () => {
         return 'Multi-Year Tax Document Vault & Downloads';
       case 'customer_billing':
         return 'Quotation Approvals, Invoices & Payment Receipts';
-      case 'customer_expert':
-        return 'My Dedicated Tax Team & Certified Public Accountant';
       case 'customer_dashboard':
       default:
         return 'Taxpayer Client Overview & Return Lifecycle';

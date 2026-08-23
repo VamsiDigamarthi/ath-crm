@@ -172,6 +172,10 @@ export const router = createBrowserRouter([
             element: <CustomerDocumentsScreen />,
           },
           {
+            path: 'vault',
+            element: <Navigate to="/customer/documents" replace />,
+          },
+          {
             path: 'billing',
             element: <CustomerBillingScreen />,
           },

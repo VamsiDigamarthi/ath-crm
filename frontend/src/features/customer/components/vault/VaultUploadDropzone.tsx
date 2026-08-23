@@ -4,13 +4,42 @@ import { Button } from '@/shared/components/Button';
 import { AppSelect } from '@/shared/components/AppSelect';
 
 export const UPLOAD_CATEGORIES = [
+  // 1. Primary Wage & Income Statements
   { label: 'W-2 Wage Statement (Employer)', value: 'W2_WAGES' },
-  { label: '1099-B Stock & Brokerage (Robinhood)', value: '1099_BROKERAGE' },
-  { label: '1099-INT / 1099-DIV Bank Interest', value: '1099_INT_DIV' },
-  { label: 'FBAR / Indian Bank Statements (SBI NRE)', value: 'FBAR_FOREIGN' },
-  { label: 'Form 1098 Mortgage Interest', value: 'MORTGAGE_1098' },
-  { label: 'Visa Copy & I-797 Approval Notice', value: 'VISA_IDENTITY' },
-  { label: 'Other Deduction Receipts', value: 'OTHER' },
+  { label: '1099-INT Bank Interest Income Statement', value: '1099_INT' },
+  { label: '1099-DIV Dividends & Distributions Statement', value: '1099_DIV' },
+  { label: '1099-B Brokerage & Stocks (Robinhood, ESPP, RSU)', value: '1099_BROKERAGE' },
+  { label: '1099-MISC / 1099-NEC Miscellaneous / Freelance Income', value: '1099_MISC' },
+  { label: '1099-K Payment Card & Third-Party Network (PayPal, Venmo, Stripe)', value: '1099_K_PAYMENTS' },
+  { label: '1099-G State Refund / Unemployment Compensation', value: '1099_G_STATE_REFUND' },
+  { label: '1099-R Retirement, Annuity & 401(k) Distributions', value: '1099_R_RETIREMENT' },
+  { label: '1099-OID Original Issue Discount', value: '1099_OID' },
+  { label: '1099-C Cancellation of Debt', value: '1099_C_DEBT' },
+  { label: '1099-Q Payments from Qualified Education Programs (529 & 530)', value: '1099_Q_EDUCATION' },
+  { label: '1099-SA HSA / Archer MSA Distributions', value: '1099_SA_HSA' },
+  { label: '1099-HC Massachusetts Health Insurance Statement', value: '1099_HC_MA_HEALTH' },
+  { label: '1095-A / 1095-B / 1095-C Health Insurance Marketplace (ACA)', value: '1095_A_MARKETPLACE' },
+  { label: 'W-2G Certain Gambling Winnings', value: 'W2_G_GAMBLING' },
+  { label: 'Schedule K-1 (Partnership / S-Corp / Estate Form 1065/1120-S)', value: 'SCHEDULE_K1' },
+
+  // 2. 1098 Deductions & Educational Forms
+  { label: '1098 Mortgage Interest Statement (Home Loan)', value: 'MORTGAGE_1098' },
+  { label: '1098-T Tuition Fees Statement (University / College)', value: '1098_T_TUITION' },
+  { label: '1098-E Student Loan Interest Statement', value: '1098_E_STUDENT_LOAN' },
+
+  // 3. Employer Stocks, Foreign & Identity
+  { label: 'Form 3921 / 3922 Employer Stock (ESPP / ISO Exercise)', value: 'STOCK_3921_3922' },
+  { label: 'FBAR / Indian Bank Statements (SBI / HDFC / ICICI NRE/NRO)', value: 'FBAR_FOREIGN' },
+  { label: 'Prior Year Tax Returns (TY 2024 / 2023 / 2020)', value: 'PRIOR_YEAR_RETURN' },
+  { label: 'Visa Copy, Passport & I-797 Approval Notice', value: 'VISA_IDENTITY' },
+
+  // 4. Receipts & Expense Worksheets
+  { label: 'Daycare Provider Statements / Receipts (Child Care)', value: 'DAYCARE_RECEIPTS' },
+  { label: 'Clean Energy & Solar Invoices (Form 5695)', value: 'SOLAR_ENERGY_INVOICE' },
+  { label: 'Property Tax Receipts (US County & India Municipal)', value: 'PROPERTY_TAX_RECEIPTS' },
+  { label: 'Charitable Donation 501(c)(3) Receipts', value: 'CHARITY_DONATIONS' },
+  { label: 'Rental Property Expenses & Rent Slips', value: 'RENTAL_EXPENSES' },
+  { label: 'Other Deduction / Expense Receipts', value: 'OTHER' },
 ];
 
 interface VaultUploadDropzoneProps {
@@ -50,12 +79,12 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div className="flex items-center gap-2">
           <UploadCloud className="w-5 h-5 text-[#16A34A]" />
-          <h3 className="text-sm font-bold text-slate-900">Upload New Tax Slips & Statements</h3>
+          <h3 className="text-sm font-bold text-slate-900">Upload New Tax Slips &amp; Statements</h3>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-slate-500">Document Type:</span>
-          <div className="w-64">
+          <div className="w-80">
             <AppSelect
               options={UPLOAD_CATEGORIES}
               value={uploadCategory}
@@ -63,6 +92,14 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
               placeholder="Select Category"
             />
           </div>
+        </div>
+      </div>
+
+      {/* IRS Cross-Verification Compliance Banner */}
+      <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
+        <div className="font-bold shrink-0">⚠️ IRS Notice:</div>
+        <div>
+          The IRS cross-verifies all reported income against third-party filed 1098/1099 statements. Please upload all available tax documents to avoid IRS audit notices and penalty assessments.
         </div>
       </div>
 

@@ -18,10 +18,21 @@ import { type CustomerDocumentItem } from '../../services/customer-api';
 export const CATEGORY_FILTER_OPTIONS = [
   { label: 'All Document Categories', value: 'ALL' },
   { label: 'W-2 Wage Statements (Employer)', value: 'W2_WAGES' },
+  { label: '1098 Mortgage Interest Statement', value: 'MORTGAGE_1098' },
+  { label: '1098-T Tuition Statements (Higher Ed)', value: '1098_T_TUITION' },
+  { label: '1098-E Student Loan Interest', value: '1098_E_STUDENT_LOAN' },
   { label: '1099-B Stock & RSUs (Robinhood/Fidelity)', value: '1099_BROKERAGE' },
-  { label: '1099-INT / 1099-DIV (Bank Interest)', value: '1099_INT_DIV' },
+  { label: '1099-INT / 1099-DIV Bank Interest', value: '1099_INT' },
+  { label: '1099-MISC / 1099-NEC Miscellaneous', value: '1099_MISC' },
+  { label: '1099-G State Refund / Government', value: '1099_G_STATE_REFUND' },
+  { label: '1099-R 401(k) & Pension Distributions', value: '1099_R_RETIREMENT' },
+  { label: '1099-SA HSA Distributions', value: '1099_SA_HSA' },
+  { label: '1099-HC Massachusetts Health Statement', value: '1099_HC_MA_HEALTH' },
+  { label: '1095-A ACA Health Marketplace', value: '1095_A_MARKETPLACE' },
+  { label: 'W-2G Gambling Winnings', value: 'W2_G_GAMBLING' },
+  { label: 'Form 3921 / 3922 Employer Stock (ESPP)', value: 'STOCK_3921_3922' },
   { label: 'FBAR / Foreign Accounts (SBI NRE/NRO)', value: 'FBAR_FOREIGN' },
-  { label: 'Form 1098 Mortgage & Property Taxes', value: 'MORTGAGE_1098' },
+  { label: 'Prior Year Tax Returns (TY 2024/2023)', value: 'PRIOR_YEAR_RETURN' },
   { label: 'Visa, I-797 & Identity Proofs', value: 'VISA_IDENTITY' },
   { label: 'Other Tax Receipts & Deduction Slips', value: 'OTHER' },
 ];
@@ -53,10 +64,35 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">W-2 Wages</span>;
       case '1099_BROKERAGE':
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">1099-B Stocks</span>;
+      case '1099_INT':
       case '1099_INT_DIV':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">1099-INT / DIV</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">1099-INT Interest</span>;
+      case '1099_DIV':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">1099-DIV Dividends</span>;
+      case '1098_T_TUITION':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200">1098-T Tuition</span>;
+      case '1098_E_STUDENT_LOAN':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200">1098-E Loan</span>;
+      case '1099_MISC':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200">1099-MISC</span>;
+      case '1099_G_STATE_REFUND':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">1099-G State</span>;
+      case '1099_R_RETIREMENT':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">1099-R Pension</span>;
+      case '1099_SA_HSA':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">1099-SA HSA</span>;
+      case '1099_HC_MA_HEALTH':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200">1099-HC Health</span>;
+      case '1095_A_MARKETPLACE':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200">1095-A ACA</span>;
+      case 'W2_G_GAMBLING':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-50 text-yellow-800 border border-yellow-200">W-2G Gaming</span>;
+      case 'STOCK_3921_3922':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">3921/3922 ESPP</span>;
       case 'FBAR_FOREIGN':
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">FBAR Indian</span>;
+      case 'PRIOR_YEAR_RETURN':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300">Prior Tax Return</span>;
       case 'MORTGAGE_1098':
         return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">1098 Mortgage</span>;
       case 'VISA_IDENTITY':
