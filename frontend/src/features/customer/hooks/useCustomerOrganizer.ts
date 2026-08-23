@@ -3,7 +3,7 @@ import {
   customerApi,
   type OrganizerData,
 } from '../services/customer-api';
-import { validateModule1, validateModule2, validateModule3, validateModule4, type ValidationErrorMap } from '../components/organizer/utils/organizer-validation';
+import { validateModule1, validateModule2, validateModule3, validateModule4, validateModule5, validateModule6, type ValidationErrorMap } from '../components/organizer/utils/organizer-validation';
 import toast from 'react-hot-toast';
 
 export const useCustomerOrganizer = (taxYearParam?: string) => {
@@ -107,6 +107,26 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
 
     if (selectedModId === 'm4') {
       const errors = validateModule4(organizerData.m4_wages, selectedTaxYear);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        const errorFieldNames = Object.keys(errors);
+        toast.error(`Please fix validation errors: ${errors[errorFieldNames[0]]}`);
+        return false;
+      }
+    }
+
+    if (selectedModId === 'm5') {
+      const errors = validateModule5(organizerData.m5_interest, selectedTaxYear);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        const errorFieldNames = Object.keys(errors);
+        toast.error(`Please fix validation errors: ${errors[errorFieldNames[0]]}`);
+        return false;
+      }
+    }
+
+    if (selectedModId === 'm6') {
+      const errors = validateModule6(organizerData.m6_stocks, selectedTaxYear);
       if (Object.keys(errors).length > 0) {
         setValidationErrors(errors);
         const errorFieldNames = Object.keys(errors);

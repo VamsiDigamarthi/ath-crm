@@ -220,6 +220,78 @@ export const m4WagesSchema = z.object({
 });
 
 /**
+ * Zod Schema for Module 5 1099-INT / DIV / OID Interest & Dividends
+ */
+export const m5InterestSchema = z.object({
+  hasInterestDividends: z.boolean().optional().default(false),
+  bankName: z.string().trim().max(150).optional().default(''),
+  interestAmount: z.number().min(0, 'Interest amount cannot be negative').max(100000000).optional().default(0),
+  dividendAmount: z.number().min(0, 'Dividend amount cannot be negative').max(100000000).optional().default(0),
+  form1099OidAmount: z.number().min(0, '1099-OID amount cannot be negative').max(100000000).optional().default(0),
+  interestAccounts: z
+    .array(
+      z.object({
+        bankName: z.string().trim().max(150).optional().default(''),
+        interestAmount: z.number().min(0).optional().default(0),
+        dividendAmount: z.number().min(0).optional().default(0),
+      })
+    )
+    .optional()
+    .default([]),
+});
+
+/**
+ * Zod Schema for Module 6 1099-B Stocks, ESPP, RSU & Capital Losses
+ */
+export const m6StocksSchema = z.object({
+  tradedStocks: z.boolean().optional().default(false),
+  brokerName: z
+    .string()
+    .trim()
+    .max(150)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  totalCapitalGain: z.number().optional().default(0),
+  capitalGain2025: z.number().optional().default(0),
+  capitalLoss2025: z.number().optional().default(0),
+  capitalLossCarryforward2023_2024: z.number().min(0).optional().default(0),
+  capitalGainTaxpayer: z.number().optional().default(0),
+  capitalLossTaxpayer: z.number().optional().default(0),
+  lossCarryforwardTaxpayer: z.number().min(0).optional().default(0),
+  capitalGainSpouse: z.number().optional().default(0),
+  capitalLossSpouse: z.number().optional().default(0),
+  lossCarryforwardSpouse: z.number().min(0).optional().default(0),
+  esppRsuReported: z.boolean().optional().default(false),
+  esppRsuDetails: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  stocksList: z
+    .array(
+      z.object({
+        brokerName: z
+          .string()
+          .trim()
+          .max(150)
+          .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+          .optional()
+          .default(''),
+        taxpayerGainLoss: z.number().optional().default(0),
+        spouseGainLoss: z.number().optional().default(0),
+        shortTermGainLoss: z.number().optional().default(0),
+        longTermGainLoss: z.number().optional().default(0),
+        totalProceeds: z.number().min(0).optional().default(0),
+      })
+    )
+    .optional()
+    .default([]),
+});
+
+/**
  * Root Schema for Saving Organizer
  */
 export const saveOrganizerSchema = z.object({
@@ -230,8 +302,8 @@ export const saveOrganizerSchema = z.object({
       m2_dependents: m2DependentsSchema.optional(),
       m3_presence: m3PresenceSchema.optional(),
       m4_wages: m4WagesSchema.optional(),
-      m5_interest: z.record(z.string(), z.any()).optional(),
-      m6_stocks: z.record(z.string(), z.any()).optional(),
+      m5_interest: m5InterestSchema.optional(),
+      m6_stocks: m6StocksSchema.optional(),
       m7_foreign: z.record(z.string(), z.any()).optional(),
       m8_deductions: z.record(z.string(), z.any()).optional(),
       m9_directDeposit: z.record(z.string(), z.any()).optional(),

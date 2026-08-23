@@ -138,6 +138,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData.m5_interest}
             updateField={(field, val) => updateModuleField('m5_interest', field, val)}
             selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
           />
         )}
 
@@ -146,6 +148,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData.m6_stocks}
             updateField={(field, val) => updateModuleField('m6_stocks', field, val)}
             selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
           />
         )}
 

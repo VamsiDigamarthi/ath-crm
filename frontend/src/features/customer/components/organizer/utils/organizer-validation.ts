@@ -4,6 +4,15 @@ import { parseUsDate } from './organizer-date-helpers';
 export type ValidationErrorMap = Record<string, string>;
 
 /**
+ * Detects XSS vectors, HTML tags, script injection attempts, and dangerous characters
+ */
+export const containsXssOrHtml = (val?: string | null): boolean => {
+  if (!val || typeof val !== 'string') return false;
+  const htmlTagPattern = /<[^>]+>|<\s*script\b|javascript\s*:|on\w+\s*=/i;
+  return htmlTagPattern.test(val);
+};
+
+/**
  * Checks if a parsed date is strictly in the future (after today)
  */
 export const isFutureDate = (dateStr?: string | null): boolean => {
@@ -508,6 +517,93 @@ export const validateModule4 = (
 };
 
 /**
+ * Validates Module 5: 1099-INT / DIV / OID Interest & Dividends
+ * Note: Module 5 is optional, but if amounts are entered, non-negative numbers and clean bank names are strictly enforced.
+ */
+export const validateModule5 = (
+  data?: OrganizerData['m5_interest'],
+  _selectedTaxYear: number = 2025
+): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) return errors;
+
+  // 1. Bank / Payer Name XSS & Content Validation
+  const bank = (data.bankName || '').trim();
+  if (bank) {
+    if (containsXssOrHtml(bank)) {
+      errors.bankName = 'HTML tags or script injections are strictly forbidden!';
+    } else if (bank.length < 2) {
+      errors.bankName = 'Bank name must be at least 2 characters';
+    }
+  }
+
+  // 2. Interest Amount Validation
+  if (data.interestAmount !== undefined && data.interestAmount !== null) {
+    if (isNaN(data.interestAmount) || data.interestAmount < 0) {
+      errors.interestAmount = 'Interest income cannot be negative';
+    } else if (data.interestAmount > 0 && !bank) {
+      errors.bankName = 'Bank name is required when interest income is reported';
+    }
+  }
+
+  // 3. Dividend Amount Validation
+  if (data.dividendAmount !== undefined && data.dividendAmount !== null) {
+    if (isNaN(data.dividendAmount) || data.dividendAmount < 0) {
+      errors.dividendAmount = 'Dividend income cannot be negative';
+    }
+  }
+
+  // 4. 1099-OID Amount Validation
+  if (data.form1099OidAmount !== undefined && data.form1099OidAmount !== null) {
+    if (isNaN(data.form1099OidAmount) || data.form1099OidAmount < 0) {
+      errors.form1099OidAmount = '1099-OID amount cannot be negative';
+    }
+  }
+
+  return errors;
+};
+
+/**
+ * Validates Module 6: 1099-B Stocks, ESPP, RSU & Capital Losses
+ * Note: Module 6 is optional, but if brokerage platforms or gains/losses are entered, they are strictly validated.
+ */
+export const validateModule6 = (
+  data?: OrganizerData['m6_stocks'],
+  _selectedTaxYear: number = 2025
+): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) return errors;
+
+  // 1. Validate Brokerage Platforms in stocksList
+  const stocks = data.stocksList || [];
+  stocks.forEach((stk, idx) => {
+    const bName = (stk.brokerName || '').trim();
+    if (!bName) {
+      errors[`stock_${idx}_brokerName`] = 'Broker / Platform Name is required (e.g. Robinhood, Fidelity, Zerodha)';
+    } else if (containsXssOrHtml(bName)) {
+      errors[`stock_${idx}_brokerName`] = 'HTML tags or script injections are strictly forbidden!';
+    } else if (bName.length < 2) {
+      errors[`stock_${idx}_brokerName`] = 'Broker name must be at least 2 characters';
+    }
+  });
+
+  // 2. Validate ESPP / RSU details if entered
+  if (data.esppRsuDetails && containsXssOrHtml(data.esppRsuDetails)) {
+    errors.esppRsuDetails = 'HTML tags or script injections are strictly forbidden!';
+  }
+
+  // 3. Loss Carryforwards must be non-negative (>= 0)
+  if (data.lossCarryforwardTaxpayer !== undefined && (isNaN(data.lossCarryforwardTaxpayer) || data.lossCarryforwardTaxpayer < 0)) {
+    errors.lossCarryforwardTaxpayer = 'Loss carryforward must be a non-negative number ($0 or greater)';
+  }
+  if (data.lossCarryforwardSpouse !== undefined && (isNaN(data.lossCarryforwardSpouse) || data.lossCarryforwardSpouse < 0)) {
+    errors.lossCarryforwardSpouse = 'Loss carryforward must be a non-negative number ($0 or greater)';
+  }
+
+  return errors;
+};
+
+/**
  * Checks if a specific organizer module has been completed and submitted with valid data
  */
 export const isModuleCompleted = (modId: string, organizerData?: OrganizerData | null): boolean => {
@@ -542,6 +638,22 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
     case 'm4': {
       const m4 = organizerData.m4_wages;
       return Boolean(m4 && m4.employerName && (m4.estimatedWages ?? 0) > 0);
+    }
+    case 'm5': {
+      const m5 = organizerData.m5_interest;
+      return Boolean(m5 && (Boolean(m5.bankName) || (m5.interestAmount ?? 0) > 0 || (m5.dividendAmount ?? 0) > 0 || (m5.form1099OidAmount ?? 0) > 0));
+    }
+    case 'm6': {
+      const m6 = organizerData.m6_stocks;
+      return Boolean(
+        m6 &&
+        (m6.tradedStocks || 
+          Boolean(m6.brokerName) || 
+          (m6.stocksList && m6.stocksList.length > 0) || 
+          (m6.totalCapitalGain ?? 0) !== 0 || 
+          (m6.capitalGainTaxpayer ?? 0) !== 0 ||
+          (m6.capitalLossTaxpayer ?? 0) !== 0)
+      );
     }
     default:
       return false;

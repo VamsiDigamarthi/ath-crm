@@ -3,31 +3,36 @@ import { Sparkles, DollarSign, Plus, Trash2, Building2 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppInput } from '@/shared/components/AppInput';
 import { type OrganizerData } from '../../../services/customer-api';
+import { type ValidationErrorMap } from '../utils/organizer-validation';
 
 interface Module6Props {
   data: OrganizerData['m6_stocks'];
   updateField: <K extends keyof OrganizerData['m6_stocks']>(field: K, value: OrganizerData['m6_stocks'][K]) => void;
   selectedTaxYear: number;
+  errors?: ValidationErrorMap;
+  clearError?: (field: string) => void;
 }
 
 export const Module6Stocks: React.FC<Module6Props> = ({
   data,
   updateField,
   selectedTaxYear,
+  errors = {},
+  clearError,
 }) => {
   const stockList = data.stocksList || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
         <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
         <div>
-          <strong>1099-B Brokerage, ESPP/RSU &amp; Capital Loss Carryforwards:</strong> The IRS matches 1099-B proceeds directly against broker records. Report all trading accounts (Robinhood, Fidelity, E*TRADE, Zerodha, Charles Schwab), employer stock forms (Form 3921 &amp; 3922), and separate gains/losses for Taxpayer and Spouse.
+          <strong>1099-B Brokerage, ESPP/RSU &amp; Capital Loss Carryforwards (Optional):</strong> The IRS matches 1099-B proceeds directly against broker records. Report all trading accounts (Robinhood, Fidelity, E*TRADE, Charles Schwab, Zerodha), employer stock forms (Form 3921 &amp; 3922), and separate gains/losses for Taxpayer and Spouse.
         </div>
       </div>
 
       {/* Dynamic Multi-Brokerage Accounts Table */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4">
+      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div>
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -55,7 +60,7 @@ export const Module6Stocks: React.FC<Module6Props> = ({
               updateField('stocksList', updated);
               updateField('tradedStocks', true);
             }}
-            className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1"
+            className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Brokerage Platform</span>
@@ -63,23 +68,25 @@ export const Module6Stocks: React.FC<Module6Props> = ({
         </div>
 
         {stockList.length === 0 ? (
-          <div className="p-4 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
+          <div className="p-6 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
             <p>No individual brokerage platforms added yet.</p>
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                updateField('stocksList', [{
-                  brokerName: data.brokerName || 'Robinhood Financial LLC',
-                  taxpayerGainLoss: data.capitalGain2025 || data.totalCapitalGain || 0,
-                  spouseGainLoss: 0,
-                  shortTermGainLoss: 0,
-                  longTermGainLoss: 0,
-                  totalProceeds: 0,
-                }]);
+                updateField('stocksList', [
+                  {
+                    brokerName: '',
+                    taxpayerGainLoss: 0,
+                    spouseGainLoss: 0,
+                    shortTermGainLoss: 0,
+                    longTermGainLoss: 0,
+                    totalProceeds: 0,
+                  },
+                ]);
                 updateField('tradedStocks', true);
               }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100"
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 mr-1" />
               <span>Add Brokerage Platform</span>
@@ -106,23 +113,25 @@ export const Module6Stocks: React.FC<Module6Props> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <AppInput
-                    label="Broker / Institution Name *"
+                    label="Broker / Platform Name *"
                     placeholder="e.g. Robinhood / Fidelity / Zerodha"
-                    value={stk.brokerName}
+                    error={errors[`stock_${idx}_brokerName`]}
+                    value={stk.brokerName || ''}
                     onChange={(e) => {
                       const list = [...stockList];
                       list[idx].brokerName = e.target.value;
                       updateField('stocksList', list);
                       if (idx === 0) updateField('brokerName', e.target.value);
+                      if (clearError) clearError(`stock_${idx}_brokerName`);
                     }}
                   />
 
                   <AppInput
-                    label="Taxpayer Gain / (Loss) ($) *"
+                    label="Taxpayer Gain / (Loss) ($)"
                     type="number"
                     placeholder="e.g. 4200 or -1500"
                     leftIcon={<DollarSign className="w-4 h-4" />}
-                    value={stk.taxpayerGainLoss ? stk.taxpayerGainLoss.toString() : ''}
+                    value={stk.taxpayerGainLoss !== undefined && stk.taxpayerGainLoss !== null ? stk.taxpayerGainLoss.toString() : ''}
                     onChange={(e) => {
                       const list = [...stockList];
                       list[idx].taxpayerGainLoss = parseFloat(e.target.value) || 0;
@@ -135,7 +144,7 @@ export const Module6Stocks: React.FC<Module6Props> = ({
                     type="number"
                     placeholder="e.g. 1200 or 0"
                     leftIcon={<DollarSign className="w-4 h-4" />}
-                    value={stk.spouseGainLoss ? stk.spouseGainLoss.toString() : ''}
+                    value={stk.spouseGainLoss !== undefined && stk.spouseGainLoss !== null ? stk.spouseGainLoss.toString() : ''}
                     onChange={(e) => {
                       const list = [...stockList];
                       list[idx].spouseGainLoss = parseFloat(e.target.value) || 0;
@@ -150,7 +159,7 @@ export const Module6Stocks: React.FC<Module6Props> = ({
       </div>
 
       {/* Aggregate Capital Gains, Losses & Carryforwards Table (Taxpayer vs Spouse) */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4">
+      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
           <DollarSign className="w-4 h-4 text-emerald-600" />
           <span>Aggregate Capital Gains &amp; Prior Year Loss Carryforwards</span>
@@ -167,9 +176,9 @@ export const Module6Stocks: React.FC<Module6Props> = ({
               type="number"
               placeholder="e.g. 4200"
               leftIcon={<DollarSign className="w-4 h-4" />}
-              value={data.capitalGainTaxpayer ? data.capitalGainTaxpayer.toString() : (data.capitalGain2025 ? data.capitalGain2025.toString() : '')}
+              value={data.capitalGainTaxpayer !== undefined && data.capitalGainTaxpayer !== null && data.capitalGainTaxpayer > 0 ? data.capitalGainTaxpayer.toString() : (data.capitalGain2025 ? data.capitalGain2025.toString() : '')}
               onChange={(e) => {
-                const val = parseFloat(e.target.value) || 0;
+                const val = Math.max(0, parseFloat(e.target.value) || 0);
                 updateField('capitalGainTaxpayer', val);
                 updateField('capitalGain2025', val);
                 updateField('totalCapitalGain', val);
@@ -181,9 +190,9 @@ export const Module6Stocks: React.FC<Module6Props> = ({
               type="number"
               placeholder="e.g. 1500"
               leftIcon={<DollarSign className="w-4 h-4" />}
-              value={data.capitalLossTaxpayer ? data.capitalLossTaxpayer.toString() : (data.capitalLoss2025 ? data.capitalLoss2025.toString() : '')}
+              value={data.capitalLossTaxpayer !== undefined && data.capitalLossTaxpayer !== null && data.capitalLossTaxpayer > 0 ? data.capitalLossTaxpayer.toString() : (data.capitalLoss2025 ? data.capitalLoss2025.toString() : '')}
               onChange={(e) => {
-                const val = parseFloat(e.target.value) || 0;
+                const val = Math.max(0, parseFloat(e.target.value) || 0);
                 updateField('capitalLossTaxpayer', val);
                 updateField('capitalLoss2025', val);
               }}
@@ -194,11 +203,13 @@ export const Module6Stocks: React.FC<Module6Props> = ({
               type="number"
               placeholder="e.g. 3000"
               leftIcon={<DollarSign className="w-4 h-4" />}
-              value={data.lossCarryforwardTaxpayer ? data.lossCarryforwardTaxpayer.toString() : (data.capitalLossCarryforward2023_2024 ? data.capitalLossCarryforward2023_2024.toString() : '')}
+              error={errors.lossCarryforwardTaxpayer}
+              value={data.lossCarryforwardTaxpayer !== undefined && data.lossCarryforwardTaxpayer !== null && data.lossCarryforwardTaxpayer > 0 ? data.lossCarryforwardTaxpayer.toString() : (data.capitalLossCarryforward2023_2024 ? data.capitalLossCarryforward2023_2024.toString() : '')}
               onChange={(e) => {
-                const val = parseFloat(e.target.value) || 0;
+                const val = Math.max(0, parseFloat(e.target.value) || 0);
                 updateField('lossCarryforwardTaxpayer', val);
                 updateField('capitalLossCarryforward2023_2024', val);
+                if (clearError) clearError('lossCarryforwardTaxpayer');
               }}
             />
           </div>
@@ -213,8 +224,11 @@ export const Module6Stocks: React.FC<Module6Props> = ({
               type="number"
               placeholder="e.g. 800"
               leftIcon={<DollarSign className="w-4 h-4" />}
-              value={data.capitalGainSpouse ? data.capitalGainSpouse.toString() : ''}
-              onChange={(e) => updateField('capitalGainSpouse', parseFloat(e.target.value) || 0)}
+              value={data.capitalGainSpouse !== undefined && data.capitalGainSpouse !== null && data.capitalGainSpouse > 0 ? data.capitalGainSpouse.toString() : ''}
+              onChange={(e) => {
+                const val = Math.max(0, parseFloat(e.target.value) || 0);
+                updateField('capitalGainSpouse', val);
+              }}
             />
 
             <AppInput
@@ -222,8 +236,11 @@ export const Module6Stocks: React.FC<Module6Props> = ({
               type="number"
               placeholder="0"
               leftIcon={<DollarSign className="w-4 h-4" />}
-              value={data.capitalLossSpouse ? data.capitalLossSpouse.toString() : ''}
-              onChange={(e) => updateField('capitalLossSpouse', parseFloat(e.target.value) || 0)}
+              value={data.capitalLossSpouse !== undefined && data.capitalLossSpouse !== null && data.capitalLossSpouse > 0 ? data.capitalLossSpouse.toString() : ''}
+              onChange={(e) => {
+                const val = Math.max(0, parseFloat(e.target.value) || 0);
+                updateField('capitalLossSpouse', val);
+              }}
             />
 
             <AppInput
@@ -231,8 +248,13 @@ export const Module6Stocks: React.FC<Module6Props> = ({
               type="number"
               placeholder="0"
               leftIcon={<DollarSign className="w-4 h-4" />}
-              value={data.lossCarryforwardSpouse ? data.lossCarryforwardSpouse.toString() : ''}
-              onChange={(e) => updateField('lossCarryforwardSpouse', parseFloat(e.target.value) || 0)}
+              error={errors.lossCarryforwardSpouse}
+              value={data.lossCarryforwardSpouse !== undefined && data.lossCarryforwardSpouse !== null && data.lossCarryforwardSpouse > 0 ? data.lossCarryforwardSpouse.toString() : ''}
+              onChange={(e) => {
+                const val = Math.max(0, parseFloat(e.target.value) || 0);
+                updateField('lossCarryforwardSpouse', val);
+                if (clearError) clearError('lossCarryforwardSpouse');
+              }}
             />
           </div>
         </div>
@@ -247,8 +269,12 @@ export const Module6Stocks: React.FC<Module6Props> = ({
         <AppInput
           label="Additional Details on Stock / Crypto Dispositions"
           placeholder="e.g. Sold 150 RSUs via Morgan Stanley at $142 vesting price; Bitcoin transactions via Coinbase"
+          error={errors.esppRsuDetails}
           value={data.esppRsuDetails || ''}
-          onChange={(e) => updateField('esppRsuDetails', e.target.value)}
+          onChange={(e) => {
+            updateField('esppRsuDetails', e.target.value);
+            if (clearError) clearError('esppRsuDetails');
+          }}
         />
       </div>
     </div>
