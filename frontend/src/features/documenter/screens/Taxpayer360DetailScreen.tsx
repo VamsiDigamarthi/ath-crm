@@ -325,7 +325,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
             activeTab === 'DOCUMENTS' ? 'bg-[#16A34A] text-white' : 'bg-slate-100 text-slate-600'
           }`}>
-            3 files
+            {(lead?.documents || currentLead.documents || []).length} files
           </span>
         </button>
 
@@ -368,6 +368,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
             <TaxPrepDocumentVault
               customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+              documents={(lead?.documents || currentLead.documents || []) as any}
+              onDocumentVerified={fetchLeadDetails}
             />
           </div>
         )}

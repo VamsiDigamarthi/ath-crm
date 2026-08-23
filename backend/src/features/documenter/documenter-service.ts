@@ -510,9 +510,7 @@ export class DocumenterService {
     });
 
     return agents.map((agent) => {
-      const activeLoad = agent.assignedDocApps.filter((a) =>
-        ([ApplicationStage.DOC_OUTREACH, ApplicationStage.DOC_PREP] as ApplicationStage[]).includes(a.currentStage)
-      ).length;
+      const activeLoad = agent.assignedDocApps.length;
       const prepCount = agent.assignedDocApps.filter(
         (a) => a.currentStage === ApplicationStage.DOC_PREP
       ).length;

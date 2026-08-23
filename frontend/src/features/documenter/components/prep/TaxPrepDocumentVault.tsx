@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/shared/components/Button';
 import { AppModal } from '@/shared/components/AppModal';
 import { 
@@ -6,7 +6,9 @@ import {
   CheckCircle2, 
   Download, 
   FileCheck,
-  Eye
+  Eye,
+  FileSpreadsheet,
+  Image as ImageIcon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '@/lib/api-client';
@@ -33,6 +35,10 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
 }) => {
   const [docList, setDocList] = useState<DocumentItem[]>(initialDocuments);
   const [previewDoc, setPreviewDoc] = useState<DocumentItem | null>(null);
+
+  useEffect(() => {
+    setDocList(initialDocuments || []);
+  }, [initialDocuments]);
 
   const handleVerify = async (docId: string) => {
     try {
@@ -68,20 +74,37 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
   };
 
   const getCategoryBadge = (cat: string) => {
-    switch (cat) {
-      case 'W2_WAGES':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">W-2 Wages</span>;
-      case '1099_BROKERAGE':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">1099-B Stocks</span>;
-      case '1099_INT_DIV':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">1099-INT / DIV</span>;
-      case 'FBAR_FOREIGN':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">FBAR Indian</span>;
-      case 'MORTGAGE_1098':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">1098 Mortgage</span>;
-      default:
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">{cat || 'Tax Slip'}</span>;
+    const upper = (cat || '').toUpperCase();
+    if (upper.includes('W2') || upper.includes('W-2')) {
+      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">W-2 Wages</span>;
     }
+    if (upper.includes('DIV') || upper.includes('DIVIDEND')) {
+      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">1099-DIV Dividends</span>;
+    }
+    if (upper.includes('INT') || upper.includes('INTEREST')) {
+      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">1099-INT Interest</span>;
+    }
+    if (upper.includes('BROKERAGE') || upper.includes('1099_B') || upper.includes('STOCK')) {
+      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">1099-B Stocks</span>;
+    }
+    if (upper.includes('FBAR') || upper.includes('INDIAN') || upper.includes('FOREIGN')) {
+      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">FBAR Indian</span>;
+    }
+    if (upper.includes('1098') || upper.includes('MORTGAGE')) {
+      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">1098 Mortgage</span>;
+    }
+    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">{cat || 'Tax Slip'}</span>;
+  };
+
+  const getFileIcon = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) {
+      return <ImageIcon className="w-4 h-4 text-emerald-600" />;
+    }
+    if (['xlsx', 'xls', 'csv'].includes(ext)) {
+      return <FileSpreadsheet className="w-4 h-4 text-blue-600" />;
+    }
+    return <FileText className="w-4 h-4 text-slate-600" />;
   };
 
   return (
@@ -119,7 +142,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
             >
               <div className="flex items-start gap-3">
                 <div className="w-9 h-9 rounded-lg bg-emerald-50 text-[#16A34A] border border-emerald-100 flex items-center justify-center font-bold shrink-0">
-                  <FileText className="w-4 h-4" />
+                  {getFileIcon(doc.fileName)}
                 </div>
 
                 <div className="space-y-0.5">
@@ -172,7 +195,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
                     className="h-7 px-2.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
                   >
                     <CheckCircle2 className="w-3 h-3" />
-                    <span>Verify & Approve</span>
+                    <span>Verify &amp; Approve</span>
                   </Button>
                 )}
               </div>
