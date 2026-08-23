@@ -106,6 +106,10 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData.m2_dependents}
             updateField={(field, val) => updateModuleField('m2_dependents', field, val)}
             selectedTaxYear={selectedTaxYear}
+            maritalStatus={organizerData.m1_demographics?.maritalStatus}
+            primaryTaxpayerLastName={organizerData.m1_demographics?.lastName || organizerData.m1_demographics?.fullName?.split(' ').slice(1).join(' ') || ''}
+            errors={errors}
+            clearError={clearError}
           />
         )}
 
@@ -114,6 +118,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData.m3_presence}
             updateField={(field, val) => updateModuleField('m3_presence', field, val)}
             selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
           />
         )}
 

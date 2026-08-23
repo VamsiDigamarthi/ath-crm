@@ -40,6 +40,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   taxDraftSummary,
 }) => {
   const organizer = taxDraftSummary?.organizer || {};
+  const activeTaxYear = taxDraftSummary?.taxYear || organizer.taxYear || 2025;
 
   const [viewMode, setViewMode] = useState<'INSPECTOR' | 'GRID'>('INSPECTOR');
   const [selectedModId, setSelectedModId] = useState<string>('m1');
@@ -272,13 +273,15 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             <ReviewModule2Dependents
               m2={m2}
               showSensitive={showSensitive}
+              toggleShow={toggleShow}
             />
           )}
 
           {selectedModId === 'm3' && (
             <ReviewModule3Presence
               m3={m3}
-              m1={m1}
+              selectedTaxYear={activeTaxYear}
+              isSubmitted={isModuleCompleted('m3', organizer)}
             />
           )}
 

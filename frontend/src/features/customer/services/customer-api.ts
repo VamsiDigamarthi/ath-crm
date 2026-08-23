@@ -139,6 +139,7 @@ export const customerApi = {
 };
 
 export interface OrganizerData {
+  submittedModules?: string[];
   m1_demographics: {
     fullName: string;
     firstName?: string;

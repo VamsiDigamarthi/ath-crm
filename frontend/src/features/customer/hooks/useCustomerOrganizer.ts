@@ -3,7 +3,7 @@ import {
   customerApi,
   type OrganizerData,
 } from '../services/customer-api';
-import { validateModule1, type ValidationErrorMap } from '../components/organizer/utils/organizer-validation';
+import { validateModule1, validateModule2, validateModule3, type ValidationErrorMap } from '../components/organizer/utils/organizer-validation';
 import toast from 'react-hot-toast';
 
 export const useCustomerOrganizer = (taxYearParam?: string) => {
@@ -82,6 +82,29 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
       }
     }
 
+    if (selectedModId === 'm2') {
+      const errors = validateModule2(
+        organizerData.m2_dependents,
+        organizerData.m1_demographics?.maritalStatus
+      );
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        const errorFieldNames = Object.keys(errors);
+        toast.error(`Please fix validation errors: ${errors[errorFieldNames[0]]}`);
+        return false;
+      }
+    }
+
+    if (selectedModId === 'm3') {
+      const errors = validateModule3(organizerData.m3_presence, selectedTaxYear);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        const errorFieldNames = Object.keys(errors);
+        toast.error(`Please fix validation errors: ${errors[errorFieldNames[0]]}`);
+        return false;
+      }
+    }
+
     setValidationErrors({});
     return true;
   };
@@ -98,7 +121,16 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
 
     try {
       setSaving(true);
-      const res = await customerApi.saveOrganizer(selectedTaxYear, organizerData);
+      const updatedSubmitted = Array.from(
+        new Set([...(organizerData.submittedModules || []), selectedModId])
+      );
+      const dataToSave: OrganizerData = {
+        ...organizerData,
+        submittedModules: updatedSubmitted,
+      };
+      setOrganizerData(dataToSave);
+
+      const res = await customerApi.saveOrganizer(selectedTaxYear, dataToSave);
       if (res.data) {
         setProgressPercent(res.data.progressPercent);
         setCompletedCount(res.data.completedCount);

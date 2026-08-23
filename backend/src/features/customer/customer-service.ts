@@ -335,8 +335,14 @@ export class CustomerService {
     const email = m1Saved.email || profile.email || profile.user?.email || 'arjun.varma@gmail.com';
     const phone = m1Saved.phone || profile.phone || profile.user?.mobile || '+1 (713) 555-0138';
 
+    // Strictly load submittedModules from saved draft. Default only to ['m1'] if user has filled demographics
+    const submittedModules: string[] = Array.isArray(organizer.submittedModules)
+      ? organizer.submittedModules
+      : (m1Saved.firstName || profile.firstName ? ['m1'] : []);
+
     // Real customer data from CustomerProfile and saved TaxDraftSummary
     const defaultOrganizer = {
+      submittedModules,
       m1_demographics: {
         firstName,
         middleName,
@@ -374,11 +380,11 @@ export class CustomerService {
         employerReimbursedAmount: 0,
       },
       m3_presence: organizer.m3_presence || {
-        days2025: 365,
-        days2024: 0,
-        days2023: 0,
+        days2025: undefined,
+        days2024: undefined,
+        days2023: undefined,
         visaType: profile.visaType || 'H-1B',
-        residedStates: [{ state: profile.state || 'TX', fromDate: '01/01/2025', toDate: '12/31/2025' }],
+        statesResidedHistory: [],
         cityCountyTaxesRequired: false,
       },
       m4_wages: organizer.m4_wages || {
@@ -425,18 +431,8 @@ export class CustomerService {
       },
     };
 
-    // Calculate real completion progress
-    let completedCount = 0;
-    if (defaultOrganizer.m1_demographics.fullName && defaultOrganizer.m1_demographics.city) completedCount++;
-    if (organizer.m2_dependents) completedCount++;
-    if (defaultOrganizer.m3_presence.days2025 > 0) completedCount++;
-    if (organizer.m4_wages && (defaultOrganizer.m4_wages.hasW2 || defaultOrganizer.m4_wages.employerName)) completedCount++;
-    if (organizer.m5_interest) completedCount++;
-    if (organizer.m6_stocks) completedCount++;
-    if (organizer.m7_foreign) completedCount++;
-    if (organizer.m8_deductions) completedCount++;
-    if (organizer.m9_directDeposit && defaultOrganizer.m9_directDeposit.routingNumber) completedCount++;
-
+    // Calculate real completion progress strictly based on actual submitted modules
+    const completedCount = submittedModules.length;
     const progressPercent = Math.round((completedCount / 9) * 100);
 
     return {
@@ -450,10 +446,11 @@ export class CustomerService {
   }
 
   /**
-   * Save 9-Module Organizer data into TaxApplication
+   * Save / update 9-module organizer data with XSS sanitization and PostgreSQL sync
    */
-  static async saveOrganizer(userId: string, body: any) {
-    const { taxYear, organizerData } = body;
+  static async saveOrganizer(userId: string, dataOrBody: any, taxYearParam?: number | string) {
+    const taxYear = dataOrBody?.taxYear || taxYearParam || 2025;
+    const organizerData = dataOrBody?.organizerData || dataOrBody;
 
     const profile = await prisma.customerProfile.findFirst({
       where: { userId },
@@ -468,7 +465,7 @@ export class CustomerService {
       throw new NotFoundError('Taxpayer customer profile not found');
     }
 
-    const selectedYear = taxYear ? parseInt(taxYear, 10) : 2025;
+    const selectedYear = parseInt(taxYear.toString(), 10) || 2025;
     let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
 
     if (!activeApp) {
@@ -516,18 +513,13 @@ export class CustomerService {
 
     const currentDraft = (activeApp.taxDraftSummary as any) || {};
 
-    // Calculate completion
-    let completedCount = 0;
-    if (cleanOrganizerData.m1_demographics?.firstName || cleanOrganizerData.m1_demographics?.fullName) completedCount++;
-    if (cleanOrganizerData.m2_dependents) completedCount++;
-    if (cleanOrganizerData.m3_presence?.days2025 > 0) completedCount++;
-    if (cleanOrganizerData.m4_wages) completedCount++;
-    if (cleanOrganizerData.m5_interest) completedCount++;
-    if (cleanOrganizerData.m6_stocks) completedCount++;
-    if (cleanOrganizerData.m7_foreign) completedCount++;
-    if (cleanOrganizerData.m8_deductions) completedCount++;
-    if (cleanOrganizerData.m9_directDeposit?.routingNumber) completedCount++;
+    // Calculate real completion strictly from submitted modules list
+    const existingSubmitted: string[] = currentDraft.organizer?.submittedModules || ['m1'];
+    const newSubmitted: string[] = cleanOrganizerData.submittedModules || existingSubmitted;
+    const submittedModules = Array.from(new Set(newSubmitted));
 
+    cleanOrganizerData.submittedModules = submittedModules;
+    const completedCount = submittedModules.length;
     const progressPercent = Math.round((completedCount / 9) * 100);
 
     const updatedSummary = {
