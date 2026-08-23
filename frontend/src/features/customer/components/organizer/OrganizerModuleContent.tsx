@@ -1,8 +1,9 @@
 import React from 'react';
-import { CheckCircle2, ArrowLeft, ArrowRight, Save } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, ArrowRight, Save, Clock } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { ORGANIZER_MODULES } from './OrganizerModuleSidebar';
 import { type OrganizerData } from '../../services/customer-api';
+import { isModuleCompleted } from './utils/organizer-validation';
 import { Module1Demographics } from './modules/Module1Demographics';
 import { Module2Dependents } from './modules/Module2Dependents';
 import { Module3Presence } from './modules/Module3Presence';
@@ -23,6 +24,8 @@ interface OrganizerModuleContentProps {
   onSave: () => void;
   currentModIndex: number;
   saving: boolean;
+  errors?: Record<string, string>;
+  clearError?: (field: string) => void;
 }
 
 export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
@@ -35,6 +38,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
   onSave,
   currentModIndex,
   saving,
+  errors = {},
+  clearError,
 }) => {
   const currentMod = ORGANIZER_MODULES.find((m) => m.id === selectedModId) || ORGANIZER_MODULES[0];
 
@@ -71,10 +76,17 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
           </div>
 
           <div>
-            <span className="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
-              <span>Verified Intake Form</span>
-            </span>
+            {isModuleCompleted(currentMod.id, organizerData) ? (
+              <span className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-2 shadow-2xs">
+                <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
+                <span>Section Submitted &amp; Verified ✓</span>
+              </span>
+            ) : (
+              <span className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-2 shadow-2xs">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <span>Draft Intake in Progress</span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -84,6 +96,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData.m1_demographics}
             updateField={(field, val) => updateModuleField('m1_demographics', field, val)}
             selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
           />
         )}
 

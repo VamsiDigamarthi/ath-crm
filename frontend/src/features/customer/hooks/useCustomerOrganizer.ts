@@ -3,6 +3,7 @@ import {
   customerApi,
   type OrganizerData,
 } from '../services/customer-api';
+import { validateModule1, type ValidationErrorMap } from '../components/organizer/utils/organizer-validation';
 import toast from 'react-hot-toast';
 
 export const useCustomerOrganizer = (taxYearParam?: string) => {
@@ -15,6 +16,7 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
   const [saving, setSaving] = useState<boolean>(false);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [completedCount, setCompletedCount] = useState<number>(0);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrorMap>({});
 
   const fetchOrganizer = useCallback(async () => {
     try {
@@ -37,6 +39,16 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
     fetchOrganizer();
   }, [fetchOrganizer]);
 
+  // Clear specific validation error on field edit
+  const clearError = (field: string) => {
+    setValidationErrors((prev) => {
+      if (!prev[field]) return prev;
+      const copy = { ...prev };
+      delete copy[field];
+      return copy;
+    });
+  };
+
   // Update a specific module field
   const updateModuleField = <K extends keyof OrganizerData>(
     moduleKey: K,
@@ -53,11 +65,36 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
         },
       };
     });
+    clearError(field as string);
+  };
+
+  // Validate active module
+  const validateCurrentModule = (): boolean => {
+    if (!organizerData) return false;
+
+    if (selectedModId === 'm1') {
+      const errors = validateModule1(organizerData.m1_demographics);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        const errorFieldNames = Object.keys(errors);
+        toast.error(`Please fill out required fields: ${errors[errorFieldNames[0]]}`);
+        return false;
+      }
+    }
+
+    setValidationErrors({});
+    return true;
   };
 
   // Save current organizer data to PostgreSQL
-  const saveOrganizer = async (silent: boolean = false) => {
-    if (!organizerData) return;
+  const saveOrganizer = async (silent: boolean = false): Promise<boolean> => {
+    if (!organizerData) return false;
+
+    // Run strict validation before persisting
+    const isValid = validateCurrentModule();
+    if (!isValid) {
+      return false;
+    }
 
     try {
       setSaving(true);
@@ -65,13 +102,17 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
       if (res.data) {
         setProgressPercent(res.data.progressPercent);
         setCompletedCount(res.data.completedCount);
+        setValidationErrors({});
         if (!silent) {
           toast.success('Organizer saved successfully! 🚀');
         }
+        return true;
       }
+      return false;
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to save organizer';
       toast.error(msg);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -82,7 +123,12 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
   const currentModIndex = moduleIds.indexOf(selectedModId);
 
   const handleNext = async () => {
-    await saveOrganizer(true);
+    const success = await saveOrganizer(true);
+    if (!success) {
+      // Stay on current module so user can correct highlighted errors
+      return;
+    }
+
     if (currentModIndex < moduleIds.length - 1) {
       setSelectedModId(moduleIds[currentModIndex + 1]);
     } else {
@@ -92,6 +138,7 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
 
   const handlePrev = () => {
     if (currentModIndex > 0) {
+      setValidationErrors({});
       setSelectedModId(moduleIds[currentModIndex - 1]);
     }
   };
@@ -107,6 +154,8 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
     saving,
     progressPercent,
     completedCount,
+    validationErrors,
+    clearError,
     updateModuleField,
     saveOrganizer,
     handleNext,

@@ -13,6 +13,7 @@ import {
   Gift 
 } from 'lucide-react';
 import { type OrganizerData } from '../../services/customer-api';
+import { isModuleCompleted } from './utils/organizer-validation';
 
 export interface ModuleDefinition {
   id: string;
@@ -111,32 +112,6 @@ export const OrganizerModuleSidebar: React.FC<OrganizerModuleSidebarProps> = ({
   completedCount,
   organizerData,
 }) => {
-  const isModuleCompleted = (modId: string): boolean => {
-    if (!organizerData) return false;
-    switch (modId) {
-      case 'm1':
-        return Boolean(organizerData.m1_demographics.fullName && organizerData.m1_demographics.city);
-      case 'm2':
-        return organizerData.m2_dependents !== undefined;
-      case 'm3':
-        return organizerData.m3_presence.days2025 > 0;
-      case 'm4':
-        return Boolean(organizerData.m4_wages.hasW2 || organizerData.m4_wages.employerName);
-      case 'm5':
-        return Boolean(organizerData.m5_interest.hasInterestDividends || organizerData.m5_interest.bankName);
-      case 'm6':
-        return Boolean(organizerData.m6_stocks.tradedStocks || organizerData.m6_stocks.brokerName);
-      case 'm7':
-        return Boolean(organizerData.m7_foreign.hasFbar || organizerData.m7_foreign.indianBankName);
-      case 'm8':
-        return Boolean(organizerData.m8_deductions.hsaContribution || organizerData.m8_deductions.studentLoanInterest);
-      case 'm9':
-        return Boolean(organizerData.m9_directDeposit.routingNumber && organizerData.m9_directDeposit.accountNumber);
-      default:
-        return false;
-    }
-  };
-
   return (
     <div className="w-full bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
       {/* Top Header Row with Status */}
@@ -160,7 +135,7 @@ export const OrganizerModuleSidebar: React.FC<OrganizerModuleSidebarProps> = ({
         {ORGANIZER_MODULES.map((mod) => {
           const Icon = mod.icon;
           const isSelected = mod.id === selectedModId;
-          const isDone = isModuleCompleted(mod.id);
+          const isDone = isModuleCompleted(mod.id, organizerData);
 
           return (
             <button
@@ -171,7 +146,7 @@ export const OrganizerModuleSidebar: React.FC<OrganizerModuleSidebarProps> = ({
                 isSelected
                   ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
                   : isDone
-                  ? 'bg-emerald-50/50 hover:bg-emerald-50 text-slate-800 border-emerald-200'
+                  ? 'bg-emerald-50/60 hover:bg-emerald-50 text-slate-800 border-emerald-300/80'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
               }`}
             >
@@ -198,11 +173,30 @@ export const OrganizerModuleSidebar: React.FC<OrganizerModuleSidebarProps> = ({
                 </div>
               </div>
 
-              <div className="shrink-0 ml-1">
+              {/* Status Pill Badge */}
+              <div className="shrink-0 ml-1.5 flex items-center">
                 {isDone ? (
-                  <CheckCircle2 className={`w-3.5 h-3.5 ${isSelected ? 'text-emerald-400' : 'text-[#16A34A]'}`} />
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold border ${
+                      isSelected
+                        ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400/40'
+                        : 'bg-emerald-100 text-[#15803D] border-emerald-300'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />
+                    <span>Submitted</span>
+                  </span>
                 ) : (
-                  <Clock className={`w-3.5 h-3.5 ${isSelected ? 'text-amber-300' : 'text-amber-500'}`} />
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold border ${
+                      isSelected
+                        ? 'bg-slate-800 text-slate-300 border-slate-700'
+                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                    }`}
+                  >
+                    <Clock className="w-2.5 h-2.5 text-amber-500" />
+                    <span>Pending</span>
+                  </span>
                 )}
               </div>
             </button>

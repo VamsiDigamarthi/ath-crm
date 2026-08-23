@@ -105,12 +105,13 @@ export function AppInput({
             type="button"
             tabIndex={-1}
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-gray-600 transition-colors z-10"
+            className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 hover:text-[#16A34A] transition-colors z-10 cursor-pointer"
+            title={showPassword ? 'Hide value' : 'Show value'}
           >
             {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
         ) : rightIcon ? (
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 pointer-events-none z-10">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 z-10">
             {rightIcon}
           </div>
         ) : null}

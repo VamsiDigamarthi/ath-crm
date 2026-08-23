@@ -20,6 +20,8 @@ export const CustomerOrganizerWizard: React.FC = () => {
     saving,
     progressPercent,
     completedCount,
+    validationErrors,
+    clearError,
     updateModuleField,
     saveOrganizer,
     handleNext,
@@ -87,6 +89,8 @@ export const CustomerOrganizerWizard: React.FC = () => {
           onSave={() => saveOrganizer(false)}
           currentModIndex={currentModIndex}
           saving={saving}
+          errors={validationErrors}
+          clearError={clearError}
         />
       </div>
     </div>

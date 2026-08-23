@@ -214,6 +214,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     placeholder="MM/DD/YYYY"
                     format="MM/dd/yyyy"
                     accentColor="#16A34A"
+                    maxDate={new Date()}
                     value={parseUsDate(sp.dob)}
                     onChange={(d) => {
                       const list = [...spouses];
@@ -225,6 +226,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
 
                   <AppInput
                     label="Spouse SSN / ITIN (Editable) *"
+                    type="password"
                     placeholder="982-14-9812"
                     leftIcon={<CreditCard className="w-4 h-4" />}
                     value={sp.ssn}
@@ -427,6 +429,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     placeholder="MM/DD/YYYY"
                     format="MM/dd/yyyy"
                     accentColor="#16A34A"
+                    maxDate={new Date()}
                     value={parseUsDate(dep.dob)}
                     onChange={(d) => {
                       const list = [...(data.dependentsList || [])];
@@ -437,7 +440,8 @@ export const Module2Dependents: React.FC<Module2Props> = ({
 
                   <AppInput
                     label="SSN / ITIN (Editable) *"
-                    placeholder="•••-••-1234"
+                    type="password"
+                    placeholder="982-14-1234"
                     leftIcon={<CreditCard className="w-4 h-4" />}
                     value={dep.ssn}
                     onChange={(e) => {

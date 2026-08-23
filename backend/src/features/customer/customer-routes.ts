@@ -3,6 +3,9 @@ import { CustomerController } from './customer-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { uploadTaxDocument } from '../../middlewares/file-upload-middleware.js';
 
+import { validateRequest } from '../../middlewares/validate-request.js';
+import { saveOrganizerSchema } from './customer-validator.js';
+
 const router = Router();
 
 // Protect all customer routes with auth session
@@ -26,6 +29,6 @@ router.get('/documents/:id/download', CustomerController.downloadDocument);
  * 9-Module Intake Organizer Routes
  */
 router.get('/organizer', CustomerController.getOrganizer);
-router.put('/organizer', CustomerController.saveOrganizer);
+router.put('/organizer', validateRequest(saveOrganizerSchema), CustomerController.saveOrganizer);
 
 export { router as customerRouter };
