@@ -292,6 +292,129 @@ export const m6StocksSchema = z.object({
 });
 
 /**
+ * Zod Schema for Module 7 FBAR / FATCA & Indian Income (INR)
+ */
+export const m7ForeignSchema = z.object({
+  hasFbar: z.boolean().optional().default(false),
+  hasFbarOver10k: z.enum(['YES', 'NO']).optional().default('NO'),
+  spouseFbarOver10k: z.enum(['YES', 'NO']).optional().default('NO'),
+  indianBankName: z
+    .string()
+    .trim()
+    .max(150)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  foreignSalaryInr: z.number().min(0).max(1000000000).optional().default(0),
+  foreignInterestInr: z.number().min(0).max(1000000000).optional().default(0),
+  foreignDividendInr: z.number().min(0).max(1000000000).optional().default(0),
+  foreignRentalInr: z.number().min(0).max(1000000000).optional().default(0),
+  otherForeignIncomeSource: z
+    .string()
+    .trim()
+    .max(150)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  otherForeignIncomeInr: z.number().min(0).max(1000000000).optional().default(0),
+  foreignTaxesPaidInr: z.number().min(0).max(1000000000).optional().default(0),
+  foreignAccountsList: z
+    .array(
+      z.object({
+        bankName: z
+          .string()
+          .trim()
+          .max(150)
+          .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+          .optional()
+          .default(''),
+        accountType: z.string().trim().max(50).optional().default('SAVINGS_NRE'),
+        accountNumber: z.string().trim().max(50).optional().default(''),
+        maxBalanceInr: z.number().min(0).optional().default(0),
+        interestEarnedInr: z.number().min(0).optional().default(0),
+      })
+    )
+    .optional()
+    .default([]),
+});
+
+/**
+ * Zod Schema for Module 8 Itemized Deductions, Rent & Solar Energy
+ */
+export const m8DeductionsSchema = z.object({
+  hasRentDeductions: z.boolean().optional().default(false),
+  rentDeductionsList: z
+    .array(
+      z.object({
+        state: z.string().trim().max(50).optional().default(''),
+        months: z.number().int().min(0).max(12).optional().default(0),
+        monthlyRent: z.number().min(0).optional().default(0),
+        totalRentPaid: z.number().min(0).optional().default(0),
+      })
+    )
+    .optional()
+    .default([]),
+  charitableDonations: z.number().min(0).optional().default(0),
+  charitableList: z
+    .array(
+      z.object({
+        institutionName: z
+          .string()
+          .trim()
+          .max(150)
+          .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+          .optional()
+          .default(''),
+        amountDonated: z.number().min(0).optional().default(0),
+        donationType: z.string().trim().max(50).optional().default('CASH'),
+      })
+    )
+    .optional()
+    .default([]),
+  lastYearTaxPrepFee: z.number().min(0).optional().default(0),
+  lastYearTaxPrepFeeTaxpayer: z.number().min(0).optional().default(0),
+  lastYearTaxPrepFeeSpouse: z.number().min(0).optional().default(0),
+  mortgageInterest1098: z.number().min(0).optional().default(0),
+  mortgageInterestTaxpayer: z.number().min(0).optional().default(0),
+  mortgageInterestSpouse: z.number().min(0).optional().default(0),
+  propertyTaxesUs: z.number().min(0).optional().default(0),
+  propertyTaxesUsTaxpayer: z.number().min(0).optional().default(0),
+  propertyTaxesUsSpouse: z.number().min(0).optional().default(0),
+  propertyTaxesIndia: z.number().min(0).optional().default(0),
+  propertyTaxesIndiaTaxpayer: z.number().min(0).optional().default(0),
+  propertyTaxesIndiaSpouse: z.number().min(0).optional().default(0),
+  medicalExpenses: z.number().min(0).optional().default(0),
+  medicalExpensesTaxpayer: z.number().min(0).optional().default(0),
+  medicalExpensesSpouse: z.number().min(0).optional().default(0),
+  studentLoanInterest: z.number().min(0).optional().default(0),
+  studentLoanInterestTaxpayer: z.number().min(0).optional().default(0),
+  studentLoanInterestSpouse: z.number().min(0).optional().default(0),
+  solarCleanEnergyExpenses: z.number().min(0).optional().default(0),
+  solarCleanEnergyTaxpayer: z.number().min(0).optional().default(0),
+  solarCleanEnergySpouse: z.number().min(0).optional().default(0),
+  electricVehicleExpenses: z.number().min(0).optional().default(0),
+  electricVehicleTaxpayer: z.number().min(0).optional().default(0),
+  electricVehicleSpouse: z.number().min(0).optional().default(0),
+  hsaContribution: z.number().min(0).optional().default(0),
+  hsaTaxpayer: z.number().min(0).optional().default(0),
+  hsaSpouse: z.number().min(0).optional().default(0),
+  iraContribution: z.number().min(0).optional().default(0),
+  iraTaxpayer: z.number().min(0).optional().default(0),
+  iraSpouse: z.number().min(0).optional().default(0),
+  educatorExpenses: z.number().min(0).optional().default(0),
+  educatorExpensesTaxpayer: z.number().min(0).optional().default(0),
+  educatorExpensesSpouse: z.number().min(0).optional().default(0),
+  otherDeductionsDescription: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  otherDeductionsAmount: z.number().min(0).optional().default(0),
+});
+
+/**
  * Root Schema for Saving Organizer
  */
 export const saveOrganizerSchema = z.object({
@@ -304,8 +427,8 @@ export const saveOrganizerSchema = z.object({
       m4_wages: m4WagesSchema.optional(),
       m5_interest: m5InterestSchema.optional(),
       m6_stocks: m6StocksSchema.optional(),
-      m7_foreign: z.record(z.string(), z.any()).optional(),
-      m8_deductions: z.record(z.string(), z.any()).optional(),
+      m7_foreign: m7ForeignSchema.optional(),
+      m8_deductions: m8DeductionsSchema.optional(),
       m9_directDeposit: z.record(z.string(), z.any()).optional(),
     }),
   }),

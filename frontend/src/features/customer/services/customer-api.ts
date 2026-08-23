@@ -320,66 +320,71 @@ export interface OrganizerData {
     foreignAccountsList?: Array<{
       bankName: string;
       accountType: string;
-      peakBalanceInr: number;
-      accountCity: string;
+      accountNumber?: string;
+      peakBalanceInr?: number;
+      maxBalanceInr?: number;
+      interestEarnedInr?: number;
+      accountCity?: string;
     }>;
   };
   m8_deductions: {
+    hasRentDeductions?: boolean;
     hsaContribution?: number;
     hsaTaxpayer?: number;
     hsaSpouse?: number;
     traditionalIraTaxpayer?: number;
     traditionalIraSpouse?: number;
+    iraContribution?: number;
+    iraTaxpayer?: number;
+    iraSpouse?: number;
 
     // 12-Item Incurred Expenses (Taxpayer vs Spouse)
     lastYearTaxPrepFeeTaxpayer?: number;
     lastYearTaxPrepFeeSpouse?: number;
+    lastYearTaxPrepFee?: number;
     mortgageInterestTaxpayer?: number;
     mortgageInterestSpouse?: number;
+    mortgageInterest1098?: number;
     propertyTaxesUsTaxpayer?: number;
     propertyTaxesUsSpouse?: number;
+    propertyTaxesUs?: number;
     propertyTaxesIndiaTaxpayer?: number;
     propertyTaxesIndiaSpouse?: number;
+    propertyTaxesIndia?: number;
     educatorExpensesTaxpayer?: number;
     educatorExpensesSpouse?: number;
+    educatorExpenses?: number;
     medicalExpensesTaxpayer?: number;
     medicalExpensesSpouse?: number;
-    stateRefundTY2024Taxpayer?: number;
-    stateRefundTY2024Spouse?: number;
+    medicalExpenses?: number;
+    studentLoanInterestTaxpayer?: number;
+    studentLoanInterestSpouse?: number;
+    studentLoanInterest?: number;
+    solarCleanEnergyTaxpayer?: number;
+    solarCleanEnergySpouse?: number;
+    solarCleanEnergyExpenses?: number;
     cleanEnergyCostTaxpayer?: number;
     cleanEnergyCostSpouse?: number;
+    cleanEnergyCost?: number;
     cleanEnergyEquipmentDetails?: string;
+    electricVehicleTaxpayer?: number;
+    electricVehicleSpouse?: number;
+    electricVehicleExpenses?: number;
+    stateRefundTY2024Taxpayer?: number;
+    stateRefundTY2024Spouse?: number;
+    stateRefundTY2024?: number;
     otherExpensesTaxpayer?: number;
     otherExpensesSpouse?: number;
     otherExpensesDetails?: string;
-    capitalGain2025Taxpayer?: number;
-    capitalGain2025Spouse?: number;
-    capitalLoss2025Taxpayer?: number;
-    capitalLoss2025Spouse?: number;
-    capitalLossCarryforwardTaxpayer?: number;
-    capitalLossCarryforwardSpouse?: number;
+    otherDeductionsDescription?: string;
+    otherDeductionsAmount?: number;
 
-    // Legacy fields
-    mortgageInterest1098?: number;
-    propertyTaxesUs?: number;
-    propertyTaxesIndia?: number;
-    educatorExpenses?: number;
-    medicalExpenses?: number;
-    studentLoanInterest?: number;
-    stateRefundTY2024?: number;
-    cleanEnergyEquipment?: string;
-    cleanEnergyCost?: number;
-    cleanEnergyList?: Array<{
-      equipmentType: string;
-      cost: number;
-    }>;
     charitableDonations?: number;
     charitableList?: Array<{
       institutionName: string;
       amountDonated: number;
+      donationType?: string;
     }>;
-    lastYearTaxPrepFee?: number;
-    otherExpensesNotListed?: number;
     stateRentDeduction?: {
       state: string;
       months: number;

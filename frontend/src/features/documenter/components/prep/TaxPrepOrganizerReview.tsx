@@ -312,12 +312,16 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
           {selectedModId === 'm7' && (
             <ReviewModule7Foreign
               m7={m7}
+              selectedTaxYear={activeTaxYear}
+              isSubmitted={isModuleCompleted('m7', organizer)}
             />
           )}
 
           {selectedModId === 'm8' && (
             <ReviewModule8Deductions
               m8={m8}
+              selectedTaxYear={activeTaxYear}
+              isSubmitted={isModuleCompleted('m8', organizer)}
             />
           )}
 

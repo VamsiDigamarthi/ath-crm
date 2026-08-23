@@ -604,6 +604,125 @@ export const validateModule6 = (
 };
 
 /**
+ * Validates Module 7: FBAR / FATCA & Indian Income (INR)
+ * Note: Module 7 is optional, but if Indian accounts or income are reported, they are strictly validated.
+ */
+export const validateModule7 = (
+  data?: OrganizerData['m7_foreign'],
+  _selectedTaxYear: number = 2025
+): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) return errors;
+
+  // 1. Check XSS in otherForeignIncomeSource
+  if (data.otherForeignIncomeSource && containsXssOrHtml(data.otherForeignIncomeSource)) {
+    errors.otherForeignIncomeSource = 'HTML tags or script injections are strictly forbidden!';
+  }
+
+  // 2. Validate Foreign Accounts if FBAR is YES or accounts are present
+  const accounts = data.foreignAccountsList || [];
+  accounts.forEach((acc, idx) => {
+    const bName = (acc.bankName || '').trim();
+    if (!bName) {
+      errors[`foreignAcc_${idx}_bankName`] = 'Indian Bank / Institution Name is required (e.g. HDFC, SBI, ICICI)';
+    } else if (containsXssOrHtml(bName)) {
+      errors[`foreignAcc_${idx}_bankName`] = 'HTML tags or script injections are strictly forbidden!';
+    } else if (bName.length < 2) {
+      errors[`foreignAcc_${idx}_bankName`] = 'Bank name must be at least 2 characters';
+    }
+
+    if (acc.maxBalanceInr !== undefined && (isNaN(acc.maxBalanceInr) || acc.maxBalanceInr < 0)) {
+      errors[`foreignAcc_${idx}_maxBalanceInr`] = 'Max balance cannot be negative';
+    }
+  });
+
+  // 3. Non-negative checks on INR Income amounts
+  if (data.foreignSalaryInr !== undefined && (isNaN(data.foreignSalaryInr) || data.foreignSalaryInr < 0)) {
+    errors.foreignSalaryInr = 'Salary income cannot be negative';
+  }
+  if (data.foreignInterestInr !== undefined && (isNaN(data.foreignInterestInr) || data.foreignInterestInr < 0)) {
+    errors.foreignInterestInr = 'Interest income cannot be negative';
+  }
+  if (data.foreignDividendInr !== undefined && (isNaN(data.foreignDividendInr) || data.foreignDividendInr < 0)) {
+    errors.foreignDividendInr = 'Dividend income cannot be negative';
+  }
+  if (data.foreignRentalInr !== undefined && (isNaN(data.foreignRentalInr) || data.foreignRentalInr < 0)) {
+    errors.foreignRentalInr = 'Rental income cannot be negative';
+  }
+  if (data.foreignTaxesPaidInr !== undefined && (isNaN(data.foreignTaxesPaidInr) || data.foreignTaxesPaidInr < 0)) {
+    errors.foreignTaxesPaidInr = 'TDS / Foreign tax paid cannot be negative';
+  }
+
+  return errors;
+};
+
+/**
+ * Validates Module 8: Itemized Deductions, State Rent & Solar Energy
+ * Note: Module 8 is optional, but if rent rows or expenses are entered, strict state uniqueness, 12-month limit, and non-negative amounts are enforced.
+ */
+export const validateModule8 = (
+  data?: OrganizerData['m8_deductions'],
+  _selectedTaxYear: number = 2025
+): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) return errors;
+
+  // 1. Validate State Rental Deductions
+  const rentList = data.rentDeductionsList || [];
+  const seenStates = new Set<string>();
+  let totalMonths = 0;
+
+  rentList.forEach((rent, idx) => {
+    const st = (rent.state || '').trim();
+    if (st) {
+      if (seenStates.has(st)) {
+        errors[`rent_${idx}_state`] = 'Duplicate state selected! Each state can only be listed once.';
+      } else {
+        seenStates.add(st);
+      }
+    }
+
+    const months = rent.months || 0;
+    totalMonths += months;
+    if (months < 0 || months > 12) {
+      errors[`rent_${idx}_months`] = 'Rental months must be between 1 and 12';
+    }
+
+    if (rent.monthlyRent !== undefined && rent.monthlyRent < 0) {
+      errors[`rent_${idx}_monthlyRent`] = 'Monthly rent cannot be negative';
+    }
+  });
+
+  if (totalMonths > 12) {
+    errors.rentMonthsTotal = `Total rental months across all states cannot exceed 12 months in a calendar year (currently ${totalMonths} months)!`;
+  }
+
+  // 2. Validate Charitable Donations
+  const charities = data.charitableList || [];
+  charities.forEach((ch, idx) => {
+    const inst = (ch.institutionName || '').trim();
+    if (!inst) {
+      errors[`charity_${idx}_institutionName`] = 'Charity / Institution name is required';
+    } else if (containsXssOrHtml(inst)) {
+      errors[`charity_${idx}_institutionName`] = 'HTML tags or script injections are strictly forbidden!';
+    } else if (inst.length < 2) {
+      errors[`charity_${idx}_institutionName`] = 'Institution name must be at least 2 characters';
+    }
+
+    if (ch.amountDonated !== undefined && ch.amountDonated < 0) {
+      errors[`charity_${idx}_amountDonated`] = 'Donation amount cannot be negative';
+    }
+  });
+
+  // 3. Other Deductions Description XSS Check
+  if (data.otherDeductionsDescription && containsXssOrHtml(data.otherDeductionsDescription)) {
+    errors.otherDeductionsDescription = 'HTML tags or script injections are strictly forbidden!';
+  }
+
+  return errors;
+};
+
+/**
  * Checks if a specific organizer module has been completed and submitted with valid data
  */
 export const isModuleCompleted = (modId: string, organizerData?: OrganizerData | null): boolean => {
@@ -653,6 +772,36 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
           (m6.totalCapitalGain ?? 0) !== 0 || 
           (m6.capitalGainTaxpayer ?? 0) !== 0 ||
           (m6.capitalLossTaxpayer ?? 0) !== 0)
+      );
+    }
+    case 'm7': {
+      const m7 = organizerData.m7_foreign;
+      return Boolean(
+        m7 &&
+        (m7.hasFbar || 
+          m7.hasFbarOver10k === 'YES' || 
+          m7.spouseFbarOver10k === 'YES' ||
+          (m7.foreignSalaryInr ?? 0) > 0 ||
+          (m7.foreignInterestInr ?? 0) > 0 ||
+          (m7.foreignDividendInr ?? 0) > 0 ||
+          (m7.foreignRentalInr ?? 0) > 0 ||
+          (m7.foreignTaxesPaidInr ?? 0) > 0 ||
+          (m7.foreignAccountsList && m7.foreignAccountsList.length > 0))
+      );
+    }
+    case 'm8': {
+      const m8 = organizerData.m8_deductions;
+      return Boolean(
+        m8 &&
+        ((m8.rentDeductionsList && m8.rentDeductionsList.length > 0 && m8.rentDeductionsList.some(r => (r.totalRentPaid ?? 0) > 0)) ||
+          (m8.charitableList && m8.charitableList.length > 0) ||
+          (m8.charitableDonations ?? 0) > 0 ||
+          (m8.mortgageInterest1098 ?? 0) > 0 ||
+          (m8.propertyTaxesUs ?? 0) > 0 ||
+          (m8.medicalExpenses ?? 0) > 0 ||
+          (m8.solarCleanEnergyExpenses ?? 0) > 0 ||
+          (m8.electricVehicleExpenses ?? 0) > 0 ||
+          (m8.studentLoanInterest ?? 0) > 0)
       );
     }
     default:
