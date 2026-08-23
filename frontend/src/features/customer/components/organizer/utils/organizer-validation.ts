@@ -446,6 +446,68 @@ export const validateModule3 = (
 };
 
 /**
+ * Validates Module 4: W-2 Wages & Rental Properties
+ */
+export const validateModule4 = (
+  data?: OrganizerData['m4_wages'],
+  _selectedTaxYear: number = 2025
+): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) return errors;
+
+  // 1. Primary Employer Name
+  const empName = (data.employerName || '').trim();
+  if (!empName) {
+    errors.employerName = 'Primary Employer Name is required (as listed on Form W-2)';
+  } else if (empName.length < 2) {
+    errors.employerName = 'Employer name must be at least 2 characters';
+  }
+
+  // 2. Box 1 Estimated Total Wages
+  if (data.estimatedWages === undefined || data.estimatedWages === null) {
+    errors.estimatedWages = 'Box 1 Total Wages ($) is required (as listed on Form W-2)';
+  } else if (isNaN(data.estimatedWages) || data.estimatedWages <= 0) {
+    errors.estimatedWages = 'Total Wages must be greater than $0';
+  }
+
+  // 3. Rental Properties Validation
+  const rentals = data.rentalProperties || [];
+  rentals.forEach((prop, idx) => {
+    const addr = (prop.address || '').trim();
+    if (!addr) {
+      errors[`rental_${idx}_address`] = 'Rental property address is required';
+    } else if (addr.length < 5) {
+      errors[`rental_${idx}_address`] = 'Please enter full property address with street & city';
+    }
+
+    if (prop.totalRentalIncome === undefined || prop.totalRentalIncome === null || isNaN(prop.totalRentalIncome)) {
+      errors[`rental_${idx}_totalRentalIncome`] = 'Total Rental Income received ($) is required (enter 0 if none)';
+    } else if (prop.totalRentalIncome < 0) {
+      errors[`rental_${idx}_totalRentalIncome`] = 'Rental income cannot be negative';
+    }
+
+    if (prop.monthsRented2025 !== undefined && (prop.monthsRented2025 < 0 || prop.monthsRented2025 > 12)) {
+      errors[`rental_${idx}_monthsRented2025`] = 'Months rented must be between 0 and 12';
+    }
+
+    if (prop.personalMonths2025 !== undefined && (prop.personalMonths2025 < 0 || prop.personalMonths2025 > 12)) {
+      errors[`rental_${idx}_personalMonths2025`] = 'Personal months used must be between 0 and 12';
+    }
+
+    if (prop.purchaseDate) {
+      const pDate = parseUsDate(prop.purchaseDate);
+      if (!pDate || isNaN(pDate.getTime())) {
+        errors[`rental_${idx}_purchaseDate`] = 'Enter valid purchase date (MM/DD/YYYY)';
+      } else if (pDate > new Date()) {
+        errors[`rental_${idx}_purchaseDate`] = 'Property purchase date cannot be a future date!';
+      }
+    }
+  });
+
+  return errors;
+};
+
+/**
  * Checks if a specific organizer module has been completed and submitted with valid data
  */
 export const isModuleCompleted = (modId: string, organizerData?: OrganizerData | null): boolean => {
@@ -472,6 +534,14 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
           Boolean(m2.spouseFirstName) ||
           Boolean(m2.spouseName))
       );
+    }
+    case 'm3': {
+      const m3 = organizerData.m3_presence;
+      return Boolean(m3 && m3.days2025 !== undefined && m3.days2025 > 0);
+    }
+    case 'm4': {
+      const m4 = organizerData.m4_wages;
+      return Boolean(m4 && m4.employerName && (m4.estimatedWages ?? 0) > 0);
     }
     default:
       return false;

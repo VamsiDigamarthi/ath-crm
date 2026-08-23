@@ -128,6 +128,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData.m4_wages}
             updateField={(field, val) => updateModuleField('m4_wages', field, val)}
             selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
           />
         )}
 

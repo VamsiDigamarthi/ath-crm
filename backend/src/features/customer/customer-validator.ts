@@ -180,6 +180,46 @@ export const m3PresenceSchema = z.object({
 });
 
 /**
+ * Zod Schema for Module 4 W-2 Wages & Rental Properties
+ */
+export const m4WagesSchema = z.object({
+  hasW2: z.boolean().optional().default(true),
+  employerName: z.string().trim().max(150).optional().default(''),
+  estimatedWages: z.number().min(0).max(100000000).optional(),
+  federalTaxWithheld: z.number().min(0).max(100000000).optional(),
+  w2List: z
+    .array(
+      z.object({
+        employerName: z.string().trim().max(150).optional().default(''),
+        ein: z.string().trim().max(50).optional().default(''),
+        box1Wages: z.number().min(0).optional().default(0),
+        box2FederalTax: z.number().min(0).optional().default(0),
+        state: z.string().trim().max(10).optional().default(''),
+        stateTaxWithheld: z.number().min(0).optional().default(0),
+      })
+    )
+    .optional()
+    .default([]),
+  hasRentalProperty: z.boolean().optional().default(false),
+  rentalProperties: z
+    .array(
+      z.object({
+        propertyType: z.string().trim().max(50).optional().default('RESIDENTIAL'),
+        address: z.string().trim().max(255).optional().default(''),
+        monthsRented2025: z.number().int().min(0).max(12).optional().default(12),
+        personalMonths2025: z.number().int().min(0).max(12).optional().default(0),
+        ownership: z.string().trim().max(50).optional().default('TAXPAYER'),
+        purchaseDate: z.string().trim().max(30).optional().default(''),
+        costOfProperty: z.number().min(0).optional().default(0),
+        totalRentalIncome: z.number().min(0).optional().default(0),
+        rentalExpenses: z.number().min(0).optional().default(0),
+      })
+    )
+    .optional()
+    .default([]),
+});
+
+/**
  * Root Schema for Saving Organizer
  */
 export const saveOrganizerSchema = z.object({
@@ -189,7 +229,7 @@ export const saveOrganizerSchema = z.object({
       m1_demographics: m1DemographicsSchema.optional(),
       m2_dependents: m2DependentsSchema.optional(),
       m3_presence: m3PresenceSchema.optional(),
-      m4_wages: z.record(z.string(), z.any()).optional(),
+      m4_wages: m4WagesSchema.optional(),
       m5_interest: z.record(z.string(), z.any()).optional(),
       m6_stocks: z.record(z.string(), z.any()).optional(),
       m7_foreign: z.record(z.string(), z.any()).optional(),

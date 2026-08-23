@@ -388,9 +388,13 @@ export class CustomerService {
         cityCountyTaxesRequired: false,
       },
       m4_wages: organizer.m4_wages || {
-        hasW2: false,
+        hasW2: true,
         employerName: '',
-        estimatedWages: 0,
+        estimatedWages: undefined,
+        federalTaxWithheld: undefined,
+        w2List: [],
+        hasRentalProperty: false,
+        rentalProperties: [],
       },
       m5_interest: organizer.m5_interest || {
         hasInterestDividends: false,
