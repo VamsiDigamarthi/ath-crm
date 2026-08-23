@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { TaxPrepDetailModal } from '../components/prep/TaxPrepDetailModal';
 import { Button } from '@/shared/components/Button';
@@ -11,12 +12,14 @@ import {
   Calculator,
   FileText,
   Sparkles,
-  DollarSign
+  DollarSign,
+  User
 } from 'lucide-react';
 import { renderVisaBadge } from '../columns/documenter-columns';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 
 export const DocumenterAgentPrepScreen: React.FC = () => {
+  const navigate = useNavigate();
   const {
     leads,
     stats,
@@ -217,11 +220,21 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="md"
+                    variant="outline"
+                    onClick={() => navigate(`/documenter/agent/lead/${lead.id}`)}
+                    className="border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer px-3"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>View</span>
+                  </Button>
+
+                  <Button
+                    size="md"
                     onClick={() => handleOpenPrep(lead)}
                     className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-2 shadow-2xs cursor-pointer px-4"
                   >
                     <Calculator className="w-4 h-4" />
-                    <span>Open Tax Prep & Send to Sales</span>
+                    <span>Open Tax Prep Workspace</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </div>

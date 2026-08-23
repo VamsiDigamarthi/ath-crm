@@ -1,9 +1,11 @@
 export type DocumenterTab = 
   | 'UNASSIGNED'
+  | 'NOT_CALLED'
   | 'OUTREACH'
   | 'PREP'
   | 'MY_LEADS'
   | 'CALLBACKS'
+  | 'DROPPED'
   | 'ALL';
 
 export type CallDisposition = 
@@ -12,6 +14,42 @@ export type CallDisposition =
   | 'CONNECTED_NOT_INTERESTED'
   | 'NO_ANSWER_VOICEMAIL'
   | 'INVALID_DISCONNECTED';
+
+export interface CallLogItem {
+  id: string;
+  applicationId: string;
+  agentId: string;
+  agentName?: string;
+  agentRole?: string;
+  agentEmail?: string;
+  agentAvatar?: string;
+  disposition: CallDisposition | string;
+  callSummary?: string | null;
+  callbackScheduledAt?: string | null;
+  durationSeconds?: number;
+  createdAt: string;
+}
+
+export interface TaxDocumentItem {
+  id: string;
+  fileName: string;
+  fileCategory: 'W2' | '1099' | '1040' | 'ID_PROOF' | 'OTHER';
+  fileSize?: string;
+  uploadedAt: string;
+  uploadedByName?: string;
+  verificationStatus: 'VERIFIED' | 'PENDING' | 'REJECTED';
+  fileUrl?: string;
+}
+
+export interface StageHistoryItem {
+  id: string;
+  fromStage: string;
+  toStage: string;
+  movedByName: string;
+  movedByRole: string;
+  remarks?: string;
+  createdAt: string;
+}
 
 export interface DocumenterLeadCustomer {
   id: string;
@@ -51,12 +89,17 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
     callbackScheduledAt?: string | null;
     createdAt: string;
   } | null;
+  callLogs?: CallLogItem[];
+  documents?: TaxDocumentItem[];
+  stageHistory?: StageHistoryItem[];
+  taxDraftSummary?: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface DocumenterStats {
   unassigned: number;
+  uncontacted?: number;
   activeOutreach: number;
   inPrep: number;
   myLeads: number;

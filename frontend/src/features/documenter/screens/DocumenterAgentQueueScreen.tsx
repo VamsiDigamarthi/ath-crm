@@ -7,6 +7,7 @@ import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { Button } from '@/shared/components/Button';
 import { 
   PhoneCall, 
+  PhoneOutgoing,
   RefreshCw, 
   Globe,
   CheckCircle2,
@@ -206,6 +207,19 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
               }`}
             >
               All Leads ({stats.myLeads || totalItems})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('NOT_CALLED')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'NOT_CALLED'
+                  ? 'bg-white text-blue-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <PhoneOutgoing className="w-3.5 h-3.5 text-blue-600" />
+              <span>Not Called Yet ({stats.uncontacted ?? 0})</span>
             </button>
 
             <button

@@ -190,6 +190,25 @@ export const downloadDocument = async (
   }
 };
 
+export const getLeadDetails = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const data = await DocumenterService.getLeadDetails(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Lead details with full call history fetched successfully',
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const verifyDocument = async (
   req: Request,
   res: Response,

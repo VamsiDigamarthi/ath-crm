@@ -145,3 +145,14 @@
     - Role `ADMIN` -> Routes to `/admin`
 - **SSR/Hydration Safety**: Zustand stores must employ `typeof window !== 'undefined'` check blocks and cache-hydration lifecycle checks (e.g. `initialize()`) on mount to completely prevent hydration mismatches during Server-Side Rendering (SSR).
 
+## 22. Tax Operations Workflow & Multi-Role Staffing Standards
+- **Strict Sequential Stage Flow**:
+  - **Documenter**: Only handles outreach, customer qualification, and document intake. **Never** sends directly to Sales.
+  - **Tax Preparer**: Computes tax deductions and prepares the draft Form 1040 / calculation summary.
+  - **Tax Reviewer**: Audits computations and provides quality sign-off. Only **Reviewer-Approved** drafts proceed to Sales.
+  - **Sales Person**: Pitches approved quotes and closes deals.
+- **Multi-Role Capability**:
+  - A single staff member can hold multiple operational roles (e.g. `DOC_PREPARER` and `DOC_REVIEWER`).
+  - **4-Eyes Guardrail**: The system strictly prevents a staff member from reviewing or approving a tax return that they personally prepared.
+
+

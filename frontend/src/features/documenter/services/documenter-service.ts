@@ -45,6 +45,13 @@ export const documenterService = {
   },
 
   /**
+   * Fetch full 360 case details for a single application including ALL historical call logs
+   */
+  async getLeadDetails(id: string): Promise<{ success: boolean; data: DocumenterLeadItem }> {
+    return apiClient.get(`/documenter/leads/${id}`);
+  },
+
+  /**
    * Fetch active documenter agents with live workload stats
    */
   async getAgents(params?: { timeRange?: 'TODAY' | 'WEEK' | 'SEASON' }): Promise<DocumenterAgentsResponse> {

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { ColumnDef } from '@/shared/components/AppTable';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
@@ -8,7 +9,8 @@ import {
   Globe, 
   Clock, 
   CheckCircle2, 
-  AlertCircle
+  AlertCircle,
+  Eye
 } from 'lucide-react';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 
@@ -55,6 +57,13 @@ export const renderStageBadge = (stage: string) => {
           Needs Review
         </span>
       );
+    case 'DROPPED_CANCELLED':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+          <UserX className="w-3 h-3 text-slate-500" />
+          Dropped / Closed
+        </span>
+      );
     default:
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">
@@ -83,12 +92,16 @@ export const getDocumenterColumns = ({
         const c = item.customer;
         const initial = c.firstName?.[0] || 'T';
         return (
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+          <Link
+            to={`/documenter/agent/lead/${item.id}`}
+            className="flex items-center gap-3 group text-left cursor-pointer"
+            title="View Lead Details & Call History"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-emerald-100 group-hover:to-teal-200 border border-slate-200 group-hover:border-emerald-300 text-slate-700 group-hover:text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs transition-all">
               {initial}
             </div>
             <div>
-              <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-[#16A34A] transition-colors flex items-center gap-1.5">
                 <span>{c.fullName || `${c.firstName} ${c.middleName ? c.middleName + ' ' : ''}${c.lastName}`}</span>
                 {renderVisaBadge(c.visaType)}
               </div>
@@ -97,7 +110,7 @@ export const getDocumenterColumns = ({
                 {c.dob ? ` • DOB: ${c.dob}` : ''}
               </div>
             </div>
-          </div>
+          </Link>
         );
       },
     },
@@ -233,6 +246,14 @@ export const getDocumenterColumns = ({
       cellClassName: 'text-right',
       render: (item) => (
         <div className="flex items-center justify-end gap-1.5">
+          <Link
+            to={`/documenter/agent/lead/${item.id}`}
+            className="h-8 px-2.5 rounded-lg text-xs font-semibold border border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+            title="View Lead Details & Call History"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">View</span>
+          </Link>
           <Button
             size="sm"
             onClick={() => onOpenCallModal(item)}

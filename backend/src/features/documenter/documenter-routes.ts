@@ -1,5 +1,6 @@
 import {
   getDocumenterLeads,
+  getLeadDetails,
   getDocumenterAgents,
   assignLeadsBulk,
   autoRoundRobinAssign,
@@ -29,6 +30,14 @@ router.get(
   requireAuth,
   authorize(...DOCUMENTER_ROLES),
   getDocumenterLeads
+);
+
+// 1b. Get single lead full 360 details with all historical call logs
+router.get(
+  '/leads/:id',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  getLeadDetails
 );
 
 // 2. Get active agents list with workloads

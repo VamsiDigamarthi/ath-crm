@@ -6,7 +6,7 @@ import { StorageService } from '../../utils/storage-service.js';
 export interface DocumenterLeadQuery {
   page?: number;
   limit?: number;
-  tab?: 'UNASSIGNED' | 'OUTREACH' | 'PREP' | 'MY_LEADS' | 'CALLBACKS' | 'ALL';
+  tab?: 'UNASSIGNED' | 'NOT_CALLED' | 'UNCONTACTED' | 'OUTREACH' | 'PREP' | 'MY_LEADS' | 'CALLBACKS' | 'DROPPED' | 'ALL';
   search?: string;
   agentId?: string;
   visaType?: string;
@@ -17,6 +17,85 @@ export interface DocumenterLeadQuery {
 }
 
 export class DocumenterService {
+  /**
+   * Fetch full 360 case details for a single application including ALL historical call logs,
+   * stage history, and uploaded documents
+   */
+  public static async getLeadDetails(applicationId: string) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: {
+        customer: true,
+        assignedDocAgent: {
+          select: {
+            id: true,
+            email: true,
+            mobile: true,
+            role: true,
+          },
+        },
+        assignedSalesAgent: {
+          select: {
+            id: true,
+            email: true,
+            mobile: true,
+            role: true,
+          },
+        },
+        callLogs: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            agent: {
+              select: {
+                id: true,
+                email: true,
+                mobile: true,
+                role: true,
+              },
+            },
+          },
+        },
+        stageHistories: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            movedByUser: {
+              select: {
+                id: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+        },
+        documents: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax Application not found');
+    }
+
+    const formattedCallLogs = app.callLogs.map((c) => ({
+      id: c.id,
+      applicationId: c.applicationId,
+      agentId: c.agentId,
+      agentName: c.agent?.email?.split('@')[0] || 'Staff',
+      agentRole: c.agent?.role || 'DOC_AGENT',
+      agentEmail: c.agent?.email || '',
+      disposition: c.disposition,
+      callSummary: c.callSummary,
+      callbackScheduledAt: c.callbackScheduledAt?.toISOString() || null,
+      createdAt: c.createdAt.toISOString(),
+    }));
+
+    return {
+      ...app,
+      callLogs: formattedCallLogs,
+    };
+  }
+
   /**
    * List paginated leads in Documenter Department with real-time metric stats
    */
@@ -47,6 +126,11 @@ export class DocumenterService {
         where.assignedDocAgentId = null;
         where.currentStage = { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] };
         break;
+      case 'NOT_CALLED':
+      case 'UNCONTACTED':
+        where.callLogs = { none: {} };
+        where.currentStage = { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] };
+        break;
       case 'OUTREACH':
         where.currentStage = ApplicationStage.DOC_OUTREACH;
         break;
@@ -65,6 +149,9 @@ export class DocumenterService {
           },
         };
         break;
+      case 'DROPPED':
+        where.currentStage = ApplicationStage.DROPPED_CANCELLED;
+        break;
       case 'ALL':
       default:
         where.currentStage = {
@@ -73,6 +160,7 @@ export class DocumenterService {
             ApplicationStage.DOC_OUTREACH,
             ApplicationStage.DOC_PREP,
             ApplicationStage.CORRECTION_NEEDED,
+            ApplicationStage.DROPPED_CANCELLED,
           ],
         };
         break;
@@ -130,6 +218,7 @@ export class DocumenterService {
       leads, 
       totalItems, 
       unassignedCount, 
+      uncontactedCount,
       outreachCount, 
       prepCount, 
       myLeadsCount, 
@@ -168,6 +257,13 @@ export class DocumenterService {
       prisma.taxApplication.count({
         where: {
           assignedDocAgentId: null,
+          currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] },
+        },
+      }),
+      prisma.taxApplication.count({
+        where: {
+          ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { assignedDocAgentId: currentUserId } : {}),
+          callLogs: { none: {} },
           currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] },
         },
       }),
@@ -250,35 +346,23 @@ export class DocumenterService {
       }
     });
 
-    const sortedHours = Array.from(activeHoursSet).sort((a, b) => a - b);
+    const activeHours = Array.from(activeHoursSet).sort((a, b) => a - b);
+    const hourlyBreakdown = activeHours.map((h) => {
+      const hourStr = `${h.toString().padStart(2, '0')}:00`;
+      const hourLogs = recentCallLogs.filter((l) => {
+        const d = new Date(l.createdAt);
+        return d >= startOfToday && d.getHours() === h;
+      });
+      const connectedCount = hourLogs.filter((l) =>
+        ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'].includes(l.disposition)
+      ).length;
 
-    const formatHourLabel = (hr: number): string => {
-      const period = hr >= 12 ? 'PM' : 'AM';
-      const displayHour = hr % 12 === 0 ? 12 : hr % 12;
-      return `${displayHour} ${period}`;
-    };
-
-    const hoursMap: Record<number, { hour: string; dials: number; connected: number }> = {};
-    sortedHours.forEach((hr) => {
-      hoursMap[hr] = { hour: formatHourLabel(hr), dials: 0, connected: 0 };
+      return {
+        hour: hourStr,
+        dials: hourLogs.length,
+        connected: connectedCount,
+      };
     });
-
-    const connectedDispositions = ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'];
-
-    recentCallLogs.forEach((log) => {
-      const logDate = new Date(log.createdAt);
-      if (logDate >= startOfToday) {
-        const hr = logDate.getHours();
-        if (hoursMap[hr]) {
-          hoursMap[hr].dials += 1;
-          if (connectedDispositions.includes(log.disposition)) {
-            hoursMap[hr].connected += 1;
-          }
-        }
-      }
-    });
-
-    const hourlyBreakdown = Object.values(hoursMap);
 
     // Compute real daily buckets for last 5 days
     const daysMap: Record<string, { day: string; dials: number; connected: number; prep: number }> = {};
@@ -296,7 +380,7 @@ export class DocumenterService {
       const dateStr = new Date(log.createdAt).toISOString().slice(0, 10);
       if (daysMap[dateStr]) {
         daysMap[dateStr].dials += 1;
-        if (connectedDispositions.includes(log.disposition)) {
+        if (['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'].includes(log.disposition)) {
           daysMap[dateStr].connected += 1;
         }
         if (log.disposition === 'CONNECTED_INTERESTED') {
@@ -348,6 +432,7 @@ export class DocumenterService {
       },
       stats: {
         unassigned: unassignedCount,
+        uncontacted: uncontactedCount,
         activeOutreach: outreachCount,
         inPrep: prepCount,
         callbacks: callbacksCount,

@@ -15,6 +15,7 @@ import { DocumenterAgentDashboardScreen } from '@/features/documenter/screens/Do
 import { DocumenterAgentQueueScreen } from '@/features/documenter/screens/DocumenterAgentQueueScreen';
 import { DocumenterAgentCallbacksScreen } from '@/features/documenter/screens/DocumenterAgentCallbacksScreen';
 import { DocumenterAgentPrepScreen } from '@/features/documenter/screens/DocumenterAgentPrepScreen';
+import { Taxpayer360DetailScreen } from '@/features/documenter/screens/Taxpayer360DetailScreen';
 import { DocumenterLayout } from '@/features/documenter/layouts/DocumenterLayout';
 import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
@@ -136,6 +137,14 @@ export const router = createBrowserRouter([
           {
             path: 'agent/prep',
             element: <DocumenterAgentPrepScreen />,
+          },
+          {
+            path: 'agent/lead/:id',
+            element: <Taxpayer360DetailScreen />,
+          },
+          {
+            path: 'lead/:id',
+            element: <Taxpayer360DetailScreen />,
           },
         ],
       },
