@@ -1,0 +1,5 @@
+firstName,middleName,lastName,email,phone,ssnTin,dob,occupation,visaType,maritalStatus,taxYear,filingType,addressLine1,city,state,zipCode,estimatedIncome,source
+"Karthik","R.","Nambiar","karthik.nambiar@techcorp.io","+1 (408) 555-0188","456-12-8901","08/22/1991","Cloud Solutions Architect","H-1B","Married","2025","INDIVIDUAL","3200 Innovation Way","San Jose","CA","95134","$165,000","Referral Campaign"
+"Ananya","","Deshmukh","ananya.deshmukh@finlabs.com","+1 (206) 555-0143","789-23-4567","11/05/1994","Data Scientist","F-1 OPT","Single","2025","INDIVIDUAL","450 Pine Street","Seattle","WA","98101","$138,000","Web Organic"
+"Suresh","","Choudhary","suresh.choudhary@megacorp.com","+1 (512) 555-0177","112-33-4455","04/12/1989","DevOps Engineer","N/A","Single","2025","INDIVIDUAL","1200 Tech Ridge Blvd","Austin","TX","78753","$115,000","Cold List"
+"[object Object]","🔥","Kumar","kumar.test@gmail.com","+1 (214) 555-0192","998-87-7665","09/30/1993","QA Analyst","L-1","Married","2025","INDIVIDUAL","700 Main St","Dallas","TX","75201","$95,000","Import Error Test"

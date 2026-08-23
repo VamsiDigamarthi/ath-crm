@@ -67,16 +67,33 @@ export const registerAdminSchema = z.object({
   }),
 });
 
+const EMOJI_REGEX = /[\p{Extended_Pictographic}\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}]/u;
+
+const noObjectOrEmoji = (val: string) => {
+  return !/\[object\s+object\]/i.test(val) && !val.includes('{') && !val.includes('}') && !EMOJI_REGEX.test(val);
+};
+
 export const leadItemSchema = z.object({
-  firstName: z.string().trim().min(2, "First name must be at least 2 characters").max(50, "First name must not exceed 50 characters"),
+  firstName: z.string().trim()
+    .min(2, "First name must be at least 2 characters")
+    .max(50, "First name must not exceed 50 characters")
+    .refine(noObjectOrEmoji, "First name contains invalid object reference or emojis"),
   middleName: z.string().trim().max(50, "Middle name must not exceed 50 characters").optional().nullable().or(z.literal("")),
-  lastName: z.string().trim().min(2, "Last name must be at least 2 characters").max(50, "Last name must not exceed 50 characters"),
-  phone: z.string().trim().min(7, "Valid phone number is required (min 7 digits)").max(25, "Phone number too long"),
+  lastName: z.string().trim()
+    .min(2, "Last name must be at least 2 characters")
+    .max(50, "Last name must not exceed 50 characters")
+    .refine(noObjectOrEmoji, "Last name contains invalid object reference or emojis"),
+  phone: z.string().trim()
+    .min(7, "Valid phone number is required (min 7 digits)")
+    .max(25, "Phone number too long")
+    .refine(noObjectOrEmoji, "Phone number contains invalid object reference or emojis"),
   email: z.string().trim().email("Invalid email format").optional().nullable().or(z.literal("")),
   ssnTin: z.string().trim().optional().nullable().or(z.literal("")),
   dob: z.string().trim().optional().nullable().or(z.literal("")),
   occupation: z.string().trim().max(100).optional().nullable().or(z.literal("")),
-  visaType: z.string().trim().optional().nullable().or(z.literal("")),
+  visaType: z.string().trim()
+    .min(1, "Visa type is required")
+    .refine(noObjectOrEmoji, "Visa type contains invalid object reference or emojis"),
   maritalStatus: z.string().trim().max(50).optional().nullable().or(z.literal("")),
   filingType: z.string().optional().default("INDIVIDUAL"),
   addressLine1: z.string().trim().max(200).optional().nullable().or(z.literal("")),

@@ -234,6 +234,43 @@ function normalizeHeaderKey(header: string): string {
   return clean;
 }
 
+function extractCleanCellValue(cellValue: unknown): string {
+  if (cellValue === null || cellValue === undefined) return '';
+  if (typeof cellValue === 'string') {
+    const trimmed = cellValue.trim();
+    return trimmed === '[object Object]' ? '' : trimmed;
+  }
+  if (typeof cellValue === 'number' || typeof cellValue === 'boolean') {
+    return String(cellValue);
+  }
+  if (cellValue instanceof Date) {
+    if (isNaN(cellValue.getTime())) return '';
+    return cellValue.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  }
+  if (typeof cellValue === 'object') {
+    const obj = cellValue as Record<string, any>;
+    // RichText format: { richText: [{ text: '...' }, ...] }
+    if (Array.isArray(obj.richText)) {
+      return obj.richText.map((rt: any) => rt.text || '').join('').trim();
+    }
+    // Hyperlink / Text object format: { text: '...', hyperlink: '...' }
+    if (obj.text !== undefined && obj.text !== null) {
+      if (typeof obj.text === 'object') return extractCleanCellValue(obj.text);
+      const s = String(obj.text).trim();
+      return s === '[object Object]' ? '' : s;
+    }
+    // Formula result format: { formula: '...', result: '...' }
+    if (obj.result !== undefined && obj.result !== null) {
+      return extractCleanCellValue(obj.result);
+    }
+    if (obj.value !== undefined && obj.value !== null) {
+      return extractCleanCellValue(obj.value);
+    }
+    return '';
+  }
+  return '';
+}
+
 /**
  * Parses native Excel (.xlsx / .xls) buffer into ParsedLeadRow array with strict validations
  */
@@ -251,14 +288,7 @@ export async function parseExcelFileBuffer(
   worksheet.eachRow((row) => {
     const rowValues: string[] = [];
     row.eachCell({ includeEmpty: true }, (cell) => {
-      let val = '';
-      if (cell.value !== null && cell.value !== undefined) {
-        if (typeof cell.value === 'object') {
-          val = (cell.value as any).text || (cell.value as any).result || String(cell.value);
-        } else {
-          val = String(cell.value);
-        }
-      }
+      const val = extractCleanCellValue(cell.value);
       rowValues.push(val.trim());
     });
     if (rowValues.some((c) => c.length > 0)) {
