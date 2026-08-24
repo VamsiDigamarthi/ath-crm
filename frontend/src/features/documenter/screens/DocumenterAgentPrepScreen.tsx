@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
-import { TaxPrepDetailModal } from '../components/prep/TaxPrepDetailModal';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { 
   FileCheck2, 
   Send, 
   RefreshCw, 
-  ArrowRight,
   Calculator,
   FileText,
   Sparkles,
@@ -16,7 +14,6 @@ import {
   User
 } from 'lucide-react';
 import { renderVisaBadge } from '../columns/documenter-columns';
-import type { DocumenterLeadItem } from '../types/documenter.types';
 
 export const DocumenterAgentPrepScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -26,9 +23,6 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
     isLoading,
     refreshData,
   } = useDocumenterWorkspace('PREP');
-
-  const [selectedLeadForPrep, setSelectedLeadForPrep] = useState<DocumenterLeadItem | null>(null);
-  const [isPrepModalOpen, setIsPrepModalOpen] = useState<boolean>(false);
 
   const prepLeads = leads.filter((l) => l.currentStage === 'DOC_PREP');
 
@@ -46,16 +40,6 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
     }, 0);
     return Math.round(total / calculatedLeads.length);
   }, [prepLeads]);
-
-  const handleOpenPrep = (lead: DocumenterLeadItem) => {
-    setSelectedLeadForPrep(lead);
-    setIsPrepModalOpen(true);
-  };
-
-  const handleClosePrep = () => {
-    setSelectedLeadForPrep(null);
-    setIsPrepModalOpen(false);
-  };
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -220,22 +204,11 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   <Button
                     size="md"
-                    variant="outline"
                     onClick={() => navigate(`/documenter/agent/lead/${lead.id}`)}
-                    className="border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer px-3"
+                    className="border border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer px-4 h-9 rounded-xl transition-all"
                   >
                     <User className="w-3.5 h-3.5" />
                     <span>View</span>
-                  </Button>
-
-                  <Button
-                    size="md"
-                    onClick={() => handleOpenPrep(lead)}
-                    className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-2 shadow-2xs cursor-pointer px-4"
-                  >
-                    <Calculator className="w-4 h-4" />
-                    <span>Open Tax Prep Workspace</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </div>
@@ -244,15 +217,6 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Tax Prep Workspace Modal */}
-      <TaxPrepDetailModal
-        isOpen={isPrepModalOpen}
-        onClose={handleClosePrep}
-        lead={selectedLeadForPrep}
-        onSuccessHandoff={() => {
-          refreshData();
-        }}
-      />
     </div>
   );
 };

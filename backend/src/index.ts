@@ -14,36 +14,55 @@ import { currentUser } from "./middlewares/current-user.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Security & Logging
-app.use(helmet()); // Sets various HTTP headers for security
-app.use(morgan("dev")); // Logs requests to the console
-
-// Rate Limiting to prevent brute force/spam
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Limit each IP to 100 requests per window
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-
-app.use("/api", limiter);
-
+// Allowed CORS Origins
 const allowedOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(",").map((url) => url.trim())
-  : ["http://localhost:5173", "http://localhost:3000", "http://localhost:80", "http://localhost"];
+  : [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:7000",
+      "http://localhost:3000",
+      "http://localhost:80",
+      "http://localhost",
+    ];
 
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
-app.use(express.json());
+// 1. CORS MUST BE FIRST SO ALL RESPONSES & PREFLIGHTS RECEIVE HEADERS
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+  })
+);
+
+// 2. Security Headers & Logging
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+app.use(morgan("dev"));
+
+// 3. Body & Cookie Parsers
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
 
-// Global Auth Middleware - Populates req.currentUser
+// 4. Rate Limiting (Never block OPTIONS preflights, generous window)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5000, // Limit
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === "OPTIONS", // Never rate limit CORS preflights
+});
+app.use("/api", limiter);
+
+// 5. Global Auth Middleware - Populates req.currentUser
 app.use(currentUser);
 
-// All API routes consolidated under /api
+// 6. All API routes consolidated under /api
 app.use("/api", rootRouter);
 
 app.get("/", (req: Request, res: Response) => {
@@ -61,5 +80,3 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-// Restart trigger
