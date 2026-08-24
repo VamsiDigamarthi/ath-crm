@@ -29,11 +29,15 @@ const limiter = rateLimit({
 
 app.use("/api", limiter);
 
-app.use(express.json());
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((url) => url.trim())
+  : ["http://localhost:5173", "http://localhost:3000", "http://localhost:80", "http://localhost"];
+
 app.use(cors({
-  origin: "http://localhost:5173", // Vite frontend URL
+  origin: allowedOrigins,
   credentials: true,
 }));
+app.use(express.json());
 app.use(cookieParser());
 
 // Global Auth Middleware - Populates req.currentUser
