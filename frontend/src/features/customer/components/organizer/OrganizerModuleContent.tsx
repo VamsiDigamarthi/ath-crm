@@ -26,6 +26,7 @@ interface OrganizerModuleContentProps {
   saving: boolean;
   errors?: Record<string, string>;
   clearError?: (field: string) => void;
+  className?: string;
 }
 
 export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
@@ -40,19 +41,20 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
   saving,
   errors = {},
   clearError,
+  className,
 }) => {
   const currentMod = ORGANIZER_MODULES.find((m) => m.id === selectedModId) || ORGANIZER_MODULES[0];
 
   if (!organizerData) {
     return (
-      <div className="lg:col-span-8 bg-white p-12 rounded-xl border border-slate-200 shadow-xs text-center text-xs text-slate-400">
+      <div className={className || "lg:col-span-8 bg-white p-12 rounded-xl border border-slate-200 shadow-xs text-center text-xs text-slate-400"}>
         Loading module intake data...
       </div>
     );
   }
 
   return (
-    <div className="lg:col-span-8 bg-white p-5 sm:p-7 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-6">
+    <div className={className || "lg:col-span-8 bg-white p-5 sm:p-7 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-6"}>
       <div className="space-y-6">
         {/* Module Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">

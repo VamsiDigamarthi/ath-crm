@@ -43,6 +43,7 @@ model TaxApplication {
   callLogs       CallLog[]
   documents      TaxDocument[]
   quotes         SalesQuote[]
+  auditLogs      AuditLog[]
 
   @@unique([customerId, taxYear])
   @@index([currentStage])
@@ -105,4 +106,42 @@ model SalesQuote {
   createdAt      DateTime       @default(now())
 
   @@index([applicationId])
+}
+
+enum AuditActorType {
+  CLIENT
+  AGENT
+  MANAGER
+  ADMIN
+  SYSTEM
+}
+
+enum AuditActionType {
+  ORGANIZER_UPDATE
+  DOCUMENT_UPLOAD
+  DOCUMENT_DELETE
+  DOCUMENT_VERIFY
+  STAGE_CHANGE
+  DISPOSITION_LOG
+  TAX_DRAFT_SAVE
+}
+
+model AuditLog {
+  id            String          @id @default(uuid())
+  applicationId String
+  application   TaxApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actorId       String?
+  actorUser     User?           @relation(fields: [actorId], references: [id])
+  actorType     AuditActorType  @default(AGENT)
+  actorName     String?
+  actorRole     String?
+  action        AuditActionType
+  moduleKey     String?
+  details       Json?
+  createdAt     DateTime        @default(now())
+
+  @@index([applicationId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
 }

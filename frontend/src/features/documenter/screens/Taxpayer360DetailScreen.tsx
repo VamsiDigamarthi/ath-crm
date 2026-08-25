@@ -367,9 +367,11 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         {activeTab === 'DOCUMENTS' && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
             <TaxPrepDocumentVault
+              leadId={currentLead.id}
               customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
               documents={(lead?.documents || currentLead.documents || []) as any}
               onDocumentVerified={fetchLeadDetails}
+              onDocumentUploaded={fetchLeadDetails}
             />
           </div>
         )}
@@ -390,8 +392,10 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         {activeTab === 'ORGANIZER' && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
             <TaxPrepOrganizerReview
+              leadId={currentLead.id}
               customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
               taxDraftSummary={currentLead.taxDraftSummary}
+              onOrganizerSaved={fetchLeadDetails}
             />
           </div>
         )}

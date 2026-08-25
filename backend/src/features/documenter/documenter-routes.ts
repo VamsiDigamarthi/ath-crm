@@ -9,9 +9,13 @@ import {
   sendToSales,
   downloadDocument,
   verifyDocument,
+  uploadLeadDocument,
+  deleteLeadDocument,
+  saveLeadOrganizer,
 } from './documenter-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
+import { uploadTaxDocument } from '../../middlewares/file-upload-middleware.js';
 import { Role } from '../../types/index.js';
 import { Router } from 'express';
 
@@ -22,6 +26,9 @@ const DOCUMENTER_ROLES = [
   Role.DOC_MANAGER,
   Role.DOC_TEAM_LEAD,
   Role.DOC_AGENT,
+  Role.PREP_MANAGER,
+  Role.TAX_REVIEWER,
+  Role.TAX_PREPARER,
 ];
 
 // 1. Get paginated leads with tab stats
@@ -104,4 +111,30 @@ router.patch(
   verifyDocument
 );
 
+// 10. Agent Upload Document on Behalf of Client
+router.post(
+  '/leads/:id/documents',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  uploadTaxDocument.single('file'),
+  uploadLeadDocument
+);
+
+// 11. Agent Delete Document from Vault
+router.delete(
+  '/documents/:id',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  deleteLeadDocument
+);
+
+// 12. Agent Save / Update 9-Module Intake Organizer on Call
+router.put(
+  '/leads/:id/organizer',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  saveLeadOrganizer
+);
+
 export { router as documenterRouter };
+

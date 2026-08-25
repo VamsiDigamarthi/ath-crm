@@ -218,7 +218,7 @@ export const verifyDocument = async (
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { status } = req.body;
 
-    const result = await DocumenterService.verifyDocument(id, status || 'VERIFIED');
+    const result = await DocumenterService.verifyDocument(id, status || 'VERIFIED', req.currentUser?.id);
 
     res.status(200).json({
       success: true,
@@ -229,3 +229,76 @@ export const verifyDocument = async (
     next(error);
   }
 };
+
+export const uploadLeadDocument = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    if (!req.file) {
+      res.status(400).json({ success: false, message: 'Please attach a document file to upload' });
+      return;
+    }
+    const documentCategory = req.body.documentCategory || 'W2_WAGES';
+    const result = await DocumenterService.uploadLeadDocument(
+      id,
+      req.currentUser!.id,
+      req.file,
+      documentCategory
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Document uploaded and verified in vault successfully by agent',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteLeadDocument = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await DocumenterService.deleteLeadDocument(id, req.currentUser!.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Document deleted successfully by agent',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const saveLeadOrganizer = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const result = await DocumenterService.saveLeadOrganizer(
+      id,
+      req.currentUser!.id,
+      req.body,
+      req.body.taxYear
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Intake organizer saved and synced to database successfully by agent',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

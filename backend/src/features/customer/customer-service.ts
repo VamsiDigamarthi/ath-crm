@@ -223,6 +223,27 @@ export class CustomerService {
       },
     });
 
+    // Record AuditLog for Client Document Upload
+    await prisma.auditLog.create({
+      data: {
+        applicationId: activeApp.id,
+        actorId: userId,
+        actorType: 'CLIENT',
+        actorName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client',
+        actorRole: 'TAXPAYER_USER',
+        action: 'DOCUMENT_UPLOAD',
+        moduleKey: 'DOCUMENT_VAULT',
+        details: {
+          documentId: newDoc.id,
+          fileName: file.originalname,
+          documentCategory: newDoc.documentCategory,
+          fileSize: storageResult.fileSize,
+          source: 'TAXPAYER_CLIENT_PORTAL',
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
     return {
       id: newDoc.id,
       fileName: newDoc.fileName,
@@ -262,6 +283,25 @@ export class CustomerService {
     // Delete from DB
     await prisma.taxDocument.delete({
       where: { id: documentId },
+    });
+
+    // Record AuditLog for Client Document Deletion
+    await prisma.auditLog.create({
+      data: {
+        applicationId: doc.applicationId,
+        actorId: userId,
+        actorType: 'CLIENT',
+        actorName: `${doc.application.customer.firstName || ''} ${doc.application.customer.lastName || ''}`.trim() || doc.application.customer.email,
+        actorRole: 'TAXPAYER_USER',
+        action: 'DOCUMENT_DELETE',
+        moduleKey: 'DOCUMENT_VAULT',
+        details: {
+          deletedFileName: doc.fileName,
+          documentCategory: doc.documentCategory,
+          source: 'TAXPAYER_CLIENT_PORTAL',
+          timestamp: new Date().toISOString(),
+        },
+      },
     });
 
     return { success: true, message: 'Document deleted successfully' };
@@ -538,6 +578,26 @@ export class CustomerService {
       where: { id: activeApp.id },
       data: {
         taxDraftSummary: updatedSummary,
+      },
+    });
+
+    // Record AuditLog for Client Organizer Update
+    await prisma.auditLog.create({
+      data: {
+        applicationId: activeApp.id,
+        actorId: userId,
+        actorType: 'CLIENT',
+        actorName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client',
+        actorRole: 'TAXPAYER_USER',
+        action: 'ORGANIZER_UPDATE',
+        moduleKey: 'ORGANIZER_ALL',
+        details: {
+          submittedModules,
+          progressPercent,
+          completedCount,
+          source: 'TAXPAYER_CLIENT_PORTAL',
+          timestamp: new Date().toISOString(),
+        },
       },
     });
 

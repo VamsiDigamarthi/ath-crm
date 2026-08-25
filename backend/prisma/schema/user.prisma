@@ -40,6 +40,7 @@ model User {
   callLogs       CallLog[]
   uploadedDocs   TaxDocument[]
   salesQuotes    SalesQuote[]
+  auditLogs      AuditLog[]
 
   @@index([email])
   @@index([mobile])

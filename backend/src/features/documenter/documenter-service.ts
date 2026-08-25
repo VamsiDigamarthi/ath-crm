@@ -2,6 +2,7 @@ import { prisma } from '../../config/db.js';
 import { ApplicationStage, Role } from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { StorageService } from '../../utils/storage-service.js';
+import { sanitizeObject } from '../customer/customer-validator.js';
 
 export interface DocumenterLeadQuery {
   page?: number;
@@ -902,7 +903,7 @@ export class DocumenterService {
   /**
    * Mark document as verified / rejected
    */
-  static async verifyDocument(documentId: string, status: 'VERIFIED' | 'REJECTED') {
+  static async verifyDocument(documentId: string, status: 'VERIFIED' | 'REJECTED', agentUserId?: string) {
     const doc = await prisma.taxDocument.findUnique({
       where: { id: documentId },
     });
@@ -918,6 +919,255 @@ export class DocumenterService {
       },
     });
 
+    if (agentUserId) {
+      const agentUser = await prisma.user.findUnique({ where: { id: agentUserId } });
+      await prisma.auditLog.create({
+        data: {
+          applicationId: doc.applicationId,
+          actorId: agentUserId,
+          actorType: 'AGENT',
+          actorName: agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent',
+          actorRole: agentUser?.role || 'DOC_AGENT',
+          action: 'DOCUMENT_VERIFY',
+          moduleKey: 'DOCUMENT_VAULT',
+          details: {
+            documentId: doc.id,
+            fileName: doc.fileName,
+            verificationStatus: status,
+            source: 'AGENT_CALLING_PORTAL',
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    }
+
     return updated;
+  }
+
+  /**
+   * Upload tax document on behalf of customer by Documenter Agent
+   */
+  public static async uploadLeadDocument(
+    applicationId: string,
+    agentUserId: string,
+    file: Express.Multer.File,
+    documentCategory: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const agentUser = await prisma.user.findUnique({
+      where: { id: agentUserId },
+    });
+
+    // Save file via Storage Service
+    const storageResult = await StorageService.saveFile(file, `taxpayer_${app.customerId}_ty${app.taxYear}`);
+
+    // Insert TaxDocument record
+    const newDoc = await prisma.taxDocument.create({
+      data: {
+        applicationId: app.id,
+        uploadedByUserId: agentUserId,
+        fileName: file.originalname,
+        filePath: storageResult.filePath,
+        documentCategory: documentCategory || 'W2_WAGES',
+        verificationStatus: 'VERIFIED', // Agent uploaded directly
+      },
+    });
+
+    // Record AuditLog for Agent Document Upload
+    await prisma.auditLog.create({
+      data: {
+        applicationId: app.id,
+        actorId: agentUserId,
+        actorType: 'AGENT',
+        actorName: agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent',
+        actorRole: agentUser?.role || 'DOC_AGENT',
+        action: 'DOCUMENT_UPLOAD',
+        moduleKey: 'DOCUMENT_VAULT',
+        details: {
+          documentId: newDoc.id,
+          fileName: file.originalname,
+          documentCategory: newDoc.documentCategory,
+          fileSize: storageResult.fileSize,
+          source: 'AGENT_CALLING_PORTAL',
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      id: newDoc.id,
+      fileName: newDoc.fileName,
+      documentCategory: newDoc.documentCategory,
+      verificationStatus: newDoc.verificationStatus,
+      createdAt: newDoc.createdAt,
+      fileSize: storageResult.fileSize,
+      mimeType: storageResult.mimeType,
+    };
+  }
+
+  /**
+   * Delete document by Agent with Audit Log
+   */
+  public static async deleteLeadDocument(documentId: string, agentUserId: string) {
+    const doc = await prisma.taxDocument.findUnique({
+      where: { id: documentId },
+      include: {
+        application: {
+          include: { customer: true },
+        },
+      },
+    });
+
+    if (!doc) {
+      throw new NotFoundError('Tax document not found');
+    }
+
+    const agentUser = await prisma.user.findUnique({
+      where: { id: agentUserId },
+    });
+
+    // Delete from storage
+    await StorageService.deleteFile(doc.filePath);
+
+    // Delete from DB
+    await prisma.taxDocument.delete({
+      where: { id: documentId },
+    });
+
+    // Record AuditLog for Agent Document Deletion
+    await prisma.auditLog.create({
+      data: {
+        applicationId: doc.applicationId,
+        actorId: agentUserId,
+        actorType: 'AGENT',
+        actorName: agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent',
+        actorRole: agentUser?.role || 'DOC_AGENT',
+        action: 'DOCUMENT_DELETE',
+        moduleKey: 'DOCUMENT_VAULT',
+        details: {
+          deletedFileName: doc.fileName,
+          documentCategory: doc.documentCategory,
+          source: 'AGENT_CALLING_PORTAL',
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return { success: true, message: 'Document deleted successfully by agent' };
+  }
+
+  /**
+   * Save / update 9-module intake organizer on call by Documenter Agent
+   */
+  public static async saveLeadOrganizer(
+    applicationId: string,
+    agentUserId: string,
+    dataOrBody: any,
+    _taxYearParam?: number | string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const agentUser = await prisma.user.findUnique({
+      where: { id: agentUserId },
+    });
+
+    const organizerData = dataOrBody?.organizerData || dataOrBody;
+    const cleanOrganizerData = sanitizeObject(organizerData);
+    const m1 = cleanOrganizerData.m1_demographics || {};
+
+    // Synchronize Demographics with CustomerProfile
+    const profileUpdateData: Record<string, any> = {};
+    if (m1.firstName) profileUpdateData.firstName = m1.firstName;
+    if (m1.middleName !== undefined) profileUpdateData.middleName = m1.middleName;
+    if (m1.lastName) profileUpdateData.lastName = m1.lastName;
+    if (m1.dob) profileUpdateData.dob = m1.dob;
+    if (m1.phone) profileUpdateData.phone = m1.phone;
+    if (m1.email) profileUpdateData.email = m1.email;
+    if (m1.occupation) profileUpdateData.occupation = m1.occupation;
+    if (m1.visaType) profileUpdateData.visaType = m1.visaType;
+    if (m1.maritalStatus) profileUpdateData.maritalStatus = m1.maritalStatus;
+    if (m1.residentialAddress) profileUpdateData.addressLine1 = m1.residentialAddress;
+    if (m1.city) profileUpdateData.city = m1.city;
+    if (m1.state) profileUpdateData.state = m1.state;
+    if (m1.zipCode) profileUpdateData.zipCode = m1.zipCode;
+
+    if (m1.ssnMasked && !m1.ssnMasked.includes('•••')) {
+      profileUpdateData.ssnTin = m1.ssnMasked;
+    }
+
+    if (Object.keys(profileUpdateData).length > 0) {
+      await prisma.customerProfile.update({
+        where: { id: app.customerId },
+        data: profileUpdateData,
+      });
+    }
+
+    const currentDraft = (app.taxDraftSummary as any) || {};
+    const existingSubmitted: string[] = currentDraft.organizer?.submittedModules || ['m1'];
+    const newSubmitted: string[] = cleanOrganizerData.submittedModules || existingSubmitted;
+    const submittedModules = Array.from(new Set(newSubmitted));
+
+    cleanOrganizerData.submittedModules = submittedModules;
+    const completedCount = submittedModules.length;
+    const progressPercent = Math.round((completedCount / 9) * 100);
+
+    const updatedSummary = {
+      ...currentDraft,
+      organizer: cleanOrganizerData,
+      organizerPercent: progressPercent,
+      organizerVerifiedCount: completedCount,
+      lastSavedAt: new Date().toISOString(),
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: app.id },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    // Record AuditLog for Agent Organizer Update
+    await prisma.auditLog.create({
+      data: {
+        applicationId: app.id,
+        actorId: agentUserId,
+        actorType: 'AGENT',
+        actorName: agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent',
+        actorRole: agentUser?.role || 'DOC_AGENT',
+        action: 'ORGANIZER_UPDATE',
+        moduleKey: 'ORGANIZER_AGENT_CALL',
+        details: {
+          submittedModules,
+          progressPercent,
+          completedCount,
+          source: 'AGENT_CALLING_PORTAL',
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      taxYear: updatedApp.taxYear,
+      applicationId: updatedApp.id,
+      organizer: cleanOrganizerData,
+      progressPercent,
+      completedCount,
+      message: 'Organizer saved successfully by agent on call',
+    };
   }
 }
