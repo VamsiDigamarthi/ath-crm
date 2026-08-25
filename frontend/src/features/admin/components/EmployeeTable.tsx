@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { Button } from '@/shared/components/Button';
-import { UserPlus, Users, DollarSign, FileCheck, ShieldCheck } from 'lucide-react';
+import { UserPlus, Users, DollarSign, FileCheck, ShieldCheck, Calculator } from 'lucide-react';
 import type { EmployeeItem, DepartmentType } from '../types/employee.types';
 import { getEmployeeColumns } from '../columns/employee-columns';
 
@@ -94,6 +94,19 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             >
               <Users className="w-3.5 h-3.5" />
               Documenters
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onDepartmentChange('PREP_REVIEW')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeDepartment === 'PREP_REVIEW'
+                  ? 'bg-white text-indigo-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              Tax Prep &amp; Review
             </button>
 
             <button

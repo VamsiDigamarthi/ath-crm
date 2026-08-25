@@ -23,7 +23,7 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
-  const [department, setDepartment] = useState<'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN'>('DOC');
+  const [department, setDepartment] = useState<'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN'>('DOC');
   const [role, setRole] = useState<EmployeeRole>('DOC_AGENT');
   const [isActive, setIsActive] = useState<boolean>(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,7 +57,13 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
         return [
           { label: 'Documenter Manager (Department Lead)', value: 'DOC_MANAGER' },
           { label: 'Documenter Team Leader (Supervises Agents)', value: 'DOC_TEAM_LEAD' },
-          { label: 'Documenter Agent (Outreach & Tax Prep)', value: 'DOC_AGENT' },
+          { label: 'Documenter Agent (Outreach & Intake)', value: 'DOC_AGENT' },
+        ];
+      case 'PREP_REVIEW':
+        return [
+          { label: 'Tax Prep Manager (Department Lead)', value: 'PREP_MANAGER' },
+          { label: 'Tax Reviewer / QA Lead (Quality Assurance & Sign-off)', value: 'TAX_REVIEWER' },
+          { label: 'Tax Preparer (1040/W-2 Computation & Drafts)', value: 'TAX_PREPARER' },
         ];
       case 'SALES':
         return [
@@ -80,9 +86,10 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
   };
 
   const handleDepartmentChange = (newDept: string) => {
-    const dept = newDept as 'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN';
+    const dept = newDept as 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
     setDepartment(dept);
     if (dept === 'DOC') setRole('DOC_AGENT');
+    else if (dept === 'PREP_REVIEW') setRole('TAX_PREPARER');
     else if (dept === 'SALES') setRole('SALES_AGENT');
     else if (dept === 'FILE_OP') setRole('FILE_OP_AGENT');
     else setRole('ADMIN');
@@ -220,7 +227,8 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
             value={department}
             onChange={handleDepartmentChange}
             options={[
-              { label: 'Documenter Dept (Outreach & Prep)', value: 'DOC' },
+              { label: 'Documenter Dept (Outreach & Intake)', value: 'DOC' },
+              { label: 'Tax Prep & Review Dept (Computation & QA)', value: 'PREP_REVIEW' },
               { label: 'Sales Dept (Quotations & Negotiation)', value: 'SALES' },
               { label: 'File Operator Dept (CPA E-Filing)', value: 'FILE_OP' },
               { label: 'System Administration (Admin)', value: 'ADMIN' },

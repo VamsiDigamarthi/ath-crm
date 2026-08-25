@@ -105,6 +105,7 @@ export const useEmployeeManagement = () => {
     if (serverStats) return serverStats;
 
     let documenters = 0;
+    let prepReview = 0;
     let sales = 0;
     let fileOperators = 0;
     let admins = 0;
@@ -112,6 +113,7 @@ export const useEmployeeManagement = () => {
 
     employees.forEach((emp) => {
       if (emp.department === 'DOC') documenters++;
+      if (emp.department === 'PREP_REVIEW') prepReview++;
       if (emp.department === 'SALES') sales++;
       if (emp.department === 'FILE_OP') fileOperators++;
       if (emp.department === 'ADMIN') admins++;
@@ -121,6 +123,7 @@ export const useEmployeeManagement = () => {
     return {
       total: totalItems || employees.length,
       documenters,
+      prepReview,
       sales,
       fileOperators,
       admins,

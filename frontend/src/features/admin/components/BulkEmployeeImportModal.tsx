@@ -22,8 +22,10 @@ export const BulkEmployeeImportModal: React.FC<BulkEmployeeImportModalProps> = (
 
   const handleDownloadTemplate = () => {
     const csvContent =
-      '\uFEFF"First Name","Last Name","Work Email","Phone Number","Department (DOC/SALES/FILE_OP/ADMIN)","Role (MANAGER/LEAD/AGENT)"\n' +
+      '\uFEFF"First Name","Last Name","Work Email","Phone Number","Department (DOC/PREP_REVIEW/SALES/FILE_OP/ADMIN)","Role (MANAGER/REVIEWER/PREPARER/AGENT)"\n' +
       '"Rohan","Gupta","rohan.g@taxcrm.com","+1 (555) 019-3321","DOC","DOC_AGENT"\n' +
+      '"Deepak","Joshi","deepak.j@taxcrm.com","+1 (555) 019-2004","PREP_REVIEW","TAX_PREPARER"\n' +
+      '"Anjali","Rao","anjali.r@taxcrm.com","+1 (555) 019-2002","PREP_REVIEW","TAX_REVIEWER"\n' +
       '"Meera","Sen","meera.s@taxcrm.com","+1 (555) 019-4412","SALES","SALES_AGENT"\n' +
       '"Tanvi","Shah","tanvi.s@taxcrm.com","+1 (555) 019-8876","FILE_OP","FILE_OP_AGENT"\n';
 
@@ -58,19 +60,31 @@ export const BulkEmployeeImportModal: React.FC<BulkEmployeeImportModalProps> = (
           const email = cols[2] || `staff${idx + 1}@taxcrm.com`;
           const mobile = cols[3] || `+1 (555) 019-000${idx}`;
           const deptRaw = (cols[4] || 'DOC').toUpperCase();
-          const dept = (['DOC', 'SALES', 'FILE_OP', 'ADMIN'].includes(deptRaw)
+          const dept = (['DOC', 'PREP_REVIEW', 'SALES', 'FILE_OP', 'ADMIN'].includes(deptRaw)
             ? deptRaw
-            : 'DOC') as 'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN';
+            : 'DOC') as 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
 
           let role: EmployeeRole = 'DOC_AGENT';
-          if (dept === 'SALES') role = 'SALES_AGENT';
-          else if (dept === 'FILE_OP') role = 'FILE_OP_AGENT';
-          else if (dept === 'ADMIN') role = 'ADMIN';
+          const roleRaw = (cols[5] || '').toUpperCase();
+          if (roleRaw && ['PREP_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER', 'DOC_MANAGER', 'DOC_TEAM_LEAD', 'DOC_AGENT', 'SALES_MANAGER', 'SALES_TEAM_LEAD', 'SALES_AGENT', 'FILE_OP_MANAGER', 'FILE_OP_TEAM_LEAD', 'FILE_OP_AGENT', 'ADMIN'].includes(roleRaw)) {
+            role = roleRaw as EmployeeRole;
+          } else if (dept === 'PREP_REVIEW') {
+            role = 'TAX_PREPARER';
+          } else if (dept === 'SALES') {
+            role = 'SALES_AGENT';
+          } else if (dept === 'FILE_OP') {
+            role = 'FILE_OP_AGENT';
+          } else if (dept === 'ADMIN') {
+            role = 'ADMIN';
+          }
 
           const getRoleLabel = (r: EmployeeRole): string => {
             switch (r) {
               case 'DOC_MANAGER': return 'Department Manager';
-              case 'DOC_AGENT': return 'Outreach / Prep Agent';
+              case 'DOC_AGENT': return 'Outreach / Intake Agent';
+              case 'PREP_MANAGER': return 'Tax Prep Manager';
+              case 'TAX_REVIEWER': return 'Tax Reviewer (QA Lead)';
+              case 'TAX_PREPARER': return 'Tax Preparer (Draftsman)';
               case 'SALES_MANAGER': return 'Sales Operations Manager';
               case 'SALES_AGENT': return 'Sales Pitch Agent';
               case 'FILE_OP_MANAGER': return 'CPA Operations Head';
@@ -83,6 +97,7 @@ export const BulkEmployeeImportModal: React.FC<BulkEmployeeImportModalProps> = (
           const getDeptLabel = (d: string): string => {
             switch (d) {
               case 'DOC': return 'Documenter Dept';
+              case 'PREP_REVIEW': return 'Tax Prep & Review';
               case 'SALES': return 'Sales Dept';
               case 'FILE_OP': return 'File Operator';
               case 'ADMIN': return 'Administration';

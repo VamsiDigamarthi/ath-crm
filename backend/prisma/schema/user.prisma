@@ -3,6 +3,9 @@ enum Role {
   DOC_MANAGER
   DOC_TEAM_LEAD
   DOC_AGENT
+  PREP_MANAGER
+  TAX_REVIEWER
+  TAX_PREPARER
   SALES_MANAGER
   SALES_TEAM_LEAD
   SALES_AGENT
@@ -27,9 +30,11 @@ model User {
 
   customerProfile CustomerProfile?
 
-  assignedDocApps   TaxApplication[] @relation("DocAgentApps")
-  assignedSalesApps TaxApplication[] @relation("SalesAgentApps")
-  assignedFileApps  TaxApplication[] @relation("FileOpApps")
+  assignedDocApps    TaxApplication[] @relation("DocAgentApps")
+  assignedPrepApps   TaxApplication[] @relation("PrepAgentApps")
+  assignedReviewApps TaxApplication[] @relation("ReviewAgentApps")
+  assignedSalesApps  TaxApplication[] @relation("SalesAgentApps")
+  assignedFileApps   TaxApplication[] @relation("FileOpApps")
 
   stageHistories StageHistory[]
   callLogs       CallLog[]

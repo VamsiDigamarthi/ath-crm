@@ -3,6 +3,9 @@ export type EmployeeRole =
   | 'DOC_MANAGER'
   | 'DOC_TEAM_LEAD'
   | 'DOC_AGENT'
+  | 'PREP_MANAGER'
+  | 'TAX_REVIEWER'
+  | 'TAX_PREPARER'
   | 'SALES_MANAGER'
   | 'SALES_TEAM_LEAD'
   | 'SALES_AGENT'
@@ -10,7 +13,7 @@ export type EmployeeRole =
   | 'FILE_OP_TEAM_LEAD'
   | 'FILE_OP_AGENT';
 
-export type DepartmentType = 'ALL' | 'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN';
+export type DepartmentType = 'ALL' | 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
 
 export interface EmployeeItem extends Record<string, unknown> {
   id: string;
@@ -19,7 +22,7 @@ export interface EmployeeItem extends Record<string, unknown> {
   fullName: string;
   email: string;
   mobile: string;
-  department: 'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN';
+  department: 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
   departmentLabel: string;
   role: EmployeeRole;
   roleLabel: string;
@@ -33,6 +36,7 @@ export interface EmployeeItem extends Record<string, unknown> {
 export interface EmployeeStats {
   total: number;
   documenters: number;
+  prepReview: number;
   sales: number;
   fileOperators: number;
   admins: number;
@@ -45,7 +49,7 @@ export interface AddEmployeeFormData {
   lastName: string;
   email: string;
   mobile: string;
-  department: 'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN';
+  department: 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
   role: EmployeeRole;
   isActive: boolean;
 }

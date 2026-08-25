@@ -23,7 +23,7 @@ export interface UpdateEmployeeInput {
 
 export interface ListEmployeesQuery {
   search?: string;
-  department?: 'ALL' | 'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN';
+  department?: 'ALL' | 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
   role?: string;
   isActive?: boolean;
   page?: number;
@@ -35,7 +35,7 @@ export class EmployeeService {
    * Helper: Map Prisma Role to Department Code and Department Label
    */
   public static getDepartmentFromRole(role: Role): {
-    department: 'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN';
+    department: 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
     departmentLabel: string;
     roleLabel: string;
   } {
@@ -46,6 +46,12 @@ export class EmployeeService {
         return { department: 'DOC', departmentLabel: 'Documenter Dept', roleLabel: 'Team Leader' };
       case Role.DOC_AGENT:
         return { department: 'DOC', departmentLabel: 'Documenter Dept', roleLabel: 'Outreach / Prep Agent' };
+      case Role.PREP_MANAGER:
+        return { department: 'PREP_REVIEW', departmentLabel: 'Tax Prep & Review', roleLabel: 'Tax Prep Manager' };
+      case Role.TAX_REVIEWER:
+        return { department: 'PREP_REVIEW', departmentLabel: 'Tax Prep & Review', roleLabel: 'Tax Reviewer (QA Lead)' };
+      case Role.TAX_PREPARER:
+        return { department: 'PREP_REVIEW', departmentLabel: 'Tax Prep & Review', roleLabel: 'Tax Preparer (Draftsman)' };
       case Role.SALES_MANAGER:
         return { department: 'SALES', departmentLabel: 'Sales Dept', roleLabel: 'Sales Operations Manager' };
       case Role.SALES_TEAM_LEAD:
@@ -67,10 +73,12 @@ export class EmployeeService {
   /**
    * Helper: Map Department Code to Roles Array
    */
-  public static getRolesByDepartment(dept: 'DOC' | 'SALES' | 'FILE_OP' | 'ADMIN'): Role[] {
+  public static getRolesByDepartment(dept: 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN'): Role[] {
     switch (dept) {
       case 'DOC':
         return [Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.DOC_AGENT];
+      case 'PREP_REVIEW':
+        return [Role.PREP_MANAGER, Role.TAX_REVIEWER, Role.TAX_PREPARER];
       case 'SALES':
         return [Role.SALES_MANAGER, Role.SALES_TEAM_LEAD, Role.SALES_AGENT];
       case 'FILE_OP':
@@ -84,7 +92,14 @@ export class EmployeeService {
    * List all operational staff members with filters, pagination, and workload stats
    */
   public static async listEmployees(query: ListEmployeesQuery) {
-    const { search, department, role, isActive, page: queryPage, limit: queryLimit } = query;
+    const {
+      search,
+      department,
+      role,
+      isActive,
+      page: queryPage = 1,
+      limit: queryLimit = 10,
+    } = query;
 
     const page = Math.max(1, Number(queryPage) || 1);
     const limit = Math.max(1, Math.min(100, Number(queryLimit) || 10));
@@ -133,11 +148,23 @@ export class EmployeeService {
           _count: {
             select: {
               assignedDocApps: true,
+              assignedPrepApps: true,
+              assignedReviewApps: true,
               assignedSalesApps: true,
               assignedFileApps: true,
             },
           },
           assignedDocApps: {
+            select: {
+              currentStage: true,
+            },
+          },
+          assignedPrepApps: {
+            select: {
+              currentStage: true,
+            },
+          },
+          assignedReviewApps: {
             select: {
               currentStage: true,
             },
@@ -165,6 +192,7 @@ export class EmployeeService {
     });
 
     let documenters = 0;
+    let prepReview = 0;
     let sales = 0;
     let fileOperators = 0;
     let admins = 0;
@@ -173,6 +201,7 @@ export class EmployeeService {
     allStaff.forEach((s) => {
       const meta = this.getDepartmentFromRole(s.role);
       if (meta.department === 'DOC') documenters++;
+      if (meta.department === 'PREP_REVIEW') prepReview++;
       if (meta.department === 'SALES') sales++;
       if (meta.department === 'FILE_OP') fileOperators++;
       if (meta.department === 'ADMIN') admins++;
@@ -182,6 +211,7 @@ export class EmployeeService {
     const stats = {
       total: allStaff.length,
       documenters,
+      prepReview,
       sales,
       fileOperators,
       admins,
@@ -195,7 +225,11 @@ export class EmployeeService {
     const employees = users.map((u) => {
       const meta = this.getDepartmentFromRole(u.role);
       const assignedCases =
-        u._count.assignedDocApps + u._count.assignedSalesApps + u._count.assignedFileApps;
+        u._count.assignedDocApps +
+        u._count.assignedPrepApps +
+        u._count.assignedReviewApps +
+        u._count.assignedSalesApps +
+        u._count.assignedFileApps;
       const firstName = u.firstName || u.email?.split('@')[0] || 'Staff';
       const lastName = u.lastName || '';
       const fullName = `${firstName} ${lastName}`.trim();
@@ -205,6 +239,17 @@ export class EmployeeService {
         completedCases = u.assignedDocApps.filter(
           (a) =>
             a.currentStage === ApplicationStage.DOC_PREP ||
+            a.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
+            a.currentStage === ApplicationStage.SALES_PITCHING ||
+            a.currentStage === ApplicationStage.FILING_QUEUE ||
+            a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+            a.currentStage === ApplicationStage.FILING_SUCCESS
+        ).length;
+      } else if (meta.department === 'PREP_REVIEW') {
+        const prepApps = u.assignedPrepApps || [];
+        const reviewApps = u.assignedReviewApps || [];
+        completedCases = [...prepApps, ...reviewApps].filter(
+          (a) =>
             a.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
             a.currentStage === ApplicationStage.SALES_PITCHING ||
             a.currentStage === ApplicationStage.FILING_QUEUE ||

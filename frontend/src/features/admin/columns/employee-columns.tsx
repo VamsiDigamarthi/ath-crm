@@ -5,6 +5,7 @@ import {
   DollarSign, 
   FileCheck, 
   ShieldCheck, 
+  Calculator,
   Edit3, 
   Power 
 } from 'lucide-react';
@@ -26,6 +27,16 @@ export const renderDepartmentBadge = (department: string, roleLabel: string) => 
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
             <Users className="w-3.5 h-3.5 text-blue-600" />
             Documenter
+          </span>
+          <span className="text-[11px] font-medium text-slate-500 pl-0.5">{roleLabel}</span>
+        </div>
+      );
+    case 'PREP_REVIEW':
+      return (
+        <div className="flex flex-col gap-1 items-start">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+            <Calculator className="w-3.5 h-3.5 text-indigo-600" />
+            Tax Prep &amp; Review
           </span>
           <span className="text-[11px] font-medium text-slate-500 pl-0.5">{roleLabel}</span>
         </div>

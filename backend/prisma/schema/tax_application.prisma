@@ -23,6 +23,12 @@ model TaxApplication {
   assignedDocAgentId String?
   assignedDocAgent   User?   @relation("DocAgentApps", fields: [assignedDocAgentId], references: [id])
 
+  assignedPrepAgentId String?
+  assignedPrepAgent   User?   @relation("PrepAgentApps", fields: [assignedPrepAgentId], references: [id])
+
+  assignedReviewAgentId String?
+  assignedReviewAgent   User?   @relation("ReviewAgentApps", fields: [assignedReviewAgentId], references: [id])
+
   assignedSalesAgentId String?
   assignedSalesAgent   User?   @relation("SalesAgentApps", fields: [assignedSalesAgentId], references: [id])
 
