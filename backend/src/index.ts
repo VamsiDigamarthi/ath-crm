@@ -14,10 +14,22 @@ import { currentUser } from "./middlewares/current-user.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Allowed CORS Origins
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(",").map((url) => url.trim())
+  : [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:7000",
+      "http://localhost:3000",
+      "http://localhost:80",
+      "http://localhost",
+    ];
+
 // 1. CORS MUST BE FIRST SO ALL RESPONSES & PREFLIGHTS RECEIVE HEADERS
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
@@ -68,5 +80,3 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-// Restart trigger
