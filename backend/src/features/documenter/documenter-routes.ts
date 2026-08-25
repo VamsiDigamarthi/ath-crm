@@ -7,6 +7,7 @@ import {
   logCallDisposition,
   saveTaxDraft,
   sendToSales,
+  moveToTaxPrep,
   downloadDocument,
   verifyDocument,
   uploadLeadDocument,
@@ -87,7 +88,15 @@ router.post(
   saveTaxDraft
 );
 
-// 7. Send lead to Sales Pitch Queue (Handoff)
+// 7. Move lead to Tax Preparation & Review Queue (Handoff)
+router.post(
+  '/leads/:id/move-to-prep',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  moveToTaxPrep
+);
+
+// 7b. Send lead to Sales Pitch Queue (Handoff)
 router.post(
   '/send-to-sales',
   requireAuth,

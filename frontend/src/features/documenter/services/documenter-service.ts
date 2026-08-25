@@ -109,4 +109,11 @@ export const documenterService = {
   }): Promise<any> {
     return apiClient.post('/documenter/send-to-sales', payload);
   },
+
+  /**
+   * Transition lead from DOC_OUTREACH / RAW_PROSPECT to DOC_PREP (Move to Tax Preparation)
+   */
+  async moveToTaxPrep(applicationId: string, remarks?: string): Promise<any> {
+    return apiClient.post(`/documenter/leads/${applicationId}/move-to-prep`, { remarks });
+  },
 };

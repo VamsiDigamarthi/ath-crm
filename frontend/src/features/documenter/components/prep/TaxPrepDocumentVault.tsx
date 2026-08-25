@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/shared/components/Button';
 import { AppModal } from '@/shared/components/AppModal';
 import { AppSelect } from '@/shared/components/AppSelect';
+import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { 
   FileText, 
   CheckCircle2, 
@@ -62,23 +63,34 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('W2_WAGES');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+
+  // AppConfirmDialog States
+  const [docToVerify, setDocToVerify] = useState<DocumentItem | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<DocumentItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setDocList(initialDocuments || []);
   }, [initialDocuments]);
 
-  const handleVerify = async (docId: string) => {
+  const handleConfirmVerify = async () => {
+    if (!docToVerify) return;
     try {
-      await apiClient.patch(`/documenter/documents/${docId}/verify`, { status: 'VERIFIED' });
+      setIsVerifying(true);
+      await apiClient.patch(`/documenter/documents/${docToVerify.id}/verify`, { status: 'VERIFIED' });
       setDocList((prev) =>
-        prev.map((d) => (d.id === docId ? { ...d, verificationStatus: 'VERIFIED' } : d))
+        prev.map((d) => (d.id === docToVerify.id ? { ...d, verificationStatus: 'VERIFIED' } : d))
       );
-      toast.success('Document marked as Verified & Approved in Database! 📁✅');
-      if (onDocumentVerified) onDocumentVerified(docId);
-    } catch {
-      toast.error('Failed to update verification status');
+      toast.success(`"${docToVerify.fileName}" marked as Verified & Approved! 📁✅`);
+      if (onDocumentVerified) onDocumentVerified(docToVerify.id);
+      setDocToVerify(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update verification status');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -102,20 +114,19 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
     }
   };
 
-  const handleDelete = async (docId: string, fileName: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${fileName}"? This will remove it from the vault.`)) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!docToDelete) return;
     try {
-      setIsDeletingId(docId);
-      await apiClient.delete(`/documenter/documents/${docId}`);
-      setDocList((prev) => prev.filter((d) => d.id !== docId));
-      toast.success(`"${fileName}" deleted from vault successfully`);
+      setIsDeleting(true);
+      await apiClient.delete(`/documenter/documents/${docToDelete.id}`);
+      setDocList((prev) => prev.filter((d) => d.id !== docToDelete.id));
+      toast.success(`"${docToDelete.fileName}" deleted from vault successfully`);
       if (onDocumentUploaded) onDocumentUploaded();
-    } catch {
-      toast.error('Failed to delete document');
+      setDocToDelete(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to delete document');
     } finally {
-      setIsDeletingId(null);
+      setIsDeleting(false);
     }
   };
 
@@ -294,8 +305,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleDelete(doc.id, doc.fileName)}
-                  disabled={isDeletingId === doc.id}
+                  onClick={() => setDocToDelete(doc)}
                   className="border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-bold h-7 px-2 flex items-center gap-1 cursor-pointer"
                   title="Delete File"
                 >
@@ -311,7 +321,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
                 ) : (
                   <Button
                     size="sm"
-                    onClick={() => handleVerify(doc.id)}
+                    onClick={() => setDocToVerify(doc)}
                     className="h-7 px-2.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
                   >
                     <CheckCircle2 className="w-3 h-3" />
@@ -459,6 +469,36 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
             </div>
           </div>
         </AppModal>
+      )}
+
+      {/* Confirmation Dialog for Verify & Approve */}
+      {docToVerify && (
+        <AppConfirmDialog
+          isOpen={Boolean(docToVerify)}
+          onClose={() => setDocToVerify(null)}
+          onConfirm={handleConfirmVerify}
+          title="Verify & Approve Tax Document"
+          description={`Are you sure you want to verify and approve "${docToVerify.fileName}"? This will mark the client's tax statement as authenticated and ready for 1040 preparation.`}
+          confirmLabel="Yes, Verify & Approve"
+          cancelLabel="Cancel"
+          variant="success"
+          isLoading={isVerifying}
+        />
+      )}
+
+      {/* Confirmation Dialog for Delete Document */}
+      {docToDelete && (
+        <AppConfirmDialog
+          isOpen={Boolean(docToDelete)}
+          onClose={() => setDocToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Document from Vault"
+          description={`Are you sure you want to permanently remove "${docToDelete.fileName}" from this taxpayer's vault? This action cannot be undone.`}
+          confirmLabel="Yes, Delete Document"
+          cancelLabel="Cancel"
+          variant="danger"
+          isLoading={isDeleting}
+        />
       )}
     </div>
   );

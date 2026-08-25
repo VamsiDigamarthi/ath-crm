@@ -12,8 +12,11 @@ import {
   Calculator, 
   PhoneCall, 
   CheckSquare, 
-  RefreshCw
+  RefreshCw,
+  FileCheck2,
+  CheckCircle2
 } from 'lucide-react';
+import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { renderVisaBadge, renderStageBadge } from '../columns/documenter-columns';
@@ -42,6 +45,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const [lead, setLead] = useState<DocumenterLeadItem | null>(null);
   const [isLoadingLead, setIsLoadingLead] = useState<boolean>(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState<boolean>(false);
+  const [isMoveToPrepModalOpen, setIsMoveToPrepModalOpen] = useState<boolean>(false);
+  const [isMovingToPrep, setIsMovingToPrep] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Fetch full 360 lead details including all historical call logs
@@ -56,6 +61,25 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       console.error('Failed to load full lead details:', err);
     } finally {
       setIsLoadingLead(false);
+    }
+  };
+
+  const handleConfirmMoveToPrep = async () => {
+    if (!id && !lead?.id) return;
+    const targetAppId = lead?.id || id || '';
+    if (!targetAppId) return;
+    try {
+      setIsMovingToPrep(true);
+      await documenterService.moveToTaxPrep(targetAppId);
+      toast.success(`Taxpayer return successfully transferred to Tax Prep Manager Queue! 🧮✨`);
+      setIsMoveToPrepModalOpen(false);
+      await fetchLeadDetails();
+      refreshData();
+    } catch (err: any) {
+      console.error('Failed to move lead to prep:', err);
+      toast.error(err?.response?.data?.message || 'Failed to transfer to Tax Prep');
+    } finally {
+      setIsMovingToPrep(false);
     }
   };
 
@@ -163,6 +187,27 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {currentLead.currentStage === 'DOC_PREP' || (lead as any)?.currentStage === 'DOC_PREP' ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+              <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />
+              <span>Transferred to Tax Prep</span>
+            </span>
+          ) : currentLead.currentStage === 'SALES_PITCH_QUEUE' || (lead as any)?.currentStage === 'SALES_PITCH_QUEUE' ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
+              <span>Sent to Sales</span>
+            </span>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setIsMoveToPrepModalOpen(true)}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <FileCheck2 className="w-3.5 h-3.5" />
+              <span>Move to Tax Preparation</span>
+            </Button>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -413,6 +458,65 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           setIsCallModalOpen(false);
         }}
       />
+
+      {/* 6. Move to Tax Preparation Confirmation Modal */}
+      {isMoveToPrepModalOpen && (
+        <AppModal
+          isOpen={isMoveToPrepModalOpen}
+          onClose={() => setIsMoveToPrepModalOpen(false)}
+          title={`Move to Tax Preparation: ${customer.fullName || `${customer.firstName} ${customer.lastName}`}`}
+          width="500px"
+        >
+          <div className="space-y-4 font-sans py-1">
+            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
+              <div className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
+                <FileCheck2 className="w-4 h-4 text-[#16A34A]" />
+                <span>Ready for Tax Preparation &amp; 1040 Drafting?</span>
+              </div>
+              <p className="leading-relaxed text-emerald-800">
+                You are about to transfer <strong>{customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY {currentLead.taxYear})</strong> to the <strong>Tax Prep &amp; Review Department Queue</strong>.
+              </p>
+            </div>
+
+            {/* Checklist items */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+                Intake Readiness Verification:
+              </div>
+              <div className="flex items-center justify-between text-slate-700">
+                <span>Client Documents Verified:</span>
+                <span className="font-bold text-[#16A34A]">{(lead?.documents || currentLead.documents || []).length} Document(s) in Vault ✓</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-700">
+                <span>Taxpayer Profile &amp; Residency:</span>
+                <span className="font-bold text-[#16A34A]">{customer.visaType || 'Verified'} ✓</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsMoveToPrepModalOpen(false)}
+                className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={isMovingToPrep}
+                onClick={handleConfirmMoveToPrep}
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold px-4 cursor-pointer shadow-2xs flex items-center gap-1.5"
+              >
+                <FileCheck2 className={`w-3.5 h-3.5 ${isMovingToPrep ? 'animate-spin' : ''}`} />
+                <span>{isMovingToPrep ? 'Transferring...' : 'Confirm & Send to Prep Queue'}</span>
+              </Button>
+            </div>
+          </div>
+        </AppModal>
+      )}
     </div>
   );
 };

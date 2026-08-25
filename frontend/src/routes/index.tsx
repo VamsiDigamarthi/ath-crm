@@ -17,6 +17,10 @@ import { DocumenterAgentCallbacksScreen } from '@/features/documenter/screens/Do
 import { DocumenterAgentPrepScreen } from '@/features/documenter/screens/DocumenterAgentPrepScreen';
 import { Taxpayer360DetailScreen } from '@/features/documenter/screens/Taxpayer360DetailScreen';
 import { DocumenterLayout } from '@/features/documenter/layouts/DocumenterLayout';
+import { PrepReviewLayout } from '@/features/prep-review/layouts/PrepReviewLayout';
+import { PrepManagerDashboardScreen } from '@/features/prep-review/screens/PrepManagerDashboardScreen';
+import { PrepManagerQueueScreen } from '@/features/prep-review/screens/PrepManagerQueueScreen';
+import { PrepStaffScorecardsScreen } from '@/features/prep-review/screens/PrepStaffScorecardsScreen';
 import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
 import { AdminSettingsScreen } from '@/features/admin/screens/AdminSettingsScreen';
@@ -145,6 +149,39 @@ export const router = createBrowserRouter([
           {
             path: 'lead/:id',
             element: <Taxpayer360DetailScreen />,
+          },
+        ],
+      },
+    ],
+  },
+
+  // 4b. Tax Prep & Review Operations Portal (/prep-review/*)
+  {
+    element: (
+      <ProtectedRoute
+        allowedRoles={['ADMIN', 'PREP_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER']}
+      />
+    ),
+    children: [
+      {
+        path: '/prep-review',
+        element: <PrepReviewLayout />,
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/prep-review/manager" replace />,
+          },
+          {
+            path: 'manager',
+            element: <PrepManagerDashboardScreen />,
+          },
+          {
+            path: 'manager/queue',
+            element: <PrepManagerQueueScreen />,
+          },
+          {
+            path: 'manager/staff',
+            element: <PrepStaffScorecardsScreen />,
           },
         ],
       },

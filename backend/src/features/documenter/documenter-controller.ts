@@ -175,6 +175,31 @@ export const sendToSales = async (
   }
 };
 
+export const moveToTaxPrep = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const { remarks } = req.body;
+
+    const result = await DocumenterService.moveToTaxPrep({
+      applicationId: id,
+      remarks,
+      agentUserId: req.currentUser?.id || 'SYSTEM',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Taxpayer return transferred to Tax Prep Manager Queue successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const downloadDocument = async (
   req: Request,
   res: Response,

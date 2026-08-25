@@ -196,13 +196,13 @@ export class CustomerService {
     const selectedYear = taxYearQuery ? parseInt(taxYearQuery, 10) : 2025;
     let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
 
-    // If application doesn't exist for this year, create it in DOC_PREP
+    // If application doesn't exist for this year, create it in DOC_OUTREACH
     if (!activeApp) {
       activeApp = await prisma.taxApplication.create({
         data: {
           customerId: profile.id,
           taxYear: selectedYear,
-          currentStage: 'DOC_PREP',
+          currentStage: 'DOC_OUTREACH',
           filingType: 'INDIVIDUAL',
         },
       });

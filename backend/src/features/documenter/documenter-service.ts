@@ -832,6 +832,50 @@ export class DocumenterService {
   }
 
   /**
+   * Transition lead from DOC_OUTREACH / RAW_PROSPECT to DOC_PREP (Move to Tax Preparation)
+   */
+  public static async moveToTaxPrep(options: {
+    applicationId: string;
+    remarks?: string;
+    agentUserId: string;
+  }) {
+    const { applicationId, remarks, agentUserId } = options;
+
+    return await prisma.$transaction(async (tx) => {
+      const app = await tx.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: { customer: true },
+      });
+
+      if (!app) {
+        throw new NotFoundError('Application not found');
+      }
+
+      const updatedApp = await tx.taxApplication.update({
+        where: { id: applicationId },
+        data: {
+          currentStage: ApplicationStage.DOC_PREP,
+        },
+        include: {
+          customer: true,
+        },
+      });
+
+      await tx.stageHistory.create({
+        data: {
+          applicationId: app.id,
+          fromStage: app.currentStage,
+          toStage: ApplicationStage.DOC_PREP,
+          movedByUserId: agentUserId,
+          remarks: remarks || 'Intake completed and verified by Documenter Agent; transferred to Tax Preparation & Review Queue',
+        },
+      });
+
+      return updatedApp;
+    });
+  }
+
+  /**
    * Transition lead from DOC_PREP to SALES_PITCH_QUEUE (Send to Sales)
    */
   public static async sendToSales(options: {
