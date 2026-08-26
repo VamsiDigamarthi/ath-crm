@@ -44,6 +44,8 @@ export const prepReviewService = {
     tab?: string;
     search?: string;
     staffId?: string;
+    preparerId?: string;
+    reviewerId?: string;
     page?: number;
     limit?: number;
   }): Promise<PipelineLeadsResponse> {
@@ -96,4 +98,48 @@ export const prepReviewService = {
       return INITIAL_PREP_MANAGER_STATS;
     }
   },
+
+  /**
+   * Fetch Real Workspace Data (Client, Documents, Assigned Reviewer, Form 1040 draft)
+   */
+  async getWorkspaceDetails(id: string): Promise<any> {
+    try {
+      const response: any = await apiClient.get(`/prep-review/workspace/${id}`);
+      return response?.data || response;
+    } catch (err: any) {
+      throw new Error(err?.response?.data?.message || 'Failed to fetch workspace details');
+    }
+  },
+
+  /**
+   * Save 1040 Workspace Calculation Draft
+   */
+  async saveWorkspaceDraft(id: string, payload: any): Promise<any> {
+    return apiClient.post(`/prep-review/workspace/${id}/save-draft`, payload);
+  },
+
+  /**
+   * Submit 1040 Computation for Senior QA Review
+   */
+  async submitWorkspaceToQA(id: string, payload: any): Promise<any> {
+    return apiClient.post(`/prep-review/workspace/${id}/submit-qa`, payload);
+  },
+
+  /**
+   * Senior QA Reviewer Sign-Off & Approval
+   */
+  async signOffQAReturn(id: string, remarks: string): Promise<any> {
+    return apiClient.post(`/prep-review/reviewer/audit/${id}/sign-off`, { remarks });
+  },
+
+  /**
+   * Senior QA Reviewer Request Revision
+   */
+  async requestRevisionQAReturn(id: string, payload: {
+    discrepancyCategory: string;
+    revisionNotes: string;
+  }): Promise<any> {
+    return apiClient.post(`/prep-review/reviewer/audit/${id}/request-revision`, payload);
+  },
 };
+

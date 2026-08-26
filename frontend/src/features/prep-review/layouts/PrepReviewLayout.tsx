@@ -6,9 +6,10 @@ import { Button } from '@/shared/components/Button';
 import {
   Users,
   LogOut,
-  Bell,
+  Calculator,
   LayoutDashboard,
-  LayoutGrid
+  LayoutGrid,
+  ShieldCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -27,36 +28,30 @@ export const PrepReviewLayout: React.FC = () => {
     }
   };
 
-  const navItems = [
-    {
-      id: 'dashboard',
-      label: 'Operations Hub',
-      icon: LayoutDashboard,
-      section: 'Management',
-      path: '/prep-review/manager',
-    },
-    {
-      id: 'queue',
-      label: 'Pipeline Caseload',
-      icon: LayoutGrid,
-      section: 'Operations',
-      path: '/prep-review/manager/queue',
-    },
-    {
-      id: 'staff',
-      label: 'Staff Matrix & Capacity',
-      icon: Users,
-      section: 'Operations',
-      path: '/prep-review/manager/staff',
-    },
-  ];
+  const isManager = user?.role === 'PREP_MANAGER' || user?.role === 'ADMIN';
+
+  // Role-specific Navigation Items (Matching Documenter standard)
+  const navItems = isManager
+    ? [
+        { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/prep-review/manager' },
+        { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: '1', path: '/prep-review/manager/queue' },
+        { id: 'staff', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', badge: '5', path: '/prep-review/manager/staff' },
+      ]
+    : [
+        { id: 'specialist_hub', label: 'My Operations Hub', icon: LayoutDashboard, section: 'Specialist Workspace', path: '/prep-review/dashboard' },
+        { id: 'preparer', label: 'Preparer Workbench', icon: Calculator, section: 'Active Operations', badge: '1', path: '/prep-review/preparer' },
+        { id: 'reviewer', label: 'QA Audit Deck', icon: ShieldCheck, section: 'Active Operations', badge: '1', path: '/prep-review/reviewer' },
+      ];
 
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/prep-review/manager/staff')) return 'staff';
-    if (currentPath.includes('/prep-review/manager/queue')) return 'queue';
+    if (currentPath.includes('/prep-review/manager/queue')) return 'caseload';
     if (currentPath.includes('/prep-review/manager')) return 'dashboard';
-    return 'dashboard';
+    if (currentPath.includes('/prep-review/dashboard')) return 'specialist_hub';
+    if (currentPath.includes('/prep-review/preparer')) return 'preparer';
+    if (currentPath.includes('/prep-review/reviewer')) return 'reviewer';
+    return isManager ? 'dashboard' : 'specialist_hub';
   };
 
   const activeId = getActiveId();
@@ -68,61 +63,70 @@ export const PrepReviewLayout: React.FC = () => {
     }
   };
 
+  const getRoleBadgeLabel = () => {
+    if (user?.role === 'PREP_MANAGER') return 'Tax Prep Manager';
+    if (user?.role === 'TAX_PREPARER') return 'Tax Preparer';
+    if (user?.role === 'TAX_REVIEWER') return 'Senior QA Reviewer';
+    if (user?.role === 'ADMIN') return 'Administrator';
+    return 'Tax Specialist';
+  };
+
+  const getHeaderTitle = () => {
+    if (activeId === 'staff') return 'Staff Matrix & Workload Allocation';
+    if (activeId === 'caseload') return 'Tax Preparation Department Queue';
+    if (activeId === 'dashboard') return 'Tax Prep & Review Operations Command Center';
+    if (activeId === 'specialist_hub') return 'Tax Specialist Unified Operations Deck';
+    if (activeId === 'preparer') return 'Tax Preparer 1040 Drafting Workbench';
+    if (activeId === 'reviewer') return 'Senior QA Compliance Audit Deck';
+    return 'Tax Prep & Review Operations';
+  };
+
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      {/* Sidebar */}
+    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
+      {/* Sidebar - Matching Documenter standard */}
       <AppSidebar
+        width={240}
+        variant="light"
+        accentColor="#16A34A"
+        brand={{
+          title: 'TaxCRM Engine',
+          subtitle: isManager ? 'Prep Manager Portal' : 'Tax Specialist Portal',
+          logo: (
+            <div className="w-7 h-7 rounded-lg bg-[#16A34A] flex items-center justify-center text-white font-bold">
+              <Calculator className="w-4 h-4 text-white" />
+            </div>
+          ),
+        }}
         items={navItems}
         activeId={activeId}
         onItemClick={handleItemClick}
-        brand={{
-          title: 'TaxCRM Engine',
-          subtitle: 'Tax Prep & QA Operations',
+        user={{
+          name: user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email?.split('@')[0] || 'Staff',
+          email: user?.email || 'prep@taxcrm.com',
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'prep'}`,
         }}
+        onUserClick={handleLogout}
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Navbar */}
-        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 shadow-2xs">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
+        {/* Top Header Bar */}
+        <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-slate-200 shrink-0">
           <div className="flex items-center gap-3">
-            <h1 className="text-base font-bold text-slate-800 tracking-tight">
-              Tax Prep &amp; Review Operations
+            <h1 className="font-bold text-base text-slate-900 leading-tight">
+              {getHeaderTitle()}
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              Department Manager
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+              <Calculator className="w-3 h-3 text-[#16A34A]" /> {getRoleBadgeLabel()}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors relative cursor-pointer"
-              title="Notifications"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500" />
-            </button>
-
-            <div className="h-4 w-px bg-slate-200 mx-1" />
-
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-800 text-white font-bold text-xs flex items-center justify-center border border-indigo-300">
-                {user?.email?.[0]?.toUpperCase() || 'M'}
-              </div>
-              <div className="hidden sm:block text-left">
-                <div className="text-xs font-bold text-slate-800 leading-tight">
-                  {user?.email?.split('@')[0] || 'Suresh Raina'}
-                </div>
-                <div className="text-[10px] text-slate-400 font-medium">Tax Prep Manager</div>
-              </div>
-            </div>
-
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 text-xs font-semibold flex items-center gap-1.5 ml-2 cursor-pointer h-8 px-2.5"
+              className="border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 text-xs font-semibold flex items-center gap-1.5 cursor-pointer h-8 px-2.5"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Logout</span>

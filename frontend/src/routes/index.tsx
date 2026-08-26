@@ -21,6 +21,11 @@ import { PrepReviewLayout } from '@/features/prep-review/layouts/PrepReviewLayou
 import { PrepManagerDashboardScreen } from '@/features/prep-review/screens/PrepManagerDashboardScreen';
 import { PrepManagerQueueScreen } from '@/features/prep-review/screens/PrepManagerQueueScreen';
 import { PrepStaffScorecardsScreen } from '@/features/prep-review/screens/PrepStaffScorecardsScreen';
+import { TaxSpecialistDashboardScreen } from '@/features/prep-review/screens/TaxSpecialistDashboardScreen';
+import { TaxPreparerQueueScreen } from '@/features/prep-review/screens/TaxPreparerQueueScreen';
+import { TaxPreparerWorkspaceScreen } from '@/features/prep-review/screens/TaxPreparerWorkspaceScreen';
+import { TaxReviewerQueueScreen } from '@/features/prep-review/screens/TaxReviewerQueueScreen';
+import { TaxReviewerAuditScreen } from '@/features/prep-review/screens/TaxReviewerAuditScreen';
 import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
 import { AdminSettingsScreen } from '@/features/admin/screens/AdminSettingsScreen';
@@ -169,8 +174,9 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/prep-review/manager" replace />,
+            element: <Navigate to="/prep-review/dashboard" replace />,
           },
+          // Manager Routes
           {
             path: 'manager',
             element: <PrepManagerDashboardScreen />,
@@ -182,6 +188,29 @@ export const router = createBrowserRouter([
           {
             path: 'manager/staff',
             element: <PrepStaffScorecardsScreen />,
+          },
+          // Specialist Unified Operations Dashboard
+          {
+            path: 'dashboard',
+            element: <TaxSpecialistDashboardScreen />,
+          },
+          // Tax Preparer Routes
+          {
+            path: 'preparer',
+            element: <TaxPreparerQueueScreen />,
+          },
+          {
+            path: 'preparer/workspace/:id',
+            element: <TaxPreparerWorkspaceScreen />,
+          },
+          // QA Compliance Reviewer Routes
+          {
+            path: 'reviewer',
+            element: <TaxReviewerQueueScreen />,
+          },
+          {
+            path: 'reviewer/audit/:id',
+            element: <TaxReviewerAuditScreen />,
           },
         ],
       },
