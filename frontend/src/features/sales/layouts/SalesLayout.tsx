@@ -8,6 +8,7 @@ import {
   PhoneCall,
   LayoutDashboard,
   LayoutGrid,
+  Users,
   LogOut,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -32,8 +33,9 @@ export const SalesLayout: React.FC = () => {
   // Role-specific Navigation Items (Matching PrepReview and Documenter standard)
   const navItems = isManager
     ? [
-        { id: 'dashboard', label: 'Revenue Dashboard', icon: LayoutDashboard, section: 'Management', path: '/sales/manager' },
+        { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/sales/manager' },
         { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: '4', path: '/sales/manager/queue' },
+        { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', badge: '3', path: '/sales/manager/team' },
       ]
     : [
         { id: 'agent_hub', label: 'Closer Hub', icon: LayoutDashboard, section: 'Closer Workspace', path: '/sales/agent' },
@@ -42,6 +44,7 @@ export const SalesLayout: React.FC = () => {
 
   const currentPath = location.pathname;
   const getActiveId = () => {
+    if (currentPath.includes('/sales/manager/team')) return 'team';
     if (currentPath.includes('/sales/manager/queue')) return 'pipeline';
     if (currentPath.includes('/sales/manager')) return 'dashboard';
     if (currentPath.includes('/sales/agent/queue') || currentPath.includes('/sales/agent/pitch')) return 'pitch_queue';
@@ -66,6 +69,7 @@ export const SalesLayout: React.FC = () => {
   };
 
   const getHeaderTitle = () => {
+    if (activeId === 'team') return 'Sales Closers Staff Matrix & Capacity';
     if (activeId === 'pipeline') return 'Sales & Fee Quotation Department Queue';
     if (activeId === 'dashboard') return 'Sales Revenue & Closers Command Center';
     if (activeId === 'agent_hub') return 'Sales Closer Daily Operations Hub';

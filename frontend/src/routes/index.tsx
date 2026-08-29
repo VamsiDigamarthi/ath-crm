@@ -29,6 +29,7 @@ import { TaxReviewerAuditScreen } from '@/features/prep-review/screens/TaxReview
 import { SalesLayout } from '@/features/sales/layouts/SalesLayout';
 import { SalesManagerDashboardScreen } from '@/features/sales/screens/SalesManagerDashboardScreen';
 import { SalesManagerQueueScreen } from '@/features/sales/screens/SalesManagerQueueScreen';
+import { SalesTeamScorecardsScreen } from '@/features/sales/screens/SalesTeamScorecardsScreen';
 import { SalesAgentDashboardScreen } from '@/features/sales/screens/SalesAgentDashboardScreen';
 import { SalesAgentQueueScreen } from '@/features/sales/screens/SalesAgentQueueScreen';
 import { SalesPitchWorkspaceScreen } from '@/features/sales/screens/SalesPitchWorkspaceScreen';
@@ -247,6 +248,10 @@ export const router = createBrowserRouter([
           {
             path: 'manager/queue',
             element: <SalesManagerQueueScreen />,
+          },
+          {
+            path: 'manager/team',
+            element: <SalesTeamScorecardsScreen />,
           },
           // Agent / Closer Routes
           {
