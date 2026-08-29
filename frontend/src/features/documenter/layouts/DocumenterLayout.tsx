@@ -6,20 +6,24 @@ import { Button } from '@/shared/components/Button';
 import {
   Users,
   LogOut,
-  Bell,
   Headphones,
   LayoutDashboard,
   LayoutGrid,
   PhoneCall,
   Clock,
-  FileCheck2
+  FileCheck2,
+  Bell,
 } from 'lucide-react';
+import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
+import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
 export const DocumenterLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const { getUnreadCount } = useNotificationStore();
+  const unreadCount = getUnreadCount();
 
   const handleLogout = async () => {
     try {
@@ -39,16 +43,19 @@ export const DocumenterLayout: React.FC = () => {
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/documenter/manager' },
         { id: 'scorecards', label: 'Agent Scorecards', icon: Users, section: 'Operations', badge: '8', path: '/documenter/manager/scorecards' },
         { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: '20', path: '/documenter/manager/queue' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
       ]
     : [
         { id: 'agent_dashboard', label: 'Calling Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
         { id: 'agent_queue', label: 'My Calling Queue', icon: PhoneCall, section: 'Calling Workspace', badge: '20', path: '/documenter/agent/queue' },
         { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', badge: '3', path: '/documenter/agent/callbacks' },
         { id: 'agent_prep', label: 'Tax Prep Active', icon: FileCheck2, section: 'Intake Pipeline', badge: '4', path: '/documenter/agent/prep' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Calling Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
       ];
 
   const currentPath = location.pathname;
   const getActiveId = () => {
+    if (currentPath.includes('/documenter/notifications')) return 'notifications';
     if (currentPath.includes('/documenter/manager/scorecards')) return 'scorecards';
     if (currentPath.includes('/documenter/manager/queue')) return 'caseload';
     if (currentPath.includes('/documenter/manager')) return 'dashboard';
@@ -75,6 +82,7 @@ export const DocumenterLayout: React.FC = () => {
   };
 
   const getHeaderTitle = () => {
+    if (activeId === 'notifications') return 'Documenter Notifications & Activity Hub';
     if (activeId === 'scorecards') return 'Calling Agent Scorecards & Workload Health';
     if (activeId === 'caseload') return 'Department Caseload Queue & Pipeline';
     if (activeId === 'dashboard') return 'Documenter Operations Command Center';
@@ -125,13 +133,7 @@ export const DocumenterLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg p-2"
-            >
-              <Bell className="w-4 h-4 text-slate-500" />
-            </Button>
+            <NotificationBellPopover />
 
             <Button
               variant="outline"

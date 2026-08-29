@@ -11,8 +11,11 @@ import {
   Users,
   LogOut,
   FileCheck2,
+  Bell,
 } from 'lucide-react';
 import { filingService } from '../services/filing-service';
+import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
+import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
 export const FilingLayout: React.FC = () => {
@@ -57,19 +60,25 @@ export const FilingLayout: React.FC = () => {
     loadBadge();
   }, [isManager, user?.id, user?.email]);
 
+  const { getUnreadCount } = useNotificationStore();
+  const unreadCount = getUnreadCount();
+
   const navItems = isManager
     ? [
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/filing/manager' },
         { id: 'queue', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/filing/manager/queue' },
         { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/filing/manager/staff' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/filing/notifications' },
       ]
     : [
         { id: 'agent_hub', label: 'Filing Hub', icon: LayoutDashboard, section: 'Filing Workspace', path: '/filing/agent' },
         { id: 'agent_queue', label: 'Transmission Queue', icon: Send, section: 'Active Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/filing/agent/queue' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Filing Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/filing/notifications' },
       ];
 
   const currentPath = location.pathname;
   const getActiveId = () => {
+    if (currentPath.includes('/filing/notifications')) return 'notifications';
     if (currentPath.includes('/filing/manager/staff')) return 'team';
     if (currentPath.includes('/filing/manager/queue')) return 'queue';
     if (currentPath.includes('/filing/manager')) return 'dashboard';
@@ -95,6 +104,7 @@ export const FilingLayout: React.FC = () => {
   };
 
   const getHeaderTitle = () => {
+    if (activeId === 'notifications') return 'IRS E-Filing Notifications Hub';
     if (activeId === 'team') return 'Filing Specialists Staff Matrix & Capacity';
     if (activeId === 'queue') return 'IRS Modernized e-File (MeF) Department Queue';
     if (activeId === 'dashboard') return 'IRS Transmission Command Center';
@@ -147,6 +157,8 @@ export const FilingLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBellPopover />
+
             <Button
               variant="outline"
               size="sm"

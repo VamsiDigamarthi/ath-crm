@@ -10,8 +10,11 @@ import {
   LayoutGrid,
   Users,
   LogOut,
+  Bell,
 } from 'lucide-react';
 import { salesService } from '../services/sales-service';
+import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
+import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
 export const SalesLayout: React.FC = () => {
@@ -56,20 +59,26 @@ export const SalesLayout: React.FC = () => {
     loadBadge();
   }, [isManager, user?.id, user?.email]);
 
+  const { getUnreadCount } = useNotificationStore();
+  const unreadCount = getUnreadCount();
+
   // Role-specific Navigation Items (Matching PrepReview and Documenter standard)
   const navItems = isManager
     ? [
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/sales/manager' },
         { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/manager/queue' },
         { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/sales/manager/team' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
       ]
     : [
         { id: 'agent_hub', label: 'Closer Hub', icon: LayoutDashboard, section: 'Closer Workspace', path: '/sales/agent' },
         { id: 'pitch_queue', label: 'Pitch Queue', icon: PhoneCall, section: 'Active Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/agent/queue' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Closer Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
       ];
 
   const currentPath = location.pathname;
   const getActiveId = () => {
+    if (currentPath.includes('/sales/notifications')) return 'notifications';
     if (currentPath.includes('/sales/manager/team')) return 'team';
     if (currentPath.includes('/sales/manager/queue')) return 'pipeline';
     if (currentPath.includes('/sales/manager')) return 'dashboard';
@@ -95,6 +104,7 @@ export const SalesLayout: React.FC = () => {
   };
 
   const getHeaderTitle = () => {
+    if (activeId === 'notifications') return 'Sales Department Notifications Hub';
     if (activeId === 'team') return 'Sales Closers Staff Matrix & Capacity';
     if (activeId === 'pipeline') return 'Sales & Fee Quotation Department Queue';
     if (activeId === 'dashboard') return 'Sales Revenue & Closers Command Center';
@@ -144,6 +154,8 @@ export const SalesLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBellPopover />
+
             <Button
               variant="outline"
               size="sm"

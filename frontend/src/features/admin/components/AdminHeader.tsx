@@ -1,6 +1,6 @@
-import React from 'react';
 import { Button } from '@/shared/components/Button';
 import { ShieldCheck, FileSpreadsheet, LogOut } from 'lucide-react';
+import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 
 interface AdminHeaderProps {
   userEmail?: string | null;
@@ -25,7 +25,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
               TaxCRM Engine
             </h1>
             <span className="text-[10px] font-semibold bg-emerald-50 text-[#16A34A] border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-[#16A34A]" /> Super Admin
+              <ShieldCheck className="w-3 h-3 text-[#16A34A]" /> Admin
             </span>
           </div>
           <p className="text-xs text-slate-500 font-medium">Admin Operations Console</p>
@@ -41,6 +41,8 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             Role: {userRole}
           </p>
         </div>
+
+        <NotificationBellPopover />
 
         <Button
           variant="outline"

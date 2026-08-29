@@ -9,14 +9,19 @@ import {
   Calculator,
   LayoutDashboard,
   LayoutGrid,
-  ShieldCheck
+  ShieldCheck,
+  Bell,
 } from 'lucide-react';
+import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
+import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
 export const PrepReviewLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const { getUnreadCount } = useNotificationStore();
+  const unreadCount = getUnreadCount();
 
   const handleLogout = async () => {
     try {
@@ -36,15 +41,18 @@ export const PrepReviewLayout: React.FC = () => {
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/prep-review/manager' },
         { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: '1', path: '/prep-review/manager/queue' },
         { id: 'staff', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', badge: '5', path: '/prep-review/manager/staff' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/prep-review/notifications' },
       ]
     : [
         { id: 'specialist_hub', label: 'My Operations Hub', icon: LayoutDashboard, section: 'Specialist Workspace', path: '/prep-review/dashboard' },
         { id: 'preparer', label: 'Preparer Workbench', icon: Calculator, section: 'Active Operations', badge: '1', path: '/prep-review/preparer' },
         { id: 'reviewer', label: 'QA Audit Deck', icon: ShieldCheck, section: 'Active Operations', badge: '1', path: '/prep-review/reviewer' },
+        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Specialist Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/prep-review/notifications' },
       ];
 
   const currentPath = location.pathname;
   const getActiveId = () => {
+    if (currentPath.includes('/prep-review/notifications')) return 'notifications';
     if (currentPath.includes('/prep-review/manager/staff')) return 'staff';
     if (currentPath.includes('/prep-review/manager/queue')) return 'caseload';
     if (currentPath.includes('/prep-review/manager')) return 'dashboard';
@@ -72,6 +80,7 @@ export const PrepReviewLayout: React.FC = () => {
   };
 
   const getHeaderTitle = () => {
+    if (activeId === 'notifications') return 'Tax Prep & Review Notifications Hub';
     if (activeId === 'staff') return 'Staff Matrix & Workload Allocation';
     if (activeId === 'caseload') return 'Tax Preparation Department Queue';
     if (activeId === 'dashboard') return 'Tax Prep & Review Operations Command Center';
@@ -122,6 +131,8 @@ export const PrepReviewLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <NotificationBellPopover />
+
             <Button
               variant="outline"
               size="sm"

@@ -15,6 +15,8 @@ import {
   Clock,
   CheckCircle2
 } from 'lucide-react';
+import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
+import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
 export const CustomerLayout: React.FC = () => {
@@ -58,6 +60,9 @@ export const CustomerLayout: React.FC = () => {
     }
   };
 
+  const { getUnreadCount } = useNotificationStore();
+  const unreadCount = getUnreadCount();
+
   const navItems = [
     { 
       id: 'customer_dashboard', 
@@ -91,10 +96,19 @@ export const CustomerLayout: React.FC = () => {
       badge: isConvertedCustomer ? 'Paid Receipt' : '$199 Quote', 
       path: '/customer/billing' 
     },
+    { 
+      id: 'customer_notifications', 
+      label: 'Notifications', 
+      icon: Bell, 
+      section: 'Financials & Vault', 
+      badge: unreadCount > 0 ? String(unreadCount) : undefined, 
+      path: '/customer/notifications' 
+    },
   ];
 
   const currentPath = location.pathname;
   const getActiveId = () => {
+    if (currentPath.includes('/customer/notifications')) return 'customer_notifications';
     if (currentPath.includes('/customer/organizer')) return 'customer_organizer';
     if (currentPath.includes('/customer/documents')) return 'customer_documents';
     if (currentPath.includes('/customer/billing')) return 'customer_billing';
@@ -194,14 +208,7 @@ export const CustomerLayout: React.FC = () => {
               </div>
             )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg p-2"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4 text-slate-500" />
-            </Button>
+            <NotificationBellPopover />
 
             <Button
               variant="outline"

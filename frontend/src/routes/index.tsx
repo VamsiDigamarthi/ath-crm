@@ -50,6 +50,31 @@ import { CustomerDocumentsScreen } from '@/features/customer/screens/CustomerDoc
 import { CustomerBillingScreen } from '@/features/customer/screens/CustomerBillingScreen';
 import { CustomerExpertScreen } from '@/features/customer/screens/CustomerExpertScreen';
 import { UnauthorizedScreen } from '@/features/auth/screens/UnauthorizedScreen';
+import { NotificationCenterScreen } from '@/features/notifications/screens/NotificationCenterScreen';
+import { useAuthStore } from '@/features/auth/store/auth-store';
+
+/**
+ * Smart redirect component: Navigates user to their role's layout-wrapped notification screen
+ */
+const NotificationRedirect: React.FC = () => {
+  const { user } = useAuthStore();
+  const role = user?.role;
+
+  if (role === 'ADMIN') return <Navigate to="/admin/notifications" replace />;
+  if (role === 'DOC_MANAGER' || role === 'DOC_TEAM_LEAD' || role === 'DOC_AGENT') {
+    return <Navigate to="/documenter/notifications" replace />;
+  }
+  if (role === 'PREP_MANAGER' || role === 'TAX_REVIEWER' || role === 'TAX_PREPARER') {
+    return <Navigate to="/prep-review/notifications" replace />;
+  }
+  if (role === 'SALES_MANAGER' || role === 'SALES_CLOSER' || role === 'SALES_AGENT') {
+    return <Navigate to="/sales/notifications" replace />;
+  }
+  if (role === 'FILE_OP_MANAGER' || role === 'FILE_OP_TEAM_LEAD' || role === 'FILE_OP_AGENT') {
+    return <Navigate to="/filing/notifications" replace />;
+  }
+  return <Navigate to="/customer/notifications" replace />;
+};
 
 export const router = createBrowserRouter([
   // 1. Public Routes (Accessible ONLY when NOT logged in)
@@ -63,7 +88,7 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // 2. Protected Routes (Common / Fallback Dashboard)
+  // 2. Protected Routes (Common / Fallback Dashboard & Smart Notification Redirect)
   {
     element: <ProtectedRoute />,
     children: [
@@ -71,10 +96,14 @@ export const router = createBrowserRouter([
         path: '/dashboard',
         element: <DashboardScreen />,
       },
+      {
+        path: '/notifications',
+        element: <NotificationRedirect />,
+      },
     ],
   },
 
-  // 3. Super Admin Portal (/admin/*)
+  // 3. Admin Portal (/admin/*)
   {
     element: <ProtectedRoute allowedRoles={['ADMIN']} />,
     children: [
@@ -111,6 +140,10 @@ export const router = createBrowserRouter([
             element: <FilingDepartmentScreen />,
           },
           {
+            path: 'notifications',
+            element: <NotificationCenterScreen />,
+          },
+          {
             path: 'settings',
             element: <AdminSettingsScreen />,
           },
@@ -143,6 +176,10 @@ export const router = createBrowserRouter([
           {
             path: 'manager/queue',
             element: <ManagerQueueScreen />,
+          },
+          {
+            path: 'notifications',
+            element: <NotificationCenterScreen />,
           },
           // Calling Agent Routes
           {
@@ -226,6 +263,10 @@ export const router = createBrowserRouter([
             path: 'reviewer/audit/:id',
             element: <TaxReviewerAuditScreen />,
           },
+          {
+            path: 'notifications',
+            element: <NotificationCenterScreen />,
+          },
         ],
       },
     ],
@@ -276,6 +317,10 @@ export const router = createBrowserRouter([
           {
             path: 'pitch/:id',
             element: <SalesPitchWorkspaceScreen />,
+          },
+          {
+            path: 'notifications',
+            element: <NotificationCenterScreen />,
           },
         ],
       },
@@ -328,6 +373,10 @@ export const router = createBrowserRouter([
             path: 'workspace/:id',
             element: <FilingTransmissionWorkspaceScreen />,
           },
+          {
+            path: 'notifications',
+            element: <NotificationCenterScreen />,
+          },
         ],
       },
     ],
@@ -360,6 +409,10 @@ export const router = createBrowserRouter([
           {
             path: 'billing',
             element: <CustomerBillingScreen />,
+          },
+          {
+            path: 'notifications',
+            element: <NotificationCenterScreen />,
           },
           {
             path: 'expert',

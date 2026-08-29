@@ -41,6 +41,7 @@ model User {
   uploadedDocs   TaxDocument[]
   salesQuotes    SalesQuote[]
   auditLogs      AuditLog[]
+  notifications  Notification[]   @relation("UserNotifications")
 
   @@index([email])
   @@index([mobile])

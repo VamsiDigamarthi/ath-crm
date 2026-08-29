@@ -3,6 +3,7 @@ import type { ParsedLeadRow, BulkImportStatsData } from '../types/bulk-import.ty
 import { useCSVFileUpload } from './useCSVFileUpload';
 import { useLeadTableFilters, type StatusFilterType } from './useLeadTableFilters';
 import { adminService } from '../services/admin-service';
+import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
 export type { StatusFilterType };
@@ -154,6 +155,16 @@ export const useBulkImport = () => {
       const newProfiles = metrics?.newProfilesCreated ?? 0;
       const linkedProfiles = metrics?.existingProfilesLinked ?? 0;
       const skippedCount = metrics?.duplicatesSkipped ?? 0;
+
+      // Dispatch real notification for Document Manager & Documenter Dept
+      useNotificationStore.getState().addNotification({
+        title: `New Batch of ${validCount} Leads Uploaded by Admin`,
+        message: `Admin successfully ingested ${validCount} new tax leads for TY${taxYear} (${newProfiles} new profiles, ${linkedProfiles} multi-year linked). Intake queue ready.`,
+        category: 'DOCUMENTER',
+        priority: 'HIGH',
+        actionUrl: '/documenter/manager/queue',
+        actionLabel: 'View Documenter Queue',
+      });
 
       toast.success(
         res?.message ||

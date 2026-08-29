@@ -15,6 +15,8 @@ import {
   LogOut,
   Bell,
 } from 'lucide-react';
+import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
+import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
 export const AdminLayout: React.FC = () => {
@@ -32,6 +34,9 @@ export const AdminLayout: React.FC = () => {
     }
   };
 
+  const { getUnreadCount } = useNotificationStore();
+  const unreadCount = getUnreadCount();
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Main', path: '/admin/dashboard' },
     { id: 'prospects', label: 'Bulk Lead Import', icon: FileSpreadsheet, section: 'Operations', badge: '1,248', path: '/admin/prospects' },
@@ -39,12 +44,14 @@ export const AdminLayout: React.FC = () => {
     { id: 'documenter', label: 'Documenter Dept', icon: Users, section: 'Operations', badge: '432', path: '/admin/documenter' },
     { id: 'sales', label: 'Sales Pitches', icon: DollarSign, section: 'Operations', badge: '289', path: '/admin/sales' },
     { id: 'filing', label: 'File Operator', icon: FileCheck, section: 'Operations', badge: '527', path: '/admin/filing' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, section: 'System', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/admin/notifications' },
     { id: 'settings', label: 'System Settings', icon: Settings, section: 'Admin', path: '/admin/settings' },
   ];
 
   // Determine active item from URL pathname
   const currentPath = location.pathname;
   const getActiveId = () => {
+    if (currentPath.includes('/admin/notifications')) return 'notifications';
     if (currentPath.includes('/admin/prospects') || currentPath.includes('/admin/leads')) return 'prospects';
     if (currentPath.includes('/admin/employees')) return 'employees';
     if (currentPath.includes('/admin/documenter')) return 'documenter';
@@ -58,6 +65,8 @@ export const AdminLayout: React.FC = () => {
 
   const getHeaderTitle = () => {
     switch (activeId) {
+      case 'notifications':
+        return 'Department Notifications & Activity Hub';
       case 'employees':
         return 'Staff & Team Directory';
       case 'prospects':
@@ -103,7 +112,7 @@ export const AdminLayout: React.FC = () => {
         activeId={activeId}
         onItemClick={handleItemClick}
         user={{
-          name: user?.email?.split('@')[0] || 'Super Admin',
+          name: user?.email?.split('@')[0] || 'Admin',
           email: user?.email || user?.mobile || 'admin@taxcrm.com',
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'admin'}`,
         }}
@@ -119,27 +128,21 @@ export const AdminLayout: React.FC = () => {
               {getHeaderTitle()}
             </h1>
             <span className="text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-[#16A34A]" /> Super Admin
+              <ShieldCheck className="w-3 h-3 text-[#16A34A]" /> Admin
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg p-2"
-            >
-              <Bell className="w-4 h-4 text-slate-500" />
-            </Button>
+            <NotificationBellPopover />
 
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-red-600 text-xs flex items-center gap-2 transition-colors"
+              className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-red-600 text-xs flex items-center gap-2 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
-              Logout
+              <span>Logout</span>
             </Button>
           </div>
         </header>

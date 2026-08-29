@@ -1,5 +1,5 @@
 import { prisma } from "../../config/db.js";
-import { ApplicationStage } from "@prisma/client";
+import { ApplicationStage, Role } from "@prisma/client";
 import { normalizeVisaType } from "./admin-validator.js";
 
 export interface LeadImportItem {
@@ -173,6 +173,25 @@ export class LeadIngestionService {
                   });
                 }
 
+                // Create AuditLog record for audit compliance
+                await tx.auditLog.create({
+                  data: {
+                    applicationId: newApp.id,
+                    actorId: adminUserId || null,
+                    actorType: 'ADMIN',
+                    actorName: 'Admin',
+                    actorRole: 'ADMIN',
+                    action: 'STAGE_CHANGE',
+                    moduleKey: 'LEAD_INGESTION',
+                    details: {
+                      event: 'LEAD_INGESTED',
+                      taxYear,
+                      importedAt: new Date().toISOString(),
+                      remarks: `Admin ingested lead into TaxCRM Intake Pipeline for TY${taxYear} (Linked to existing profile ${matchedProfile.firstName} ${matchedProfile.lastName})`,
+                    },
+                  },
+                });
+
                 existingProfilesLinked++;
                 validProcessed++;
               }
@@ -223,6 +242,25 @@ export class LeadIngestionService {
                 });
               }
 
+              // Create AuditLog record for audit compliance
+              await tx.auditLog.create({
+                data: {
+                  applicationId: newApp.id,
+                  actorId: adminUserId || null,
+                  actorType: 'ADMIN',
+                  actorName: 'Admin',
+                  actorRole: 'ADMIN',
+                  action: 'STAGE_CHANGE',
+                  moduleKey: 'LEAD_INGESTION',
+                  details: {
+                    event: 'LEAD_INGESTED',
+                    taxYear,
+                    importedAt: new Date().toISOString(),
+                    remarks: `Admin uploaded new lead record into TaxCRM Intake Pipeline for Tax Year ${taxYear}`,
+                  },
+                },
+              });
+
               newProfilesCreated++;
               validProcessed++;
             }
@@ -235,6 +273,21 @@ export class LeadIngestionService {
     }
 
     const processingTimeMs = Date.now() - startTime;
+
+    // Create persistent Notification in database targeted for Document Manager
+    if (validProcessed > 0) {
+      await prisma.notification.create({
+        data: {
+          targetRole: Role.DOC_MANAGER,
+          title: `Admin Ingested ${validProcessed} New Leads (TY${taxYear})`,
+          message: `Admin successfully uploaded ${validProcessed} new tax prospect leads (${newProfilesCreated} new profiles, ${existingProfilesLinked} multi-year linked). Intake queue ready for agent assignment.`,
+          category: 'DOCUMENTER',
+          priority: 'HIGH',
+          actionUrl: '/documenter/manager/queue',
+          actionLabel: 'View & Assign Queue',
+        },
+      });
+    }
 
     return {
       totalReceived: leads.length,
