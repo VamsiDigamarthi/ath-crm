@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Users, 
   RefreshCw, 
@@ -11,29 +11,22 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { SalesClosersWorkloadTable } from '../components/manager/SalesClosersWorkloadTable';
-import { INITIAL_SALES_REPS } from '../constants/sales-mock-data';
-import type { SalesRepItem } from '../types/sales.types';
-import toast from 'react-hot-toast';
+import { useSalesTeamScorecards } from '../hooks/useSalesTeamScorecards';
 
 export const SalesTeamScorecardsScreen: React.FC = () => {
-  const [salesReps] = useState<SalesRepItem[]>(INITIAL_SALES_REPS);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success('Closers matrix & workload refreshed');
-    }, 400);
-  };
-
-  const totalDealsClosedToday = salesReps.reduce((acc, r) => acc + r.dealsClosedToday, 0);
-  const totalRevenueToday = salesReps.reduce((acc, r) => acc + r.totalRevenueToday, 0);
-  const avgConversionRate = '35.7%';
+  const {
+    salesReps,
+    kpiMetrics,
+    totalDepartmentLeads,
+    isLoading,
+    isRefreshing,
+    handleRefresh,
+    handleBalancePool,
+  } = useSalesTeamScorecards();
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
-      {/* 1. Header & Live Team Capacity Action (Matching Documenter & PrepReview Manager standard) */}
+      {/* 1. Header & Live Team Capacity Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -55,7 +48,7 @@ export const SalesTeamScorecardsScreen: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isRefreshing || isLoading}
             className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -64,7 +57,8 @@ export const SalesTeamScorecardsScreen: React.FC = () => {
 
           <Button
             size="sm"
-            onClick={() => toast.success('Pool workload balanced across active closers!')}
+            onClick={handleBalancePool}
+            disabled={isLoading}
             className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 fill-current text-amber-300" />
@@ -87,7 +81,7 @@ export const SalesTeamScorecardsScreen: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {salesReps.length}
+              {kpiMetrics.activeClosers}
             </div>
             <div className="text-xs text-blue-600 font-medium mt-1">
               Dedicated revenue closers
@@ -107,7 +101,7 @@ export const SalesTeamScorecardsScreen: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {totalDealsClosedToday}
+              {kpiMetrics.dealsClosedToday}
             </div>
             <div className="text-xs text-[#16A34A] font-medium mt-1 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -128,7 +122,7 @@ export const SalesTeamScorecardsScreen: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              ${totalRevenueToday.toLocaleString()}
+              ${kpiMetrics.revenueGeneratedToday.toLocaleString()}
             </div>
             <div className="text-xs text-purple-600 font-medium mt-1">
               Service fee receipts
@@ -148,7 +142,7 @@ export const SalesTeamScorecardsScreen: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {avgConversionRate}
+              {kpiMetrics.teamConversionRate}
             </div>
             <div className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
               <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
@@ -159,7 +153,11 @@ export const SalesTeamScorecardsScreen: React.FC = () => {
       </div>
 
       {/* 3. Closers Workload Table */}
-      <SalesClosersWorkloadTable salesReps={salesReps} />
+      <SalesClosersWorkloadTable 
+        salesReps={salesReps} 
+        totalDepartmentLeads={totalDepartmentLeads}
+        isLoading={isLoading} 
+      />
     </div>
   );
 };

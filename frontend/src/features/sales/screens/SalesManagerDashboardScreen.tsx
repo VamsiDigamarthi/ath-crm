@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   DollarSign, 
@@ -12,28 +12,55 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { SalesManagerStatsCards } from '../components/manager/SalesManagerStatsCards';
-import { 
-  INITIAL_MANAGER_STATS, 
-  INITIAL_SALES_LEADS 
-} from '../constants/sales-mock-data';
+import { salesService } from '../services/sales-service';
+import type { SalesLeadItem, SalesManagerStats } from '../types/sales.types';
 import toast from 'react-hot-toast';
 
 export const SalesManagerDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [stats] = useState(INITIAL_MANAGER_STATS);
-  const [leads] = useState(INITIAL_SALES_LEADS);
+  const [stats, setStats] = useState<SalesManagerStats>({
+    pipelineLeads: 0,
+    activePitching: 0,
+    pendingPayment: 0,
+    closedPaidDeals: 0,
+    totalRevenueMTD: 0,
+    avgDealSize: 0,
+    conversionRatePct: 0,
+  });
+  const [leads, setLeads] = useState<SalesLeadItem[]>([]);
   const [timeRange, setTimeRange] = useState<'TODAY' | 'WEEK' | 'MTD'>('MTD');
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success('Sales operations analytics refreshed');
-    }, 400);
-  };
+  const fetchDashboardData = useCallback(async (showToast = false) => {
+    try {
+      if (showToast) setIsRefreshing(true);
+      const [leadsRes, statsRes] = await Promise.all([
+        salesService.getPipelineLeads({ limit: 100 }),
+        salesService.getManagerStats(),
+      ]);
 
-  // Funnel Stage Counts
+      setLeads(leadsRes?.leads || []);
+      if (statsRes) {
+        setStats(statsRes);
+      }
+      if (showToast) {
+        toast.success('Sales operations analytics refreshed! 🔄');
+      }
+    } catch (err: any) {
+      console.error('Failed to load sales manager dashboard:', err);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Dynamic Funnel Stage Counts from live database leads
   const funnelStages = useMemo(() => {
     const total = leads.length || 1;
     const awaiting = leads.filter((l) => l.currentStage === 'SALES_PITCH_QUEUE').length;
@@ -86,9 +113,15 @@ export const SalesManagerDashboardScreen: React.FC = () => {
     ];
   }, [leads]);
 
+  const readyForTransmissionCount = useMemo(() => {
+    return leads.filter(
+      (l) => l.currentStage === 'PAID_AND_AUTHORIZED' || l.currentStage === 'FILING_QUEUE'
+    ).length;
+  }, [leads]);
+
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
-      {/* 1. Header & Live Time Filter Bar (Exact Documenter & PrepReview Manager standard) */}
+      {/* 1. Header & Live Time Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -127,8 +160,8 @@ export const SalesManagerDashboardScreen: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
+            onClick={() => fetchDashboardData(true)}
+            disabled={isRefreshing || isLoading}
             className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -214,22 +247,30 @@ export const SalesManagerDashboardScreen: React.FC = () => {
           <div className="space-y-3 text-xs">
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
               <span className="font-bold text-slate-800">Federal Form 1040 Base Prep ($149)</span>
-              <span className="font-black text-slate-900">$3,278 (67%)</span>
+              <span className="font-black text-slate-900">
+                ${Math.round(stats.totalRevenueMTD * 0.67).toLocaleString()} (67%)
+              </span>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
               <span className="font-bold text-slate-800">State Income Tax Returns ($49 / State)</span>
-              <span className="font-black text-slate-900">$882 (18%)</span>
+              <span className="font-black text-slate-900">
+                ${Math.round(stats.totalRevenueMTD * 0.18).toLocaleString()} (18%)
+              </span>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
               <span className="font-bold text-slate-800">Audit Defense &amp; IRS Representation ($29)</span>
-              <span className="font-black text-slate-900">$435 (9%)</span>
+              <span className="font-black text-slate-900">
+                ${Math.round(stats.totalRevenueMTD * 0.09).toLocaleString()} (9%)
+              </span>
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
               <span className="font-bold text-slate-800">Foreign Bank FBAR FinCEN 114 ($99)</span>
-              <span className="font-black text-slate-900">$295 (6%)</span>
+              <span className="font-black text-slate-900">
+                ${Math.round(stats.totalRevenueMTD * 0.06).toLocaleString()} (6%)
+              </span>
             </div>
           </div>
         </div>
@@ -250,11 +291,15 @@ export const SalesManagerDashboardScreen: React.FC = () => {
             <div className="grid grid-cols-2 gap-3 mt-4">
               <div className="bg-white p-3 rounded-xl border border-emerald-100 text-center">
                 <div className="text-[10px] text-slate-500 font-medium">Ready for Transmission</div>
-                <div className="text-xl font-black text-[#16A34A]">1 Client</div>
+                <div className="text-xl font-black text-[#16A34A]">
+                  {readyForTransmissionCount} Client{readyForTransmissionCount === 1 ? '' : 's'}
+                </div>
               </div>
               <div className="bg-white p-3 rounded-xl border border-emerald-100 text-center">
-                <div className="text-[10px] text-slate-500 font-medium">Avg Time to Close</div>
-                <div className="text-xl font-black text-blue-600">4.2 Hours</div>
+                <div className="text-[10px] text-slate-500 font-medium">Avg Conversion Rate</div>
+                <div className="text-xl font-black text-blue-600">
+                  {stats.conversionRatePct}%
+                </div>
               </div>
             </div>
           </div>

@@ -120,3 +120,15 @@ Tier 3: TAX_APPLICATIONS (Yearly filing case moving through department stages)
   * Modals: `AppModal`
   * Dialogs: `AppConfirmDialog`
   * Inputs: `AppSearchInput`, `AppCopyButton`, `AppSelect`, `AppDatePicker`, `AppImageUpload`
+
+---
+
+## 7. Mandatory Universal Rule: Cross-Department Historical Visibility & Non-Disappearing Records
+* **Zero Disappearance Across Stages**: Whenever a lead advances forward to higher stages (`DOC_PREP` $\rightarrow$ `QA_APPROVED` $\rightarrow$ `SALES_PITCHING` $\rightarrow$ `PAYMENT_PENDING` $\rightarrow$ `FILING_QUEUE` $\rightarrow$ `FILING_SUCCESS`), it **MUST NEVER** disappear from lower/previous departments or from the assigned employees' completed/historical caseload lists.
+* **Historical Caseloads**:
+  * **Documenters** must perpetually see all qualified intakes they worked on.
+  * **Preparers** must perpetually see all returns they computed in `Completed / QA Approved`.
+  * **QA Reviewers** must perpetually see all returns they audited/approved in `Passed QA (Signed Off)` and `All In Review`.
+  * **Sales Closers** must perpetually see all pitched/closed deals in `Paid & E-Signed` and `In Filing`.
+* **Live Global Stage & History**: Every queue and dashboard must display the real-time active stage of the case across the entire firm, ensuring 100% transparency.
+

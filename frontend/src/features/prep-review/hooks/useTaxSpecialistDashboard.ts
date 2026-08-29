@@ -57,11 +57,30 @@ export function useTaxSpecialistDashboard() {
     // Relevant leads
     const userRelevantLeads = [...prep, ...review];
     const qaApprovedToday = userRelevantLeads.filter(
-      (l) => l.currentStage === 'QA_APPROVED' || l.currentStage === 'SALES_PITCH_QUEUE'
+      (l) =>
+        l.prepStage === 'QA_APPROVED' ||
+        l.taxDraftSummary?.status === 'QA_APPROVED' ||
+        Boolean(l.taxDraftSummary?.qaApprovedByUserId) ||
+        Boolean(l.taxDraftSummary?.qaApprovedAt) ||
+        [
+          'QA_APPROVED',
+          'SALES_PITCH_QUEUE',
+          'SALES_PITCHING',
+          'QUOTATION_SENT',
+          'PAYMENT_PENDING',
+          'PAID_AND_AUTHORIZED',
+          'FILING_QUEUE',
+          'FILING_IN_PROGRESS',
+          'FILING_SUCCESS',
+        ].includes(l.currentStage)
     ).length;
 
     const correctionsPending = userRelevantLeads.filter(
-      (l) => l.currentStage === 'QA_REVISION_REQUESTED'
+      (l) =>
+        l.prepStage === 'QA_REVISION_REQUESTED' ||
+        l.currentStage === 'QA_REVISION_REQUESTED' ||
+        l.currentStage === 'CORRECTION_NEEDED' ||
+        l.taxDraftSummary?.status === 'REVISION_REQUESTED'
     ).length;
 
     const totalCaseload = assignedPrepCount + assignedReviewCount;

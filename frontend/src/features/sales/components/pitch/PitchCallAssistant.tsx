@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { 
   Phone, 
   PhoneOff, 
-  Clock, 
   Sparkles, 
-  Rocket
+  Rocket,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { SalesLeadItem } from '../../types/sales.types';
@@ -34,50 +34,64 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
   };
 
   const handleToggleCall = () => {
-    if (!isCalling) {
-      setIsCalling(true);
-      toast.success(`Connected to ${lead.taxpayerName} (${lead.taxpayerPhone}) 📞`);
-    } else {
+    if (isCalling) {
       setIsCalling(false);
-      toast.success('Call ended. Please record call disposition.');
+      toast.success('Closer call ended. Call notes updated.');
+    } else {
+      setIsCalling(true);
+      toast.success(`Dialing ${lead.taxpayerName} (${lead.taxpayerPhone})... 📞`);
     }
   };
 
   const isReadyForFiling = paymentStatus === 'PAID' && esignStatus === 'SIGNED';
 
   return (
-    <div className="space-y-4">
-      {/* 1. Live Phone Call Controller */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
+    <div className="space-y-6 font-sans">
+      {/* 1. Integrated Softphone / Call Controller */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <Phone className="w-4 h-4 text-blue-600" />
-            <h4 className="font-bold text-xs sm:text-sm text-slate-900">
-              Taxpayer Phone Line &amp; Closer Assistant
-            </h4>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Phone className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-xs sm:text-sm text-slate-900">
+                Closer Softphone &amp; Outreach
+              </h3>
+              <div className="text-[10px] text-slate-400 font-medium">
+                Integrated PBX CRM Dialer
+              </div>
+            </div>
           </div>
 
-          {isCalling && (
-            <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 animate-pulse">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{formatTimer(callDuration)}</span>
-            </span>
+          {isCalling ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[#16A34A] border border-emerald-200 text-xs font-bold animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>In Call • {formatTimer(callDuration)}</span>
+            </div>
+          ) : (
+            <span className="text-xs text-slate-400 font-medium">Ready to Call</span>
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+        {/* Taxpayer Contact Row & Dial Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100">
           <div>
-            <div className="text-xs font-bold text-slate-900">{lead.taxpayerPhone}</div>
-            <div className="text-[10px] text-slate-500 font-medium">Direct Mobile Line</div>
+            <div className="font-bold text-xs text-slate-900">{lead.taxpayerName}</div>
+            <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5 mt-0.5">
+              <span>{lead.taxpayerPhone}</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-400">{lead.stateOfResidence}</span>
+            </div>
           </div>
 
           <Button
             size="sm"
             onClick={handleToggleCall}
-            className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer ${
+            className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs ${
               isCalling
                 ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
             }`}
           >
             {isCalling ? (
@@ -156,7 +170,7 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
           </span>
         </div>
 
-        <div className="space-y-1.5 text-xs text-slate-600 mb-4">
+        <div className="space-y-1.5 text-xs text-slate-600 mb-3">
           <div className="flex items-center justify-between">
             <span>1. Service Fee Paid:</span>
             <span className={`font-bold ${paymentStatus === 'PAID' ? 'text-[#16A34A]' : 'text-amber-600'}`}>
@@ -172,13 +186,30 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
           </div>
         </div>
 
+        {/* Clear Explanation of Why Button is Disabled */}
+        {!isReadyForFiling && (
+          <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <strong className="font-bold">IRS Transmission Gate:</strong>
+              <span className="ml-1">
+                {paymentStatus !== 'PAID' && esignStatus !== 'SIGNED'
+                  ? 'Both fee payment and Form 8879 taxpayer authorization are required before dispatching to IRS.'
+                  : paymentStatus !== 'PAID'
+                  ? 'Fee payment is pending. Please collect payment to enable IRS dispatch.'
+                  : 'Form 8879 authorization is pending. Please collect digital signature or upload signed PDF to enable IRS dispatch.'}
+              </span>
+            </div>
+          </div>
+        )}
+
         <Button
           onClick={onDispatchToFiling}
           disabled={!isReadyForFiling}
           className={`w-full text-xs font-bold py-2.5 flex items-center justify-center gap-2 shadow-sm cursor-pointer ${
             isReadyForFiling
               ? 'bg-[#16A34A] hover:bg-[#15803D] text-white'
-              : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+              : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
           }`}
         >
           <Rocket className="w-4 h-4" />

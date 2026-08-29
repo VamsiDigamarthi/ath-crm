@@ -1,5 +1,5 @@
 import apiClient from '@/lib/api-client';
-import type { SalesLeadItem, SalesRepItem, SalesManagerStats } from '../types/sales.types';
+import type { SalesLeadItem, SalesRepItem, SalesManagerStats, SalesAgentStats } from '../types/sales.types';
 
 export interface SalesPipelineResponse {
   leads: SalesLeadItem[];
@@ -20,6 +20,7 @@ export const salesService = {
     search?: string;
     page?: number;
     limit?: number;
+    salesAgentId?: string;
   }): Promise<SalesPipelineResponse> {
     try {
       const response: any = await apiClient.get('/sales/leads', { params });
@@ -31,6 +32,19 @@ export const salesService = {
       };
     } catch (err: any) {
       throw new Error(err?.response?.data?.message || 'Failed to fetch sales leads');
+    }
+  },
+
+  /**
+   * Fetch Single Sales Lead by ID
+   */
+  async getLeadById(id: string): Promise<SalesLeadItem | null> {
+    try {
+      const response: any = await apiClient.get(`/sales/leads/${id}`);
+      return response?.data?.lead || response?.lead || null;
+    } catch (err: any) {
+      console.error('Failed to load lead by id:', err);
+      return null;
     }
   },
 
@@ -76,9 +90,38 @@ export const salesService = {
   },
 
   /**
+   * Fetch Agent KPI Stats from backend database
+   */
+  async getAgentStats(salesAgentId?: string): Promise<SalesAgentStats> {
+    try {
+      const response: any = await apiClient.get('/sales/agent-stats', {
+        params: salesAgentId ? { salesAgentId } : undefined,
+      });
+      const s = response?.data?.stats || response?.stats;
+      return {
+        assignedLeads: s?.totalAssigned || 0,
+        pitchInProgress: s?.activePitching || 0,
+        paymentsPending: s?.pendingPayment || 0,
+        dealsClosedToday: s?.dealsClosedToday || 0,
+        myRevenueToday: s?.revenueToday || 0,
+        myConversionRate: s?.conversionRate || 0,
+      };
+    } catch {
+      return {
+        assignedLeads: 0,
+        pitchInProgress: 0,
+        paymentsPending: 0,
+        dealsClosedToday: 0,
+        myRevenueToday: 0,
+        myConversionRate: 0,
+      };
+    }
+  },
+
+  /**
    * Assign Sales Lead to Closer
    */
-  async assignLead(payload: { applicationId: string; salesAgentId: string }) {
+  async assignLead(payload: { applicationId?: string; applicationIds?: string[]; salesAgentId: string }) {
     return apiClient.post('/sales/assign', payload);
   },
 
@@ -87,5 +130,38 @@ export const salesService = {
    */
   async autoRoundRobin() {
     return apiClient.post('/sales/auto-round-robin');
+  },
+
+  /**
+   * Dispatch paid & e-signed return to IRS Filing Queue
+   */
+  async dispatchToFiling(id: string) {
+    return apiClient.post(`/sales/leads/${id}/dispatch-filing`);
+  },
+
+  /**
+   * Record Service Fee Payment in Database
+   */
+  async recordPayment(id: string, payload: {
+    amount: number;
+    discountAmount?: number;
+    paymentMethod?: string;
+    transactionRef?: string;
+    notes?: string;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/record-payment`, payload);
+  },
+
+  /**
+   * Record Form 8879 Authorization in Database
+   */
+  async recordEsign(id: string, payload: {
+    esignMethod?: string;
+    fileName?: string;
+    taxpayerPin?: string;
+    callRecordingRef?: string;
+    notes?: string;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/record-esign`, payload);
   },
 };

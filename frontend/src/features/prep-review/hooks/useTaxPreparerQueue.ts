@@ -48,6 +48,45 @@ export function useTaxPreparerQueue() {
     fetchPreparerLeads();
   }, [fetchPreparerLeads]);
 
+  // Helper checks
+  const isReturnApproved = (lead: PrepReviewLead) => {
+    return (
+      lead.prepStage === 'QA_APPROVED' ||
+      lead.taxDraftSummary?.status === 'QA_APPROVED' ||
+      Boolean(lead.taxDraftSummary?.qaApprovedByUserId) ||
+      Boolean(lead.taxDraftSummary?.qaApprovedAt) ||
+      [
+        'QA_APPROVED',
+        'SALES_PITCH_QUEUE',
+        'SALES_PITCHING',
+        'QUOTATION_SENT',
+        'PAYMENT_PENDING',
+        'PAID_AND_AUTHORIZED',
+        'FILING_QUEUE',
+        'FILING_IN_PROGRESS',
+        'FILING_SUCCESS',
+      ].includes(lead.currentStage)
+    );
+  };
+
+  const isReturnRevision = (lead: PrepReviewLead) => {
+    return (
+      lead.prepStage === 'QA_REVISION_REQUESTED' ||
+      lead.currentStage === 'QA_REVISION_REQUESTED' ||
+      lead.currentStage === 'CORRECTION_NEEDED' ||
+      lead.taxDraftSummary?.status === 'REVISION_REQUESTED'
+    );
+  };
+
+  const isReturnSubmittedToQA = (lead: PrepReviewLead) => {
+    return (
+      lead.prepStage === 'QA_IN_REVIEW' ||
+      lead.currentStage === 'QA_IN_REVIEW' ||
+      lead.currentStage === 'QA_REVIEW_QUEUE' ||
+      lead.taxDraftSummary?.status === 'SUBMITTED_FOR_QA'
+    );
+  };
+
   // Compute live tab counts based on actual database stage
   const counts = useMemo(() => {
     let drafting = 0;
@@ -56,10 +95,10 @@ export function useTaxPreparerQueue() {
     let revisions = 0;
 
     allLeads.forEach((lead) => {
-      if (lead.currentStage === 'PREP_IN_PROGRESS') drafting++;
-      else if (lead.currentStage === 'QA_IN_REVIEW') qaSubmitted++;
-      else if (lead.currentStage === 'QA_APPROVED' || lead.currentStage === 'SALES_PITCH_QUEUE') qaApproved++;
-      else if (lead.currentStage === 'QA_REVISION_REQUESTED') revisions++;
+      if (isReturnRevision(lead)) revisions++;
+      else if (isReturnApproved(lead)) qaApproved++;
+      else if (isReturnSubmittedToQA(lead)) qaSubmitted++;
+      else drafting++;
     });
 
     return {
@@ -85,10 +124,15 @@ export function useTaxPreparerQueue() {
   // Filtered Leads
   const filteredReturns = useMemo(() => {
     return allLeads.filter((item) => {
-      if (activeTab === 'DRAFTING' && item.currentStage !== 'PREP_IN_PROGRESS') return false;
-      if (activeTab === 'QA_SUBMITTED' && item.currentStage !== 'QA_IN_REVIEW') return false;
-      if (activeTab === 'QA_APPROVED' && item.currentStage !== 'QA_APPROVED' && item.currentStage !== 'SALES_PITCH_QUEUE') return false;
-      if (activeTab === 'REVISIONS' && item.currentStage !== 'QA_REVISION_REQUESTED') return false;
+      const approved = isReturnApproved(item);
+      const revision = isReturnRevision(item);
+      const submitted = isReturnSubmittedToQA(item);
+      const drafting = !approved && !revision && !submitted;
+
+      if (activeTab === 'DRAFTING' && !drafting) return false;
+      if (activeTab === 'QA_SUBMITTED' && !submitted) return false;
+      if (activeTab === 'QA_APPROVED' && !approved) return false;
+      if (activeTab === 'REVISIONS' && !revision) return false;
       if (complexityFilter !== 'ALL' && item.complexity !== complexityFilter) return false;
 
       if (searchQuery.trim()) {

@@ -412,7 +412,11 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
 
                     {/* Lifecycle Stage */}
                     <td className="py-3.5 px-4">
-                      <PrepStageBadge stage={lead.currentStage} />
+                      <PrepStageBadge 
+                        stage={lead.currentStage} 
+                        assignedCloserName={lead.assignedSalesAgent?.name}
+                        assignedFileOpName={lead.assignedFileOp?.name}
+                      />
                     </td>
 
                     {/* Assign Action */}

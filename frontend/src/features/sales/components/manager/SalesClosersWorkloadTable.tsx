@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Award, 
   PhoneCall, 
@@ -9,22 +9,49 @@ import {
 } from 'lucide-react';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppPagination } from '@/shared/components/AppPagination';
 import { Button } from '@/shared/components/Button';
 import { useNavigate } from 'react-router-dom';
 import type { SalesRepItem } from '../../types/sales.types';
 
 interface SalesClosersWorkloadTableProps {
   salesReps: SalesRepItem[];
+  totalDepartmentLeads?: number;
   isLoading?: boolean;
 }
 
 export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps> = ({
   salesReps,
+  totalDepartmentLeads = 0,
   isLoading = false,
 }) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [tierFilter, setTierFilter] = useState<'ALL' | 'STAR' | 'STEADY'>('ALL');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const handleSearchChange = useCallback((val: string) => {
+    setSearchQuery((prev) => {
+      if (prev !== val) {
+        setCurrentPage(1);
+        return val;
+      }
+      return prev;
+    });
+  }, []);
+
+  const handleTierFilterChange = useCallback((tier: 'ALL' | 'STAR' | 'STEADY') => {
+    setTierFilter((prev) => {
+      if (prev !== tier) {
+        setCurrentPage(1);
+        return tier;
+      }
+      return prev;
+    });
+  }, []);
 
   const filteredStaff = useMemo(() => {
     return salesReps.filter((rep) => {
@@ -41,6 +68,13 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
       return true;
     });
   }, [salesReps, tierFilter, searchQuery]);
+
+  const totalPages = Math.ceil(filteredStaff.length / itemsPerPage) || 1;
+
+  const paginatedStaff = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredStaff.slice(start, start + itemsPerPage);
+  }, [filteredStaff, currentPage, itemsPerPage]);
 
   const getAvatarBox = (email: string) => {
     const initial = (email?.[0] || 'S').toUpperCase();
@@ -70,7 +104,7 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
 
   return (
     <div className="w-full bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden font-sans">
-      {/* Header with Title & Search Input (Exact Documenter & PrepReview Manager standard) */}
+      {/* Header with Title & Search Input */}
       <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50/50">
         <div>
           <h3 className="text-sm sm:text-base font-bold text-slate-900">
@@ -85,7 +119,7 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
           <div className="w-64 sm:w-72">
             <AppSearchInput
               value={searchQuery}
-              onChange={(val) => setSearchQuery(val)}
+              onChange={handleSearchChange}
               placeholder="Search closer by name or email..."
             />
           </div>
@@ -94,7 +128,7 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
           <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
             <button
               type="button"
-              onClick={() => setTierFilter('ALL')}
+              onClick={() => handleTierFilterChange('ALL')}
               className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                 tierFilter === 'ALL'
                   ? 'bg-white text-slate-900 shadow-xs'
@@ -105,7 +139,7 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
             </button>
             <button
               type="button"
-              onClick={() => setTierFilter('STAR')}
+              onClick={() => handleTierFilterChange('STAR')}
               className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                 tierFilter === 'STAR'
                   ? 'bg-white text-purple-700 shadow-xs'
@@ -139,15 +173,16 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
                   Loading dynamic closers matrix from database...
                 </td>
               </tr>
-            ) : filteredStaff.length === 0 ? (
+            ) : paginatedStaff.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
                   No sales closers found matching your search.
                 </td>
               </tr>
             ) : (
-              filteredStaff.map((rep) => {
-                const capacityPct = Math.round((rep.activeLeads / 10) * 100);
+              paginatedStaff.map((rep) => {
+                const effectiveTotal = totalDepartmentLeads > 0 ? totalDepartmentLeads : (rep.activeLeads || 1);
+                const sharePct = effectiveTotal > 0 ? Math.round((rep.activeLeads / effectiveTotal) * 100) : 0;
 
                 return (
                   <tr key={rep.id} className="hover:bg-slate-50/70 transition-colors">
@@ -168,19 +203,19 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
                       </div>
                     </td>
 
-                    {/* Active Caseload Breakdown: Progress Bar */}
+                    {/* Active Caseload Breakdown: Dynamic Share of Department Leads */}
                     <td className="py-3.5 px-4 min-w-[200px]">
                       <div className="space-y-1.5">
                         <div className="font-extrabold text-xs text-slate-900 flex items-center justify-between">
-                          <span>{rep.activeLeads} / 10 Active Leads</span>
-                          <span className="text-[10px] text-slate-400 font-semibold">{capacityPct}% Cap</span>
+                          <span>
+                            {rep.activeLeads} / {effectiveTotal} {effectiveTotal === 1 ? 'Lead' : 'Leads'}
+                          </span>
+                          <span className="text-[10px] text-blue-600 font-semibold">{sharePct}% Share</span>
                         </div>
                         <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all ${
-                              capacityPct > 80 ? 'bg-amber-500' : 'bg-blue-600'
-                            }`}
-                            style={{ width: `${capacityPct}%` }}
+                            className="h-full rounded-full transition-all bg-blue-600"
+                            style={{ width: `${Math.min(100, Math.max(sharePct, rep.activeLeads > 0 ? 15 : 0))}%` }}
                           />
                         </div>
                       </div>
@@ -237,6 +272,24 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Footer */}
+      {!isLoading && filteredStaff.length > 0 && (
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+          <AppPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredStaff.length}
+            itemsPerPage={itemsPerPage}
+            perPageOptions={[5, 10, 20]}
+            onPageChange={(p) => setCurrentPage(p)}
+            onPerPageChange={(pp) => {
+              setItemsPerPage(pp);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

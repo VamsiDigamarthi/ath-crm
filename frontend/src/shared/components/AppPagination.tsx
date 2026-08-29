@@ -38,7 +38,8 @@ export function AppPagination({
   onPerPageChange,
   className,
 }: AppPaginationProps) {
-  const pages = buildPages(currentPage, Math.max(totalPages, 1))
+  const safeTotalPages = Math.max(totalPages, 1)
+  const pages = buildPages(currentPage, safeTotalPages)
 
   const startItem = totalItems !== undefined && totalItems > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0
   const endItem = totalItems !== undefined ? Math.min(currentPage * itemsPerPage, totalItems) : 0
@@ -53,7 +54,7 @@ export function AppPagination({
           </span>
         ) : (
           <span>
-            Page <strong className="text-slate-900 font-bold">{currentPage}</strong> of <strong className="text-slate-900 font-bold">{Math.max(totalPages, 1)}</strong>
+            Page <strong className="text-slate-900 font-bold">{currentPage}</strong> of <strong className="text-slate-900 font-bold">{safeTotalPages}</strong>
           </span>
         )}
       </div>
@@ -66,7 +67,10 @@ export function AppPagination({
             <span className="text-slate-500 font-medium whitespace-nowrap">Rows per page:</span>
             <select
               value={itemsPerPage}
-              onChange={(e) => onPerPageChange(Number(e.target.value))}
+              onChange={(e) => {
+                e.preventDefault();
+                onPerPageChange(Number(e.target.value));
+              }}
               aria-label="Rows per page"
               className="bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] cursor-pointer"
             >
@@ -80,10 +84,17 @@ export function AppPagination({
         )}
 
         {/* Page Nav Buttons */}
-        {totalPages > 1 && (
+        {safeTotalPages > 1 && (
           <nav className="flex items-center gap-1" aria-label="Pagination Navigation">
             <button
-              onClick={() => onPageChange(currentPage - 1)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (currentPage > 1) {
+                  onPageChange(currentPage - 1);
+                }
+              }}
               disabled={currentPage <= 1}
               className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               aria-label="Previous page"
@@ -100,11 +111,17 @@ export function AppPagination({
                 )
               }
 
-              const isActive = page === currentPage
+              const pageNum = Number(page)
+              const isActive = pageNum === currentPage
               return (
                 <button
+                  type="button"
                   key={page}
-                  onClick={() => onPageChange(page)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onPageChange(pageNum);
+                  }}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'w-8 h-8 rounded-lg text-xs font-bold transition-all border cursor-pointer flex items-center justify-center',
@@ -119,8 +136,15 @@ export function AppPagination({
             })}
 
             <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (currentPage < safeTotalPages) {
+                  onPageChange(currentPage + 1);
+                }
+              }}
+              disabled={currentPage >= safeTotalPages}
               className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               aria-label="Next page"
             >

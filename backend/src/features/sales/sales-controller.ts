@@ -7,12 +7,26 @@ export class SalesController {
       const result = await SalesService.getPipelineLeads({
         stage: req.query.stage as string,
         search: req.query.search as string,
+        salesAgentId: req.query.salesAgentId as string,
         page: Number(req.query.page) || 1,
-        limit: Number(req.query.limit) || 50,
+        limit: Number(req.query.limit) || 100,
       });
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to fetch sales pipeline leads' });
+    }
+  }
+
+  public static async getLeadById(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const lead = await SalesService.getLeadById(id);
+      if (!lead) {
+        return res.status(404).json({ message: 'Sales Lead not found' });
+      }
+      res.json({ lead });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to fetch sales lead' });
     }
   }
 
@@ -31,6 +45,19 @@ export class SalesController {
       res.json({ stats });
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to fetch sales manager stats' });
+    }
+  }
+
+  public static async getAgentStats(req: Request, res: Response) {
+    try {
+      const salesAgentId = (req.query.salesAgentId as string) || (req as any).user?.id;
+      if (!salesAgentId) {
+        return res.status(400).json({ message: 'salesAgentId is required' });
+      }
+      const stats = await SalesService.getAgentStats(salesAgentId);
+      res.json({ stats });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to fetch sales agent stats' });
     }
   }
 
@@ -60,6 +87,39 @@ export class SalesController {
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to execute auto round robin' });
+    }
+  }
+
+  public static async dispatchToFiling(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = (req as any).user?.id || 'SYSTEM';
+      const result = await SalesService.dispatchToFiling(id, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to dispatch to filing' });
+    }
+  }
+
+  public static async recordPayment(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = (req as any).user?.id || 'SYSTEM';
+      const result = await SalesService.recordPayment(id, req.body, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to record payment' });
+    }
+  }
+
+  public static async recordEsign(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = (req as any).user?.id || 'SYSTEM';
+      const result = await SalesService.recordEsign(id, req.body, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to record Form 8879 authorization' });
     }
   }
 }

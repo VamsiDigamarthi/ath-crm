@@ -2,6 +2,7 @@ import React from 'react';
 import { Calculator, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppEmptyState } from '@/shared/components/AppEmptyState';
+import { PrepStageBadge } from '../common/PrepStageBadge';
 import type { PrepReviewLead } from '../../types/prep-review.types';
 
 interface PreparerQueueTableProps {
@@ -68,33 +69,6 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
               const slaTime = (item as any).targetDueDate 
                 ? new Date((item as any).targetDueDate).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : item.dueByDate || 'Standard 24h SLA';
-
-              // Format Stage Label & Color
-              let stageBadge = {
-                label: 'Drafting 1040',
-                color: 'bg-blue-50 text-blue-700 border-blue-200',
-                dot: 'bg-blue-600',
-              };
-
-              if (item.currentStage === 'QA_IN_REVIEW') {
-                stageBadge = {
-                  label: 'In QA Review',
-                  color: 'bg-purple-50 text-purple-700 border-purple-200',
-                  dot: 'bg-purple-600',
-                };
-              } else if (item.currentStage === 'QA_REVISION_REQUESTED') {
-                stageBadge = {
-                  label: 'Revision Requested',
-                  color: 'bg-rose-50 text-rose-700 border-rose-200',
-                  dot: 'bg-rose-600',
-                };
-              } else if (item.currentStage === 'QA_APPROVED' || item.currentStage === 'SALES_PITCH_QUEUE') {
-                stageBadge = {
-                  label: 'QA Approved',
-                  color: 'bg-emerald-50 text-[#16A34A] border-emerald-200',
-                  dot: 'bg-[#16A34A]',
-                };
-              }
 
               return (
                 <tr key={item.id || item.applicationId} className="hover:bg-slate-50/70 transition-colors">
@@ -165,10 +139,11 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
 
                   {/* Lifecycle Stage */}
                   <td className="py-3.5 px-4 text-center">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${stageBadge.color}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${stageBadge.dot} animate-pulse`} />
-                      <span>{stageBadge.label}</span>
-                    </span>
+                    <PrepStageBadge 
+                      stage={item.currentStage} 
+                      assignedCloserName={item.assignedSalesAgent?.name}
+                      assignedFileOpName={item.assignedFileOp?.name}
+                    />
                   </td>
 
                   {/* Action */}

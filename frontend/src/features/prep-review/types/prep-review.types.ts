@@ -22,9 +22,10 @@ export interface PrepReviewLead {
   maritalStatus: string;
   stateOfResidence: string;
   complexity: ReturnComplexity;
-  currentStage: PrepReviewStage;
+  currentStage: string;
+  prepStage?: PrepReviewStage;
   
-  // Assigned Staff
+  // Assigned Staff Across Entire Lifecycle
   assignedDocAgent?: {
     id: string;
     name: string;
@@ -40,11 +41,26 @@ export interface PrepReviewLead {
     name: string;
     email: string;
   } | null;
+  assignedSalesAgent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  assignedFileOp?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
 
   // Documents & Intake Status
   documentsCount: number;
   verifiedDocumentsCount: number;
   organizerPercent: number;
+  
+  // Tax Draft Summary
+  taxDraftSummary?: any;
+  targetDueDate?: string | null;
+  prepNotes?: string;
   
   // Financial Snapshot
   estimatedWages: number;

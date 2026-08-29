@@ -37,13 +37,28 @@ export function AppSearchInput({
 }: AppSearchInputProps) {
   const [local, setLocal] = useState(value)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => { setLocal(value) }, [value])
+  const onChangeRef = useRef(onChange)
 
   useEffect(() => {
-    const t = setTimeout(() => { onChange(local) }, debounceMs)
+    onChangeRef.current = onChange
+  }, [onChange])
+
+  useEffect(() => {
+    setLocal(value)
+  }, [value])
+
+  const isFirstMount = useRef(true)
+
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false
+      return
+    }
+    const t = setTimeout(() => {
+      onChangeRef.current(local)
+    }, debounceMs)
     return () => clearTimeout(t)
-  }, [local, onChange, debounceMs])
+  }, [local, debounceMs])
 
   useEffect(() => {
     if (!enableShortcut) return
@@ -57,23 +72,21 @@ export function AppSearchInput({
     return () => window.removeEventListener('keydown', onKey)
   }, [enableShortcut])
 
-  const clear = () => { setLocal(''); onChange(''); inputRef.current?.focus() }
+  const clear = () => {
+    setLocal('')
+    onChangeRef.current('')
+    inputRef.current?.focus()
+  }
 
   return (
-    <div className={cn('w-full flex flex-col gap-1', className)}>
+    <div className={cn('relative flex flex-col gap-1', className)}>
       {label && (
-        <label className={cn('tracking-tight', LABEL_SIZE[labelSize])} style={labelColor ? { color: labelColor } : undefined}>
+        <label className={cn(LABEL_SIZE[labelSize], labelColor || 'text-gray-700')}>
           {label}
         </label>
       )}
-
-      <div className="relative w-full">
-        <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none z-10">
-          {isLoading
-            ? <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />
-            : <Search className="w-3.5 h-3.5 stroke-[1.8]" />}
-        </div>
-
+      <div className="relative flex items-center">
+        <Search className="absolute left-3 w-4 h-4 text-gray-400 pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
@@ -81,28 +94,30 @@ export function AppSearchInput({
           onChange={(e) => setLocal(e.target.value)}
           placeholder={placeholder}
           className={cn(
-            'h-10 w-full pl-10 pr-11 bg-white border-[1.5px] rounded-xl text-xs text-gray-900',
-            'placeholder-gray-400 transition-all duration-200 outline-none',
-            'hover:border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15',
-            error && 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/15',
-            !error && 'border-gray-200',
+            'w-full pl-9 pr-14 py-2 text-xs rounded-xl border bg-white text-gray-900 placeholder:text-gray-400 font-medium',
+            'border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all',
+            error && 'border-rose-400 focus:ring-rose-200'
           )}
         />
-
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3 z-10">
-          {local ? (
-            <button type="button" onClick={clear} className="p-1 hover:bg-gray-100 text-gray-400 hover:text-gray-600 rounded-full transition-colors cursor-pointer">
-              <X className="w-3 h-3" />
+        <div className="absolute right-2.5 flex items-center gap-1">
+          {isLoading && <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin" />}
+          {local && !isLoading && (
+            <button
+              type="button"
+              onClick={clear}
+              className="text-gray-400 hover:text-gray-600 p-0.5 rounded cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
             </button>
-          ) : enableShortcut ? (
-            <kbd className="hidden sm:inline-flex h-4 select-none items-center rounded border border-gray-200 bg-gray-50 px-1 font-mono text-[9px] font-bold text-gray-400 shadow-sm">
+          )}
+          {enableShortcut && !local && !isLoading && (
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-gray-400 bg-gray-100 border border-gray-200 rounded">
               /
             </kbd>
-          ) : null}
+          )}
         </div>
       </div>
-
-      {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
+      {error && <span className="text-[11px] text-rose-500 font-medium">{error}</span>}
     </div>
   )
 }

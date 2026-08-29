@@ -1,32 +1,19 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
 import { PhoneCall, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { SalesAgentStatsCards } from '../components/agent/SalesAgentStatsCards';
 import { SalesAgentQueueTable } from '../components/agent/SalesAgentQueueTable';
-import { INITIAL_AGENT_STATS, INITIAL_SALES_LEADS } from '../constants/sales-mock-data';
-import type { SalesLeadItem } from '../types/sales.types';
-import toast from 'react-hot-toast';
+import { useSalesAgentQueue } from '../hooks/useSalesAgentQueue';
 
 export const SalesAgentQueueScreen: React.FC = () => {
-  const navigate = useNavigate();
-  const [stats] = useState(INITIAL_AGENT_STATS);
-  const [leads] = useState<SalesLeadItem[]>(INITIAL_SALES_LEADS);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success('Pitch queue refreshed');
-    }, 400);
-  };
-
-  const handleOpenNextPriority = () => {
-    if (leads.length > 0) {
-      navigate(`/sales/agent/pitch/${leads[0].id}`);
-    }
-  };
+  const {
+    isLoading,
+    isRefreshing,
+    allLeads,
+    stats,
+    handleRefresh,
+    handleOpenNextPriority,
+  } = useSalesAgentQueue();
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -56,7 +43,7 @@ export const SalesAgentQueueScreen: React.FC = () => {
           <Button
             size="sm"
             onClick={handleOpenNextPriority}
-            disabled={leads.length === 0}
+            disabled={allLeads.length === 0}
             className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <PhoneCall className="w-3.5 h-3.5" />
@@ -69,7 +56,7 @@ export const SalesAgentQueueScreen: React.FC = () => {
       <SalesAgentStatsCards stats={stats} />
 
       {/* 3. My Active Queue Table */}
-      <SalesAgentQueueTable leads={leads} />
+      <SalesAgentQueueTable leads={allLeads} isLoading={isLoading} />
     </div>
   );
 };

@@ -119,13 +119,17 @@ export class PrepReviewService {
     const skip = (page - 1) * limit;
 
     const baseWhere: any = {
-      currentStage: {
-        in: [
-          ApplicationStage.DOC_PREP,
-          ApplicationStage.CORRECTION_NEEDED,
-          ApplicationStage.SALES_PITCH_QUEUE,
-        ],
-      },
+      OR: [
+        { assignedPrepAgentId: { not: null } },
+        { assignedReviewAgentId: { not: null } },
+        { currentStage: ApplicationStage.DOC_PREP },
+        { currentStage: ApplicationStage.CORRECTION_NEEDED },
+        { currentStage: ApplicationStage.SALES_PITCH_QUEUE },
+        { currentStage: ApplicationStage.SALES_PITCHING },
+        { currentStage: ApplicationStage.FILING_QUEUE },
+        { currentStage: ApplicationStage.FILING_IN_PROGRESS },
+        { currentStage: ApplicationStage.FILING_SUCCESS },
+      ],
     };
 
     // Filter by preparerId or reviewerId or staffId
@@ -156,7 +160,16 @@ export class PrepReviewService {
     // Helper to determine exact real lifecycle stage based on workflow actions
     const determineStage = (app: any): 'DOC_PREP_COMPLETE' | 'PREP_IN_PROGRESS' | 'QA_IN_REVIEW' | 'QA_REVISION_REQUESTED' | 'QA_APPROVED' => {
       const draftStatus = (app.taxDraftSummary as any)?.status;
-      if (app.currentStage === ApplicationStage.SALES_PITCH_QUEUE || draftStatus === 'QA_APPROVED') {
+      if (
+        app.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
+        app.currentStage === ApplicationStage.SALES_PITCHING ||
+        app.currentStage === ApplicationStage.FILING_QUEUE ||
+        app.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+        app.currentStage === ApplicationStage.FILING_SUCCESS ||
+        draftStatus === 'QA_APPROVED' ||
+        Boolean((app.taxDraftSummary as any)?.qaApprovedByUserId) ||
+        Boolean((app.taxDraftSummary as any)?.qaApprovedAt)
+      ) {
         return 'QA_APPROVED';
       }
       if (draftStatus === 'SUBMITTED_FOR_QA') {
@@ -184,6 +197,12 @@ export class PrepReviewService {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
         assignedReviewAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedSalesAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedFileOp: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
       },
@@ -223,7 +242,10 @@ export class PrepReviewService {
 
     const mappedLeads = paginatedApps.map((app, idx) => {
       const profile = app.customer;
-      const taxpayerName = `${profile?.firstName || 'Taxpayer'} ${profile?.lastName || ''}`.trim();
+      const taxpayerName = profile
+        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || `Taxpayer #${idx + 1}`
+        : `Taxpayer #${idx + 1}`;
+
       const stage = determineStage(app);
 
       // Compute Complexity Dynamically from DB Documents & Category
@@ -253,7 +275,8 @@ export class PrepReviewService {
         maritalStatus: profile?.maritalStatus || 'Single',
         stateOfResidence,
         complexity,
-        currentStage: stage,
+        currentStage: app.currentStage,
+        prepStage: stage,
         assignedDocAgent: app.assignedDocAgent ? {
           id: app.assignedDocAgent.id,
           name: `${app.assignedDocAgent.firstName || ''} ${app.assignedDocAgent.lastName || ''}`.trim() || app.assignedDocAgent.email || 'Doc Agent',
@@ -268,6 +291,16 @@ export class PrepReviewService {
           id: app.assignedReviewAgent.id,
           name: `${app.assignedReviewAgent.firstName || ''} ${app.assignedReviewAgent.lastName || ''}`.trim() || app.assignedReviewAgent.email || 'Reviewer',
           email: app.assignedReviewAgent.email || '',
+        } : null,
+        assignedSalesAgent: app.assignedSalesAgent ? {
+          id: app.assignedSalesAgent.id,
+          name: `${app.assignedSalesAgent.firstName || ''} ${app.assignedSalesAgent.lastName || ''}`.trim() || app.assignedSalesAgent.email || 'Sales Closer',
+          email: app.assignedSalesAgent.email || '',
+        } : null,
+        assignedFileOp: app.assignedFileOp ? {
+          id: app.assignedFileOp.id,
+          name: `${app.assignedFileOp.firstName || ''} ${app.assignedFileOp.lastName || ''}`.trim() || app.assignedFileOp.email || 'File Operator',
+          email: app.assignedFileOp.email || '',
         } : null,
         documentsCount: app.documents?.length || 0,
         verifiedDocumentsCount: app.documents?.filter((d) => d.verificationStatus === 'VERIFIED').length || 0,

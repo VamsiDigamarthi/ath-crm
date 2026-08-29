@@ -155,4 +155,14 @@
   - A single staff member can hold multiple operational roles (e.g. `DOC_PREPARER` and `DOC_REVIEWER`).
   - **4-Eyes Guardrail**: The system strictly prevents a staff member from reviewing or approving a tax return that they personally prepared.
 
+## 23. Universal Cross-Department Historical Visibility & Non-Disappearing Records
+- **Universal Visibility Mandate**: When a tax application moves forward along the departmental pipeline (`DOC_OUTREACH` $\rightarrow$ `DOC_PREP` $\rightarrow$ `QA_IN_REVIEW` $\rightarrow$ `QA_APPROVED` $\rightarrow$ `SALES_PITCHING` $\rightarrow$ `PAYMENT_PENDING` $\rightarrow$ `FILING_QUEUE` $\rightarrow$ `FILING_SUCCESS`):
+  - **Zero Disappearance**: The lead **MUST NEVER** disappear from any previous department or assigned employee's queue, dashboard, or historical list.
+  - **Preparer Visibility**: Every Tax Preparer must always see all returns they worked on in `Completed / QA Approved` and `All My Cases`, even after moving to Sales or Filing.
+  - **Reviewer Visibility**: Every Senior QA Reviewer must always see all returns they audited/signed-off in `Passed QA (Signed Off)` and `All In Review`, even after moving to Sales or Filing.
+  - **Sales Closer Visibility**: Every Sales Closer must always see all deals they closed in `Paid & E-Signed` and `In Filing`.
+  - **Live Global Stage & History**: All lower department screens must display the live current stage (e.g. `"In Sales Pitch"`, `"Ready for Filing"`, etc.) along with the audit trail.
+- **Backend Query Standard**: Backend service queries must never restrict listings by narrow stage enums that exclude advanced applications; always retain relational linkage (`assignedPrepAgentId`, `assignedReviewAgentId`, `assignedSalesAgentId`, `assignedDocAgentId`).
+
+
 

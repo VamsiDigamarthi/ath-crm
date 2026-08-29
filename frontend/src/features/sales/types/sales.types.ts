@@ -7,6 +7,8 @@ export type SalesLeadStage =
   | 'PAYMENT_PENDING'       // Client agreed, awaiting card swipe/link payment
   | 'PAID_AND_AUTHORIZED'   // Payment verified & Form 8879 E-Signed
   | 'FILING_QUEUE'          // Transferred to Filing Operations
+  | 'FILING_IN_PROGRESS'    // Filing currently active
+  | 'FILING_SUCCESS'        // Successfully accepted by IRS
   | 'PITCH_REJECTED';       // Client declined / dropped
 
 export interface SalesFeeBreakdown {
@@ -19,6 +21,7 @@ export interface SalesFeeBreakdown {
   discountAmount: number;
   discountCode: string;
   totalServiceFee: number;
+  isQuoted?: boolean;
 }
 
 export interface SalesLeadItem extends Record<string, unknown> {
@@ -45,12 +48,43 @@ export interface SalesLeadItem extends Record<string, unknown> {
   qaApprovedAt: string;
 
   // Assignment & Sales Info
+  assignedPrepAgent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   assignedSalesAgent?: {
     id: string;
     name: string;
     email: string;
     avatar?: string;
   } | null;
+
+  // Complete Form 1040 Tax Calculation Draft from Preparer & QA Reviewer
+  taxDraftSummary?: {
+    w2Wages?: number;
+    taxableInterest?: number;
+    capitalGains?: number;
+    otherIncome?: number;
+    grossIncome?: number;
+    deductionType?: 'STANDARD' | 'ITEMIZED';
+    standardDeduction?: number;
+    effectiveDeduction?: number;
+    taxableIncome?: number;
+    taxLiability?: number;
+    taxCredits?: number;
+    fedWithheld?: number;
+    federalRefund?: number;
+    federalBalanceDue?: number;
+    stateTaxLiability?: number;
+    stateWithheld?: number;
+    stateRefund?: number;
+    stateBalanceDue?: number;
+    combinedRefund?: number;
+    preparerNotes?: string;
+    auditorRemarks?: string;
+    targetDueDate?: string;
+  };
 
   // Pricing & Payment Status
   feeBreakdown: SalesFeeBreakdown;

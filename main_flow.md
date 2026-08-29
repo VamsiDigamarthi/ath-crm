@@ -98,6 +98,28 @@ graph TD
     
     K -->|Assigned to File Operator / CPA| L[Stage: FILING_IN_PROGRESS]
     L -->|IRS / Authority E-Filing| M{Filing Status}
+    M -->|Rejected by IRS| N[Stage: FILING_REJECTED<br/>Routed back to File Op]
+    M -->|Accepted / Success| O[Stage: FILING_SUCCESS<br/>Customer Profile marked isConverted=TRUE]
+
+---
+
+## 3.1 🌟 Mandatory Universal Rule: Cross-Department Historical Visibility & Non-Disappearing Records
+
+> ### 🚨 THE GOLDEN PLATFORM RULE: LEADS NEVER DISAPPEAR FROM PREVIOUS STAGES OR STAFF CASELOADS
+> Whenever a Tax Application advances forward through the pipeline (e.g. `DOC_OUTREACH` $\rightarrow$ `DOC_PREP` $\rightarrow$ `QA_IN_REVIEW` $\rightarrow$ `QA_APPROVED` $\rightarrow$ `SALES_PITCHING` $\rightarrow$ `PAYMENT_PENDING` $\rightarrow$ `FILING_QUEUE` $\rightarrow$ `FILING_SUCCESS`):
+>
+> 1. **Zero Disappearance Across Stages**:
+>    - When a lead moves to a subsequent department (e.g. from Prep/Review to Sales, or from Sales to Filing), it **MUST NEVER** disappear from the previous department’s or assigned employee’s queue/dashboard/history.
+> 2. **Staff Historical Caseload Preservation**:
+>    - **Documenter Agents & Managers (`DOC_*`)**: Retain full visibility of all leads they worked on in `All`, `In Prep`, `In Sales`, and `Completed`.
+>    - **Tax Preparers (`TAX_PREPARER`)**: Retain full visibility of all Form 1040 drafts they prepared in `Completed / QA Approved` and `All My Cases`, even after moving to Sales or Filing.
+>    - **Senior QA Reviewers (`TAX_REVIEWER`)**: Retain full visibility of all returns they audited & signed off in `Passed QA (Signed Off)` and `All In Review`, even after moving to Sales or Filing.
+>    - **Sales Closers & Managers (`SALES_*`)**: Retain full visibility of all pitched, quoted, and closed/paid deals in `Paid & E-Signed`, `In Filing`, and `All Pipeline Returns`.
+>    - **Filing Operators & Managers (`FILE_OP_*`)**: Retain full visibility of all transmitted, accepted, and completed IRS e-filings.
+> 3. **Live Status Transparency**:
+>    - Every lower/previous department screen must display the **current live global status** (e.g., `"In Sales Pitch (Preeti Verma)"`, `"Fee Paid & E-Signed"`, `"Transferred to IRS E-Filing"`) along with the full timestamped Stage History trail.
+> 4. **Backend Query Standard**:
+>    - Never use restrictive `currentStage: { in: [...] }` queries that drop records when they advance beyond the department. Always query by assignment relation (`assignedDocAgentId`, `assignedPrepAgentId`, `assignedReviewAgentId`, `assignedSalesAgentId`, `assignedFileOpId`) combined with state predicates so that historical records are perpetually accessible.
     M -->|Failed / Rejected| N[Stage: FILING_FAILED<br/>Notes added, routed to Sales/Doc]
     M -->|Accepted / Success| O[Stage: FILING_SUCCESS<br/>CustomerProfile.is_converted_customer = TRUE<br/>Permanent Converted Customer!]
     

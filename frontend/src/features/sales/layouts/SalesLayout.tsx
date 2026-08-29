@@ -11,6 +11,7 @@ import {
   Users,
   LogOut,
 } from 'lucide-react';
+import { salesService } from '../services/sales-service';
 import toast from 'react-hot-toast';
 
 export const SalesLayout: React.FC = () => {
@@ -30,16 +31,41 @@ export const SalesLayout: React.FC = () => {
 
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
 
+  const [queueBadgeCount, setQueueBadgeCount] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    async function loadBadge() {
+      try {
+        const res = await salesService.getPipelineLeads({ limit: 100 });
+        const all = res.leads || [];
+        if (isManager) {
+          setQueueBadgeCount(all.length);
+        } else {
+          const myId = user?.id;
+          const myEmail = user?.email?.toLowerCase().trim();
+          const myLeads = all.filter((l) => {
+            if (!l.assignedSalesAgent) return false;
+            return l.assignedSalesAgent.id === myId || l.assignedSalesAgent.email?.toLowerCase().trim() === myEmail;
+          });
+          setQueueBadgeCount(myLeads.length);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadBadge();
+  }, [isManager, user?.id, user?.email]);
+
   // Role-specific Navigation Items (Matching PrepReview and Documenter standard)
   const navItems = isManager
     ? [
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/sales/manager' },
-        { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: '4', path: '/sales/manager/queue' },
-        { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', badge: '3', path: '/sales/manager/team' },
+        { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/manager/queue' },
+        { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/sales/manager/team' },
       ]
     : [
         { id: 'agent_hub', label: 'Closer Hub', icon: LayoutDashboard, section: 'Closer Workspace', path: '/sales/agent' },
-        { id: 'pitch_queue', label: 'Pitch Queue', icon: PhoneCall, section: 'Active Operations', badge: '4', path: '/sales/agent/queue' },
+        { id: 'pitch_queue', label: 'Pitch Queue', icon: PhoneCall, section: 'Active Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/agent/queue' },
       ];
 
   const currentPath = location.pathname;

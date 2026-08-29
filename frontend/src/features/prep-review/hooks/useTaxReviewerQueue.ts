@@ -47,6 +47,36 @@ export function useTaxReviewerQueue() {
     fetchReviewerLeads();
   }, [fetchReviewerLeads]);
 
+  // Helper to check if a return has passed QA / signed off
+  const isReturnSignedOff = (lead: PrepReviewLead) => {
+    return (
+      lead.prepStage === 'QA_APPROVED' ||
+      lead.taxDraftSummary?.status === 'QA_APPROVED' ||
+      Boolean(lead.taxDraftSummary?.qaApprovedByUserId) ||
+      Boolean(lead.taxDraftSummary?.qaApprovedAt) ||
+      [
+        'QA_APPROVED',
+        'SALES_PITCH_QUEUE',
+        'SALES_PITCHING',
+        'QUOTATION_SENT',
+        'PAYMENT_PENDING',
+        'PAID_AND_AUTHORIZED',
+        'FILING_QUEUE',
+        'FILING_IN_PROGRESS',
+        'FILING_SUCCESS',
+      ].includes(lead.currentStage)
+    );
+  };
+
+  const isReturnRevision = (lead: PrepReviewLead) => {
+    return (
+      lead.prepStage === 'QA_REVISION_REQUESTED' ||
+      lead.currentStage === 'QA_REVISION_REQUESTED' ||
+      lead.currentStage === 'CORRECTION_NEEDED' ||
+      lead.taxDraftSummary?.status === 'REVISION_REQUESTED'
+    );
+  };
+
   // Compute live tab counts based on actual database stage
   const counts = useMemo(() => {
     let pending = 0;
@@ -54,9 +84,13 @@ export function useTaxReviewerQueue() {
     let signedOff = 0;
 
     allLeads.forEach((lead) => {
-      if (lead.currentStage === 'QA_IN_REVIEW' || lead.currentStage === 'QA_REVIEW_QUEUE') pending++;
-      else if (lead.currentStage === 'QA_REVISION_REQUESTED') revisions++;
-      else if (lead.currentStage === 'QA_APPROVED' || lead.currentStage === 'SALES_PITCH_QUEUE') signedOff++;
+      if (isReturnRevision(lead)) {
+        revisions++;
+      } else if (isReturnSignedOff(lead)) {
+        signedOff++;
+      } else {
+        pending++;
+      }
     });
 
     return {
@@ -83,9 +117,13 @@ export function useTaxReviewerQueue() {
   // Filtered QA returns based on tab and search
   const filteredReturns = useMemo(() => {
     return allLeads.filter((item) => {
-      if (activeTab === 'PENDING' && item.currentStage !== 'QA_IN_REVIEW' && item.currentStage !== 'QA_REVIEW_QUEUE') return false;
-      if (activeTab === 'REVISIONS' && item.currentStage !== 'QA_REVISION_REQUESTED') return false;
-      if (activeTab === 'APPROVED' && item.currentStage !== 'QA_APPROVED' && item.currentStage !== 'SALES_PITCH_QUEUE') return false;
+      const signedOff = isReturnSignedOff(item);
+      const revision = isReturnRevision(item);
+      const pending = !signedOff && !revision;
+
+      if (activeTab === 'PENDING' && !pending) return false;
+      if (activeTab === 'REVISIONS' && !revision) return false;
+      if (activeTab === 'APPROVED' && !signedOff) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
