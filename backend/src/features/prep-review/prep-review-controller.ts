@@ -31,19 +31,19 @@ export const getPrepReviewDashboardStats = async (req: Request, res: Response) =
 };
 
 export const getPrepReviewWorkspaceDetails = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const data = await PrepReviewService.getWorkspaceDetails(id);
   return SuccessHandler.handle(res, 'Workspace details retrieved successfully', data, 200);
 };
 
 export const savePrepReviewWorkspaceDraft = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const data = await PrepReviewService.saveWorkspaceDraft(id, req.body);
   return SuccessHandler.handle(res, 'Form 1040 draft saved successfully', data, 200);
 };
 
 export const submitPrepReviewWorkspaceToQA = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const userId = req.currentUser?.id || 'SYSTEM';
   const data = await PrepReviewService.submitWorkspaceToQA(id, req.body, userId);
   return SuccessHandler.handle(res, 'Form 1040 submitted for QA review successfully', data, 200);
@@ -51,7 +51,7 @@ export const submitPrepReviewWorkspaceToQA = async (req: Request, res: Response)
 
 export const viewPrepReviewDocument = async (req: Request, res: Response, next: any) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const downloadInfo = await PrepReviewService.getDocumentDownloadInfo(id);
 
     res.setHeader('Content-Type', downloadInfo.mimeType);
@@ -64,7 +64,7 @@ export const viewPrepReviewDocument = async (req: Request, res: Response, next: 
 
 export const downloadPrepReviewDocument = async (req: Request, res: Response, next: any) => {
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const downloadInfo = await PrepReviewService.getDocumentDownloadInfo(id);
     return res.download(downloadInfo.absolutePath, downloadInfo.fileName);
   } catch (error) {
@@ -73,7 +73,7 @@ export const downloadPrepReviewDocument = async (req: Request, res: Response, ne
 };
 
 export const signOffPrepReviewQAReturn = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const { remarks } = req.body;
   const userId = req.currentUser?.id || 'SYSTEM';
   const data = await PrepReviewService.signOffQAReturn(id, remarks, userId);
@@ -81,7 +81,7 @@ export const signOffPrepReviewQAReturn = async (req: Request, res: Response) => 
 };
 
 export const requestRevisionPrepReviewQAReturn = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const { discrepancyCategory, revisionNotes } = req.body;
   const userId = req.currentUser?.id || 'SYSTEM';
   const data = await PrepReviewService.requestRevisionQAReturn(id, { discrepancyCategory, revisionNotes }, userId);

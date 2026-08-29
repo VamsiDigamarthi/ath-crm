@@ -575,11 +575,11 @@ export class PrepReviewService {
         email: app.assignedPrepAgent.email,
         role: 'Tax Preparer',
       } : null,
-      documents: (app.documents || []).map((doc) => ({
+      documents: (app.documents || []).map((doc: any) => ({
         id: doc.id,
         fileName: doc.fileName,
-        fileUrl: doc.fileUrl,
-        fileType: doc.fileType,
+        fileUrl: doc.fileUrl || doc.filePath,
+        fileType: doc.fileType || doc.fileName?.split('.').pop() || 'pdf',
         category: doc.documentCategory || 'W-2',
         verificationStatus: doc.verificationStatus,
         uploadedAt: doc.createdAt,
@@ -690,7 +690,7 @@ export class PrepReviewService {
     return {
       absolutePath,
       fileName: doc.fileName,
-      mimeType: doc.fileType || 'application/octet-stream',
+      mimeType: (doc as any).fileType || 'application/pdf',
     };
   }
 
@@ -710,8 +710,8 @@ export class PrepReviewService {
       ...(app.taxDraftSummary as any || {}),
       status: 'QA_APPROVED',
       qaApprovedAt: new Date().toISOString(),
-      qaAuditorRemarks: remarks,
       qaApprovedByUserId: userId,
+      qaRemarks: remarks,
     };
 
     const updated = await prisma.taxApplication.update({
@@ -728,8 +728,8 @@ export class PrepReviewService {
           applicationId: app.id,
           fromStage: app.currentStage,
           toStage: ApplicationStage.SALES_PITCH_QUEUE,
-          changedByUserId: userId,
-          reason: `4-Eyes QA Compliance Sign-Off Approved: ${remarks}`,
+          movedByUserId: userId,
+          remarks: `4-Eyes QA Compliance Sign-Off Approved: ${remarks}`,
         },
       });
     } catch {
@@ -782,8 +782,8 @@ export class PrepReviewService {
           applicationId: app.id,
           fromStage: app.currentStage,
           toStage: ApplicationStage.CORRECTION_NEEDED,
-          changedByUserId: userId,
-          reason: `QA Audit Discrepancy Flagged [${payload.discrepancyCategory}]: ${payload.revisionNotes}`,
+          movedByUserId: userId,
+          remarks: `QA Audit Discrepancy Flagged [${payload.discrepancyCategory}]: ${payload.revisionNotes}`,
         },
       });
     } catch {

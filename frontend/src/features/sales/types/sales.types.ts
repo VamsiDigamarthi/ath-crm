@@ -21,7 +21,7 @@ export interface SalesFeeBreakdown {
   totalServiceFee: number;
 }
 
-export interface SalesLeadItem {
+export interface SalesLeadItem extends Record<string, unknown> {
   id: string;
   applicationId: string;
   taxpayerId: string;
@@ -70,6 +70,7 @@ export interface SalesRepItem {
   id: string;
   name: string;
   email: string;
+  role?: string;
   avatar?: string;
   activeLeads: number;
   pitchesCompletedToday: number;
