@@ -35,6 +35,13 @@ import { SalesAgentQueueScreen } from '@/features/sales/screens/SalesAgentQueueS
 import { SalesPitchWorkspaceScreen } from '@/features/sales/screens/SalesPitchWorkspaceScreen';
 import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
+import { FilingLayout } from '@/features/filing/layouts/FilingLayout';
+import { FilingManagerDashboardScreen } from '@/features/filing/screens/FilingManagerDashboardScreen';
+import { FilingManagerQueueScreen } from '@/features/filing/screens/FilingManagerQueueScreen';
+import { FilingStaffScorecardsScreen } from '@/features/filing/screens/FilingStaffScorecardsScreen';
+import { FilingSpecialistDashboardScreen } from '@/features/filing/screens/FilingSpecialistDashboardScreen';
+import { FilingSpecialistQueueScreen } from '@/features/filing/screens/FilingSpecialistQueueScreen';
+import { FilingTransmissionWorkspaceScreen } from '@/features/filing/screens/FilingTransmissionWorkspaceScreen';
 import { AdminSettingsScreen } from '@/features/admin/screens/AdminSettingsScreen';
 import { CustomerLayout } from '@/features/customer/layouts/CustomerLayout';
 import { CustomerDashboardScreen } from '@/features/customer/screens/CustomerDashboardScreen';
@@ -269,6 +276,57 @@ export const router = createBrowserRouter([
           {
             path: 'pitch/:id',
             element: <SalesPitchWorkspaceScreen />,
+          },
+        ],
+      },
+    ],
+  },
+
+  // 4d. IRS Modernized e-File (MeF) Department Portal (/filing/*)
+  {
+    element: (
+      <ProtectedRoute
+        allowedRoles={['ADMIN', 'FILE_OP_MANAGER', 'FILE_OP_TEAM_LEAD', 'FILE_OP_AGENT', 'SALES_MANAGER', 'PREP_MANAGER', 'DOC_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER', 'SALES_CLOSER', 'SALES_AGENT', 'DOC_AGENT']}
+      />
+    ),
+    children: [
+      {
+        path: '/filing',
+        element: <FilingLayout />,
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/filing/manager/queue" replace />,
+          },
+          // Manager Routes
+          {
+            path: 'manager',
+            element: <FilingManagerDashboardScreen />,
+          },
+          {
+            path: 'manager/queue',
+            element: <FilingManagerQueueScreen />,
+          },
+          {
+            path: 'manager/staff',
+            element: <FilingStaffScorecardsScreen />,
+          },
+          // Specialist Routes
+          {
+            path: 'agent',
+            element: <FilingSpecialistDashboardScreen />,
+          },
+          {
+            path: 'agent/queue',
+            element: <FilingSpecialistQueueScreen />,
+          },
+          {
+            path: 'queue',
+            element: <FilingSpecialistQueueScreen />,
+          },
+          {
+            path: 'workspace/:id',
+            element: <FilingTransmissionWorkspaceScreen />,
           },
         ],
       },

@@ -7,6 +7,7 @@ import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesFeeBreakdown } from '../types/sales.types';
+import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
 
 export const SalesPitchWorkspaceScreen: React.FC = () => {
@@ -111,11 +112,22 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
     }
   };
 
-  const handleEsignSuccess = async (meta?: { fileName?: string; method?: string; pin?: string }) => {
+  const handleEsignSuccess = async (meta?: { file?: File; fileName?: string; method?: string; pin?: string }) => {
     if (!lead) return;
     const appId = lead.id || lead.applicationId;
 
     try {
+      // 1. Physically upload the file to server storage if provided
+      if (meta?.file) {
+        const formData = new FormData();
+        formData.append('file', meta.file);
+        formData.append('documentCategory', 'FORM_8879');
+        await apiClient.post(`/documenter/leads/${appId}/documents`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
+      // 2. Record E-Sign and PIN in database
       await salesService.recordEsign(appId, {
         esignMethod: meta?.method || 'UPLOAD_PDF',
         fileName: meta?.fileName || `IRS_Form_8879_Signed_${lead.taxpayerName.replace(/\s+/g, '_')}.pdf`,
@@ -127,13 +139,16 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
           ? {
             ...prev,
             esignStatus: 'SIGNED',
+            taxpayerPin: meta?.pin || prev.taxpayerPin,
             esignCompletedAt: new Date().toISOString(),
             currentStage: prev.paymentStatus === 'PAID' ? 'PAID_AND_AUTHORIZED' : 'QUOTATION_SENT',
           }
           : prev
       );
-    } catch {
-      toast.error('E-Sign recorded locally, but failed to sync with database');
+      toast.success(`Form 8879 signed file ${meta?.fileName || ''} saved to vault and authorized with PIN ${meta?.pin || ''}! 📄✅`);
+    } catch (err: any) {
+      console.error('Failed to sync e-sign:', err);
+      toast.error(err?.response?.data?.message || 'E-Sign recorded locally, but failed to sync with database');
     }
   };
 

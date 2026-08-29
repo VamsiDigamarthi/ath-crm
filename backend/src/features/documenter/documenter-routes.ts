@@ -30,6 +30,11 @@ const DOCUMENTER_ROLES = [
   Role.PREP_MANAGER,
   Role.TAX_REVIEWER,
   Role.TAX_PREPARER,
+  Role.SALES_MANAGER,
+  Role.SALES_AGENT,
+  Role.FILE_OP_MANAGER,
+  Role.FILE_OP_TEAM_LEAD,
+  Role.FILE_OP_AGENT,
 ];
 
 // 1. Get paginated leads with tab stats

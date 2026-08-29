@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { loginSchema, otpSchema, type LoginInput, type OtpInput } from '../validations/auth-schema';
 import { useAuthStore } from '../store/auth-store';
+import { getRoleDefaultRoute } from '../utils/auth-redirect';
 import toast from 'react-hot-toast';
 
 export const useLogin = () => {
@@ -29,7 +30,7 @@ export const useLogin = () => {
       await login(data.identifier);
       setIdentifier(data.identifier);
       setIsOtpSent(true);
-      toast.success('OTP sent to your email/phone');
+      toast.success('OTP sent to your email/phone (Use: 123456)');
     } catch (error: any) {
       toast.error(error?.message || 'Failed to send OTP');
     } finally {
@@ -44,27 +45,8 @@ export const useLogin = () => {
       toast.success('Login successful!');
       
       const currentUser = useAuthStore.getState().user;
-      if (currentUser?.role === 'ADMIN') {
-        navigate('/admin/dashboard');
-      } else if (currentUser?.role === 'DOC_MANAGER') {
-        navigate('/documenter/manager');
-      } else if (currentUser?.role === 'DOC_TEAM_LEAD' || currentUser?.role === 'DOC_AGENT') {
-        navigate('/documenter/agent');
-      } else if (currentUser?.role === 'PREP_MANAGER') {
-        navigate('/prep-review/manager');
-      } else if (currentUser?.role === 'TAX_REVIEWER') {
-        navigate('/prep-review/reviewer');
-      } else if (currentUser?.role === 'TAX_PREPARER') {
-        navigate('/prep-review/preparer');
-      } else if (currentUser?.role === 'SALES_MANAGER') {
-        navigate('/sales/manager');
-      } else if (currentUser?.role === 'SALES_CLOSER' || currentUser?.role === 'SALES_AGENT') {
-        navigate('/sales/agent/queue');
-      } else if (currentUser?.role === 'TAXPAYER_USER') {
-        navigate('/customer');
-      } else {
-        navigate('/dashboard');
-      }
+      const targetRoute = getRoleDefaultRoute(currentUser?.role);
+      navigate(targetRoute);
     } catch (error: any) {
       toast.error(error?.message || 'Invalid OTP');
     } finally {

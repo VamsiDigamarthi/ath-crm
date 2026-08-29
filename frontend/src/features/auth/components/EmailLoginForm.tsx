@@ -17,35 +17,37 @@ export const EmailLoginForm: React.FC<EmailLoginFormProps> = ({
   loading,
 }) => {
   return (
-    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-      <AppInput
-        label="Registered Email"
-        labelSize="sm"
-        placeholder="name@company.com"
-        leftIcon={<Mail className="w-4 h-4 text-gray-400" />}
-        size="md"
-        value={loginForm.watch('identifier')}
-        onChange={(e) => loginForm.setValue('identifier', e.target.value, { shouldValidate: true })}
-        error={loginForm.formState.errors.identifier?.message}
-      />
+    <div className="space-y-4">
+      <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+        <AppInput
+          label="Registered Email"
+          labelSize="sm"
+          placeholder="name@company.com"
+          leftIcon={<Mail className="w-4 h-4 text-gray-400" />}
+          size="md"
+          value={loginForm.watch('identifier')}
+          onChange={(e) => loginForm.setValue('identifier', e.target.value, { shouldValidate: true })}
+          error={loginForm.formState.errors.identifier?.message}
+        />
 
-      <Button
-        type="submit"
-        variant="primary"
-        size="md"
-        fullWidth
-        loading={loading}
-        className="mt-1 shadow-md shadow-emerald-600/20 cursor-pointer font-bold"
-      >
-        {loading ? (
-          'Sending One-Time OTP...'
-        ) : (
-          <span className="flex items-center justify-center gap-2">
-            Send One-Time OTP Code
-            <ArrowRight className="w-4 h-4" />
-          </span>
-        )}
-      </Button>
-    </form>
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          fullWidth
+          loading={loading}
+          className="mt-1 shadow-md shadow-emerald-600/20 cursor-pointer font-bold bg-[#16A34A] hover:bg-[#15803D] text-white"
+        >
+          {loading ? (
+            'Sending One-Time OTP...'
+          ) : (
+            <span className="flex items-center justify-center gap-2">
+              Send One-Time OTP Code
+              <ArrowRight className="w-4 h-4" />
+            </span>
+          )}
+        </Button>
+      </form>
+    </div>
   );
 };

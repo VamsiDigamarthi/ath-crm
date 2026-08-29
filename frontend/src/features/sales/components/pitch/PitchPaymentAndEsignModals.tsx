@@ -23,7 +23,7 @@ interface PitchPaymentAndEsignModalsProps {
   onProcessPaymentSuccess: (method: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER') => void;
   isEsignModalOpen: boolean;
   onCloseEsignModal: () => void;
-  onEsignSuccess: (meta?: { fileName?: string; method?: string; pin?: string }) => void;
+  onEsignSuccess: (meta?: { file?: File; fileName?: string; method?: string; pin?: string }) => void;
   onDispatchToFiling?: () => void;
 }
 
@@ -53,8 +53,9 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
   const [callRecordingRef, setCallRecordingRef] = useState(`CALL_REC_${Math.floor(100000 + Math.random() * 900000)}`);
   const [hasEsignConsent, setHasEsignConsent] = useState(false);
 
-  // File Upload State
+  // File Upload State & PIN
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadPin, setUploadPin] = useState<string>(typeof lead.taxpayerPin === 'string' ? lead.taxpayerPin : '84920');
 
   const handleChargeCard = () => {
     setIsProcessingPayment(true);
@@ -79,7 +80,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
     setIsProcessingEsign(true);
     setTimeout(() => {
       setIsProcessingEsign(false);
-      onEsignSuccess({ method: 'EMAIL_LINK' });
+      onEsignSuccess({ method: 'EMAIL_LINK', pin: taxpayerPin });
       onCloseEsignModal();
       toast.success(`Form 8879 E-Sign Link dispatched to ${lead.taxpayerEmail}! Signed audit log recorded in database. ✍️🌟`);
     }, 800);
@@ -90,13 +91,17 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
       toast.error('Please select or drop the signed Form 8879 PDF file');
       return;
     }
+    const finalPin = uploadPin.trim() || taxpayerPin || '84920';
+    if (finalPin.length < 5) {
+      toast.error('Please enter the 5-digit PIN written on the signed Form 8879');
+      return;
+    }
     setIsProcessingEsign(true);
     setTimeout(() => {
       setIsProcessingEsign(false);
-      onEsignSuccess({ fileName: uploadedFile.name, method: 'UPLOAD_PDF' });
+      onEsignSuccess({ file: uploadedFile, fileName: uploadedFile.name, method: 'UPLOAD_PDF', pin: finalPin });
       onCloseEsignModal();
-      toast.success(`Signed document ${uploadedFile.name} successfully verified and recorded in database! 📄✅`);
-    }, 800);
+    }, 400);
   };
 
   const handleConfirmPhonePinEsign = () => {
@@ -412,6 +417,26 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                       </>
                     )}
                   </label>
+                </div>
+
+                {/* 5-Digit PIN Input written on Form 8879 Box 2 */}
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Client 5-Digit IRS PIN (Written on Form 8879 Box 2) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      maxLength={5}
+                      value={uploadPin}
+                      onChange={(e) => setUploadPin(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="e.g. 84920"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono font-bold tracking-widest text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                    />
+                    <span className="text-[10px] text-slate-500 font-medium whitespace-nowrap bg-white px-2 py-1.5 rounded-md border border-slate-200">
+                      IRS MeF Required
+                    </span>
+                  </div>
                 </div>
               </div>
             )}

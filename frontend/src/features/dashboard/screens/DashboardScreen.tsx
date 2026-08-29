@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
+import { getRoleDefaultRoute } from '@/features/auth/utils/auth-redirect';
 import { Button } from '@/shared/components/Button';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
@@ -36,6 +37,15 @@ export const DashboardScreen = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  useEffect(() => {
+    if (user?.role) {
+      const dest = getRoleDefaultRoute(user.role);
+      if (dest && dest !== '/dashboard') {
+        navigate(dest, { replace: true });
+      }
+    }
+  }, [user?.role, navigate]);
 
   const handleLogout = async () => {
     await logout();
