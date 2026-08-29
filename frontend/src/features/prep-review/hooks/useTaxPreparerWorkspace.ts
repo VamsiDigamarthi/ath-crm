@@ -61,6 +61,8 @@ export function useTaxPreparerWorkspace() {
   const [fedWithheld, setFedWithheld] = useState<number>(0);
   const [stateWithheld, setStateWithheld] = useState<number>(0);
   const [preparerNotes, setPreparerNotes] = useState<string>('');
+  const [revisionCategory, setRevisionCategory] = useState<string>('');
+  const [revisionInstructions, setRevisionInstructions] = useState<string>('');
 
   // Standard deduction for 2025: MFJ = 29200, Single = 14600
   const standardDeductionAmount = useMemo(() => {
@@ -94,13 +96,18 @@ export function useTaxPreparerWorkspace() {
         if (draft.taxCredits !== undefined) setTaxCredits(Number(draft.taxCredits) || 0);
         if (draft.fedWithheld !== undefined) setFedWithheld(Number(draft.fedWithheld) || 0);
         if (draft.stateWithheld !== undefined) setStateWithheld(Number(draft.stateWithheld) || 0);
+        if (draft.discrepancyCategory) setRevisionCategory(draft.discrepancyCategory);
+        if (draft.revisionNotes) setRevisionInstructions(draft.revisionNotes);
       } else {
         // Default initial values for new intake
-        setW2Wages(125000);
-        setTaxableInterest(1150);
-        setCapitalGains(4200);
-        setFedWithheld(18450);
-        setStateWithheld(6200);
+        setW2Wages(0);
+        setTaxableInterest(0);
+        setCapitalGains(0);
+        setOtherIncome(0);
+        setFedWithheld(0);
+        setStateWithheld(0);
+        setItemizedDeduction(0);
+        setTaxCredits(0);
       }
 
       if (data.prepNotes) {
@@ -250,6 +257,8 @@ export function useTaxPreparerWorkspace() {
     standardDeductionAmount,
     isSubmittedToQA: currentStage === 'QA_IN_REVIEW' || currentStage === 'QA_APPROVED',
     isRevisionRequested: currentStage === 'QA_REVISION_REQUESTED',
+    revisionCategory,
+    revisionInstructions,
     calculations,
     handleSaveDraft,
     handleSubmitForQA,

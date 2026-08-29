@@ -136,7 +136,17 @@ export class DocumenterService {
         where.currentStage = ApplicationStage.DOC_OUTREACH;
         break;
       case 'PREP':
-        where.currentStage = ApplicationStage.DOC_PREP;
+        where.currentStage = {
+          in: [
+            ApplicationStage.DOC_PREP,
+            ApplicationStage.CORRECTION_NEEDED,
+            ApplicationStage.SALES_PITCH_QUEUE,
+            ApplicationStage.SALES_PITCHING,
+            ApplicationStage.FILING_QUEUE,
+            ApplicationStage.FILING_IN_PROGRESS,
+            ApplicationStage.FILING_SUCCESS,
+          ],
+        };
         break;
       case 'MY_LEADS':
         if (currentUserId) {
@@ -156,13 +166,7 @@ export class DocumenterService {
       case 'ALL':
       default:
         where.currentStage = {
-          in: [
-            ApplicationStage.RAW_PROSPECT,
-            ApplicationStage.DOC_OUTREACH,
-            ApplicationStage.DOC_PREP,
-            ApplicationStage.CORRECTION_NEEDED,
-            ApplicationStage.DROPPED_CANCELLED,
-          ],
+          not: ApplicationStage.DROPPED_CANCELLED,
         };
         break;
     }
@@ -276,7 +280,17 @@ export class DocumenterService {
       }),
       prisma.taxApplication.count({
         where: {
-          currentStage: ApplicationStage.DOC_PREP,
+          currentStage: {
+            in: [
+              ApplicationStage.DOC_PREP,
+              ApplicationStage.CORRECTION_NEEDED,
+              ApplicationStage.SALES_PITCH_QUEUE,
+              ApplicationStage.SALES_PITCHING,
+              ApplicationStage.FILING_QUEUE,
+              ApplicationStage.FILING_IN_PROGRESS,
+              ApplicationStage.FILING_SUCCESS,
+            ],
+          },
           ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { assignedDocAgentId: currentUserId } : {}),
         },
       }),
@@ -513,7 +527,10 @@ export class DocumenterService {
     return agents.map((agent) => {
       const activeLoad = agent.assignedDocApps.length;
       const prepCount = agent.assignedDocApps.filter(
-        (a) => a.currentStage === ApplicationStage.DOC_PREP
+        (a) =>
+          a.currentStage !== ApplicationStage.RAW_PROSPECT &&
+          a.currentStage !== ApplicationStage.DOC_OUTREACH &&
+          a.currentStage !== ApplicationStage.DROPPED_CANCELLED
       ).length;
 
       const dials = agent._count.callLogs;

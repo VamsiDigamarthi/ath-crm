@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, ShieldCheck, RotateCcw } from 'lucide-react';
+import { Calculator, ShieldCheck, CheckCircle2, RotateCcw } from 'lucide-react';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import type { PreparerQueueTab } from '../../hooks/useTaxPreparerQueue';
 
@@ -14,6 +14,7 @@ interface PreparerFilterBarProps {
     all: number;
     drafting: number;
     qaSubmitted: number;
+    qaApproved?: number;
     revisions: number;
   };
 }
@@ -82,6 +83,19 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
 
           <button
             type="button"
+            onClick={() => onTabChange('QA_APPROVED')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'QA_APPROVED'
+                ? 'bg-white text-emerald-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
+            <span>QA Approved ({counts.qaApproved || 0})</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => onTabChange('REVISIONS')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeTab === 'REVISIONS'
@@ -100,13 +114,13 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
         <select
           value={complexityFilter}
           onChange={(e) => onComplexityChange(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white hover:border-slate-300 focus:outline-none cursor-pointer"
+          className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#16A34A]"
         >
           <option value="ALL">Complexity: All Mix</option>
           <option value="STANDARD">Standard W-2</option>
-          <option value="INVESTMENTS_1099B">1099-B Stock Gains</option>
-          <option value="FOREIGN_FBAR">Foreign FBAR / NRE</option>
-          <option value="SCHEDULE_C">Schedule C Business</option>
+          <option value="INVESTMENTS_1099B">1099-B Brokerage/Stocks</option>
+          <option value="FOREIGN_FBAR">Foreign FBAR &amp; FATCA</option>
+          <option value="SCHEDULE_C">Schedule C (Self-Employed)</option>
         </select>
       </div>
     </div>

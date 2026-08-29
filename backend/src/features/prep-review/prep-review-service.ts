@@ -156,14 +156,14 @@ export class PrepReviewService {
     // Helper to determine exact real lifecycle stage based on workflow actions
     const determineStage = (app: any): 'DOC_PREP_COMPLETE' | 'PREP_IN_PROGRESS' | 'QA_IN_REVIEW' | 'QA_REVISION_REQUESTED' | 'QA_APPROVED' => {
       const draftStatus = (app.taxDraftSummary as any)?.status;
-      if (app.currentStage === ApplicationStage.CORRECTION_NEEDED || draftStatus === 'REVISION_REQUESTED') {
-        return 'QA_REVISION_REQUESTED';
-      }
       if (app.currentStage === ApplicationStage.SALES_PITCH_QUEUE || draftStatus === 'QA_APPROVED') {
         return 'QA_APPROVED';
       }
       if (draftStatus === 'SUBMITTED_FOR_QA') {
         return 'QA_IN_REVIEW';
+      }
+      if (draftStatus === 'REVISION_REQUESTED' || app.currentStage === ApplicationStage.CORRECTION_NEEDED) {
+        return 'QA_REVISION_REQUESTED';
       }
       if (app.assignedPrepAgentId) {
         return 'PREP_IN_PROGRESS';
@@ -278,6 +278,10 @@ export class PrepReviewService {
         estimatedWages: (app.taxDraftSummary as any)?.grossIncome || 0,
         estimatedRefund: (app.taxDraftSummary as any)?.federalRefund || 0,
         estimatedBalanceDue: (app.taxDraftSummary as any)?.balanceDue || 0,
+        createdAt: app.createdAt,
+        updatedAt: app.updatedAt,
+        submittedAt: (app.taxDraftSummary as any)?.submittedAt || null,
+        signedOffAt: (app.taxDraftSummary as any)?.signedOffAt || null,
         intakeCompletedAt: app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Today',
         lastUpdated: app.updatedAt ? new Date(app.updatedAt).toLocaleDateString() : 'Just now',
       };
@@ -390,12 +394,12 @@ export class PrepReviewService {
 
     apps.forEach((app) => {
       const draftStatus = (app.taxDraftSummary as any)?.status;
-      if (app.currentStage === ApplicationStage.CORRECTION_NEEDED || draftStatus === 'REVISION_REQUESTED') {
-        revisionsPending++;
-      } else if (app.currentStage === ApplicationStage.SALES_PITCH_QUEUE || draftStatus === 'QA_APPROVED') {
+      if (app.currentStage === ApplicationStage.SALES_PITCH_QUEUE || draftStatus === 'QA_APPROVED') {
         readyForSales++;
       } else if (draftStatus === 'SUBMITTED_FOR_QA') {
         inQualityReview++;
+      } else if (draftStatus === 'REVISION_REQUESTED' || app.currentStage === ApplicationStage.CORRECTION_NEEDED) {
+        revisionsPending++;
       } else if (app.assignedPrepAgentId) {
         underPreparation++;
       } else {
@@ -639,6 +643,7 @@ export class PrepReviewService {
       where: { id: applicationId },
       data: {
         taxDraftSummary: updatedSummary,
+        currentStage: ApplicationStage.DOC_PREP,
       },
     });
 

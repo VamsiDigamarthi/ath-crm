@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShieldCheck, CheckCircle2, Eye, FileText, Lock, ExternalLink } from 'lucide-react';
+import { ShieldCheck, FileText, Lock, ExternalLink } from 'lucide-react';
 import apiClient from '@/lib/api-client';
-import type { WorkspaceTaxpayer, WorkspaceAssignedReviewer, WorkspaceDocument } from '../../hooks/useTaxPreparerWorkspace';
 import toast from 'react-hot-toast';
+import type { WorkspaceTaxpayer, WorkspaceAssignedReviewer, WorkspaceDocument } from '../../hooks/useTaxPreparerWorkspace';
 
 interface ClientProfilePanelProps {
   taxpayer: WorkspaceTaxpayer | null;
@@ -19,8 +19,8 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
   standardDeductionAmount,
   onPreviewDoc,
 }) => {
-  const reviewerName = assignedReviewer?.name || 'Kavita Nair';
-  const reviewerEmail = assignedReviewer?.email || 'kavita.nair@taxcrm.com';
+  const reviewerName = assignedReviewer?.name || '-';
+  const reviewerEmail = assignedReviewer?.email || '-';
 
   const handleDirectOpenNewTab = async (e: React.MouseEvent, doc: WorkspaceDocument) => {
     e.stopPropagation();
@@ -42,97 +42,87 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* 1. Assigned Senior QA Reviewer Card */}
-      <div className="p-4 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50/70 to-white shadow-2xs space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-purple-600" />
-            <span className="font-bold text-xs text-purple-950 uppercase tracking-wider">
-              4-Eyes QA Designated Auditor
-            </span>
-          </div>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
-            Senior Reviewer
+    <div className="space-y-4">
+      {/* 1. Designated 4-Eyes Compliance Auditor */}
+      <div className="bg-gradient-to-br from-purple-50 via-white to-slate-50 p-5 rounded-xl border border-purple-200 shadow-xs">
+        <div className="flex items-center gap-2 mb-3">
+          <ShieldCheck className="w-4 h-4 text-purple-600" />
+          <span className="text-xs font-bold text-purple-900 uppercase tracking-wider">
+            Designated 4-Eyes QA Auditor
           </span>
         </div>
-
-        <div className="flex items-center gap-3 pt-1">
-          <div className="w-9 h-9 rounded-xl bg-purple-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-            {reviewerName[0]}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">
+            {reviewerName !== '-' ? reviewerName.charAt(0).toUpperCase() : 'Q'}
           </div>
           <div>
-            <div className="font-bold text-xs sm:text-sm text-slate-900">{reviewerName}</div>
-            <div className="text-[11px] text-purple-700 font-medium">{reviewerEmail}</div>
+            <div className="text-sm font-bold text-slate-900">{reviewerName}</div>
+            <div className="text-xs text-slate-500 font-medium">{reviewerEmail}</div>
           </div>
         </div>
-
-        <p className="text-[11px] text-slate-500 font-medium leading-relaxed pt-1 border-t border-purple-100">
-          Upon clicking Submit, this calculation will immediately be audited against source files by {reviewerName}.
-        </p>
+        <div className="mt-3 pt-3 border-t border-purple-100 flex items-center justify-between text-[11px] text-purple-700 font-medium">
+          <span>Compliance Reviewer</span>
+          <span className="font-bold">4-Eyes Sign-Off Authority</span>
+        </div>
       </div>
 
-      {/* 2. Verified Source Documents Vault */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[#16A34A]" />
-            <span className="font-bold text-xs sm:text-sm text-slate-900">
-              Verified Source Documents ({documents.length || 0})
-            </span>
+      {/* 2. Source Documents Vault */}
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+            <FileText className="w-3.5 h-3.5 text-[#16A34A]" />
+            <span>Verified Source Documents</span>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#16A34A] border border-emerald-200">
-            100% Authenticated
+            {documents.filter((d) => d.verificationStatus === 'VERIFIED').length}/{documents.length} Verified
           </span>
         </div>
 
         {documents.length === 0 ? (
-          <div className="py-6 text-center text-xs text-slate-400">
-            No uploaded documents attached.
+          <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+            No source documents uploaded for this tax application.
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {documents.map((doc) => (
               <div
                 key={doc.id}
                 onClick={() => onPreviewDoc(doc)}
-                className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all flex items-center justify-between gap-3 cursor-pointer group"
+                className="group p-3 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-blue-300 hover:shadow-2xs transition-all cursor-pointer flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100 group-hover:scale-105 transition-transform">
+                    <FileText className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-bold text-xs text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                      {doc.fileName || doc.category || 'Document'}
+                    <div className="text-xs font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                      {doc.fileName || doc.category || '-'}
                     </div>
-                    <div className="text-[10px] text-slate-400 font-medium">
-                      Category: <strong className="text-slate-600">{doc.category || 'Tax Slip'}</strong>
+                    <div className="text-[10px] text-slate-500 font-medium">
+                      Category: <strong className="text-slate-600">{doc.category || '-'}</strong>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
+                    title="Open document in new browser tab"
                     onClick={(e) => handleDirectOpenNewTab(e, doc)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                    title="Open in New Tab"
+                    className="p-1.5 rounded-md hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onPreviewDoc(doc);
-                    }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-                    title="View Verified Slip"
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                      doc.verificationStatus === 'VERIFIED'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
                   >
-                    <Eye className="w-3.5 h-3.5" />
-                  </button>
+                    {doc.verificationStatus || 'PENDING'}
+                  </span>
                 </div>
               </div>
             ))}
@@ -150,15 +140,15 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
         <div className="space-y-2 text-xs">
           <div className="flex items-center justify-between">
             <span className="text-slate-500 font-medium">Filing Status:</span>
-            <span className="font-bold text-slate-800">{taxpayer?.maritalStatus || 'Married Filing Jointly'}</span>
+            <span className="font-bold text-slate-800">{taxpayer?.maritalStatus || '-'}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-slate-500 font-medium">Visa / Tax Residency:</span>
-            <span className="font-bold text-slate-800">{taxpayer?.visaType || 'H-1B Specialty Occupation'}</span>
+            <span className="font-bold text-slate-800">{taxpayer?.visaType || '-'}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-slate-500 font-medium">Primary State:</span>
-            <span className="font-bold text-slate-800">{taxpayer?.state || 'Illinois (IL)'}</span>
+            <span className="font-bold text-slate-800">{taxpayer?.state || '-'}</span>
           </div>
           <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
             <span className="text-slate-500 font-medium">Standard Deduction (2025):</span>

@@ -24,7 +24,7 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
     refreshData,
   } = useDocumenterWorkspace('PREP');
 
-  const prepLeads = leads.filter((l) => l.currentStage === 'DOC_PREP');
+  const prepLeads = leads;
 
   // Real count of leads with prepared draft calculations
   const readyForSalesCount = React.useMemo(() => {

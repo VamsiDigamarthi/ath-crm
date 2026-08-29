@@ -5,7 +5,7 @@ import { prepReviewService } from '../services/prep-review-service';
 import type { PrepReviewLead } from '../types/prep-review.types';
 import toast from 'react-hot-toast';
 
-export type PreparerQueueTab = 'ALL' | 'DRAFTING' | 'QA_SUBMITTED' | 'REVISIONS';
+export type PreparerQueueTab = 'ALL' | 'DRAFTING' | 'QA_SUBMITTED' | 'QA_APPROVED' | 'REVISIONS';
 
 export function useTaxPreparerQueue() {
   const navigate = useNavigate();
@@ -17,39 +17,32 @@ export function useTaxPreparerQueue() {
   const [isLoading, setIsLoading] = useState(true);
   const [allLeads, setAllLeads] = useState<PrepReviewLead[]>([]);
 
-  // Fetch real leads assigned to current Preparer from backend
+  // Fetch real leads strictly assigned to current Preparer from backend
   const fetchPreparerLeads = useCallback(async () => {
     setIsLoading(true);
     try {
-      // If user is a TAX_PREPARER, query their assigned leads; for manager/admin testing, fetch assigned prep leads
-      const isPreparer = user?.role === 'TAX_PREPARER';
-      const params: any = {
-        limit: 100,
-      };
+      const response = await prepReviewService.getPipelineLeads({ limit: 100 });
+      const rawLeads = response.leads || [];
 
-      if (isPreparer && user?.id) {
-        params.preparerId = user.id;
-      }
+      const currentUserId = user?.id;
+      const currentUserEmail = user?.email?.toLowerCase().trim();
 
-      const response = await prepReviewService.getPipelineLeads(params);
-      
-      // Filter to items that have an assigned preparer (or assigned to this user)
-      let leads = response.leads || [];
-      if (isPreparer && user?.id) {
-        leads = leads.filter((l) => l.assignedPreparer?.id === user.id || !l.assignedPreparer);
-      } else {
-        // If viewing as general staff/manager, filter to leads assigned to any preparer
-        leads = leads.filter((l) => Boolean(l.assignedPreparer));
-      }
+      // STRICT RELATIONAL FILTER: Only returns where current user is the assignedPreparer
+      const assignedToMe = rawLeads.filter((lead) => {
+        if (!lead.assignedPreparer) return false;
+        if (currentUserId && lead.assignedPreparer.id === currentUserId) return true;
+        if (currentUserEmail && lead.assignedPreparer.email?.toLowerCase().trim() === currentUserEmail) return true;
+        return false;
+      });
 
-      setAllLeads(leads);
+      setAllLeads(assignedToMe);
     } catch {
       toast.error('Failed to load preparer queue');
       setAllLeads([]);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, user?.role]);
+  }, [user?.id, user?.email]);
 
   useEffect(() => {
     fetchPreparerLeads();
@@ -59,11 +52,13 @@ export function useTaxPreparerQueue() {
   const counts = useMemo(() => {
     let drafting = 0;
     let qaSubmitted = 0;
+    let qaApproved = 0;
     let revisions = 0;
 
     allLeads.forEach((lead) => {
       if (lead.currentStage === 'PREP_IN_PROGRESS') drafting++;
       else if (lead.currentStage === 'QA_IN_REVIEW') qaSubmitted++;
+      else if (lead.currentStage === 'QA_APPROVED' || lead.currentStage === 'SALES_PITCH_QUEUE') qaApproved++;
       else if (lead.currentStage === 'QA_REVISION_REQUESTED') revisions++;
     });
 
@@ -71,6 +66,7 @@ export function useTaxPreparerQueue() {
       all: allLeads.length,
       drafting,
       qaSubmitted,
+      qaApproved,
       revisions,
     };
   }, [allLeads]);
@@ -80,6 +76,7 @@ export function useTaxPreparerQueue() {
     return {
       totalAssigned: allLeads.length,
       inQA: counts.qaSubmitted,
+      qaApproved: counts.qaApproved,
       revisions: counts.revisions,
       accuracyRate: counts.revisions === 0 ? 100 : Math.round(((allLeads.length - counts.revisions) / (allLeads.length || 1)) * 100),
     };
@@ -90,6 +87,7 @@ export function useTaxPreparerQueue() {
     return allLeads.filter((item) => {
       if (activeTab === 'DRAFTING' && item.currentStage !== 'PREP_IN_PROGRESS') return false;
       if (activeTab === 'QA_SUBMITTED' && item.currentStage !== 'QA_IN_REVIEW') return false;
+      if (activeTab === 'QA_APPROVED' && item.currentStage !== 'QA_APPROVED' && item.currentStage !== 'SALES_PITCH_QUEUE') return false;
       if (activeTab === 'REVISIONS' && item.currentStage !== 'QA_REVISION_REQUESTED') return false;
       if (complexityFilter !== 'ALL' && item.complexity !== complexityFilter) return false;
 
@@ -115,17 +113,18 @@ export function useTaxPreparerQueue() {
   };
 
   return {
-    allLeads,
-    filteredReturns,
-    stats,
-    counts,
     isLoading,
+    allLeads,
+    counts,
+    stats,
+    filteredReturns,
     activeTab,
     setActiveTab,
     searchQuery,
     setSearchQuery,
     complexityFilter,
     setComplexityFilter,
+    fetchPreparerLeads,
     refreshData: fetchPreparerLeads,
     handleOpenNextReturn,
   };

@@ -45,6 +45,8 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     standardDeductionAmount,
     isSubmittedToQA,
     isRevisionRequested,
+    revisionCategory,
+    revisionInstructions,
     calculations,
     handleSaveDraft,
     handleSubmitForQA,
@@ -60,11 +62,11 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     );
   }
 
-  const taxpayerName = taxpayer?.name || 'Taxpayer Client';
-  const taxpayerSSN = taxpayer?.ssnMasked || '***-**-8842';
-  const taxpayerFilingStatus = taxpayer?.maritalStatus || 'Married Filing Jointly (MFJ)';
-  const taxpayerLocation = taxpayer?.city && taxpayer?.state ? `${taxpayer.city}, ${taxpayer.state}` : 'Springfield, IL';
-  const reviewerName = assignedReviewer?.name || 'Senior QA Auditor';
+  const taxpayerName = taxpayer?.name || '-';
+  const taxpayerSSN = taxpayer?.ssnMasked || '-';
+  const taxpayerFilingStatus = taxpayer?.maritalStatus || '-';
+  const taxpayerLocation = taxpayer?.city && taxpayer?.state ? `${taxpayer.city}, ${taxpayer.state}` : (taxpayer?.state || '-');
+  const reviewerName = assignedReviewer?.name || '-';
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -153,6 +155,26 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* 1.5 Senior QA Revision Request Alert Banner */}
+      {isRevisionRequested && (
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-start gap-3 text-rose-950 shadow-2xs animate-in fade-in duration-200">
+          <RotateCcw className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-rose-900">
+              <span>Senior QA Auditor Requested Revision:</span>
+              {revisionCategory && (
+                <span className="px-2 py-0.5 rounded-md bg-rose-200/80 text-rose-900 text-[10px] font-bold">
+                  {revisionCategory}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-rose-800 font-medium leading-relaxed">
+              "{revisionInstructions || 'Please review Form 1040 calculations against source documents and resubmit for 4-Eyes audit.'}"
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 2. Split Workspace Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
