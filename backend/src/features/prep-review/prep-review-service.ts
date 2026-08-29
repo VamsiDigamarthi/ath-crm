@@ -533,11 +533,18 @@ export class PrepReviewService {
       : 'Taxpayer Client';
 
     const draft: any = app.taxDraftSummary || {};
+    const effectiveStage = draft.status === 'SUBMITTED_FOR_QA'
+      ? 'QA_IN_REVIEW'
+      : draft.status === 'REVISION_REQUESTED'
+        ? 'QA_REVISION_REQUESTED'
+        : draft.status === 'QA_APPROVED'
+          ? 'QA_APPROVED'
+          : 'PREP_IN_PROGRESS';
 
     return {
       applicationId: app.id,
       taxYear: app.taxYear || 2025,
-      currentStage: app.currentStage,
+      currentStage: effectiveStage,
       targetDueDate: draft.targetDueDate || null,
       prepNotes: draft.preparerNotes || draft.prepNotes || '',
       taxDraftSummary: app.taxDraftSummary,

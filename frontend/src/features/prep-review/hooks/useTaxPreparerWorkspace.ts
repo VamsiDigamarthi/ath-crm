@@ -248,6 +248,8 @@ export function useTaxPreparerWorkspace() {
     preparerNotes,
     setPreparerNotes,
     standardDeductionAmount,
+    isSubmittedToQA: currentStage === 'QA_IN_REVIEW' || currentStage === 'QA_APPROVED',
+    isRevisionRequested: currentStage === 'QA_REVISION_REQUESTED',
     calculations,
     handleSaveDraft,
     handleSubmitForQA,

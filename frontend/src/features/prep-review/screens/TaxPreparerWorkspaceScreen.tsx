@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Send } from 'lucide-react';
+import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { useTaxPreparerWorkspace } from '../hooks/useTaxPreparerWorkspace';
@@ -17,7 +17,6 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     isConfirmOpen,
     setIsConfirmOpen,
     taxYear,
-    currentStage,
     taxpayer,
     assignedReviewer,
     documents,
@@ -44,6 +43,8 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     preparerNotes,
     setPreparerNotes,
     standardDeductionAmount,
+    isSubmittedToQA,
+    isRevisionRequested,
     calculations,
     handleSaveDraft,
     handleSubmitForQA,
@@ -85,9 +86,23 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
               TY {taxYear} Form 1040
             </span>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-              {currentStage === 'QA_IN_REVIEW' ? 'In QA Review' : 'Drafting 1040'}
-            </span>
+
+            {/* Dynamic Stage Pill */}
+            {isSubmittedToQA ? (
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse" />
+                <span>In QA Audit Review</span>
+              </span>
+            ) : isRevisionRequested ? (
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                <span>Revision Requested</span>
+              </span>
+            ) : (
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                Drafting 1040
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             SSN: {taxpayerSSN} • {taxpayerFilingStatus} • {taxpayerLocation}
@@ -99,22 +114,43 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={handleSaveDraft}
-            disabled={isSaving}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+            disabled={isSaving || isSubmittedToQA}
+            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{isSaving ? 'Saving...' : 'Save Draft'}</span>
           </Button>
 
-          <Button
-            size="sm"
-            onClick={() => setIsConfirmOpen(true)}
-            disabled={isSubmitting}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Submit for QA Review</span>
-          </Button>
+          {isSubmittedToQA ? (
+            <Button
+              size="sm"
+              disabled
+              className="bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold flex items-center gap-1.5 cursor-not-allowed shadow-2xs"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+              <span>Submitted for QA Review</span>
+            </Button>
+          ) : isRevisionRequested ? (
+            <Button
+              size="sm"
+              onClick={() => setIsConfirmOpen(true)}
+              disabled={isSubmitting}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Resubmit for QA Review</span>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setIsConfirmOpen(true)}
+              disabled={isSubmitting}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Submit for QA Review</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -155,6 +191,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             preparerNotes={preparerNotes}
             setPreparerNotes={setPreparerNotes}
             standardDeductionAmount={standardDeductionAmount}
+            isReadOnly={isSubmittedToQA}
             calculations={calculations}
           />
         </div>

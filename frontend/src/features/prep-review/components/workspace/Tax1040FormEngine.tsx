@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, DollarSign, FileText } from 'lucide-react';
+import { Sparkles, DollarSign, FileText, Lock } from 'lucide-react';
 
 interface Tax1040FormEngineProps {
   w2Wages: number;
@@ -23,6 +23,7 @@ interface Tax1040FormEngineProps {
   preparerNotes: string;
   setPreparerNotes: (v: string) => void;
   standardDeductionAmount: number;
+  isReadOnly?: boolean;
   calculations: {
     totalGrossIncome: number;
     effectiveDeduction: number;
@@ -59,10 +60,26 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
   preparerNotes,
   setPreparerNotes,
   standardDeductionAmount,
+  isReadOnly = false,
   calculations,
 }) => {
   return (
     <div className="space-y-6">
+      {/* Read-Only QA Locked Alert */}
+      {isReadOnly && (
+        <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-between text-xs text-purple-900 shadow-2xs">
+          <div className="flex items-center gap-2 font-semibold">
+            <Lock className="w-4 h-4 text-purple-600 shrink-0" />
+            <span>
+              <strong>Form 1040 Locked for QA Audit:</strong> This return is currently undergoing 4-Eyes verification by Senior QA Reviewer. Inputs are locked.
+            </span>
+          </div>
+          <span className="px-2 py-0.5 rounded-md bg-purple-200/70 text-purple-800 text-[10px] font-bold uppercase tracking-wider">
+            In QA Review
+          </span>
+        </div>
+      )}
+
       {/* 1. Live Computation Result Banner */}
       <div className="bg-gradient-to-r from-emerald-700 via-[#16A34A] to-teal-700 rounded-xl p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -124,9 +141,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
               </div>
               <input
                 type="number"
+                disabled={isReadOnly}
                 value={w2Wages || ''}
                 onChange={(e) => setW2Wages(Number(e.target.value) || 0)}
-                className="w-full rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className={`w-full rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none ${isReadOnly ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                 placeholder="0"
               />
             </div>
@@ -143,9 +161,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
               </div>
               <input
                 type="number"
+                disabled={isReadOnly}
                 value={taxableInterest || ''}
                 onChange={(e) => setTaxableInterest(Number(e.target.value) || 0)}
-                className="w-full rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className={`w-full rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none ${isReadOnly ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                 placeholder="0"
               />
             </div>
@@ -162,9 +181,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
               </div>
               <input
                 type="number"
+                disabled={isReadOnly}
                 value={capitalGains || ''}
                 onChange={(e) => setCapitalGains(Number(e.target.value) || 0)}
-                className="w-full rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className={`w-full rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none ${isReadOnly ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                 placeholder="0"
               />
             </div>
@@ -181,9 +201,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
               </div>
               <input
                 type="number"
+                disabled={isReadOnly}
                 value={otherIncome || ''}
                 onChange={(e) => setOtherIncome(Number(e.target.value) || 0)}
-                className="w-full rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className={`w-full rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none ${isReadOnly ? 'bg-slate-100 cursor-not-allowed text-slate-600' : 'bg-white'}`}
                 placeholder="0"
               />
             </div>
@@ -210,8 +231,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Option A: Standard Deduction */}
           <div
-            onClick={() => setDeductionType('STANDARD')}
-            className={`p-4 rounded-xl border cursor-pointer transition-all ${
+            onClick={() => !isReadOnly && setDeductionType('STANDARD')}
+            className={`p-4 rounded-xl border transition-all ${
+              isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'
+            } ${
               deductionType === 'STANDARD'
                 ? 'border-emerald-500 bg-emerald-50/40 ring-1 ring-emerald-500'
                 : 'border-slate-200 bg-white hover:border-slate-300'
@@ -228,8 +251,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
 
           {/* Option B: Itemized Deduction */}
           <div
-            onClick={() => setDeductionType('ITEMIZED')}
-            className={`p-4 rounded-xl border cursor-pointer transition-all ${
+            onClick={() => !isReadOnly && setDeductionType('ITEMIZED')}
+            className={`p-4 rounded-xl border transition-all ${
+              isReadOnly ? 'cursor-not-allowed' : 'cursor-pointer'
+            } ${
               deductionType === 'ITEMIZED'
                 ? 'border-purple-500 bg-purple-50/40 ring-1 ring-purple-500'
                 : 'border-slate-200 bg-white hover:border-slate-300'
@@ -241,12 +266,15 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             </div>
             <input
               type="number"
+              disabled={isReadOnly}
               value={itemizedDeduction || ''}
               onChange={(e) => {
-                setDeductionType('ITEMIZED');
-                setItemizedDeduction(Number(e.target.value) || 0);
+                if (!isReadOnly) {
+                  setDeductionType('ITEMIZED');
+                  setItemizedDeduction(Number(e.target.value) || 0);
+                }
               }}
-              className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-800 focus:outline-none"
+              className={`mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-800 focus:outline-none ${isReadOnly ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
               placeholder="Enter Custom Itemized ($)"
             />
           </div>
@@ -284,9 +312,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             </label>
             <input
               type="number"
+              disabled={isReadOnly}
               value={taxCredits || ''}
               onChange={(e) => setTaxCredits(Number(e.target.value) || 0)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none"
+              className={`w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none ${isReadOnly ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
               placeholder="0"
             />
           </div>
@@ -298,9 +327,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             </label>
             <input
               type="number"
+              disabled={isReadOnly}
               value={fedWithheld || ''}
               onChange={(e) => setFedWithheld(Number(e.target.value) || 0)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none"
+              className={`w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none ${isReadOnly ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
               placeholder="0"
             />
           </div>
@@ -312,9 +342,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             </label>
             <input
               type="number"
+              disabled={isReadOnly}
               value={stateWithheld || ''}
               onChange={(e) => setStateWithheld(Number(e.target.value) || 0)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none"
+              className={`w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-800 focus:border-blue-500 focus:outline-none ${isReadOnly ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
               placeholder="0"
             />
           </div>
@@ -330,10 +361,11 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
 
         <textarea
           rows={3}
+          disabled={isReadOnly}
           value={preparerNotes}
           onChange={(e) => setPreparerNotes(e.target.value)}
           placeholder="Add notes for Senior QA Auditor (e.g. verified W-2 box 1 vs box 16, dual-state apportionment checked)..."
-          className="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 focus:border-blue-500 focus:outline-none placeholder:text-slate-400"
+          className={`w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 focus:border-blue-500 focus:outline-none placeholder:text-slate-400 ${isReadOnly ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
         />
       </div>
     </div>
