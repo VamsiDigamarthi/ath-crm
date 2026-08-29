@@ -1,0 +1,98 @@
+export type SalesFilingType = 'INDIVIDUAL' | 'BUSINESS' | 'EXPAT_FBAR';
+
+export type SalesLeadStage = 
+  | 'SALES_PITCH_QUEUE'     // Freshly approved by QA, awaiting pitch
+  | 'SALES_PITCHING'        // Agent actively calling/pitching client
+  | 'QUOTATION_SENT'        // Fee quote generated & sent to client
+  | 'PAYMENT_PENDING'       // Client agreed, awaiting card swipe/link payment
+  | 'PAID_AND_AUTHORIZED'   // Payment verified & Form 8879 E-Signed
+  | 'FILING_QUEUE'          // Transferred to Filing Operations
+  | 'PITCH_REJECTED';       // Client declined / dropped
+
+export interface SalesFeeBreakdown {
+  fed1040PrepFee: number;
+  statePrepFee: number;
+  selectedStates: string[];
+  fbarFee: number;
+  auditDefenseFee: number;
+  hasAuditDefense: boolean;
+  discountAmount: number;
+  discountCode: string;
+  totalServiceFee: number;
+}
+
+export interface SalesLeadItem {
+  id: string;
+  applicationId: string;
+  taxpayerId: string;
+  taxpayerName: string;
+  taxpayerEmail: string;
+  taxpayerPhone: string;
+  taxYear: number;
+  visaType: string;
+  maritalStatus: string;
+  stateOfResidence: string;
+  complexity: 'STANDARD' | 'INVESTMENTS_1099B' | 'FOREIGN_FBAR' | 'SCHEDULE_C';
+  currentStage: SalesLeadStage;
+  
+  // Tax Return Financials from QA Sign-Off
+  grossIncome: number;
+  federalRefund: number;
+  stateRefund: number;
+  balanceDue: number;
+  qaAuditorName: string;
+  qaAuditorRemarks: string;
+  qaApprovedAt: string;
+
+  // Assignment & Sales Info
+  assignedSalesAgent?: {
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string;
+  } | null;
+
+  // Pricing & Payment Status
+  feeBreakdown: SalesFeeBreakdown;
+  paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED';
+  paymentMethod?: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER' | 'ZELLE';
+  paidAt?: string;
+  transactionRef?: string;
+  esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';
+  esignCompletedAt?: string;
+
+  lastContactedAt?: string;
+  callDisposition?: string;
+  notes?: string;
+}
+
+export interface SalesRepItem {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  activeLeads: number;
+  pitchesCompletedToday: number;
+  dealsClosedToday: number;
+  totalRevenueToday: number;
+  conversionRate: string;
+}
+
+export interface SalesManagerStats {
+  pipelineLeads: number;
+  activePitching: number;
+  pendingPayment: number;
+  closedPaidDeals: number;
+  totalRevenueMTD: number;
+  avgDealSize: number;
+  conversionRatePct: number;
+}
+
+export interface SalesAgentStats {
+  assignedLeads: number;
+  pitchInProgress: number;
+  paymentsPending: number;
+  dealsClosedToday: number;
+  myRevenueToday: number;
+  myConversionRate: number;
+}

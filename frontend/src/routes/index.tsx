@@ -26,6 +26,12 @@ import { TaxPreparerQueueScreen } from '@/features/prep-review/screens/TaxPrepar
 import { TaxPreparerWorkspaceScreen } from '@/features/prep-review/screens/TaxPreparerWorkspaceScreen';
 import { TaxReviewerQueueScreen } from '@/features/prep-review/screens/TaxReviewerQueueScreen';
 import { TaxReviewerAuditScreen } from '@/features/prep-review/screens/TaxReviewerAuditScreen';
+import { SalesLayout } from '@/features/sales/layouts/SalesLayout';
+import { SalesManagerDashboardScreen } from '@/features/sales/screens/SalesManagerDashboardScreen';
+import { SalesManagerQueueScreen } from '@/features/sales/screens/SalesManagerQueueScreen';
+import { SalesAgentDashboardScreen } from '@/features/sales/screens/SalesAgentDashboardScreen';
+import { SalesAgentQueueScreen } from '@/features/sales/screens/SalesAgentQueueScreen';
+import { SalesPitchWorkspaceScreen } from '@/features/sales/screens/SalesPitchWorkspaceScreen';
 import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
 import { AdminSettingsScreen } from '@/features/admin/screens/AdminSettingsScreen';
@@ -211,6 +217,53 @@ export const router = createBrowserRouter([
           {
             path: 'reviewer/audit/:id',
             element: <TaxReviewerAuditScreen />,
+          },
+        ],
+      },
+    ],
+  },
+
+  // 4c. Sales Department Operations Portal (/sales/*)
+  {
+    element: (
+      <ProtectedRoute
+        allowedRoles={['ADMIN', 'SALES_MANAGER', 'SALES_CLOSER', 'SALES_AGENT', 'DOC_MANAGER', 'PREP_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER', 'DOC_AGENT']}
+      />
+    ),
+    children: [
+      {
+        path: '/sales',
+        element: <SalesLayout />,
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/sales/agent/queue" replace />,
+          },
+          // Manager Routes
+          {
+            path: 'manager',
+            element: <SalesManagerDashboardScreen />,
+          },
+          {
+            path: 'manager/queue',
+            element: <SalesManagerQueueScreen />,
+          },
+          // Agent / Closer Routes
+          {
+            path: 'agent',
+            element: <SalesAgentDashboardScreen />,
+          },
+          {
+            path: 'agent/queue',
+            element: <SalesAgentQueueScreen />,
+          },
+          {
+            path: 'agent/pitch/:id',
+            element: <SalesPitchWorkspaceScreen />,
+          },
+          {
+            path: 'pitch/:id',
+            element: <SalesPitchWorkspaceScreen />,
           },
         ],
       },

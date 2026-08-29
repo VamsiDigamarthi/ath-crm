@@ -50,12 +50,16 @@ export const useLogin = () => {
         navigate('/documenter/manager');
       } else if (currentUser?.role === 'DOC_TEAM_LEAD' || currentUser?.role === 'DOC_AGENT') {
         navigate('/documenter/agent');
-      } else if (
-        currentUser?.role === 'PREP_MANAGER' ||
-        currentUser?.role === 'TAX_REVIEWER' ||
-        currentUser?.role === 'TAX_PREPARER'
-      ) {
+      } else if (currentUser?.role === 'PREP_MANAGER') {
         navigate('/prep-review/manager');
+      } else if (currentUser?.role === 'TAX_REVIEWER') {
+        navigate('/prep-review/reviewer');
+      } else if (currentUser?.role === 'TAX_PREPARER') {
+        navigate('/prep-review/preparer');
+      } else if (currentUser?.role === 'SALES_MANAGER') {
+        navigate('/sales/manager');
+      } else if (currentUser?.role === 'SALES_CLOSER' || currentUser?.role === 'SALES_AGENT') {
+        navigate('/sales/agent/queue');
       } else if (currentUser?.role === 'TAXPAYER_USER') {
         navigate('/customer');
       } else {
