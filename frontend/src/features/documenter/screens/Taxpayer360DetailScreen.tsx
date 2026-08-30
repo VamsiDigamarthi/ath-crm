@@ -25,6 +25,7 @@ import { TaxPrepDraftCalculator } from '../components/prep/TaxPrepDraftCalculato
 import type { TaxDraftComputation } from '../components/prep/TaxPrepDraftCalculator';
 import { TaxPrepDocumentVault } from '../components/prep/TaxPrepDocumentVault';
 import { TaxPrepOrganizerReview } from '../components/prep/TaxPrepOrganizerReview';
+import { LeadAuditTrailSection } from '../components/LeadAuditTrailSection';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { documenterService } from '../services/documenter-service';
@@ -444,6 +445,18 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             />
           </div>
         )}
+      </div>
+
+      {/* 5. Persistent Bottom Lead Audit & Lifecycle Activity Section (Always Visible) */}
+      <div className="mt-8 pt-6 border-t border-slate-200">
+        <LeadAuditTrailSection
+          stageHistories={lead?.stageHistories || lead?.stageHistory || []}
+          auditLogs={lead?.auditLogs || []}
+          callLogs={callLogs}
+          leadId={currentLead.id}
+          taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+          currentStage={currentLead.currentStage}
+        />
       </div>
 
       {/* 5. Call Outreach Modal for Logging Conversations */}

@@ -68,6 +68,18 @@ export class DocumenterService {
             },
           },
         },
+        auditLogs: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            actorUser: {
+              select: {
+                id: true,
+                email: true,
+                role: true,
+              },
+            },
+          },
+        },
         documents: {
           orderBy: { createdAt: 'desc' },
         },
@@ -91,9 +103,38 @@ export class DocumenterService {
       createdAt: c.createdAt.toISOString(),
     }));
 
+    const formattedStageHistories = app.stageHistories.map((s) => ({
+      id: s.id,
+      applicationId: s.applicationId,
+      fromStage: s.fromStage,
+      toStage: s.toStage,
+      movedByUserId: s.movedByUserId,
+      movedByName: s.movedByUser?.email?.split('@')[0] || 'System',
+      movedByEmail: s.movedByUser?.email || 'System',
+      movedByRole: s.movedByUser?.role || 'SYSTEM',
+      remarks: s.remarks || `Stage transitioned from ${s.fromStage} to ${s.toStage}`,
+      createdAt: s.createdAt.toISOString(),
+    }));
+
+    const formattedAuditLogs = app.auditLogs.map((a) => ({
+      id: a.id,
+      applicationId: a.applicationId,
+      actorId: a.actorId,
+      actorType: a.actorType,
+      actorName: a.actorName || a.actorUser?.email?.split('@')[0] || 'System Actor',
+      actorEmail: a.actorUser?.email || '',
+      actorRole: a.actorRole || a.actorUser?.role || 'SYSTEM',
+      action: a.action,
+      moduleKey: a.moduleKey,
+      details: a.details,
+      createdAt: a.createdAt.toISOString(),
+    }));
+
     return {
       ...app,
       callLogs: formattedCallLogs,
+      stageHistories: formattedStageHistories,
+      auditLogs: formattedAuditLogs,
     };
   }
 
@@ -582,11 +623,30 @@ export class DocumenterService {
       throw new Error('Target staff member not found or inactive');
     }
 
+    if (targetAgent.role !== Role.DOC_AGENT) {
+      throw new Error('Tax leads can only be assigned to Documenter Calling Agents (DOC_AGENT). Managers and Team Leads are excluded from lead assignment.');
+    }
+
+    const assignedByUser = await prisma.user.findUnique({
+      where: { id: assignedByUserId },
+      select: { email: true, firstName: true, lastName: true },
+    });
+    const assignerName = assignedByUser?.firstName 
+      ? `${assignedByUser.firstName} ${assignedByUser.lastName || ''}`.trim() 
+      : assignedByUser?.email || 'Documenter Manager';
+
     return await prisma.$transaction(async (tx) => {
       // 1. Fetch current applications
       const apps = await tx.taxApplication.findMany({
         where: { id: { in: applicationIds } },
-        select: { id: true, currentStage: true, assignedDocAgentId: true },
+        select: { 
+          id: true, 
+          currentStage: true, 
+          assignedDocAgentId: true,
+          customer: {
+            select: { firstName: true, lastName: true }
+          }
+        },
       });
 
       // 2. Update all selected applications
@@ -598,7 +658,7 @@ export class DocumenterService {
         },
       });
 
-      // 3. Write audit trails
+      // 3. Write stage history only (prevents double logging in audit trail)
       for (const app of apps) {
         await tx.stageHistory.create({
           data: {
@@ -606,10 +666,29 @@ export class DocumenterService {
             fromStage: app.currentStage,
             toStage: ApplicationStage.DOC_OUTREACH,
             movedByUserId: assignedByUserId,
-            remarks: `Assigned to ${targetAgent.email} (${targetAgent.role})`,
+            remarks: `Documenter Manager ${assignerName} (${assignedByUser?.email || 'manager'}) directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}). Stage progressed from ${app.currentStage} → DOC_OUTREACH. Lead placed in agent calling queue.`,
           },
         });
       }
+
+      // 4. Create targeted notification ONLY for the assigned calling agent
+      await tx.notification.create({
+        data: {
+          recipientUserId: targetAgent.id,
+          title: apps.length === 1 
+            ? `1 New Lead Assigned to Your Calling Queue` 
+            : `${apps.length} New Leads Assigned to Your Calling Queue`,
+          message: `${assignerName} directly assigned ${apps.length} tax intake lead${apps.length > 1 ? 's' : ''} to your queue. Ready for taxpayer outreach!`,
+          category: 'DOCUMENTER',
+          priority: 'HIGH',
+          actionUrl: '/documenter/agent/queue',
+          actionLabel: 'Open Calling Queue',
+          relatedLeadName: apps.length === 1 && apps[0]?.customer?.firstName 
+            ? `${apps[0].customer.firstName} ${apps[0].customer.lastName || ''}`.trim() 
+            : undefined,
+          applicationId: apps.length === 1 ? apps[0].id : undefined,
+        },
+      });
 
       return {
         assignedCount: apps.length,
@@ -631,6 +710,14 @@ export class DocumenterService {
     assignedByUserId: string;
   }) {
     const { applicationIds, assignedByUserId } = options;
+
+    const assignedByUser = await prisma.user.findUnique({
+      where: { id: assignedByUserId },
+      select: { email: true, firstName: true, lastName: true },
+    });
+    const assignerName = assignedByUser?.firstName 
+      ? `${assignedByUser.firstName} ${assignedByUser.lastName || ''}`.trim() 
+      : assignedByUser?.email || 'Documenter Manager';
 
     // 1. Fetch active DOC_AGENT staff
     const activeAgents = await prisma.user.findMany({
@@ -664,8 +751,10 @@ export class DocumenterService {
 
     // 3. Distribute in atomic transaction
     return await prisma.$transaction(async (tx) => {
-      const distributionMap: Record<string, number> = {};
-      activeAgents.forEach((a) => (distributionMap[a.email || a.id] = 0));
+      const agentDistributionMap: Record<string, { agent: typeof activeAgents[0]; count: number }> = {};
+      activeAgents.forEach((a) => {
+        agentDistributionMap[a.id] = { agent: a, count: 0 };
+      });
 
       for (let i = 0; i < targetApps.length; i++) {
         const app = targetApps[i];
@@ -685,17 +774,41 @@ export class DocumenterService {
             fromStage: app.currentStage,
             toStage: ApplicationStage.DOC_OUTREACH,
             movedByUserId: assignedByUserId,
-            remarks: `Auto Round-Robin assigned to ${assignedAgent.email}`,
+            remarks: `Documenter Manager ${assignerName} (${assignedByUser?.email || 'manager'}) auto-distributed lead via 1-Click Round-Robin Pool to Calling Agent ${assignedAgent.email} (${assignedAgent.role}). Stage progressed from ${app.currentStage} → DOC_OUTREACH.`,
           },
         });
 
-        distributionMap[assignedAgent.email || assignedAgent.id]++;
+        agentDistributionMap[assignedAgent.id].count++;
+      }
+
+      // Create targeted notifications ONLY for the specific agents who received leads
+      for (const [agentId, { count }] of Object.entries(agentDistributionMap)) {
+        if (count > 0) {
+          await tx.notification.create({
+            data: {
+              recipientUserId: agentId,
+              title: count === 1
+                ? `Round-Robin: 1 New Lead Assigned`
+                : `Round-Robin: ${count} New Leads Assigned`,
+              message: `${assignerName} auto-distributed ${count} new tax prospect lead${count > 1 ? 's' : ''} to your calling queue. Ready for outreach!`,
+              category: 'DOCUMENTER',
+              priority: 'HIGH',
+              actionUrl: '/documenter/agent/queue',
+              actionLabel: 'Open Calling Queue',
+            },
+          });
+        }
       }
 
       return {
         totalDistributed: targetApps.length,
         agentsCount: activeAgents.length,
-        distribution: distributionMap,
+        agentDistribution: Object.values(agentDistributionMap).map(({ agent, count }) => ({
+          id: agent.id,
+          email: agent.email,
+          role: agent.role,
+          count,
+        })),
       };
     });
   }
@@ -733,7 +846,7 @@ export class DocumenterService {
         // 1. Handle disposition transitions
         if (disposition === 'CONNECTED_INTERESTED') {
           targetStage = ApplicationStage.DOC_PREP;
-          auditRemark = `Lead connected & interested. Moved to Tax Prep & provisioned Client Portal access.`;
+          auditRemark = `Lead agreed & interested in filing. Provisioned Client Portal access for taxpayer (9-Module Organizer & Document Vault).`;
 
           // Lazy Taxpayer User Provisioning
           if (!app.customer.userId && (app.customer.email || app.customer.phone)) {
@@ -778,7 +891,7 @@ export class DocumenterService {
           auditRemark = `No answer / voicemail left. Retained in outreach.`;
         }
 
-        // 2. Create CallLog entry
+        // 2. Create CallLog entry (Call History already tracks this cleanly)
         const callLog = await tx.callLog.create({
           data: {
             applicationId: app.id,
@@ -789,7 +902,7 @@ export class DocumenterService {
           },
         });
 
-        // 3. Update application stage
+        // 3. Update application stage if stage changed
         await tx.taxApplication.update({
           where: { id: app.id },
           data: {
@@ -798,16 +911,18 @@ export class DocumenterService {
           },
         });
 
-        // 4. Create StageHistory entry
-        await tx.stageHistory.create({
-          data: {
-            applicationId: app.id,
-            fromStage: app.currentStage,
-            toStage: targetStage,
-            movedByUserId: agentUserId,
-            remarks: auditRemark,
-          },
-        });
+        // 4. Create StageHistory entry ONLY if actual stage transition occurred
+        if (app.currentStage !== targetStage) {
+          await tx.stageHistory.create({
+            data: {
+              applicationId: app.id,
+              fromStage: app.currentStage,
+              toStage: targetStage,
+              movedByUserId: agentUserId,
+              remarks: auditRemark,
+            },
+          });
+        }
 
         results.push({ applicationId: app.id, callLogId: callLog.id, stage: targetStage });
       }
@@ -884,7 +999,7 @@ export class DocumenterService {
           fromStage: app.currentStage,
           toStage: ApplicationStage.DOC_PREP,
           movedByUserId: agentUserId,
-          remarks: remarks || 'Intake completed and verified by Documenter Agent; transferred to Tax Preparation & Review Queue',
+          remarks: remarks || `Documenter Agent completed intake review and transferred taxpayer return to Tax Preparation Department.`,
         },
       });
 
@@ -982,12 +1097,13 @@ export class DocumenterService {
 
     if (agentUserId) {
       const agentUser = await prisma.user.findUnique({ where: { id: agentUserId } });
+      const actorName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent';
       await prisma.auditLog.create({
         data: {
           applicationId: doc.applicationId,
           actorId: agentUserId,
           actorType: 'AGENT',
-          actorName: agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent',
+          actorName,
           actorRole: agentUser?.role || 'DOC_AGENT',
           action: 'DOCUMENT_VERIFY',
           moduleKey: 'DOCUMENT_VAULT',
@@ -996,6 +1112,7 @@ export class DocumenterService {
             fileName: doc.fileName,
             verificationStatus: status,
             source: 'AGENT_CALLING_PORTAL',
+            remarks: `Documenter Agent ${actorName} marked document "${doc.fileName}" as ${status}.`,
             timestamp: new Date().toISOString(),
           },
         },
@@ -1026,6 +1143,7 @@ export class DocumenterService {
     const agentUser = await prisma.user.findUnique({
       where: { id: agentUserId },
     });
+    const actorName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent';
 
     // Save file via Storage Service
     const storageResult = await StorageService.saveFile(file, `taxpayer_${app.customerId}_ty${app.taxYear}`);
@@ -1042,13 +1160,24 @@ export class DocumenterService {
       },
     });
 
+    const categoryLabels: Record<string, string> = {
+      W2_WAGES: 'W-2 Wages',
+      FORM_1099: '1099 Interest/Div/Misc',
+      FORM_1099_B: '1099-B Stock Trading',
+      PASSPORT_VISA: 'Passport / Visa ID',
+      FORM_1098_MORTGAGE: '1098 Mortgage Interest',
+      FORM_1095_HEALTH: '1095 Health Coverage',
+      OTHER_EXPENSES: 'Tax Deduction Receipts',
+    };
+    const catLabel = categoryLabels[newDoc.documentCategory] || newDoc.documentCategory;
+
     // Record AuditLog for Agent Document Upload
     await prisma.auditLog.create({
       data: {
         applicationId: app.id,
         actorId: agentUserId,
         actorType: 'AGENT',
-        actorName: agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent',
+        actorName,
         actorRole: agentUser?.role || 'DOC_AGENT',
         action: 'DOCUMENT_UPLOAD',
         moduleKey: 'DOCUMENT_VAULT',
@@ -1056,8 +1185,10 @@ export class DocumenterService {
           documentId: newDoc.id,
           fileName: file.originalname,
           documentCategory: newDoc.documentCategory,
+          categoryLabel: catLabel,
           fileSize: storageResult.fileSize,
           source: 'AGENT_CALLING_PORTAL',
+          remarks: `Documenter Agent ${actorName} uploaded document "${file.originalname}" (${catLabel}) on behalf of taxpayer.`,
           timestamp: new Date().toISOString(),
         },
       },
@@ -1103,13 +1234,15 @@ export class DocumenterService {
       where: { id: documentId },
     });
 
+    const actorName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent';
+
     // Record AuditLog for Agent Document Deletion
     await prisma.auditLog.create({
       data: {
         applicationId: doc.applicationId,
         actorId: agentUserId,
         actorType: 'AGENT',
-        actorName: agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent',
+        actorName,
         actorRole: agentUser?.role || 'DOC_AGENT',
         action: 'DOCUMENT_DELETE',
         moduleKey: 'DOCUMENT_VAULT',
@@ -1117,6 +1250,7 @@ export class DocumenterService {
           deletedFileName: doc.fileName,
           documentCategory: doc.documentCategory,
           source: 'AGENT_CALLING_PORTAL',
+          remarks: `Documenter Agent ${actorName} removed document "${doc.fileName}" from Document Vault.`,
           timestamp: new Date().toISOString(),
         },
       },
@@ -1146,6 +1280,7 @@ export class DocumenterService {
     const agentUser = await prisma.user.findUnique({
       where: { id: agentUserId },
     });
+    const actorName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent';
 
     const organizerData = dataOrBody?.organizerData || dataOrBody;
     const cleanOrganizerData = sanitizeObject(organizerData);
@@ -1202,21 +1337,37 @@ export class DocumenterService {
       },
     });
 
+    const moduleNamesMap: Record<string, string> = {
+      m1: 'Module 01 (Personal Info & Demographics)',
+      m2: 'Module 02 (Spouse & Dependents)',
+      m3: 'Module 03 (Substantial Presence & Multi-State)',
+      m4: 'Module 04 (W-2 Wages & Rental Properties)',
+      m5: 'Module 05 (1099-INT / DIV / OID Interest)',
+      m6: 'Module 06 (1099-B Stock & Crypto Capital Gains)',
+      m7: 'Module 07 (Foreign Assets & FBAR)',
+      m8: 'Module 08 (Itemized Deductions & HSA)',
+      m9: 'Module 09 (Direct Deposit Bank Details)',
+    };
+    const latestModuleKey = submittedModules[submittedModules.length - 1] || 'm1';
+    const latestModuleName = moduleNamesMap[latestModuleKey] || `Section ${latestModuleKey.toUpperCase()}`;
+
     // Record AuditLog for Agent Organizer Update
     await prisma.auditLog.create({
       data: {
         applicationId: app.id,
         actorId: agentUserId,
         actorType: 'AGENT',
-        actorName: agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent',
+        actorName,
         actorRole: agentUser?.role || 'DOC_AGENT',
         action: 'ORGANIZER_UPDATE',
-        moduleKey: 'ORGANIZER_AGENT_CALL',
+        moduleKey: `ORGANIZER_${latestModuleKey.toUpperCase()}`,
         details: {
+          activeModule: latestModuleName,
           submittedModules,
           progressPercent,
           completedCount,
           source: 'AGENT_CALLING_PORTAL',
+          remarks: `Documenter Agent ${actorName} updated ${latestModuleName} on intake call (${completedCount}/9 verified, ${progressPercent}% complete).`,
           timestamp: new Date().toISOString(),
         },
       },

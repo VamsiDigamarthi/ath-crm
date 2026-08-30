@@ -30,15 +30,18 @@ export const ManagerScorecardsScreen: React.FC = () => {
     refreshData,
   } = useDocumenterWorkspace();
 
+  // Filter exclusively for frontline Documenter Calling Agents (DOC_AGENT)
+  const callingAgents = useMemo(() => {
+    return agents.filter((a) => a.role === 'DOC_AGENT');
+  }, [agents]);
+
   // Derived Real Agent Performance Data from database query
   const agentPerformanceData: AgentPerformanceRow[] = useMemo(() => {
-    return agents.map((agent) => {
-      const isTL = agent.role === 'DOC_TEAM_LEAD';
+    return callingAgents.map((agent) => {
       const name = agent.name || agent.email.split('@')[0];
       const dials = agent.dials ?? 0;
       const connected = agent.connected ?? 0;
       const conversions = agent.conv ?? 0;
-      const maxCapacity = isTL ? 15 : 20;
 
       return {
         ...agent,
@@ -48,13 +51,15 @@ export const ManagerScorecardsScreen: React.FC = () => {
         connectedCallsToday: connected,
         conversionsToday: conversions,
         avgDuration: dials > 0 ? '3m 24s' : '0m 00s',
-        maxCapacity,
-        teamLeadName: isTL ? 'Pod Team Lead' : 'Calling Operations',
+        teamLeadName: 'Calling Operations',
       };
     });
-  }, [agents]);
+  }, [callingAgents]);
 
-  const activeAgentsCount = agents.length;
+  const activeAgentsCount = callingAgents.length;
+  const totalAssignedLeads = useMemo(() => {
+    return callingAgents.reduce((sum, a) => sum + (Number(a.activeLoad) || 0), 0);
+  }, [callingAgents]);
   const totalTeamDials = stats.todayDials ?? 0;
   const totalConnected = stats.todayConnected ?? 0;
   const totalInPrep = stats.inPrep ?? 0;
@@ -192,6 +197,7 @@ export const ManagerScorecardsScreen: React.FC = () => {
       {/* 3. Agent Performance Table */}
       <AgentPerformanceTable
         agents={agentPerformanceData}
+        totalDepartmentLeads={totalAssignedLeads}
         onFilterByAgent={(_agentId) => navigate('/documenter/manager/queue')}
         isLoading={isLoading}
       />

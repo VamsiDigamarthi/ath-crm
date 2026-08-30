@@ -53,6 +53,14 @@ export class LeadIngestionService {
     let duplicatesSkipped = 0;
     let validProcessed = 0;
 
+    const adminUser = adminUserId ? await prisma.user.findUnique({
+      where: { id: adminUserId },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true }
+    }) : null;
+    const adminName = adminUser?.firstName 
+      ? `${adminUser.firstName} ${adminUser.lastName || ''}`.trim() 
+      : adminUser?.email || 'Operations Admin';
+
     // Filter out invalid/empty rows (min 2 chars name, min 7 digits phone)
     const cleanedLeads = leads.filter(
       (l) => l && (l.firstName?.trim() && l.firstName.trim().length >= 2) &&
@@ -168,29 +176,10 @@ export class LeadIngestionService {
                       fromStage: ApplicationStage.RAW_PROSPECT,
                       toStage: ApplicationStage.RAW_PROSPECT,
                       movedByUserId: adminUserId,
-                      remarks: `Ingested & Linked to Master Profile (${matchedProfile.firstName} ${matchedProfile.lastName}) for Tax Year ${taxYear}`,
+                      remarks: `Ingested via Admin Bulk Excel/CSV Upload for Tax Year ${taxYear}. Linked to existing multi-year record (${matchedProfile.firstName} ${matchedProfile.lastName}). Queued in Documenter Intake Pool at RAW_PROSPECT stage.`,
                     },
                   });
                 }
-
-                // Create AuditLog record for audit compliance
-                await tx.auditLog.create({
-                  data: {
-                    applicationId: newApp.id,
-                    actorId: adminUserId || null,
-                    actorType: 'ADMIN',
-                    actorName: 'Admin',
-                    actorRole: 'ADMIN',
-                    action: 'STAGE_CHANGE',
-                    moduleKey: 'LEAD_INGESTION',
-                    details: {
-                      event: 'LEAD_INGESTED',
-                      taxYear,
-                      importedAt: new Date().toISOString(),
-                      remarks: `Admin ingested lead into TaxCRM Intake Pipeline for TY${taxYear} (Linked to existing profile ${matchedProfile.firstName} ${matchedProfile.lastName})`,
-                    },
-                  },
-                });
 
                 existingProfilesLinked++;
                 validProcessed++;
@@ -237,29 +226,10 @@ export class LeadIngestionService {
                     fromStage: ApplicationStage.RAW_PROSPECT,
                     toStage: ApplicationStage.RAW_PROSPECT,
                     movedByUserId: adminUserId,
-                    remarks: `Initial Bulk Ingestion for Tax Year ${taxYear}`,
+                    remarks: `Admin ${adminName} ingested raw prospect lead into TaxCRM Intake Pipeline for TY${taxYear} via Excel/CSV upload. Queued in Documenter Intake Pool at RAW_PROSPECT stage.`,
                   },
                 });
               }
-
-              // Create AuditLog record for audit compliance
-              await tx.auditLog.create({
-                data: {
-                  applicationId: newApp.id,
-                  actorId: adminUserId || null,
-                  actorType: 'ADMIN',
-                  actorName: 'Admin',
-                  actorRole: 'ADMIN',
-                  action: 'STAGE_CHANGE',
-                  moduleKey: 'LEAD_INGESTION',
-                  details: {
-                    event: 'LEAD_INGESTED',
-                    taxYear,
-                    importedAt: new Date().toISOString(),
-                    remarks: `Admin uploaded new lead record into TaxCRM Intake Pipeline for Tax Year ${taxYear}`,
-                  },
-                },
-              });
 
               newProfilesCreated++;
               validProcessed++;

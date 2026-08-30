@@ -17,23 +17,32 @@ export interface AgentPerformanceRow extends DocumenterAgentItem {
   connectedCallsToday: number;
   conversionsToday: number;
   avgDuration: string;
-  maxCapacity: number;
   teamLeadName?: string;
 }
 
 export interface AgentPerformanceTableProps {
   agents: AgentPerformanceRow[];
+  totalDepartmentLeads?: number;
   onFilterByAgent: (agentId: string) => void;
   isLoading?: boolean;
 }
 
 export const AgentPerformanceTable: React.FC<AgentPerformanceTableProps> = ({
   agents,
+  totalDepartmentLeads,
   onFilterByAgent,
   isLoading = false,
 }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
+
+  // Calculate dynamic total assigned caseload across the department
+  const totalAssignedInDept = useMemo(() => {
+    if (typeof totalDepartmentLeads === 'number' && totalDepartmentLeads > 0) {
+      return totalDepartmentLeads;
+    }
+    return agents.reduce((sum, a) => sum + (Number(a.activeLoad) || 0), 0);
+  }, [agents, totalDepartmentLeads]);
 
   const totalPages = Math.ceil(agents.length / itemsPerPage) || 1;
   const paginatedAgents = useMemo(() => {
@@ -88,24 +97,42 @@ export const AgentPerformanceTable: React.FC<AgentPerformanceTableProps> = ({
         header: 'Active Caseload Capacity',
         accessorKey: 'activeLoad',
         render: (row) => {
-          const percentage = Math.min(Math.round((row.activeLoad / (row.maxCapacity || 10)) * 100), 100);
+          const load = Number(row.activeLoad) || 0;
+          const sharePercentage = totalAssignedInDept > 0 
+            ? Math.round((load / totalAssignedInDept) * 100) 
+            : 0;
           return (
-            <div className="space-y-1.5 w-44">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-900">{row.activeLoad} leads</span>
-                <span className="text-slate-400 text-[11px]">{percentage}% of max ({row.maxCapacity})</span>
+            <div className="space-y-1.5 min-w-[210px] max-w-[250px]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-sm font-extrabold text-slate-900 leading-none">
+                    {load}
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">
+                    {load === 1 ? 'Lead' : 'Leads'}
+                  </span>
+                </div>
+                <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                  {sharePercentage}% Share
+                </span>
               </div>
+
               <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${
-                    percentage >= 80
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    sharePercentage >= 40
                       ? 'bg-amber-500'
-                      : percentage >= 40
+                      : sharePercentage > 0
                       ? 'bg-[#16A34A]'
-                      : 'bg-blue-500'
+                      : 'bg-slate-300'
                   }`}
-                  style={{ width: `${Math.max(percentage, 8)}%` }}
+                  style={{ width: `${Math.max(sharePercentage, load > 0 ? 8 : 0)}%` }}
                 />
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] font-medium text-slate-400">
+                <span>Pool: {totalAssignedInDept} Active Leads</span>
+                <span>{load > 0 ? `${load} assigned` : '0 assigned'}</span>
               </div>
             </div>
           );
@@ -149,23 +176,24 @@ export const AgentPerformanceTable: React.FC<AgentPerformanceTableProps> = ({
         header: 'Workload Status',
         accessorKey: 'activeLoad',
         render: (row) => {
-          const max = row.maxCapacity || 20;
           const load = Number(row.activeLoad) || 0;
-          const percentage = Math.round((load / max) * 100);
+          const sharePercentage = totalAssignedInDept > 0 
+            ? Math.round((load / totalAssignedInDept) * 100) 
+            : 0;
 
-          if (percentage >= 80) {
+          if (load > 0 && sharePercentage >= 40) {
             return (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                Near Capacity
+                Heavy Caseload ({sharePercentage}%)
               </span>
             );
           }
-          if (percentage >= 15 && load > 0) {
+          if (load > 0) {
             return (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
-                Optimal Load
+                Active Caseload ({sharePercentage}%)
               </span>
             );
           }
@@ -197,7 +225,7 @@ export const AgentPerformanceTable: React.FC<AgentPerformanceTableProps> = ({
         ),
       },
     ],
-    [onFilterByAgent]
+    [totalAssignedInDept, onFilterByAgent]
   );
 
   return (

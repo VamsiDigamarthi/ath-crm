@@ -25,6 +25,7 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
   onOpenCallModal,
 }) => {
   const [filterType, setFilterType] = useState<'ALL' | 'CONNECTED' | 'CALLBACKS'>('ALL');
+  const [expandedCallIds, setExpandedCallIds] = useState<Record<string, boolean>>({});
 
   // Format date helper: "Aug 23, 2026 at 01:05 PM" + relative time
   const formatCallDate = (dateStr: string): { fullDate: string; timeStr: string } => {
@@ -240,7 +241,7 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
                     </div>
                   </div>
 
-                  {/* Call Summary Notes */}
+                  {/* Call Summary Notes (Clamped to 2 lines with read more toggle) */}
                   {log.callSummary && (
                     <div className="mt-3 p-3 rounded-lg bg-white border border-slate-200/80 text-xs text-slate-700 leading-relaxed flex items-start gap-2.5">
                       <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -248,9 +249,18 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
                         <span className="font-semibold text-slate-800 block text-[11px] mb-0.5">
                           Agent Call Summary:
                         </span>
-                        <p className="text-slate-600 font-normal italic">
+                        <p className={`text-slate-600 font-normal italic leading-relaxed ${expandedCallIds[log.id] ? '' : 'line-clamp-2'}`}>
                           "{log.callSummary}"
                         </p>
+                        {log.callSummary.length > 130 && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedCallIds((prev) => ({ ...prev, [log.id]: !prev[log.id] }))}
+                            className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 hover:underline mt-1 cursor-pointer transition-colors"
+                          >
+                            {expandedCallIds[log.id] ? 'Show less' : '... Read more'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

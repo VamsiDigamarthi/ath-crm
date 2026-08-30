@@ -40,6 +40,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
   const [selectedDisposition, setSelectedDisposition] = useState<CallDisposition>('CONNECTED_INTERESTED');
   const [callSummary, setCallSummary] = useState<string>('');
   const [callbackDate, setCallbackDate] = useState<string>('');
+  const [isPreviousSummaryExpanded, setIsPreviousSummaryExpanded] = useState<boolean>(false);
 
   // Auto-bind / pre-fill previous call notes & callback time when modal opens
   useEffect(() => {
@@ -217,7 +218,18 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
             </div>
             {previousLog.callSummary && (
               <div className="text-[11px] text-purple-800 font-medium pl-5">
-                Notes: "{previousLog.callSummary}"
+                <p className={`leading-relaxed ${isPreviousSummaryExpanded ? '' : 'line-clamp-2'}`}>
+                  Notes: "{previousLog.callSummary}"
+                </p>
+                {previousLog.callSummary.length > 100 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsPreviousSummaryExpanded((prev) => !prev)}
+                    className="text-[10px] font-bold text-purple-700 hover:text-purple-900 hover:underline mt-0.5 cursor-pointer transition-colors"
+                  >
+                    {isPreviousSummaryExpanded ? 'Show less' : '... Read more'}
+                  </button>
+                )}
               </div>
             )}
           </div>

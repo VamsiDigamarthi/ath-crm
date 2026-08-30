@@ -37,12 +37,12 @@ export class NotificationService {
       where: {
         OR: [
           ...(user.id ? [{ recipientUserId: user.id }] : []),
-          ...(user.role ? [{ targetRole: user.role as any }] : []),
+          ...(user.role ? [{ targetRole: user.role as any, recipientUserId: null }] : []),
           { targetRole: null, recipientUserId: null },
         ],
       },
       orderBy: { createdAt: 'desc' },
-      take: 20,
+      take: 50,
     });
 
     return dbNotifications.map((n) => ({

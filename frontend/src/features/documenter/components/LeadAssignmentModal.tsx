@@ -6,7 +6,8 @@ import {
   Zap, 
   UserCheck, 
   Sparkles,
-  Headphones
+  Headphones,
+  Users
 } from 'lucide-react';
 import type { DocumenterAgentItem, DocumenterLeadItem } from '../types/documenter.types';
 
@@ -32,7 +33,6 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
   const [assignmentMode, setAssignmentMode] = useState<'ROUND_ROBIN' | 'DIRECT'>('ROUND_ROBIN');
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   const [searchAgent, setSearchAgent] = useState<string>('');
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'DOC_AGENT' | 'DOC_TEAM_LEAD' | 'DOC_MANAGER'>('ALL');
 
   const leadCount = selectedLeads.length;
 
@@ -49,18 +49,23 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
     return ids;
   }, [selectedLeads]);
 
-  // Auto Round-Robin strictly applies to frontline Calling Agents (DOC_AGENT)
-  const callingAgents = agents.filter((a) => a.role === 'DOC_AGENT');
+  // Exclusively filter for frontline Documenter Calling Agents (DOC_AGENT)
+  // Managers (DOC_MANAGER) and Team Leads (DOC_TEAM_LEAD) are strictly excluded from lead intake queues
+  const callingAgents = useMemo(() => {
+    return agents.filter((a) => a.role === 'DOC_AGENT');
+  }, [agents]);
 
-  // Direct selection can target any staff member (Agents, TLs, Managers)
-  const filteredStaff = agents.filter((a) => {
-    const matchesSearch =
-      a.email.toLowerCase().includes(searchAgent.toLowerCase()) ||
-      a.role.toLowerCase().includes(searchAgent.toLowerCase()) ||
-      (a.mobile && a.mobile.includes(searchAgent));
-    const matchesRole = roleFilter === 'ALL' || a.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  // Filter calling agents for search queries in Direct Selection mode
+  const filteredAgents = useMemo(() => {
+    const query = searchAgent.toLowerCase().trim();
+    if (!query) return callingAgents;
+    return callingAgents.filter((a) => {
+      return (
+        a.email.toLowerCase().includes(query) ||
+        (a.mobile && a.mobile.includes(query))
+      );
+    });
+  }, [callingAgents, searchAgent]);
 
   const handleConfirm = () => {
     if (assignmentMode === 'ROUND_ROBIN') {
@@ -71,30 +76,6 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
     }
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'DOC_MANAGER':
-        return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-            Manager
-          </span>
-        );
-      case 'DOC_TEAM_LEAD':
-        return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            Team Lead
-          </span>
-        );
-      case 'DOC_AGENT':
-      default:
-        return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-            Calling Agent
-          </span>
-        );
-    }
-  };
-
   return (
     <AppModal
       isOpen={isOpen}
@@ -102,11 +83,14 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
       className="max-w-2xl"
       title={
         <div>
-          <h3 className="text-base font-bold text-slate-900">
-            Distribute & Assign Tax Leads
+          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>Distribute &amp; Assign Tax Leads</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+              Calling Agents Only
+            </span>
           </h3>
           <p className="text-xs text-slate-500 font-medium">
-            Assign {leadCount} selected {leadCount === 1 ? 'lead' : 'leads'} to Documenter team members
+            Assign {leadCount} selected {leadCount === 1 ? 'lead' : 'leads'} to Documenter Calling Agents
           </p>
         </div>
       }
@@ -119,7 +103,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                 Auto-balanced across {callingAgents.length} Calling Agents
               </span>
             ) : (
-              <span>Select a staff member to assign</span>
+              <span>Select a calling agent to assign</span>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -128,7 +112,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
               size="sm"
               onClick={onClose}
               disabled={isLoading}
-              className="border-slate-200 text-slate-700 text-xs font-semibold"
+              className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
             >
               Cancel
             </Button>
@@ -136,7 +120,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
               size="sm"
               onClick={handleConfirm}
               disabled={isLoading || (assignmentMode === 'DIRECT' && (!selectedAgentId || currentlyAssignedAgentIds.has(selectedAgentId)))}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs px-4 shadow-sm"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs px-4 shadow-sm cursor-pointer"
             >
               {isLoading ? 'Processing...' : 'Confirm Assignment'}
             </Button>
@@ -157,7 +141,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
             }`}
           >
             <Zap className="w-4 h-4 text-amber-500 fill-current" />
-            Auto Round-Robin (Agents Only)
+            Auto Round-Robin ({callingAgents.length} Agents)
           </button>
           <button
             type="button"
@@ -169,7 +153,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
             }`}
           >
             <UserCheck className="w-4 h-4 text-blue-500" />
-            Direct Staff Selection (Any Role)
+            Direct Agent Selection ({callingAgents.length})
           </button>
         </div>
 
@@ -181,7 +165,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                 <Sparkles className="w-4 h-4 text-[#16A34A]" />
                 Fair Workload Balancing for Calling Agents
               </div>
-              The system will sequentially distribute <strong>{leadCount} leads</strong> equally across all <strong>{callingAgents.length} active Documenter Calling Agents</strong> (~{Math.ceil(leadCount / (callingAgents.length || 1))} leads each). Managers and Team Leads are excluded from cold-calling queues.
+              The system will sequentially distribute <strong>{leadCount} leads</strong> equally across all <strong>{callingAgents.length} active Documenter Calling Agents</strong> (~{Math.ceil(leadCount / (callingAgents.length || 1))} leads each). Managers and Team Leads are excluded from lead queues.
             </div>
 
             <div className="flex items-center justify-between">
@@ -189,82 +173,78 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                 <Headphones className="w-3.5 h-3.5 text-[#16A34A]" />
                 Active Calling Agents in Round-Robin Pool ({callingAgents.length})
               </div>
-              <span className="text-[11px] text-slate-400 font-medium">Managers & TLs excluded</span>
+              <span className="text-[11px] text-slate-400 font-medium">Managers &amp; TLs excluded</span>
             </div>
 
             <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-              {callingAgents.map((agent) => (
-                <div
-                  key={agent.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 border border-emerald-200 text-[#16A34A] font-bold text-xs flex items-center justify-center">
-                      {agent.email[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="font-bold text-xs text-slate-900">
-                        {agent.email}
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-medium">
-                        {agent.mobile || 'No phone'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getRoleBadge(agent.role)}
-                    <span className="text-[11px] font-semibold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                      {agent.activeLoad} active
-                    </span>
-                  </div>
+              {callingAgents.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400">
+                  No active calling agents found
                 </div>
-              ))}
+              ) : (
+                callingAgents.map((agent) => (
+                  <div
+                    key={agent.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 border border-emerald-200 text-[#16A34A] font-bold text-xs flex items-center justify-center">
+                        {agent.email[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
+                          <span>{agent.email}</span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+                            Calling Agent
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-medium">
+                          {agent.mobile || 'No phone'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-semibold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                        {agent.activeLoad} active leads
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
 
-        {/* Mode 2: Direct Staff Selection (Can choose TL, Manager, or Agent) */}
+        {/* Mode 2: Direct Calling Agent Selection (DOC_AGENT Only) */}
         {assignmentMode === 'DIRECT' && (
           <div className="space-y-3">
             {/* Search Input using shared AppSearchInput */}
             <AppSearchInput
               value={searchAgent}
               onChange={setSearchAgent}
-              placeholder="Search staff by email, mobile, or role..."
+              placeholder="Search calling agents by email or mobile..."
               debounceMs={200}
             />
 
-            {/* Role Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-              {[
-                { id: 'ALL', label: `All Staff (${agents.length})` },
-                { id: 'DOC_AGENT', label: `Agents (${callingAgents.length})` },
-                { id: 'DOC_TEAM_LEAD', label: `Team Leads (${agents.filter((a) => a.role === 'DOC_TEAM_LEAD').length})` },
-                { id: 'DOC_MANAGER', label: `Managers (${agents.filter((a) => a.role === 'DOC_MANAGER').length})` },
-              ].map((pill) => (
-                <button
-                  key={pill.id}
-                  type="button"
-                  onClick={() => setRoleFilter(pill.id as any)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    roleFilter === pill.id
-                      ? 'bg-[#16A34A] text-white shadow-2xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {pill.label}
-                </button>
-              ))}
+            {/* Calling Agent Header Indicator */}
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                <Users className="w-3.5 h-3.5 text-[#16A34A]" />
+                <span>Select from {callingAgents.length} Calling Agents</span>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                DOC_AGENT Only
+              </span>
             </div>
 
-            {/* Staff List */}
+            {/* Calling Agents List */}
             <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-              {filteredStaff.length === 0 ? (
-                <div className="p-6 text-center text-xs text-slate-400">
-                  No staff members match your search
+              {filteredAgents.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  No calling agents match your search
                 </div>
               ) : (
-                filteredStaff.map((agent) => {
+                filteredAgents.map((agent) => {
                   const isCurrentlyAssigned = currentlyAssignedAgentIds.has(agent.id);
                   const isSelected = selectedAgentId === agent.id;
                   return (
@@ -294,13 +274,15 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                         >
                           {isSelected && !isCurrentlyAssigned && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100/60 border border-emerald-200 text-[#16A34A] font-bold text-xs flex items-center justify-center">
                           {agent.email[0].toUpperCase()}
                         </div>
                         <div>
                           <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
                             <span>{agent.email}</span>
-                            {getRoleBadge(agent.role)}
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+                              Calling Agent
+                            </span>
                             {isCurrentlyAssigned && (
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-600 border border-slate-300">
                                 Current Owner

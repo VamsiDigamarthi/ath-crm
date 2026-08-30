@@ -98,9 +98,9 @@ export class CustomerService {
       assignedTeam: {
         docAgent: activeApp.assignedDocAgent
           ? {
-              name: `${activeApp.assignedDocAgent.firstName} ${activeApp.assignedDocAgent.lastName || ''}`.trim(),
-              email: activeApp.assignedDocAgent.email,
-            }
+            name: `${activeApp.assignedDocAgent.firstName} ${activeApp.assignedDocAgent.lastName || ''}`.trim(),
+            email: activeApp.assignedDocAgent.email,
+          }
           : { name: 'Kavya R', email: 'kavya.r@taxcrm.com' },
         cpaReviewer: {
           name: 'Ramesh Rao, CPA, EA',
@@ -223,6 +223,17 @@ export class CustomerService {
       },
     });
 
+    const categoryLabels: Record<string, string> = {
+      W2_WAGES: 'W-2 Wages',
+      FORM_1099: '1099 Interest/Div/Misc',
+      FORM_1099_B: '1099-B Stock Trading',
+      PASSPORT_VISA: 'Passport / Visa ID',
+      FORM_1098_MORTGAGE: '1098 Mortgage Interest',
+      FORM_1095_HEALTH: '1095 Health Coverage',
+      OTHER_EXPENSES: 'Tax Deduction Receipts',
+    };
+    const catLabel = categoryLabels[newDoc.documentCategory] || newDoc.documentCategory;
+
     // Record AuditLog for Client Document Upload
     await prisma.auditLog.create({
       data: {
@@ -237,8 +248,10 @@ export class CustomerService {
           documentId: newDoc.id,
           fileName: file.originalname,
           documentCategory: newDoc.documentCategory,
+          categoryLabel: catLabel,
           fileSize: storageResult.fileSize,
           source: 'TAXPAYER_CLIENT_PORTAL',
+          remarks: `Taxpayer uploaded document "${file.originalname}" (${catLabel}) to Document Vault.`,
           timestamp: new Date().toISOString(),
         },
       },
@@ -299,6 +312,7 @@ export class CustomerService {
           deletedFileName: doc.fileName,
           documentCategory: doc.documentCategory,
           source: 'TAXPAYER_CLIENT_PORTAL',
+          remarks: `Taxpayer deleted document "${doc.fileName}" from Document Vault.`,
           timestamp: new Date().toISOString(),
         },
       },
@@ -581,6 +595,20 @@ export class CustomerService {
       },
     });
 
+    const moduleNamesMap: Record<string, string> = {
+      m1: 'Module 01 (Personal Info & Demographics)',
+      m2: 'Module 02 (Spouse & Dependents)',
+      m3: 'Module 03 (Substantial Presence & Multi-State)',
+      m4: 'Module 04 (W-2 Wages & Rental Properties)',
+      m5: 'Module 05 (1099-INT / DIV / OID Interest)',
+      m6: 'Module 06 (1099-B Stock & Crypto Capital Gains)',
+      m7: 'Module 07 (Foreign Assets & FBAR)',
+      m8: 'Module 08 (Itemized Deductions & HSA)',
+      m9: 'Module 09 (Direct Deposit Bank Details)',
+    };
+    const latestModuleKey = submittedModules[submittedModules.length - 1] || 'm1';
+    const latestModuleName = moduleNamesMap[latestModuleKey] || `Section ${latestModuleKey.toUpperCase()}`;
+
     // Record AuditLog for Client Organizer Update
     await prisma.auditLog.create({
       data: {
@@ -590,12 +618,14 @@ export class CustomerService {
         actorName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client',
         actorRole: 'TAXPAYER_USER',
         action: 'ORGANIZER_UPDATE',
-        moduleKey: 'ORGANIZER_ALL',
+        moduleKey: `ORGANIZER_${latestModuleKey.toUpperCase()}`,
         details: {
+          activeModule: latestModuleName,
           submittedModules,
           progressPercent,
           completedCount,
           source: 'TAXPAYER_CLIENT_PORTAL',
+          remarks: `Taxpayer saved ${latestModuleName} in 9-Module Organizer (${completedCount}/9 verified, ${progressPercent}% complete).`,
           timestamp: new Date().toISOString(),
         },
       },
