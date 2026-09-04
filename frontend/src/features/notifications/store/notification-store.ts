@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import apiClient from '@/lib/api-client';
 import type { AppNotification, NotificationCategory } from '../types/notification.types';
 
@@ -24,38 +23,33 @@ interface NotificationState {
   getRecentNotifications: (limit?: number) => AppNotification[];
 }
 
-const INITIAL_NOTIFICATIONS: AppNotification[] = [];
+export const useNotificationStore = create<NotificationState>((set, get) => ({
+  notifications: [],
+  filterCategory: 'ALL',
+  filterOnlyUnread: false,
+  isLoading: false,
 
-export const useNotificationStore = create<NotificationState>()(
-  persist(
-    (set, get) => ({
-      notifications: INITIAL_NOTIFICATIONS,
-      filterCategory: 'ALL',
-      filterOnlyUnread: false,
-      isLoading: false,
-
-      fetchNotifications: async () => {
-        set({ isLoading: true });
-        try {
-          const res = await apiClient.get('/notifications');
-          const serverItems = (res as any)?.data || [];
-          if (Array.isArray(serverItems) && serverItems.length > 0) {
-            set((state) => {
-              // Merge server notifications with existing read status
-              const readMap = new Map(state.notifications.map((n) => [n.id, n.isRead]));
-              const merged = serverItems.map((item: any) => ({
-                ...item,
-                isRead: readMap.has(item.id) ? readMap.get(item.id)! : item.isRead,
-              }));
-              return { notifications: merged, isLoading: false };
-            });
-          } else {
-            set({ isLoading: false });
-          }
-        } catch {
-          set({ isLoading: false });
-        }
-      },
+  fetchNotifications: async () => {
+    set({ isLoading: true });
+    try {
+      const res = await apiClient.get('/notifications');
+      const serverItems = (res as any)?.data || [];
+      if (Array.isArray(serverItems)) {
+        set((state) => {
+          const readMap = new Map(state.notifications.map((n) => [n.id, n.isRead]));
+          const merged = serverItems.map((item: any) => ({
+            ...item,
+            isRead: readMap.has(item.id) ? readMap.get(item.id)! : item.isRead,
+          }));
+          return { notifications: merged, isLoading: false };
+        });
+      } else {
+        set({ notifications: [], isLoading: false });
+      }
+    } catch {
+      set({ notifications: [], isLoading: false });
+    }
+  },
 
       markAsRead: (id: string) => {
         set((state) => ({
@@ -109,9 +103,5 @@ export const useNotificationStore = create<NotificationState>()(
       getRecentNotifications: (limit = 4) => {
         return get().notifications.slice(0, limit);
       },
-    }),
-    {
-      name: 'taxcrm-notifications-vault',
-    }
-  )
-);
+}));
+

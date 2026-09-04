@@ -1,5 +1,5 @@
 import { prisma } from '../../config/db.js';
-import { ApplicationStage, Role } from '@prisma/client';
+import { ApplicationStage, Role, NotificationCategory, NotificationPriority } from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { StorageService } from '../../utils/storage-service.js';
 import { sanitizeObject } from '../customer/customer-validator.js';
@@ -843,9 +843,9 @@ export class DocumenterService {
         let targetStage: ApplicationStage = app.currentStage;
         let auditRemark = `Call outcome logged: ${disposition}`;
 
-        // 1. Handle disposition transitions
+        // 1. Handle disposition transitions (CONNECTED_INTERESTED keeps lead in DOC_OUTREACH until agent manually verifies & moves to prep)
         if (disposition === 'CONNECTED_INTERESTED') {
-          targetStage = ApplicationStage.DOC_PREP;
+          targetStage = ApplicationStage.DOC_OUTREACH;
           auditRemark = `Lead agreed & interested in filing. Provisioned Client Portal access for taxpayer (9-Module Organizer & Document Vault).`;
 
           // Lazy Taxpayer User Provisioning
@@ -983,6 +983,14 @@ export class DocumenterService {
         throw new NotFoundError('Application not found');
       }
 
+      const agentUser = await tx.user.findUnique({
+        where: { id: agentUserId },
+      });
+
+      const customerName = `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Taxpayer';
+      const agentName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Documenter Agent';
+      const transitionRemarks = `Documenter Agent ${agentName} (${agentUser?.email || ''}) completed document verification and transferred taxpayer return to Tax Preparation Department queue.${remarks ? ` Intake Handover Notes: "${remarks}"` : ''}`;
+
       const updatedApp = await tx.taxApplication.update({
         where: { id: applicationId },
         data: {
@@ -993,15 +1001,55 @@ export class DocumenterService {
         },
       });
 
+      // 1. Record Stage History audit log
       await tx.stageHistory.create({
         data: {
           applicationId: app.id,
           fromStage: app.currentStage,
           toStage: ApplicationStage.DOC_PREP,
           movedByUserId: agentUserId,
-          remarks: remarks || `Documenter Agent completed intake review and transferred taxpayer return to Tax Preparation Department.`,
+          remarks: transitionRemarks,
         },
       });
+
+      // 2. Broadcast Notifications to ALL active Preparation Managers
+      const prepManagers = await tx.user.findMany({
+        where: {
+          role: Role.PREP_MANAGER,
+          isActive: true,
+        },
+      });
+
+      if (prepManagers.length > 0) {
+        await tx.notification.createMany({
+          data: prepManagers.map((manager) => ({
+            recipientUserId: manager.id,
+            targetRole: Role.PREP_MANAGER,
+            applicationId: app.id,
+            title: `New Tax Return Ready for Preparation: ${customerName}`,
+            message: `Documenter Agent ${agentName} has completed intake verification for ${customerName} (TY ${app.taxYear}). Return is ready for preparer allocation.`,
+            category: NotificationCategory.PREP_REVIEW,
+            priority: NotificationPriority.HIGH,
+            actionUrl: `/prep/manager`,
+            actionLabel: 'Assign Preparer',
+            relatedLeadName: customerName,
+          })),
+        });
+      } else {
+        await tx.notification.create({
+          data: {
+            targetRole: Role.PREP_MANAGER,
+            applicationId: app.id,
+            title: `New Tax Return Ready for Preparation: ${customerName}`,
+            message: `Documenter Agent ${agentName} has completed intake verification for ${customerName} (TY ${app.taxYear}). Return is ready for preparer allocation.`,
+            category: NotificationCategory.PREP_REVIEW,
+            priority: NotificationPriority.HIGH,
+            actionUrl: `/prep/manager`,
+            actionLabel: 'Assign Preparer',
+            relatedLeadName: customerName,
+          },
+        });
+      }
 
       return updatedApp;
     });

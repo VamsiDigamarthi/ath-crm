@@ -150,7 +150,8 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
                   {/* 6. Audit Stage */}
                   <td className="py-3.5 px-4 text-center">
                     <PrepStageBadge 
-                      stage={item.currentStage} 
+                      stage={item.prepStage || item.currentStage} 
+                      assignedPreparerName={item.assignedPreparer?.name}
                       assignedCloserName={item.assignedSalesAgent?.name}
                       assignedFileOpName={item.assignedFileOp?.name}
                     />

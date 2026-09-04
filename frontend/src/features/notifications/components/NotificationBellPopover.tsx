@@ -108,14 +108,90 @@ export const NotificationBellPopover: React.FC = () => {
     }
   };
 
+  const resolveNotificationClickUrl = (notif: AppNotification): string => {
+    const appId = notif.relatedApplicationId;
+    const title = (notif.title || '').toLowerCase();
+    const msg = (notif.message || '').toLowerCase();
+    const rawUrl = (notif.actionUrl || '').toLowerCase();
+
+    // 1. REVISION REQUESTED -> Always Preparer Workspace so preparer can correct computation
+    const isRevision = title.includes('revision') || msg.includes('revision') || title.includes('discrepancy');
+    if (isRevision) {
+      if (appId) return `/prep-review/preparer/workspace/${appId}`;
+      return '/prep-review/preparer';
+    }
+
+    // 2. QA REVIEW & COMPLIANCE NOTIFICATIONS -> Always Senior QA Reviewer Audit Screen
+    // (e.g. "New QA Compliance Audit Assigned", "Form 1040 Submitted for QA Review", "4-Eyes Compliance Review")
+    const isQANotification = 
+      title.includes('qa compliance') ||
+      title.includes('submitted for qa') ||
+      title.includes('qa review') ||
+      title.includes('compliance review') ||
+      title.includes('qa audit') ||
+      msg.includes('4-eyes compliance') ||
+      rawUrl.includes('/reviewer');
+
+    if (isQANotification) {
+      if (appId) return `/prep-review/reviewer/audit/${appId}`;
+      return '/prep-review/reviewer';
+    }
+
+    // 3. TAX PREPARATION ASSIGNED NOTIFICATIONS -> Always Tax Preparer 1040 Workspace
+    // (e.g. "New 1040 Preparation Assigned", "assigned you Form 1040")
+    const isPrepNotification = 
+      title.includes('preparation assigned') ||
+      title.includes('1040 preparation') ||
+      msg.includes('assigned you form 1040') ||
+      rawUrl.includes('/preparer');
+
+    if (isPrepNotification) {
+      if (appId) return `/prep-review/preparer/workspace/${appId}`;
+      return '/prep-review/preparer';
+    }
+
+    // 4. PREPARATION MANAGER NOTIFICATIONS
+    const isManagerNotification = 
+      title.includes('ready for preparation') ||
+      title.includes('ready for preparer allocation') ||
+      rawUrl.includes('/manager');
+
+    if (isManagerNotification) {
+      return '/prep-review/manager/queue';
+    }
+
+    // 5. DOCUMENTER AGENT NOTIFICATIONS
+    const isDocAgentNotification = 
+      title.includes('calling queue') ||
+      title.includes('outreach') ||
+      rawUrl.includes('/documenter/agent');
+
+    if (isDocAgentNotification) {
+      if (appId) return `/documenter/agent/lead/${appId}`;
+      return '/documenter/agent/queue';
+    }
+
+    // 6. DOCUMENTER MANAGER NOTIFICATIONS
+    if (rawUrl.includes('/documenter/manager') || title.includes('ingested')) {
+      return '/documenter/manager/queue';
+    }
+
+    // 7. Direct actionUrl fallback (ensuring /prep-review/ prefix)
+    if (notif.actionUrl) {
+      if (notif.actionUrl.startsWith('/prep/')) {
+        return notif.actionUrl.replace('/prep/', '/prep-review/');
+      }
+      return notif.actionUrl;
+    }
+
+    return getNotificationUrl();
+  };
+
   const handleNotificationClick = (notif: AppNotification) => {
     markAsRead(notif.id);
     setIsOpen(false);
-    if (notif.actionUrl) {
-      navigate(notif.actionUrl);
-    } else {
-      navigate('/notifications');
-    }
+    const targetUrl = resolveNotificationClickUrl(notif);
+    navigate(targetUrl);
   };
 
   return (

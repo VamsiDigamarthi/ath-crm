@@ -264,12 +264,30 @@ export const router = createBrowserRouter([
             element: <TaxReviewerAuditScreen />,
           },
           {
+            path: 'reviewer/workspace/:id',
+            element: <TaxReviewerAuditScreen />,
+          },
+          {
             path: 'notifications',
             element: <NotificationCenterScreen />,
           },
         ],
       },
     ],
+  },
+
+  // 4b.2 Shorthand & Compatibility Route Redirects
+  {
+    path: '/prep/reviewer',
+    element: <Navigate to="/prep-review/reviewer" replace />,
+  },
+  {
+    path: '/prep/preparer',
+    element: <Navigate to="/prep-review/preparer" replace />,
+  },
+  {
+    path: '/prep/manager',
+    element: <Navigate to="/prep-review/manager/queue" replace />,
   },
 
   // 4c. Sales Department Operations Portal (/sales/*)

@@ -18,6 +18,12 @@ export class CustomerService {
             assignedDocAgent: {
               select: { id: true, firstName: true, lastName: true, email: true },
             },
+            assignedPrepAgent: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+            assignedReviewAgent: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
             assignedSalesAgent: {
               select: { id: true, firstName: true, lastName: true, email: true },
             },
@@ -53,13 +59,33 @@ export class CustomerService {
     const draft = (activeApp.taxDraftSummary as any) || {};
 
     // Calculate real numbers
-    const fedRefund = draft.fedRefund ?? draft.federalRefund ?? 2840;
-    const stateRefund = draft.stateRefund ?? 0;
+    const fedRefund = draft.fedRefund ?? draft.federalRefund ?? draft.federalTaxRefund ?? 2840;
+    const stateRefund = draft.stateRefund ?? draft.stateTaxRefund ?? 0;
     const totalRefund = fedRefund + stateRefund;
-    const bankName = draft.bankName || 'Chase Bank';
-    const bankMasked = draft.accountNumber
-      ? `${bankName} (•••• ${draft.accountNumber.slice(-4)})`
+    
+    // Dynamic bank info
+    const bankDetails = draft.organizer?.m9_directDeposit || {};
+    const bankName = bankDetails.bankName || draft.bankName || 'Direct Deposit';
+    const rawAccount = bankDetails.accountNumber || draft.accountNumber || '';
+    const bankMasked = rawAccount
+      ? `${bankName} (•••• ${rawAccount.slice(-4)})`
       : `${bankName} (•••• 4819)`;
+
+    // Dynamic state label
+    let stateName = 'State Return';
+    const noStateTax = ['TX', 'WA', 'FL', 'NV', 'SD', 'WY', 'AK', 'TN', 'NH'];
+    if (profile.state && noStateTax.includes(profile.state.toUpperCase())) {
+      stateName = `${profile.state.toUpperCase()} (0% State Income Tax)`;
+    } else if (profile.state) {
+      stateName = `${profile.state.toUpperCase()} State Tax`;
+    }
+
+    // Dynamic organizer progress
+    const submittedList = Array.isArray(draft.organizer?.submittedModules)
+      ? draft.organizer.submittedModules
+      : (draft.organizer?.m1_demographics?.firstName ? ['m1'] : (draft.organizerVerifiedCount ? ['m1'] : []));
+    const organizerVerifiedCount = Math.max(submittedList.length, draft.organizerVerifiedCount || 1);
+    const organizerPercent = Math.min(100, Math.round((organizerVerifiedCount / 9) * 100));
 
     const docCount = activeApp.documents?.length || 0;
     const latestQuote = activeApp.quotes?.[0];
@@ -91,7 +117,7 @@ export class CustomerService {
         fedRefund,
         stateRefund,
         totalRefund,
-        stateName: profile.state === 'TX' ? 'Texas (TX - 0% State Tax)' : `${profile.state || 'Texas'} State Tax`,
+        stateName,
         bankMasked,
         isDraft: activeApp.currentStage !== 'FILING_SUCCESS',
       },
@@ -101,16 +127,27 @@ export class CustomerService {
             name: `${activeApp.assignedDocAgent.firstName} ${activeApp.assignedDocAgent.lastName || ''}`.trim(),
             email: activeApp.assignedDocAgent.email,
           }
-          : { name: 'Kavya R', email: 'kavya.r@taxcrm.com' },
-        cpaReviewer: {
-          name: 'Ramesh Rao, CPA, EA',
-          credentials: 'IRS Enrolled Agent & Circular 230 Certified',
-        },
+          : { name: 'Assigned Documenter', email: 'support@taxcrm.com' },
+        prepAgent: activeApp.assignedPrepAgent
+          ? {
+            name: `${activeApp.assignedPrepAgent.firstName} ${activeApp.assignedPrepAgent.lastName || ''}`.trim(),
+            email: activeApp.assignedPrepAgent.email,
+          }
+          : null,
+        cpaReviewer: activeApp.assignedReviewAgent
+          ? {
+            name: `${activeApp.assignedReviewAgent.firstName} ${activeApp.assignedReviewAgent.lastName || ''}`.trim(),
+            credentials: 'IRS Enrolled Agent & Circular 230 Certified',
+          }
+          : {
+            name: 'Ramesh Rao, CPA, EA',
+            credentials: 'IRS Enrolled Agent & Circular 230 Certified',
+          },
       },
       stats: {
         docCount,
-        organizerPercent: draft.organizerPercent || 78,
-        organizerVerifiedCount: draft.organizerVerifiedCount || 7,
+        organizerPercent,
+        organizerVerifiedCount,
         quoteAmount,
         quoteStatus,
       },

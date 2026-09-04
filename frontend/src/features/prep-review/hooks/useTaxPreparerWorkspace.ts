@@ -64,6 +64,10 @@ export function useTaxPreparerWorkspace() {
   const [revisionCategory, setRevisionCategory] = useState<string>('');
   const [revisionInstructions, setRevisionInstructions] = useState<string>('');
 
+  const [stageHistories, setStageHistories] = useState<any[]>([]);
+  const [callLogs, setCallLogs] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
   // Standard deduction for 2025: MFJ = 29200, Single = 14600
   const standardDeductionAmount = useMemo(() => {
     if (taxpayer?.maritalStatus?.toLowerCase().includes('joint')) return 29200;
@@ -83,6 +87,9 @@ export function useTaxPreparerWorkspace() {
       setTaxpayer(data.taxpayer || null);
       setAssignedReviewer(data.assignedReviewer || null);
       setDocuments(data.documents || []);
+      if (data.stageHistories) setStageHistories(data.stageHistories);
+      if (data.callLogs) setCallLogs(data.callLogs);
+      if (data.auditLogs) setAuditLogs(data.auditLogs);
 
       // If draft was previously saved in DB, load its values
       const draft = data.taxDraftSummary;
@@ -260,6 +267,9 @@ export function useTaxPreparerWorkspace() {
     revisionCategory,
     revisionInstructions,
     calculations,
+    stageHistories,
+    callLogs,
+    auditLogs,
     handleSaveDraft,
     handleSubmitForQA,
   };

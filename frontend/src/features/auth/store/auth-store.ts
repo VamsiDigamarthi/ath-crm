@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authService } from '@/features/auth/services/auth-service';
+import { useNotificationStore } from '@/features/notifications/store/notification-store';
 
 interface AuthState {
   user: any;
@@ -21,11 +22,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response: any = await authService.getCurrentUser();
       if (response.data && response.data.user) {
         set({ user: response.data.user, isAuthenticated: true, isLoading: false });
+        useNotificationStore.getState().fetchNotifications();
       } else {
         set({ user: null, isAuthenticated: false, isLoading: false });
+        useNotificationStore.getState().clearAll();
       }
-    } catch (error) {
+    } catch {
       set({ user: null, isAuthenticated: false, isLoading: false });
+      useNotificationStore.getState().clearAll();
     }
   },
 
@@ -36,10 +40,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   verify: async (identifier: string, otp: string) => {
     const response: any = await authService.verifyOtp(identifier, otp);
     set({ user: response.data, isAuthenticated: true });
+    useNotificationStore.getState().fetchNotifications();
   },
 
   logout: async () => {
     await authService.logout();
     set({ user: null, isAuthenticated: false });
+    useNotificationStore.getState().clearAll();
   },
 }));

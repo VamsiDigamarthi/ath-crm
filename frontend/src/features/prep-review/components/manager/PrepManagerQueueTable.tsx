@@ -7,13 +7,13 @@ import { AppEmptyState } from '@/shared/components/AppEmptyState';
 import { Button } from '@/shared/components/Button';
 import { 
   UserCheck, 
-  Sparkles, 
   FileText, 
   CheckSquare, 
   Square, 
   ShieldCheck, 
   Calculator, 
-  UserPlus 
+  UserPlus,
+  X 
 } from 'lucide-react';
 
 interface PrepManagerQueueTableProps {
@@ -28,7 +28,7 @@ interface PrepManagerQueueTableProps {
   };
   isLoading?: boolean;
   onOpenAssignModal: (leadsToAssign: PrepReviewLead[]) => void;
-  onOpenAutoDistribute: () => void;
+  onOpenAutoDistribute?: () => void;
   onViewLeadDetail: (lead: PrepReviewLead) => void;
   selectedStageFilter?: string;
   onStageFilterChange?: (stage: string) => void;
@@ -39,7 +39,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
   tabStats,
   isLoading = false,
   onOpenAssignModal,
-  onOpenAutoDistribute,
+  onOpenAutoDistribute: _onOpenAutoDistribute,
   onViewLeadDetail,
   selectedStageFilter = 'ALL',
   onStageFilterChange,
@@ -127,36 +127,15 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
           </p>
         </div>
 
-        {/* Search & Bulk Action Buttons */}
+        {/* Search Input */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="w-64 sm:w-72">
+          <div className="w-64 sm:w-80">
             <AppSearchInput
               value={searchQuery}
               onChange={(val) => setSearchQuery(val)}
               placeholder="Search taxpayer, visa, state..."
             />
           </div>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onOpenAutoDistribute}
-            className="border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] text-xs font-bold flex items-center gap-1.5 h-8.5 px-3 cursor-pointer shadow-2xs"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#16A34A]" />
-            <span>1-Click Round-Robin</span>
-          </Button>
-
-          {selectedLeadIds.length > 0 && (
-            <Button
-              size="sm"
-              onClick={handleBulkAssignClick}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 h-8.5 px-3.5 cursor-pointer shadow-2xs animate-fade-in"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>Assign Selected ({selectedLeadIds.length})</span>
-            </Button>
-          )}
         </div>
       </div>
 
@@ -413,7 +392,8 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
                     {/* Lifecycle Stage */}
                     <td className="py-3.5 px-4">
                       <PrepStageBadge 
-                        stage={lead.currentStage} 
+                        stage={lead.prepStage || lead.currentStage} 
+                        assignedPreparerName={lead.assignedPreparer?.name}
                         assignedCloserName={lead.assignedSalesAgent?.name}
                         assignedFileOpName={lead.assignedFileOp?.name}
                       />
@@ -436,6 +416,42 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Sleek Floating Action Bar at Bottom (Exact Documenter Manager UX) */}
+      {selectedLeadIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-5 duration-200 font-sans">
+          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-900/95 backdrop-blur-md text-white border border-slate-700 shadow-2xl shadow-slate-950/40">
+            <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-[#16A34A] border border-emerald-500/30 flex items-center justify-center font-bold text-xs">
+                <CheckSquare className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-white tracking-wide">
+                  {selectedLeadIds.length} {selectedLeadIds.length === 1 ? 'Lead' : 'Leads'}
+                </span>
+                <span className="text-[10px] text-slate-400 block -mt-0.5">Selected</span>
+              </div>
+            </div>
+
+            <Button
+              size="sm"
+              onClick={handleBulkAssignClick}
+              className="h-9 px-4 rounded-xl font-bold text-xs bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            >
+              <UserPlus className="w-3.5 h-3.5 text-white" />
+              <span>Assign Preparer &amp; QA Reviewer</span>
+            </Button>
+
+            <button
+              onClick={() => setSelectedLeadIds([])}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-1 cursor-pointer"
+              title="Clear Selection"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -7,13 +7,16 @@ import { ReviewerAuditCalculationsPanel } from '../components/reviewer/audit/Rev
 import { ReviewerComplianceChecklist } from '../components/reviewer/audit/ReviewerComplianceChecklist';
 import { DocumentPreviewModal } from '../components/workspace/DocumentPreviewModal';
 import { ReviewerSignOffModals } from '../components/reviewer/audit/ReviewerSignOffModals';
+import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 
 export const TaxReviewerAuditScreen: React.FC = () => {
   const navigate = useNavigate();
   const {
     isLoading,
     isSubmitting,
+    applicationId,
     taxYear,
+    currentStage,
     taxpayer,
     assignedPreparer,
     documents,
@@ -35,19 +38,25 @@ export const TaxReviewerAuditScreen: React.FC = () => {
     setRevisionReason,
     revisionNotes,
     setRevisionNotes,
+    stageHistories,
+    callLogs,
+    auditLogs,
     handleConfirmApprove,
     handleConfirmRevision,
   } = useTaxReviewerAudit();
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-16 flex flex-col items-center justify-center gap-3">
-        <div className="w-9 h-9 rounded-full border-3 border-purple-600 border-t-transparent animate-spin" />
-        <span className="text-xs font-bold text-slate-700">Loading 4-Eyes Senior QA Audit Deck...</span>
-        <span className="text-[11px] text-slate-400 font-medium">Fetching preparer Form 1040 computations and verified slips</span>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-3 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-slate-500">Loading Form 1040 4-Eyes Compliance audit deck...</p>
+        </div>
       </div>
     );
   }
+
+  const taxpayerName = taxpayer?.name || 'Taxpayer Client';
 
   return (
     <div className="w-full space-y-6 pb-16 font-sans animate-in fade-in duration-200">
@@ -56,6 +65,8 @@ export const TaxReviewerAuditScreen: React.FC = () => {
         taxpayer={taxpayer}
         taxYear={taxYear}
         assignedPreparer={assignedPreparer}
+        currentStage={currentStage}
+        taxDraftSummary={taxDraftSummary}
         onBack={() => navigate('/prep-review/reviewer')}
         onOpenApproveModal={() => setIsApproveModalOpen(true)}
         onOpenRevisionModal={() => setIsRevisionModalOpen(true)}
@@ -106,6 +117,16 @@ export const TaxReviewerAuditScreen: React.FC = () => {
           className="w-full rounded-xl border border-slate-200 p-3.5 text-xs text-slate-800 focus:border-purple-500 focus:outline-none placeholder:text-slate-400 font-medium"
         />
       </div>
+
+      {/* 3.5 Full Lead Audit Trail & Lifecycle Activity Stream */}
+      <LeadAuditTrailSection
+        leadId={applicationId}
+        taxpayerName={taxpayerName}
+        currentStage={currentStage}
+        stageHistories={stageHistories}
+        callLogs={callLogs}
+        auditLogs={auditLogs}
+      />
 
       {/* 4. Document Preview Modal */}
       <DocumentPreviewModal

@@ -82,6 +82,9 @@ export interface PrepStaffMember {
   mobile: string;
   role: 'PREP_MANAGER' | 'TAX_REVIEWER' | 'TAX_PREPARER';
   roleLabel: string;
+  totalAssignedCount?: number;
+  totalAssignedPrep?: number;
+  totalAssignedReview?: number;
   activeCaseload: number;
   prepActiveCount?: number;
   reviewActiveCount?: number;
@@ -106,4 +109,5 @@ export interface PrepManagerStats {
   firstTimePassRate: number;
   complexityMix?: Array<{ name: string; value: number; color: string; pct: number }>;
   hourlyVelocity?: Array<{ hour: string; prepared: number; reviewed: number }>;
+  weeklyVelocity?: Array<{ day: string; prepared: number; reviewed: number }>;
 }

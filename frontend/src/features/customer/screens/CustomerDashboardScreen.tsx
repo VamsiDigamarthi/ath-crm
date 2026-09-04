@@ -35,9 +35,27 @@ export const CustomerDashboardScreen: React.FC = () => {
   const bankMasked = dashboardData?.refund?.bankMasked || 'Chase Bank (•••• 4819)';
 
   const currentStage = dashboardData?.application?.currentStage || 'DOC_PREP';
-  const docCount = dashboardData?.stats?.docCount ?? 3;
+  const docCount = dashboardData?.stats?.docCount ?? 0;
   const organizerPercent = dashboardData?.stats?.organizerPercent ?? 85;
   const organizerVerifiedCount = dashboardData?.stats?.organizerVerifiedCount ?? 7;
+  const getGreetingMessage = () => {
+    if (isConverted || currentStage === 'FILING_SUCCESS') {
+      return `Congratulations, ${taxpayerName}! Your TY ${selectedTaxYear || '2025'} Form 1040 has been certified and successfully e-filed with the IRS.`;
+    }
+    if (currentStage === 'RAW_PROSPECT' || currentStage === 'DOC_OUTREACH') {
+      return `Welcome back, ${taxpayerName}. Your TY ${selectedTaxYear || '2025'} file is in Document Intake. Please complete your 9-Module Organizer and upload your W-2 & 1099 slips.`;
+    }
+    if (currentStage === 'DOC_PREP') {
+      return `Welcome back, ${taxpayerName}. Your TY ${selectedTaxYear || '2025'} return has been transferred to the Tax Preparation Department. Our CPA team is calculating your deductions.`;
+    }
+    if (currentStage === 'SALES_PITCH_QUEUE' || currentStage === 'SALES_PITCHING') {
+      return `Welcome back, ${taxpayerName}. Your tax return draft is ready! Review your transparent fee quote and approve to initiate CPA e-filing.`;
+    }
+    if (currentStage === 'QA_IN_REVIEW' || currentStage === 'QA_APPROVED' || currentStage === 'FILING_QUEUE') {
+      return `Welcome back, ${taxpayerName}. Your return is in Senior CPA Quality Assurance audit before IRS electronic submission.`;
+    }
+    return `Welcome back, ${taxpayerName}. Your return is actively in progress with agent ${assignedAgentName}.`;
+  };
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -53,9 +71,7 @@ export const CustomerDashboardScreen: React.FC = () => {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            {isConverted
-              ? `Congratulations, ${taxpayerName}! Your TY ${selectedTaxYear || '2025'} Form 1040 has been certified and successfully e-filed with the IRS.`
-              : `Welcome back, ${taxpayerName}. Your TY ${selectedTaxYear || '2025'} return is currently active in Tax Prep Review with agent ${assignedAgentName}.`}
+            {getGreetingMessage()}
           </p>
         </div>
 

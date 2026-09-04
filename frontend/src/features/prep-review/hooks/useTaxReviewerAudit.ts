@@ -22,6 +22,9 @@ export function useTaxReviewerAudit() {
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<WorkspaceDocument | null>(null);
   const [prepNotes, setPrepNotes] = useState<string>('');
   const [taxDraftSummary, setTaxDraftSummary] = useState<any>(null);
+  const [stageHistories, setStageHistories] = useState<any[]>([]);
+  const [callLogs, setCallLogs] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   // 4-Eyes Compliance Checklist States (Default Unchecked - Auditor must manually verify)
   const [checks, setChecks] = useState<{ [key: string]: boolean }>({
@@ -74,6 +77,9 @@ export function useTaxReviewerAudit() {
       setDocuments(data.documents || []);
       setPrepNotes(data.prepNotes || '');
       setTaxDraftSummary(data.taxDraftSummary || {});
+      if (data.stageHistories) setStageHistories(data.stageHistories);
+      if (data.callLogs) setCallLogs(data.callLogs);
+      if (data.auditLogs) setAuditLogs(data.auditLogs);
 
       // Load saved auditor remarks or saved compliance checks if available
       const draft = data.taxDraftSummary;
@@ -162,6 +168,9 @@ export function useTaxReviewerAudit() {
     setRevisionReason,
     revisionNotes,
     setRevisionNotes,
+    stageHistories,
+    callLogs,
+    auditLogs,
     handleConfirmApprove,
     handleConfirmRevision,
   };

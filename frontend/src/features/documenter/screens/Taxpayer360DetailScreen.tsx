@@ -48,6 +48,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const [isCallModalOpen, setIsCallModalOpen] = useState<boolean>(false);
   const [isMoveToPrepModalOpen, setIsMoveToPrepModalOpen] = useState<boolean>(false);
   const [isMovingToPrep, setIsMovingToPrep] = useState<boolean>(false);
+  const [prepTransferNotes, setPrepTransferNotes] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Fetch full 360 lead details including all historical call logs
@@ -71,9 +72,10 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     if (!targetAppId) return;
     try {
       setIsMovingToPrep(true);
-      await documenterService.moveToTaxPrep(targetAppId);
+      await documenterService.moveToTaxPrep(targetAppId, prepTransferNotes.trim() || undefined);
       toast.success(`Taxpayer return successfully transferred to Tax Prep Manager Queue! 🧮✨`);
       setIsMoveToPrepModalOpen(false);
+      setPrepTransferNotes('');
       await fetchLeadDetails();
       refreshData();
     } catch (err: any) {
@@ -478,7 +480,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           isOpen={isMoveToPrepModalOpen}
           onClose={() => setIsMoveToPrepModalOpen(false)}
           title={`Move to Tax Preparation: ${customer.fullName || `${customer.firstName} ${customer.lastName}`}`}
-          width="500px"
+          width="520px"
         >
           <div className="space-y-4 font-sans py-1">
             <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
@@ -487,23 +489,47 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                 <span>Ready for Tax Preparation &amp; 1040 Drafting?</span>
               </div>
               <p className="leading-relaxed text-emerald-800">
-                You are about to transfer <strong>{customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY {currentLead.taxYear})</strong> to the <strong>Tax Prep &amp; Review Department Queue</strong>.
+                You are transferring <strong>{customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY {currentLead.taxYear})</strong> to the <strong>Tax Preparation Department</strong>.
               </p>
             </div>
 
             {/* Checklist items */}
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2.5">
               <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
-                Intake Readiness Verification:
+                Intake Readiness Checklist:
               </div>
               <div className="flex items-center justify-between text-slate-700">
-                <span>Client Documents Verified:</span>
-                <span className="font-bold text-[#16A34A]">{(lead?.documents || currentLead.documents || []).length} Document(s) in Vault ✓</span>
+                <span>Client Documents in Vault:</span>
+                <span className="font-bold text-[#16A34A]">{(lead?.documents || currentLead.documents || []).length} Document(s) Uploaded ✓</span>
               </div>
               <div className="flex items-center justify-between text-slate-700">
-                <span>Taxpayer Profile &amp; Residency:</span>
+                <span>Taxpayer Visa &amp; Residency:</span>
                 <span className="font-bold text-[#16A34A]">{customer.visaType || 'Verified'} ✓</span>
               </div>
+              <div className="flex items-center justify-between text-slate-700">
+                <span>Organizer Verified Status:</span>
+                <span className="font-bold text-[#16A34A]">{(currentLead.taxDraftSummary as any)?.organizerVerifiedCount || 1} / 9 Modules Verified ✓</span>
+              </div>
+            </div>
+
+            {/* Handover remarks for Prep Manager */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Handover Notes for Preparation Manager (Optional)
+              </label>
+              <textarea
+                rows={2}
+                placeholder="e.g. Taxpayer has W-2 and 1099-B stock trades, please check state deductions..."
+                value={prepTransferNotes}
+                onChange={(e) => setPrepTransferNotes(e.target.value)}
+                className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] outline-none transition-all resize-none text-slate-800 placeholder-slate-400 bg-white"
+              />
+            </div>
+
+            {/* Notification notice */}
+            <div className="p-2.5 rounded-lg bg-indigo-50/70 border border-indigo-200/80 text-[11px] text-indigo-900 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>All active Preparation Managers will be notified instantly to allocate a Tax Preparer.</span>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

@@ -1,5 +1,5 @@
 import { prisma } from '../../config/db.js';
-import { ApplicationStage, Role } from '@prisma/client';
+import { ApplicationStage, Role, NotificationCategory, NotificationPriority } from '@prisma/client';
 import { StorageService } from '../../utils/storage-service.js';
 import { NotFoundError } from '../../errors/not-found-error.js';
 
@@ -63,6 +63,10 @@ export class PrepReviewService {
       const reviewActiveCount = member.assignedReviewApps.filter((a) => activeStages.includes(a.currentStage)).length;
       const activeCaseload = prepActiveCount + reviewActiveCount;
 
+      const totalAssignedPrep = member.assignedPrepApps.length;
+      const totalAssignedReview = member.assignedReviewApps.length;
+      const totalAssignedCount = totalAssignedPrep + totalAssignedReview;
+
       const prepCompletedCount = member.assignedPrepApps.filter((a) => completedStages.includes(a.currentStage)).length;
       const reviewCompletedCount = member.assignedReviewApps.filter((a) => completedStages.includes(a.currentStage)).length;
       const completedThisMonth = prepCompletedCount + reviewCompletedCount;
@@ -87,6 +91,9 @@ export class PrepReviewService {
         mobile: member.mobile || '+1 (555) 019-2000',
         role: member.role,
         roleLabel,
+        totalAssignedCount,
+        totalAssignedPrep,
+        totalAssignedReview,
         activeCaseload,
         prepActiveCount,
         reviewActiveCount,
@@ -363,6 +370,37 @@ export class PrepReviewService {
     }
 
     return await prisma.$transaction(async (tx) => {
+      // 1. Fetch user details and target applications with fallback for manager
+      let validManagerId = assignedByUserId;
+      let managerUser = await tx.user.findUnique({
+        where: { id: assignedByUserId },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      });
+
+      if (!managerUser) {
+        const fallbackManager = await tx.user.findFirst({
+          where: { role: { in: [Role.PREP_MANAGER, Role.ADMIN] } },
+          select: { id: true, firstName: true, lastName: true, email: true },
+        });
+        if (fallbackManager) {
+          validManagerId = fallbackManager.id;
+          managerUser = fallbackManager;
+        }
+      }
+
+      const [preparerUser, reviewerUser, targetApps] = await Promise.all([
+        tx.user.findUnique({ where: { id: preparerId }, select: { id: true, firstName: true, lastName: true, email: true } }),
+        reviewerId ? tx.user.findUnique({ where: { id: reviewerId }, select: { id: true, firstName: true, lastName: true, email: true } }) : Promise.resolve(null),
+        tx.taxApplication.findMany({
+          where: { id: { in: applicationIds } },
+          include: { customer: true },
+        }),
+      ]);
+
+      const managerName = managerUser ? `${managerUser.firstName || ''} ${managerUser.lastName || ''}`.trim() || managerUser.email : 'Prep Manager';
+      const preparerName = preparerUser ? `${preparerUser.firstName || ''} ${preparerUser.lastName || ''}`.trim() || preparerUser.email : 'Tax Preparer';
+      const reviewerName = reviewerUser ? `${reviewerUser.firstName || ''} ${reviewerUser.lastName || ''}`.trim() || reviewerUser.email : 'Senior QA Reviewer';
+
       const updatedApplications = await tx.taxApplication.updateMany({
         where: { id: { in: applicationIds } },
         data: {
@@ -371,23 +409,61 @@ export class PrepReviewService {
         },
       });
 
-      // Write StageHistory audit trail
-      for (const appId of applicationIds) {
+      // 2. StageHistory Audit trail & In-App Notifications for each lead
+      for (const app of targetApps) {
+        const customerName = `${app.customer.firstName} ${app.customer.lastName}`;
+        const sDueDate = targetDueDate ? ` (Target Due: ${targetDueDate})` : '';
+        const sNotes = prepNotes ? ` Notes: ${prepNotes}` : '';
+
         await tx.stageHistory.create({
           data: {
-            applicationId: appId,
-            fromStage: ApplicationStage.DOC_PREP,
-            toStage: ApplicationStage.DOC_PREP,
-            movedByUserId: assignedByUserId,
-            remarks: `Assigned to Preparer (${preparerId}) and Reviewer (${reviewerId || 'Pending'}). SLA: ${targetDueDate || 'Standard'}. Notes: ${prepNotes || 'None'}`,
+            applicationId: app.id,
+            fromStage: app.currentStage,
+            toStage: app.currentStage,
+            movedByUserId: validManagerId,
+            remarks: `Assigned to Tax Preparer ${preparerName} (${preparerUser?.email || preparerId}) and QA Reviewer ${reviewerId ? `${reviewerName} (${reviewerUser?.email || reviewerId})` : 'Pending'}${sDueDate}.${sNotes}`,
           },
         });
+
+        // In-App Notification to Assigned Preparer
+        await tx.notification.create({
+          data: {
+            recipientUserId: preparerId,
+            applicationId: app.id,
+            category: NotificationCategory.PREP_REVIEW,
+            priority: NotificationPriority.HIGH,
+            title: `New 1040 Preparation Assigned: ${customerName}`,
+            message: `Manager ${managerName} assigned you Form 1040 for ${customerName} (TY ${app.taxYear || 2025}).${targetDueDate ? ` Target Due: ${targetDueDate}.` : ''}${prepNotes ? ` Note: ${prepNotes}` : ''}`,
+            actionUrl: `/prep-review/preparer/workspace/${app.id}`,
+            actionLabel: 'Open Workspace',
+            relatedLeadName: customerName,
+          },
+        });
+
+        // In-App Notification to Assigned Reviewer (if assigned)
+        if (reviewerId) {
+          await tx.notification.create({
+            data: {
+              recipientUserId: reviewerId,
+              applicationId: app.id,
+              category: NotificationCategory.PREP_REVIEW,
+              priority: NotificationPriority.NORMAL,
+              title: `New QA Compliance Audit Assigned: ${customerName}`,
+              message: `Manager ${managerName} designated you for 4-Eyes Compliance Review for ${customerName} (Preparer: ${preparerName}).`,
+              actionUrl: `/prep-review/reviewer/audit/${app.id}`,
+              actionLabel: 'Start QA Audit',
+              relatedLeadName: customerName,
+            },
+          });
+        }
       }
 
       return {
         totalAssigned: updatedApplications.count,
         preparerId,
         reviewerId,
+        preparerName,
+        reviewerName,
       };
     });
   }
@@ -477,12 +553,12 @@ export class PrepReviewService {
         createdAt: { gte: startOfWeek },
         OR: [
           { toStage: ApplicationStage.DOC_PREP },
-          { toStage: ApplicationStage.CORRECTION_NEEDED },
           { toStage: ApplicationStage.SALES_PITCH_QUEUE },
         ],
       },
       select: {
         id: true,
+        applicationId: true,
         fromStage: true,
         toStage: true,
         createdAt: true,
@@ -490,41 +566,85 @@ export class PrepReviewService {
       orderBy: { createdAt: 'asc' },
     });
 
-    const activeHoursSet = new Set<number>([9, 10, 11, 12, 13, 14, 15, 16, 17]);
+    const currentHour = new Date().getHours();
+    const eventHours: number[] = [];
     
     recentStageHistories.forEach((hist) => {
       const histDate = new Date(hist.createdAt);
       if (histDate >= startOfToday) {
-        activeHoursSet.add(histDate.getHours());
+        eventHours.push(histDate.getHours());
       }
     });
 
-    apps.forEach((app) => {
-      const updateDate = new Date(app.updatedAt);
-      if (updateDate >= startOfToday) {
-        activeHoursSet.add(updateDate.getHours());
-      }
-    });
+    const minHour = eventHours.length > 0 ? Math.min(8, ...eventHours) : 8;
+    const maxHour = Math.min(23, Math.max(18, currentHour, ...eventHours));
 
-    const activeHours = Array.from(activeHoursSet).sort((a, b) => a - b);
-    const hourlyVelocity = activeHours.map((h) => {
+    const hourlySlots: number[] = [];
+    for (let h = minHour; h <= maxHour; h++) {
+      hourlySlots.push(h);
+    }
+
+    const hourlyVelocity = hourlySlots.map((h) => {
       const hourStr = `${h.toString().padStart(2, '0')}:00`;
       const hourHistories = recentStageHistories.filter((hist) => {
         const d = new Date(hist.createdAt);
         return d >= startOfToday && d.getHours() === h;
       });
 
-      const prepCount = hourHistories.filter((h) => h.toStage === ApplicationStage.DOC_PREP).length;
-      const reviewCount = hourHistories.filter((h) => h.toStage === ApplicationStage.SALES_PITCH_QUEUE).length;
+      // Count distinct applications that actually entered preparation / QA passed in this hour
+      const prepHistories = hourHistories.filter(
+        (hist) => hist.toStage === ApplicationStage.DOC_PREP && hist.fromStage !== ApplicationStage.DOC_PREP
+      );
+      const reviewHistories = hourHistories.filter(
+        (hist) => hist.toStage === ApplicationStage.SALES_PITCH_QUEUE && hist.fromStage !== ApplicationStage.SALES_PITCH_QUEUE
+      );
 
-      const currentHour = new Date().getHours();
-      const effectivePrep = h === currentHour ? Math.max(prepCount, underPreparation) : prepCount;
-      const effectiveReview = h === currentHour ? Math.max(reviewCount, inQualityReview) : reviewCount;
+      const prepCount = new Set(prepHistories.map((h) => h.applicationId)).size;
+      const reviewCount = new Set(reviewHistories.map((h) => h.applicationId)).size;
 
       return {
         hour: hourStr,
-        prepared: effectivePrep,
-        reviewed: effectiveReview,
+        prepared: prepCount,
+        reviewed: reviewCount,
+      };
+    });
+
+    // 2. Dynamic weekly velocity (Monday to Sunday)
+    const now = new Date();
+    const currentDayOfWeek = now.getDay();
+    const distanceToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + distanceToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const weeklyVelocity = dayNames.map((name, i) => {
+      const dayDate = new Date(monday);
+      dayDate.setDate(monday.getDate() + i);
+      const nextDate = new Date(dayDate);
+      nextDate.setDate(dayDate.getDate() + 1);
+
+      const dayHistories = recentStageHistories.filter((hist) => {
+        const d = new Date(hist.createdAt);
+        return d >= dayDate && d < nextDate;
+      });
+
+      // Count distinct applications that entered preparation / QA passed on this day
+      const prepHistories = dayHistories.filter(
+        (hist) => hist.toStage === ApplicationStage.DOC_PREP && hist.fromStage !== ApplicationStage.DOC_PREP
+      );
+      const reviewHistories = dayHistories.filter(
+        (hist) => hist.toStage === ApplicationStage.SALES_PITCH_QUEUE && hist.fromStage !== ApplicationStage.SALES_PITCH_QUEUE
+      );
+
+      const prepCount = new Set(prepHistories.map((h) => h.applicationId)).size;
+      const reviewCount = new Set(reviewHistories.map((h) => h.applicationId)).size;
+
+      const monthName = dayDate.toLocaleString('en-US', { month: 'short' });
+      return {
+        day: `${name} (${monthName} ${dayDate.getDate()})`,
+        prepared: prepCount,
+        reviewed: reviewCount,
       };
     });
 
@@ -539,6 +659,7 @@ export class PrepReviewService {
       firstTimePassRate,
       complexityMix,
       hourlyVelocity,
+      weeklyVelocity,
     };
   }
 
@@ -546,19 +667,46 @@ export class PrepReviewService {
    * Fetch 100% Real Tax Application & Documents for Form 1040 Workspace
    */
   public static async getWorkspaceDetails(applicationId: string) {
-    const app = await prisma.taxApplication.findUnique({
-      where: { id: applicationId },
-      include: {
-        customer: true,
-        documents: true,
-        assignedPrepAgent: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+    const [app, auditLogs] = await Promise.all([
+      prisma.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: {
+          customer: true,
+          documents: true,
+          stageHistories: {
+            include: {
+              movedByUser: {
+                select: { id: true, firstName: true, lastName: true, email: true, role: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+          callLogs: {
+            include: {
+              agent: {
+                select: { id: true, firstName: true, lastName: true, email: true, role: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+          assignedPrepAgent: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          assignedReviewAgent: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
         },
-        assignedReviewAgent: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+      }),
+      prisma.auditLog.findMany({
+        where: { applicationId },
+        include: {
+          actorUser: {
+            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          },
         },
-      },
-    });
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
     if (!app) {
       throw new Error('Tax application not found');
@@ -617,6 +765,38 @@ export class PrepReviewService {
         verificationStatus: doc.verificationStatus,
         uploadedAt: doc.createdAt,
       })),
+      stageHistories: (app.stageHistories || []).map((s: any) => ({
+        id: s.id,
+        fromStage: s.fromStage,
+        toStage: s.toStage,
+        movedByUserId: s.movedByUserId,
+        movedByName: s.movedByUser ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email : 'System User',
+        movedByEmail: s.movedByUser?.email,
+        movedByRole: s.movedByUser?.role,
+        remarks: s.remarks,
+        createdAt: s.createdAt,
+      })),
+      callLogs: (app.callLogs || []).map((c: any) => ({
+        id: c.id,
+        disposition: c.disposition,
+        callSummary: c.callSummary,
+        agentId: c.agentId,
+        agentName: c.agent ? `${c.agent.firstName || ''} ${c.agent.lastName || ''}`.trim() || c.agent.email : 'Calling Agent',
+        agentEmail: c.agent?.email,
+        agentRole: c.agent?.role,
+        createdAt: c.createdAt,
+      })),
+      auditLogs: (auditLogs || []).map((a: any) => ({
+        id: a.id,
+        action: a.action,
+        moduleKey: a.moduleKey,
+        actorType: a.actorType,
+        actorName: a.actorUser ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email : (a.actorType === 'CLIENT' ? 'Taxpayer Client' : 'System User'),
+        actorEmail: a.actorUser?.email,
+        actorRole: a.actorUser?.role,
+        details: a.details,
+        createdAt: a.createdAt,
+      })),
     };
   }
 
@@ -658,6 +838,11 @@ export class PrepReviewService {
   public static async submitWorkspaceToQA(applicationId: string, payload: any, userId: string) {
     const app = await prisma.taxApplication.findUnique({
       where: { id: applicationId },
+      include: {
+        customer: true,
+        assignedPrepAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+        assignedReviewAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
     });
 
     if (!app) {
@@ -680,19 +865,84 @@ export class PrepReviewService {
       },
     });
 
-    if (userId && userId !== 'SYSTEM') {
+    // Determine valid User ID for StageHistory audit log
+    let validUserId = userId;
+    let actorUser = (userId && userId !== 'SYSTEM')
+      ? await prisma.user.findUnique({ where: { id: userId }, select: { id: true, firstName: true, lastName: true, email: true } })
+      : null;
+
+    if (!actorUser) {
+      if (app.assignedPrepAgent) {
+        validUserId = app.assignedPrepAgent.id;
+        actorUser = app.assignedPrepAgent;
+      } else {
+        const fallbackPreparer = await prisma.user.findFirst({
+          where: { role: { in: [Role.TAX_PREPARER, Role.PREP_MANAGER, Role.ADMIN] } },
+          select: { id: true, firstName: true, lastName: true, email: true },
+        });
+        if (fallbackPreparer) {
+          validUserId = fallbackPreparer.id;
+          actorUser = fallbackPreparer;
+        }
+      }
+    }
+
+    const preparerName = actorUser
+      ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email
+      : app.assignedPrepAgent ? `${app.assignedPrepAgent.firstName || ''} ${app.assignedPrepAgent.lastName || ''}`.trim() : 'Tax Preparer';
+    const preparerEmail = actorUser?.email || app.assignedPrepAgent?.email || 'preparer@taxcrm.com';
+
+    const reviewerName = app.assignedReviewAgent
+      ? `${app.assignedReviewAgent.firstName || ''} ${app.assignedReviewAgent.lastName || ''}`.trim() || app.assignedReviewAgent.email
+      : 'Senior QA Reviewer';
+    const reviewerEmail = app.assignedReviewAgent?.email || 'qa@taxcrm.com';
+
+    const customerName = `${app.customer.firstName} ${app.customer.lastName}`;
+
+    const gross = Number(payload.totalGrossIncome ?? payload.w2Wages ?? 0);
+    const fedRefund = Number(payload.federalRefund ?? 0);
+    const balanceDue = Number(payload.balanceDue ?? 0);
+    const fedOutcome = balanceDue > 0 ? `-$${balanceDue.toLocaleString()} (Fed Tax Due)` : `+$${fedRefund.toLocaleString()} (Fed Refund)`;
+    const stateRefund = Number(payload.stateRefund ?? 0);
+    const stateBalanceDue = Number(payload.stateBalanceDue ?? 0);
+    const stateOutcome = stateBalanceDue > 0 ? `-$${stateBalanceDue.toLocaleString()} (State Due)` : `+$${stateRefund.toLocaleString()} (State Refund)`;
+    const sNotes = payload.preparerNotes ? ` Handover Notes: "${payload.preparerNotes}"` : '';
+
+    if (validUserId) {
       try {
         await prisma.stageHistory.create({
           data: {
             applicationId: app.id,
             fromStage: app.currentStage,
             toStage: app.currentStage,
-            movedByUserId: userId,
-            remarks: 'Form 1040 draft completed and submitted for 4-Eyes Senior QA compliance review',
+            movedByUserId: validUserId,
+            remarks: `Form 1040 computation completed and submitted for 4-Eyes QA Compliance Review by Preparer ${preparerName} (${preparerEmail}) to Senior Auditor ${reviewerName} (${reviewerEmail}). Total Gross Income: $${gross.toLocaleString()}, Federal Net: ${fedOutcome}, State Net: ${stateOutcome}.${sNotes}`,
           },
         });
       } catch (err) {
-        console.error('Stage history create failed:', err);
+        console.error('Stage history audit log creation failed:', err);
+      }
+    }
+
+    // In-App Notification to Designated Senior QA Auditor
+    const targetReviewerId = app.assignedReviewAgentId || app.assignedReviewAgent?.id;
+    if (targetReviewerId) {
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: targetReviewerId,
+            applicationId: app.id,
+            category: NotificationCategory.PREP_REVIEW,
+            priority: NotificationPriority.HIGH,
+            title: `Form 1040 Submitted for QA Review: ${customerName}`,
+            message: `Preparer ${preparerName} completed Form 1040 for ${customerName} (TY ${app.taxYear || 2025}) with ${fedOutcome}. Ready for 4-Eyes compliance audit.`,
+            actionUrl: `/prep-review/reviewer/audit/${app.id}`,
+            actionLabel: 'Review & Sign Off',
+            relatedLeadName: customerName,
+          },
+        });
+      } catch (notifErr) {
+        console.error('QA Notification dispatch failed:', notifErr);
       }
     }
 
@@ -739,6 +989,17 @@ export class PrepReviewService {
       throw new Error('Tax application not found');
     }
 
+    const currentDraft = (app.taxDraftSummary as any) || {};
+    if (currentDraft.status !== 'SUBMITTED_FOR_QA') {
+      if (currentDraft.status === 'QA_APPROVED' || app.currentStage === ApplicationStage.SALES_PITCH_QUEUE) {
+        throw new Error('This tax return has already been QA Approved & Signed Off.');
+      }
+      if (currentDraft.status === 'REVISION_REQUESTED' || app.currentStage === ApplicationStage.CORRECTION_NEEDED) {
+        throw new Error('Cannot sign off: Return is currently awaiting revisions from the Tax Preparer.');
+      }
+      throw new Error('Cannot sign off: Form 1040 is currently Under Preparation by the Tax Preparer. Preparer must submit draft to QA first.');
+    }
+
     const updatedSummary = {
       ...(app.taxDraftSummary as any || {}),
       status: 'QA_APPROVED',
@@ -769,6 +1030,26 @@ export class PrepReviewService {
       // Stage history resilience
     }
 
+    // In-App Notification to Preparer
+    if (app.assignedPrepAgentId) {
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: app.assignedPrepAgentId,
+            applicationId: app.id,
+            category: NotificationCategory.PREP_REVIEW,
+            priority: NotificationPriority.NORMAL,
+            title: `Form 1040 QA Approved: Tax Return Signed Off`,
+            message: `Senior Auditor approved Form 1040 draft for TY ${app.taxYear || 2025}. Transferred to Sales Pitch Queue.`,
+            actionUrl: `/prep-review/preparer/workspace/${app.id}`,
+            actionLabel: 'View Workspace',
+          },
+        });
+      } catch (e) {
+        console.error('Sign-off notification error:', e);
+      }
+    }
+
     return {
       applicationId: updated.id,
       status: 'QA_APPROVED',
@@ -790,6 +1071,17 @@ export class PrepReviewService {
 
     if (!app) {
       throw new Error('Tax application not found');
+    }
+
+    const currentDraft = (app.taxDraftSummary as any) || {};
+    if (currentDraft.status !== 'SUBMITTED_FOR_QA') {
+      if (currentDraft.status === 'QA_APPROVED' || app.currentStage === ApplicationStage.SALES_PITCH_QUEUE) {
+        throw new Error('Cannot request revision: This tax return has already been QA Approved & Signed Off.');
+      }
+      if (currentDraft.status === 'REVISION_REQUESTED' || app.currentStage === ApplicationStage.CORRECTION_NEEDED) {
+        throw new Error('Revision has already been requested. Awaiting re-submission from the Tax Preparer.');
+      }
+      throw new Error('Cannot request revision: Form 1040 is currently Under Preparation and has not yet been submitted for QA Review.');
     }
 
     const updatedSummary = {
@@ -821,6 +1113,26 @@ export class PrepReviewService {
       });
     } catch {
       // Stage history resilience
+    }
+
+    // In-App Notification to Assigned Preparer to correct discrepancy
+    if (app.assignedPrepAgentId) {
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: app.assignedPrepAgentId,
+            applicationId: app.id,
+            category: NotificationCategory.PREP_REVIEW,
+            priority: NotificationPriority.HIGH,
+            title: `Calculation Revision Requested by QA Reviewer`,
+            message: `Senior Auditor flagged discrepancy [${payload.discrepancyCategory}]: "${payload.revisionNotes}". Please review and re-submit Form 1040.`,
+            actionUrl: `/prep-review/preparer/workspace/${app.id}`,
+            actionLabel: 'Review & Fix',
+          },
+        });
+      } catch (e) {
+        console.error('Revision notification error:', e);
+      }
     }
 
     return {

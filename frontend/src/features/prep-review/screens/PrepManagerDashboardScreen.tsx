@@ -1,21 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePrepReviewManager } from '../hooks/usePrepReviewManager';
 import { PrepAssignLeadDrawer } from '../components/manager/PrepAssignLeadDrawer';
 import { PrepAutoDistributeModal } from '../components/manager/PrepAutoDistributeModal';
 import { Button } from '@/shared/components/Button';
-import { 
-  Calculator, 
-  Sparkles, 
-  Users, 
-  CheckCircle2, 
-  RefreshCw, 
-  Zap, 
-  Clock, 
-  ShieldCheck, 
-  RotateCcw, 
-  ChevronRight, 
-  PieChart as PieIcon, 
-  BarChart3 
+import {
+  Calculator,
+  Sparkles,
+  Users,
+  CheckCircle2,
+  RefreshCw,
+  Zap,
+  Clock,
+  Calendar,
+  ShieldCheck,
+  RotateCcw,
+  ChevronRight,
+  PieChart as PieIcon,
+  BarChart3
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -37,6 +38,7 @@ import toast from 'react-hot-toast';
 
 export const PrepManagerDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
+  const [chartMode, setChartMode] = useState<'HOURLY' | 'WEEKLY'>('HOURLY');
 
   const {
     timeRange,
@@ -65,12 +67,16 @@ export const PrepManagerDashboardScreen: React.FC = () => {
     ? Math.round(((totalInPipeline - unassignedToPrep) / totalInPipeline) * 100)
     : 0;
 
-  // 1. Chart Data: Hourly Tax Return Preparation Velocity (Matching Documenter Service logic)
+  // 1. Chart Data: Hourly & Weekly Tax Return Preparation Velocity
   const hourlyPrepData = useMemo(() => {
     if (stats.hourlyVelocity && stats.hourlyVelocity.length > 0) {
       return stats.hourlyVelocity;
     }
-    const defaultHours = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+    const currentH = new Date().getHours();
+    const defaultHours = [];
+    for (let h = 8; h <= Math.min(23, Math.max(18, currentH)); h++) {
+      defaultHours.push(`${h.toString().padStart(2, '0')}:00`);
+    }
     return defaultHours.map((h) => ({
       hour: h,
       prepared: 0,
@@ -78,13 +84,27 @@ export const PrepManagerDashboardScreen: React.FC = () => {
     }));
   }, [stats.hourlyVelocity]);
 
+  const weeklyPrepData = useMemo(() => {
+    if (stats.weeklyVelocity && stats.weeklyVelocity.length > 0) {
+      return stats.weeklyVelocity;
+    }
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return dayNames.map((d) => ({
+      day: d,
+      prepared: 0,
+      reviewed: 0,
+    }));
+  }, [stats.weeklyVelocity]);
+
   const peakText = useMemo(() => {
-    if (!hourlyPrepData || hourlyPrepData.length === 0) return 'Peak: 11:00 & 15:00';
-    const highest = [...hourlyPrepData].sort((a, b) => ((b.prepared || 0) + (b.reviewed || 0)) - ((a.prepared || 0) + (a.reviewed || 0)))[0];
-    return highest && (highest.prepared > 0 || highest.reviewed > 0)
-      ? `Peak: ${highest.hour}`
-      : 'Peak: 11:00 & 15:00';
-  }, [hourlyPrepData]);
+    const dataToEval = chartMode === 'HOURLY' ? hourlyPrepData : weeklyPrepData;
+    if (!dataToEval || dataToEval.length === 0) return 'Peak: Active Shift';
+    const highest = [...dataToEval].sort((a: any, b: any) => ((b.prepared || 0) + (b.reviewed || 0)) - ((a.prepared || 0) + (a.reviewed || 0)))[0] as any;
+    if (highest && ((highest.prepared || 0) > 0 || (highest.reviewed || 0) > 0)) {
+      return `Peak: ${chartMode === 'HOURLY' ? highest.hour : highest.day}`;
+    }
+    return 'Live Flow Active';
+  }, [hourlyPrepData, weeklyPrepData, chartMode]);
 
   // 2. Chart Data: Return Complexity Distribution (Donut Chart)
   const complexityData = useMemo(() => {
@@ -160,11 +180,10 @@ export const PrepManagerDashboardScreen: React.FC = () => {
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
-                  timeRange === range
+                className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${timeRange === range
                     ? 'bg-slate-100 text-[#16A34A] font-bold'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 {range === 'TODAY' ? 'Today' : range === 'WEEK' ? 'This Week' : 'All-Time Season'}
               </button>
@@ -232,9 +251,9 @@ export const PrepManagerDashboardScreen: React.FC = () => {
             </p>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div 
-              className="bg-[#16A34A] h-full rounded-full transition-all duration-300" 
-              style={{ width: `${allocatedPercent}%` }} 
+            <div
+              className="bg-[#16A34A] h-full rounded-full transition-all duration-300"
+              style={{ width: `${allocatedPercent}%` }}
             />
           </div>
         </div>
@@ -260,9 +279,9 @@ export const PrepManagerDashboardScreen: React.FC = () => {
             </p>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div 
-              className="bg-[#16A34A] h-full rounded-full transition-all duration-300" 
-              style={{ width: `${stats.firstTimePassRate}%` }} 
+            <div
+              className="bg-[#16A34A] h-full rounded-full transition-all duration-300"
+              style={{ width: `${stats.firstTimePassRate}%` }}
             />
           </div>
         </div>
@@ -388,19 +407,17 @@ export const PrepManagerDashboardScreen: React.FC = () => {
           ].map((item) => (
             <div
               key={item.step}
-              className={`p-4 rounded-xl border transition-all relative flex flex-col justify-between ${
-                item.active
+              className={`p-4 rounded-xl border transition-all relative flex flex-col justify-between ${item.active
                   ? 'bg-emerald-50/50 border-emerald-300 ring-2 ring-emerald-500/20 shadow-xs'
                   : 'bg-slate-50/80 border-slate-200/90 hover:bg-white hover:border-slate-300'
-              }`}
+                }`}
             >
               <div>
                 <div className="flex items-center justify-between gap-1 mb-2">
                   <span className="text-xs font-bold text-slate-700 truncate">{item.title}</span>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
-                      item.active ? 'bg-[#16A34A] text-white' : 'bg-slate-200 text-slate-700'
-                    }`}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${item.active ? 'bg-[#16A34A] text-white' : 'bg-slate-200 text-slate-700'
+                      }`}
                   >
                     {item.pct}
                   </span>
@@ -425,61 +442,116 @@ export const PrepManagerDashboardScreen: React.FC = () => {
 
       {/* 4. REAL RECHARTS GRAPHS & VISUALIZATIONS (Grid Layout) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* GRAPH 1: Hourly Preparation & Review Velocity (AreaChart) */}
+        {/* GRAPH 1: Dynamic Hourly & Weekly Preparation & Review Velocity */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <AreaChart className="w-4 h-4 text-[#16A34A]" />
-                  Hourly Preparation &amp; QA Audit Velocity (9 AM - 6 PM)
+                  {chartMode === 'HOURLY'
+                    ? "Today's Live Operations Velocity"
+                    : 'Current Week Daily Throughput (Mon – Sun)'}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                  Returns drafted by Preparers vs QA sign-offs approved throughout the shift
+                  {chartMode === 'HOURLY'
+                    ? 'Returns drafted by Preparers vs QA sign-offs approved today'
+                    : 'Day-by-day tax return output and audit milestones for this week'}
                 </p>
               </div>
-              <span className="text-xs font-bold text-[#16A34A] bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                {peakText}
-              </span>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                {/* View Mode Toggle Pills */}
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setChartMode('HOURLY')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${chartMode === 'HOURLY'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span>Today Hourly</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartMode('WEEKLY')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${chartMode === 'WEEKLY'
+                        ? 'bg-white text-slate-900 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                  >
+                    <Calendar className="w-3 h-3" />
+                    <span>This Week</span>
+                  </button>
+                </div>
+
+                <span className="text-xs font-bold text-[#16A34A] bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                  {peakText}
+                </span>
+              </div>
             </div>
 
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={hourlyPrepData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="prepGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
-                    </linearGradient>
-                    <linearGradient id="reviewGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#16A34A" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#16A34A" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                  <XAxis dataKey="hour" stroke="#94A3B8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} allowDecimals={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                  <Area
-                    type="monotone"
-                    dataKey="prepared"
-                    name="1040 Returns Under Prep"
-                    stroke="#3B82F6"
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#prepGrad)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="reviewed"
-                    name="QA Audits Signed Off"
-                    stroke="#16A34A"
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#reviewGrad)"
-                  />
-                </AreaChart>
+                {chartMode === 'HOURLY' ? (
+                  <AreaChart data={hourlyPrepData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="prepGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
+                      </linearGradient>
+                      <linearGradient id="reviewGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#16A34A" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#16A34A" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                    <XAxis dataKey="hour" stroke="#94A3B8" fontSize={11} tickLine={false} />
+                    <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} allowDecimals={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                    <Area
+                      type="monotone"
+                      dataKey="prepared"
+                      name="1040 Returns Under Prep"
+                      stroke="#3B82F6"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#prepGrad)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="reviewed"
+                      name="QA Audits Signed Off"
+                      stroke="#16A34A"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#reviewGrad)"
+                    />
+                  </AreaChart>
+                ) : (
+                  <BarChart data={weeklyPrepData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                    <XAxis dataKey="day" stroke="#94A3B8" fontSize={11} tickLine={false} />
+                    <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} allowDecimals={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                    <Bar
+                      dataKey="prepared"
+                      name="1040 Returns Under Prep"
+                      fill="#3B82F6"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="reviewed"
+                      name="QA Audits Signed Off"
+                      fill="#16A34A"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                )}
               </ResponsiveContainer>
             </div>
           </div>

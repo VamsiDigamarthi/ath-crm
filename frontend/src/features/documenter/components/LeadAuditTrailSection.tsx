@@ -92,8 +92,8 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
 
     // 1. Stage History Transitions (Primary source of truth for Lifecycle & Ingestion/Assignment)
     stageHistories.forEach((s) => {
-      // Skip dummy same-stage records that aren't the initial ingestion
-      if (s.fromStage === s.toStage && s.fromStage !== 'RAW_PROSPECT') {
+      // Only skip true no-ops with no remarks
+      if (s.fromStage === s.toStage && !s.remarks && s.fromStage !== 'RAW_PROSPECT') {
         return;
       }
 
@@ -102,13 +102,29 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                           s.remarks?.toLowerCase().includes('bulk ingestion') ||
                           s.remarks?.toLowerCase().includes('bulk upload');
 
+      const isPrepAssignment = s.remarks?.toLowerCase().includes('tax preparer') || 
+                               s.remarks?.toLowerCase().includes('qa reviewer') ||
+                               s.remarks?.toLowerCase().includes('preparer (');
+
+      const isDocAssignment = (s.remarks?.toLowerCase().includes('directly assigned') || 
+                               s.remarks?.toLowerCase().includes('calling agent')) && !isPrepAssignment;
+
       const isAutoRoundRobin = s.remarks?.toLowerCase().includes('auto round-robin') || 
                                s.remarks?.toLowerCase().includes('auto-distributed') ||
                                s.remarks?.toLowerCase().includes('round-robin');
 
-      const isDirectAssign = s.remarks?.toLowerCase().includes('directly assigned') || 
-                             s.remarks?.toLowerCase().includes('assigned to');
+      const isSubmitQA = s.remarks?.toLowerCase().includes('submitted for 4-eyes') || 
+                         s.remarks?.toLowerCase().includes('form 1040 computation completed');
 
+      const isQASignOff = s.remarks?.toLowerCase().includes('qa approved') || 
+                          s.remarks?.toLowerCase().includes('compliance sign-off') ||
+                          s.remarks?.toLowerCase().includes('signed off');
+
+      const isQARevision = s.remarks?.toLowerCase().includes('revision requested') || 
+                           s.remarks?.toLowerCase().includes('correction needed');
+
+      let displayFromStage = s.fromStage;
+      let displayToStage = s.toStage;
       let eventType: UnifiedTimelineEvent['type'] = 'STAGE_CHANGE';
       let eventTitle = `Stage Transition: ${s.fromStage} → ${s.toStage}`;
       let eventDescription = s.remarks || `Application stage transitioned from ${s.fromStage} to ${s.toStage}`;
@@ -120,9 +136,32 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
       } else if (isAutoRoundRobin) {
         eventType = 'ASSIGNMENT';
         eventTitle = '1-Click Auto Round-Robin Lead Allocation';
-      } else if (isDirectAssign) {
+      } else if (isPrepAssignment) {
         eventType = 'ASSIGNMENT';
-        eventTitle = 'Documenter Manager Direct Lead Assignment';
+        eventTitle = 'Tax Preparer & QA Reviewer Assignment (Prep Manager)';
+        displayFromStage = 'UNASSIGNED';
+        displayToStage = 'DOC_PREP';
+      } else if (isDocAssignment) {
+        eventType = 'ASSIGNMENT';
+        eventTitle = 'Documenter Manager Calling Agent Direct Assignment';
+      } else if (isSubmitQA) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Form 1040 Submitted for 4-Eyes QA Compliance Review';
+        displayFromStage = 'DOC_PREP';
+        displayToStage = 'QA_IN_REVIEW';
+      } else if (isQASignOff) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Senior QA Compliance Sign-Off (Ready for Sales)';
+        displayFromStage = 'QA_IN_REVIEW';
+        displayToStage = 'SALES_PITCH_QUEUE';
+      } else if (isQARevision) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Senior QA Auditor Requested Calculation Revision';
+        displayFromStage = 'QA_IN_REVIEW';
+        displayToStage = 'CORRECTION_NEEDED';
+      } else if (s.fromStage === s.toStage) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = `Department Action (${s.toStage})`;
       }
 
       events.push({
@@ -130,11 +169,11 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         type: eventType,
         title: eventTitle,
         description: eventDescription,
-        fromStage: s.fromStage,
-        toStage: s.toStage,
-        actorName: s.movedByName || s.movedByEmail?.split('@')[0] || (isIngestion ? 'Operations Admin' : 'Documenter Manager'),
+        fromStage: displayFromStage,
+        toStage: displayToStage,
+        actorName: s.movedByName || s.movedByEmail?.split('@')[0] || (isIngestion ? 'Operations Admin' : isPrepAssignment ? 'Prep Manager' : 'Documenter Manager'),
         actorEmail: s.movedByEmail || undefined,
-        actorRole: s.movedByRole || (isIngestion ? 'ADMIN' : 'DOC_MANAGER'),
+        actorRole: s.movedByRole || (isIngestion ? 'ADMIN' : isPrepAssignment ? 'PREP_MANAGER' : 'DOC_MANAGER'),
         timestamp: s.createdAt,
       });
     });
@@ -404,13 +443,17 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                           </span>
                         )}
 
-                        {isStage && event.fromStage && event.toStage && (
+                        {isStage && event.fromStage && event.toStage && event.fromStage !== event.toStage ? (
                           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-50 text-[#16A34A] border border-emerald-200">
                             <span>{event.fromStage}</span>
                             <ArrowRight className="w-2.5 h-2.5 text-[#16A34A]" />
                             <span>{event.toStage}</span>
                           </div>
-                        )}
+                        ) : isStage && event.toStage ? (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+                            {event.toStage}
+                          </span>
+                        ) : null}
 
                         {isCall && event.disposition && (
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">

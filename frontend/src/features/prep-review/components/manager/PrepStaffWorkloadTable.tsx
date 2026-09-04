@@ -162,9 +162,9 @@ export const PrepStaffWorkloadTable: React.FC<PrepStaffWorkloadTableProps> = ({
           <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
             <tr>
               <th className="py-3 px-4">Staff Member</th>
-              <th className="py-3 px-4">Active Caseload Breakdown</th>
-              <th className="py-3 px-4 text-center">Active Distribution</th>
-              <th className="py-3 px-4 text-center">Completed (MTD)</th>
+              <th className="py-3 px-4">Total Assigned Caseload</th>
+              <th className="py-3 px-4 text-center">Active in Progress</th>
+              <th className="py-3 px-4 text-center">Completed &amp; Signed Off</th>
               <th className="py-3 px-4 text-center">Workload Status</th>
               <th className="py-3 px-4 text-right">Caseload Action</th>
             </tr>
@@ -184,6 +184,9 @@ export const PrepStaffWorkloadTable: React.FC<PrepStaffWorkloadTableProps> = ({
               </tr>
             ) : (
               filteredStaff.map((member) => {
+                const totalAssigned = Number(member.totalAssignedCount) || 0;
+                const totalPrep = Number(member.totalAssignedPrep) || 0;
+                const totalReview = Number(member.totalAssignedReview) || 0;
                 const load = Number(member.activeCaseload) || 0;
                 const prepCount = Number(member.prepActiveCount) || 0;
                 const reviewCount = Number(member.reviewActiveCount) || 0;
@@ -209,65 +212,65 @@ export const PrepStaffWorkloadTable: React.FC<PrepStaffWorkloadTableProps> = ({
                       </div>
                     </td>
 
-                    {/* Active Caseload Breakdown: Dynamic Preparer vs Reviewer Counts */}
+                    {/* Total Assigned Caseload (All-Time Assigned) */}
                     <td className="py-3.5 px-4 min-w-[220px]">
                       <div className="space-y-1.5">
                         <div className="font-extrabold text-xs text-slate-900 flex items-center gap-1.5">
-                          <span>{load} Total Active Returns</span>
-                          {load > 0 && (
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>{totalAssigned} Total Assigned Returns</span>
+                          {totalAssigned > 0 && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                              All-Time
+                            </span>
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
                           <span className={`px-2 py-0.5 rounded-md font-bold border ${
-                            prepCount > 0
+                            totalPrep > 0
                               ? 'bg-blue-50 text-blue-700 border-blue-200'
                               : 'bg-slate-50 text-slate-500 border-slate-200'
                           }`}>
-                            🧮 {prepCount} as Preparer
+                            🧮 {totalPrep} as Preparer
                           </span>
                           <span className={`px-2 py-0.5 rounded-md font-bold border ${
-                            reviewCount > 0
+                            totalReview > 0
                               ? 'bg-purple-50 text-purple-700 border-purple-200'
                               : 'bg-slate-50 text-slate-500 border-slate-200'
                           }`}>
-                            🛡️ {reviewCount} as QA Reviewer
+                            🛡️ {totalReview} as QA Reviewer
                           </span>
                         </div>
                       </div>
                     </td>
 
-                    {/* Active Distribution */}
+                    {/* Active in Progress (Currently under Prep/QA) */}
                     <td className="py-3.5 px-4 text-center">
                       <div className="flex flex-col items-center justify-center gap-1">
-                        {prepCount === 0 && reviewCount === 0 ? (
+                        {load === 0 ? (
                           <span className="text-[11px] text-slate-400 font-medium">
-                            Ready for Distribution
+                            0 Active (Queue Clear)
                           </span>
                         ) : (
                           <div className="space-y-1">
-                            {prepCount > 0 && (
-                              <div className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                {prepCount} 1040 Drafting
-                              </div>
-                            )}
-                            {reviewCount > 0 && (
-                              <div className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
-                                {reviewCount} QA Audit
-                              </div>
-                            )}
+                            <span className="font-bold text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
+                              {load} Active
+                            </span>
+                            <div className="flex items-center gap-1 text-[10px] text-slate-600 font-medium">
+                              {prepCount > 0 && <span>{prepCount} Prep</span>}
+                              {prepCount > 0 && reviewCount > 0 && <span>•</span>}
+                              {reviewCount > 0 && <span>{reviewCount} QA</span>}
+                            </div>
                           </div>
                         )}
                       </div>
                     </td>
 
-                    {/* Completed MTD */}
+                    {/* Completed MTD & QA Passed */}
                     <td className="py-3.5 px-4 text-center">
                       <div className="font-extrabold text-xs text-slate-900">
                         {member.completedThisMonth || 0} files
                       </div>
-                      <div className="text-[10px] text-slate-400 font-medium">
-                        {prepDone} Prep • {reviewDone} QA
+                      <div className="text-[10px] text-slate-500 font-medium">
+                        {prepDone} Prep • {reviewDone} QA Passed
                       </div>
                     </td>
 

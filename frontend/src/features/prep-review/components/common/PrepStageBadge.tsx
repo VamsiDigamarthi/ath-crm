@@ -14,15 +14,27 @@ import {
 
 interface PrepStageBadgeProps {
   stage: string;
+  assignedPreparerName?: string;
   assignedCloserName?: string;
   assignedFileOpName?: string;
 }
 
 export const PrepStageBadge: React.FC<PrepStageBadgeProps> = ({ 
   stage, 
+  assignedPreparerName,
   assignedCloserName, 
   assignedFileOpName 
 }) => {
+  // If assigned preparer exists and stage is DOC_PREP, show Under Preparation (1040)
+  if (assignedPreparerName && (stage === 'DOC_PREP' || stage === 'DOC_PREP_COMPLETE')) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+        <FileSpreadsheet className="w-3 h-3 text-blue-600 shrink-0" />
+        <span>Under Preparation (1040)</span>
+      </span>
+    );
+  }
+
   switch (stage) {
     case 'DOC_PREP_COMPLETE':
     case 'DOC_PREP':

@@ -18,13 +18,90 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { useNotificationStore } from '../store/notification-store';
-import type { NotificationCategory, NotificationPriority } from '../types/notification.types';
+import type { AppNotification, NotificationCategory, NotificationPriority } from '../types/notification.types';
 import toast from 'react-hot-toast';
 
 export const NotificationCenterScreen: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<NotificationPriority | 'ALL'>('ALL');
+
+  const resolveNotificationClickUrl = (notif: AppNotification): string => {
+    const appId = notif.relatedApplicationId;
+    const title = (notif.title || '').toLowerCase();
+    const msg = (notif.message || '').toLowerCase();
+    const rawUrl = (notif.actionUrl || '').toLowerCase();
+
+    // 1. REVISION REQUESTED -> Always Preparer Workspace so preparer can correct computation
+    const isRevision = title.includes('revision') || msg.includes('revision') || title.includes('discrepancy');
+    if (isRevision) {
+      if (appId) return `/prep-review/preparer/workspace/${appId}`;
+      return '/prep-review/preparer';
+    }
+
+    // 2. QA REVIEW & COMPLIANCE NOTIFICATIONS -> Always Senior QA Reviewer Audit Screen
+    const isQANotification = 
+      title.includes('qa compliance') ||
+      title.includes('submitted for qa') ||
+      title.includes('qa review') ||
+      title.includes('compliance review') ||
+      title.includes('qa audit') ||
+      msg.includes('4-eyes compliance') ||
+      rawUrl.includes('/reviewer');
+
+    if (isQANotification) {
+      if (appId) return `/prep-review/reviewer/audit/${appId}`;
+      return '/prep-review/reviewer';
+    }
+
+    // 3. TAX PREPARATION ASSIGNED NOTIFICATIONS -> Always Tax Preparer 1040 Workspace
+    const isPrepNotification = 
+      title.includes('preparation assigned') ||
+      title.includes('1040 preparation') ||
+      msg.includes('assigned you form 1040') ||
+      rawUrl.includes('/preparer');
+
+    if (isPrepNotification) {
+      if (appId) return `/prep-review/preparer/workspace/${appId}`;
+      return '/prep-review/preparer';
+    }
+
+    // 4. PREPARATION MANAGER NOTIFICATIONS
+    const isManagerNotification = 
+      title.includes('ready for preparation') ||
+      title.includes('ready for preparer allocation') ||
+      rawUrl.includes('/manager');
+
+    if (isManagerNotification) {
+      return '/prep-review/manager/queue';
+    }
+
+    // 5. DOCUMENTER AGENT NOTIFICATIONS
+    const isDocAgentNotification = 
+      title.includes('calling queue') ||
+      title.includes('outreach') ||
+      rawUrl.includes('/documenter/agent');
+
+    if (isDocAgentNotification) {
+      if (appId) return `/documenter/agent/lead/${appId}`;
+      return '/documenter/agent/queue';
+    }
+
+    // 6. DOCUMENTER MANAGER NOTIFICATIONS
+    if (rawUrl.includes('/documenter/manager') || title.includes('ingested')) {
+      return '/documenter/manager/queue';
+    }
+
+    // 7. Direct actionUrl fallback (ensuring /prep-review/ prefix)
+    if (notif.actionUrl) {
+      if (notif.actionUrl.startsWith('/prep/')) {
+        return notif.actionUrl.replace('/prep/', '/prep-review/');
+      }
+      return notif.actionUrl;
+    }
+
+    return '';
+  };
 
   const {
     notifications,
@@ -360,7 +437,8 @@ export const NotificationCenterScreen: React.FC = () => {
                     type="button"
                     onClick={() => {
                       markAsRead(notif.id);
-                      navigate(notif.actionUrl!);
+                      const targetUrl = resolveNotificationClickUrl(notif);
+                      navigate(targetUrl || notif.actionUrl!);
                     }}
                     className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                   >
