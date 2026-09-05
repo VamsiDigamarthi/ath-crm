@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import type { ParsedLeadRow, BulkImportStatsData } from '../types/bulk-import.types';
+import type { ParsedLeadRow, BulkImportStatsData, BulkImportServerResult } from '../types/bulk-import.types';
 import { useCSVFileUpload } from './useCSVFileUpload';
 import { useLeadTableFilters, type StatusFilterType } from './useLeadTableFilters';
 import { adminService } from '../services/admin-service';
@@ -20,6 +20,8 @@ export const useBulkImport = () => {
   const [rows, setRows] = useState<ParsedLeadRow[]>([]);
   const [isIngesting, setIsIngesting] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [showResultModal, setShowResultModal] = useState<boolean>(false);
+  const [importResult, setImportResult] = useState<BulkImportServerResult | null>(null);
 
   // ---------------------------------------------------------------------------
   // 2. SUB-HOOK: TABLE FILTERS & SEARCH
@@ -153,24 +155,34 @@ export const useBulkImport = () => {
       const metrics = res?.data;
       const validCount = metrics?.validProcessed ?? validRows.length;
       const newProfiles = metrics?.newProfilesCreated ?? 0;
-      const linkedProfiles = metrics?.existingProfilesLinked ?? 0;
       const skippedCount = metrics?.duplicatesSkipped ?? 0;
 
-      // Dispatch real notification for Document Manager & Documenter Dept
-      useNotificationStore.getState().addNotification({
-        title: `New Batch of ${validCount} Leads Uploaded by Admin`,
-        message: `Admin successfully ingested ${validCount} new tax leads for TY${taxYear} (${newProfiles} new profiles, ${linkedProfiles} multi-year linked). Intake queue ready.`,
-        category: 'DOCUMENTER',
-        priority: 'HIGH',
-        actionUrl: '/documenter/manager/queue',
-        actionLabel: 'View Documenter Queue',
-      });
+      setImportResult(metrics);
+      setShowResultModal(true);
 
-      toast.success(
-        res?.message ||
-          `Successfully imported ${validCount} leads for Tax Year ${taxYear}! (${newProfiles} new, ${linkedProfiles} multi-year linked, ${skippedCount} duplicates skipped)`,
-        { duration: 6000 }
-      );
+      // Dispatch real notification for Document Manager & Documenter Dept
+      if (validCount > 0) {
+        useNotificationStore.getState().addNotification({
+          title: `New Batch of ${validCount} Leads Uploaded by Admin`,
+          message: `Admin successfully ingested ${validCount} new tax leads for TY${taxYear} (${newProfiles} new profiles). Intake queue ready.`,
+          category: 'DOCUMENTER',
+          priority: 'HIGH',
+          actionUrl: '/documenter/manager/queue',
+          actionLabel: 'View Documenter Queue',
+        });
+      }
+
+      if (skippedCount > 0) {
+        toast.error(
+          `Ingested ${validCount} leads, but ${skippedCount} existing customer duplicates were blocked & skipped!`,
+          { duration: 6000 }
+        );
+      } else {
+        toast.success(
+          res?.message || `Successfully imported ${validCount} leads for Tax Year ${taxYear}!`,
+          { duration: 6000 }
+        );
+      }
 
       // Clean up after successful import
       handleClearFile();
@@ -212,6 +224,9 @@ export const useBulkImport = () => {
     isIngesting,               // Boolean flag while submitting leads to server
     showConfirmModal,          // Boolean flag controlling confirmation modal visibility
     setShowConfirmModal,       // Callback to toggle confirmation modal
+    showResultModal,           // Boolean flag controlling result breakdown modal visibility
+    setShowResultModal,        // Callback to toggle result breakdown modal
+    importResult,              // Full server result containing skipped leads and metrics
 
     // 🚀 [Action Handlers]
     handleDragOver,            // Event handler for onDragOver

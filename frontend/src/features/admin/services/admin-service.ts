@@ -29,18 +29,12 @@ export interface BulkImportPayload {
   }[];
 }
 
+import type { BulkImportServerResult } from '../types/bulk-import.types';
+
 export interface BulkImportApiResponse {
   success: boolean;
   message: string;
-  data: {
-    totalReceived: number;
-    validProcessed: number;
-    newProfilesCreated: number;
-    existingProfilesLinked: number;
-    duplicatesSkipped: number;
-    taxYear: number;
-    processingTimeMs: number;
-  };
+  data: BulkImportServerResult;
 }
 
 export interface EmployeesListApiResponse {

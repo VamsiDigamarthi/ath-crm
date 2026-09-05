@@ -4,6 +4,7 @@ import { BulkImportHero } from '../components/BulkImportHero';
 import { BulkImportDropzone } from '../components/BulkImportDropzone';
 import { BulkImportStats } from '../components/BulkImportStats';
 import { BulkImportTable } from '../components/BulkImportTable';
+import { BulkImportResultModal } from '../components/BulkImportResultModal';
 import { 
   Sparkles, 
   ShieldCheck, 
@@ -31,6 +32,9 @@ export const BulkLeadImportScreen: React.FC = () => {
     isIngesting,
     showConfirmModal,
     setShowConfirmModal,
+    showResultModal,
+    setShowResultModal,
+    importResult,
     handleDragOver,
     handleDragLeave,
     handleDrop,
@@ -179,6 +183,13 @@ export const BulkLeadImportScreen: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Detailed Server Ingestion & Skipped Leads Breakdown Modal */}
+      <BulkImportResultModal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        result={importResult}
+      />
     </div>
   );
 };
