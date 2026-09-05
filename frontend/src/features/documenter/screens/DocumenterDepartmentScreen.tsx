@@ -23,6 +23,7 @@ import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.type
 export const DocumenterDepartmentScreen: React.FC = () => {
   const {
     isAgent,
+    isAdmin,
     activeTab,
     handleTabChange,
     searchQuery,
@@ -60,8 +61,9 @@ export const DocumenterDepartmentScreen: React.FC = () => {
       getDocumenterColumns({
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
+        isAdmin,
       }),
-    [handleOpenCallModal, handleOpenAssignModal]
+    [handleOpenCallModal, handleOpenAssignModal, isAdmin]
   );
 
   // Super Admin Department Supervision Tabs
@@ -94,18 +96,18 @@ export const DocumenterDepartmentScreen: React.FC = () => {
             size="sm"
             onClick={refreshData}
             disabled={isLoading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5"
+            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
 
-          {!isAgent && stats.unassigned > 0 && (
+          {!isAgent && !isAdmin && stats.unassigned > 0 && (
             <Button
               size="sm"
               onClick={handleAutoRoundRobin}
               disabled={isActionLoading}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
               <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
               1-Click Auto Round-Robin ({stats.unassigned})
@@ -119,6 +121,7 @@ export const DocumenterDepartmentScreen: React.FC = () => {
         stats={stats}
         onQuickAutoDistribute={handleAutoRoundRobin}
         isDistributing={isActionLoading}
+        hideQuickAction={isAdmin}
       />
 
       {/* 1. Tabs & Search Bar Card */}
@@ -185,11 +188,11 @@ export const DocumenterDepartmentScreen: React.FC = () => {
               </select>
             </div>
 
-            {!isAgent && selectedRows.length > 0 && (
+            {!isAgent && !isAdmin && selectedRows.length > 0 && (
               <Button
                 size="sm"
                 onClick={() => handleOpenAssignModal()}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <Users className="w-3.5 h-3.5" />
                 Assign Selected ({selectedRows.length})
@@ -203,7 +206,7 @@ export const DocumenterDepartmentScreen: React.FC = () => {
       <AppTable<DocumenterLeadItem>
         data={leads}
         columns={columns}
-        selectable={!isAgent}
+        selectable={!isAgent && !isAdmin}
         selectedRows={selectedRows}
         rowKey="id"
         onSelectionChange={(selected) => setSelectedRows(selected)}
@@ -227,7 +230,7 @@ export const DocumenterDepartmentScreen: React.FC = () => {
       />
 
       {/* Floating Emerald Action Bar when rows are checked */}
-      {!isAgent && (
+      {!isAgent && !isAdmin && (
         <FloatingActionBar
           selectedCount={selectedRows.length}
           onAutoRoundRobin={handleAutoRoundRobin}

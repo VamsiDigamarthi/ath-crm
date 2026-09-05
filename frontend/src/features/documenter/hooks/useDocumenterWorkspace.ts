@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   const { user } = useAuthStore();
   const isAgent = user?.role === 'DOC_AGENT';
+  const isAdmin = user?.role === 'ADMIN';
 
   // 1. Filter & Pagination State
   const [timeRange, setTimeRange] = useState<'TODAY' | 'WEEK' | 'SEASON'>('TODAY');
@@ -237,6 +238,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   return {
     user,
     isAgent,
+    isAdmin,
     activeTab,
     handleTabChange,
     searchQuery,

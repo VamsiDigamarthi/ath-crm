@@ -24,7 +24,7 @@ export interface PrepReviewLead {
   complexity: ReturnComplexity;
   currentStage: string;
   prepStage?: PrepReviewStage;
-  
+
   // Assigned Staff Across Entire Lifecycle
   assignedDocAgent?: {
     id: string;
@@ -56,17 +56,17 @@ export interface PrepReviewLead {
   documentsCount: number;
   verifiedDocumentsCount: number;
   organizerPercent: number;
-  
+
   // Tax Draft Summary
   taxDraftSummary?: any;
   targetDueDate?: string | null;
   prepNotes?: string;
-  
+
   // Financial Snapshot
   estimatedWages: number;
   estimatedRefund: number;
   estimatedBalanceDue: number;
-  
+
   // Dates
   intakeCompletedAt: string;
   prepStartedAt?: string;

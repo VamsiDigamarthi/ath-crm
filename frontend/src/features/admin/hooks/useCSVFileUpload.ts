@@ -142,15 +142,15 @@ export const useCSVFileUpload = ({
   const handleLoadDemoData = useCallback(() => {
     setIsParsing(true);
     setTimeout(() => {
-      const demoData = getDemoLeadRows();
-      setFile(new File([''], 'sample_tax_leads_2025.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-      setFileName('sample_tax_leads_2025.xlsx');
+      const demoData = getDemoLeadRows(taxYear);
+      setFile(new File([''], `sample_tax_leads_${taxYear}.xlsx`, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+      setFileName(`sample_tax_leads_${taxYear}.xlsx`);
       setFileSize('18.4 KB');
       onParsedSuccess(demoData);
       setIsParsing(false);
-      toast.success(`Loaded ${demoData.length} sample lead records for preview`);
+      toast.success(`Loaded ${demoData.length} sample lead records for TY ${taxYear} preview`);
     }, 200);
-  }, [onParsedSuccess]);
+  }, [taxYear, onParsedSuccess]);
 
   // Download Styled Native Excel Template (.xlsx) with Emerald Green Header & Bold Font
   const handleDownloadTemplate = useCallback(async () => {

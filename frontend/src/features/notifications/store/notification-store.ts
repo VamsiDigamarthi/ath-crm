@@ -35,14 +35,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const res = await apiClient.get('/notifications');
       const serverItems = (res as any)?.data || [];
       if (Array.isArray(serverItems)) {
-        set((state) => {
-          const readMap = new Map(state.notifications.map((n) => [n.id, n.isRead]));
-          const merged = serverItems.map((item: any) => ({
-            ...item,
-            isRead: readMap.has(item.id) ? readMap.get(item.id)! : item.isRead,
-          }));
-          return { notifications: merged, isLoading: false };
-        });
+        set({ notifications: serverItems, isLoading: false });
       } else {
         set({ notifications: [], isLoading: false });
       }
@@ -51,19 +44,29 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }
   },
 
-      markAsRead: (id: string) => {
-        set((state) => ({
-          notifications: state.notifications.map((n) =>
-            n.id === id ? { ...n, isRead: true } : n
-          ),
-        }));
-      },
+  markAsRead: async (id: string) => {
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, isRead: true } : n
+      ),
+    }));
+    try {
+      await apiClient.patch(`/notifications/${id}/read`);
+    } catch (err) {
+      console.error('Failed to persist markAsRead in database:', err);
+    }
+  },
 
-      markAllAsRead: () => {
-        set((state) => ({
-          notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
-        }));
-      },
+  markAllAsRead: async () => {
+    set((state) => ({
+      notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
+    }));
+    try {
+      await apiClient.patch('/notifications/mark-all-read');
+    } catch (err) {
+      console.error('Failed to persist markAllAsRead in database:', err);
+    }
+  },
 
       deleteNotification: (id: string) => {
         set((state) => ({

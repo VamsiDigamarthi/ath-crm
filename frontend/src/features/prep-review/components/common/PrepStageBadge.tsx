@@ -1,9 +1,9 @@
 import React from 'react';
-import { 
-  FileCheck, 
-  Clock, 
-  RotateCcw, 
-  CheckCircle2, 
+import {
+  FileCheck,
+  Clock,
+  RotateCcw,
+  CheckCircle2,
   Sparkles,
   PhoneCall,
   DollarSign,
@@ -19,11 +19,11 @@ interface PrepStageBadgeProps {
   assignedFileOpName?: string;
 }
 
-export const PrepStageBadge: React.FC<PrepStageBadgeProps> = ({ 
-  stage, 
+export const PrepStageBadge: React.FC<PrepStageBadgeProps> = ({
+  stage,
   assignedPreparerName,
-  assignedCloserName, 
-  assignedFileOpName 
+  assignedCloserName,
+  assignedFileOpName
 }) => {
   // If assigned preparer exists and stage is DOC_PREP, show Under Preparation (1040)
   if (assignedPreparerName && (stage === 'DOC_PREP' || stage === 'DOC_PREP_COMPLETE')) {

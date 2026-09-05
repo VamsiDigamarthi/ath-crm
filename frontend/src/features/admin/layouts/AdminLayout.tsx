@@ -7,9 +7,11 @@ import {
   LayoutDashboard,
   FileSpreadsheet,
   Users,
+  Calculator,
   DollarSign,
-  FileCheck,
+  FileCheck2,
   UserPlus,
+  UserCheck,
   Settings,
   ShieldCheck,
   LogOut,
@@ -39,11 +41,13 @@ export const AdminLayout: React.FC = () => {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Main', path: '/admin/dashboard' },
-    { id: 'prospects', label: 'Bulk Lead Import', icon: FileSpreadsheet, section: 'Operations', badge: '1,248', path: '/admin/prospects' },
-    { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', badge: '8', path: '/admin/employees' },
-    { id: 'documenter', label: 'Documenter Dept', icon: Users, section: 'Operations', badge: '432', path: '/admin/documenter' },
-    { id: 'sales', label: 'Sales Pitches', icon: DollarSign, section: 'Operations', badge: '289', path: '/admin/sales' },
-    { id: 'filing', label: 'File Operator', icon: FileCheck, section: 'Operations', badge: '527', path: '/admin/filing' },
+    { id: 'prospects', label: 'Bulk Lead Import', icon: FileSpreadsheet, section: 'Operations', path: '/admin/prospects' },
+    { id: 'customers', label: 'Client Directory', icon: UserCheck, section: 'Management', path: '/admin/customers' },
+    { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', path: '/admin/employees' },
+    { id: 'documenter', label: 'Documenter Dept', icon: Users, section: 'Operations', path: '/admin/documenter' },
+    { id: 'prep-review', label: 'Prep & Review Dept', icon: Calculator, section: 'Operations', path: '/admin/prep-review' },
+    { id: 'sales', label: 'Sales Dept', icon: DollarSign, section: 'Operations', path: '/admin/sales' },
+    { id: 'filing', label: 'File Operator Hub', icon: FileCheck2, section: 'Operations', path: '/admin/filing' },
     { id: 'notifications', label: 'Notifications', icon: Bell, section: 'System', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/admin/notifications' },
     { id: 'settings', label: 'System Settings', icon: Settings, section: 'Admin', path: '/admin/settings' },
   ];
@@ -53,8 +57,10 @@ export const AdminLayout: React.FC = () => {
   const getActiveId = () => {
     if (currentPath.includes('/admin/notifications')) return 'notifications';
     if (currentPath.includes('/admin/prospects') || currentPath.includes('/admin/leads')) return 'prospects';
+    if (currentPath.includes('/admin/customers')) return 'customers';
     if (currentPath.includes('/admin/employees')) return 'employees';
     if (currentPath.includes('/admin/documenter')) return 'documenter';
+    if (currentPath.includes('/admin/prep-review')) return 'prep-review';
     if (currentPath.includes('/admin/sales')) return 'sales';
     if (currentPath.includes('/admin/filing')) return 'filing';
     if (currentPath.includes('/admin/settings')) return 'settings';
@@ -67,21 +73,25 @@ export const AdminLayout: React.FC = () => {
     switch (activeId) {
       case 'notifications':
         return 'Department Notifications & Activity Hub';
+      case 'customers':
+        return 'Customer & Client Directory';
       case 'employees':
         return 'Staff & Team Directory';
       case 'prospects':
         return 'Bulk Lead Import & Deduplication';
       case 'documenter':
-        return 'Documenter Department Queue';
+        return 'Documenter Department Supervision';
+      case 'prep-review':
+        return 'Tax Prep & QA Review Department Supervision';
       case 'sales':
-        return 'Sales Pitches & Quotations';
+        return 'Sales & Fee Quotations Supervision';
       case 'filing':
-        return 'File Operator & CPA E-Filing';
+        return 'File Operator & CPA E-Filing Hub';
       case 'settings':
         return 'System Settings';
       case 'dashboard':
       default:
-        return 'Operations Dashboard';
+        return 'Executive Operations Dashboard';
     }
   };
 
@@ -94,7 +104,7 @@ export const AdminLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-800 font-sans selection:bg-emerald-500 selection:text-white overflow-hidden">
-      {/* Compact Width Left Sidebar with aligned h-16 Brand header */}
+      {/* Left Sidebar */}
       <AppSidebar
         width={240}
         variant="light"
@@ -128,7 +138,7 @@ export const AdminLayout: React.FC = () => {
               {getHeaderTitle()}
             </h1>
             <span className="text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-[#16A34A]" /> Admin
+              <ShieldCheck className="w-3 h-3 text-[#16A34A]" /> Super Admin
             </span>
           </div>
 

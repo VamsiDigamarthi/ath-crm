@@ -7,6 +7,9 @@ import {
   updateEmployee,
   toggleEmployeeStatus,
   bulkOnboardEmployees,
+  getCustomers,
+  getCustomerDetails,
+  getAdminDashboardStats,
 } from "./admin-controller.js";
 import { validateRequest } from "../../middlewares/validate-request.js";
 import {
@@ -71,6 +74,29 @@ router.post(
   authorize(Role.ADMIN),
   validateRequest(bulkOnboardEmployeesSchema),
   bulkOnboardEmployees
+);
+
+// Converted Clients & Taxpayer Directory
+router.get(
+  "/customers",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getCustomers
+);
+
+router.get(
+  "/customers/:id",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getCustomerDetails
+);
+
+// Admin Executive Operations Dashboard Stats
+router.get(
+  "/dashboard-stats",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getAdminDashboardStats
 );
 
 export { router as adminRouter };

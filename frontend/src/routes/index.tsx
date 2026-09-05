@@ -7,6 +7,7 @@ import { AdminLayout } from '@/features/admin/layouts/AdminLayout';
 import { AdminOverviewScreen } from '@/features/admin/screens/AdminOverviewScreen';
 import { BulkLeadImportScreen } from '@/features/admin/screens/BulkLeadImportScreen';
 import { EmployeeManagementScreen } from '@/features/admin/screens/EmployeeManagementScreen';
+import { AdminCustomerDirectoryScreen } from '@/features/admin/screens/AdminCustomerDirectoryScreen';
 import { DocumenterDepartmentScreen } from '@/features/documenter/screens/DocumenterDepartmentScreen';
 import { DocumenterManagerDashboardScreen } from '@/features/documenter/screens/DocumenterManagerDashboardScreen';
 import { ManagerScorecardsScreen } from '@/features/documenter/screens/ManagerScorecardsScreen';
@@ -26,7 +27,9 @@ import { TaxPreparerQueueScreen } from '@/features/prep-review/screens/TaxPrepar
 import { TaxPreparerWorkspaceScreen } from '@/features/prep-review/screens/TaxPreparerWorkspaceScreen';
 import { TaxReviewerQueueScreen } from '@/features/prep-review/screens/TaxReviewerQueueScreen';
 import { TaxReviewerAuditScreen } from '@/features/prep-review/screens/TaxReviewerAuditScreen';
+import { PrepDepartmentScreen } from '@/features/prep-review/screens/PrepDepartmentScreen';
 import { SalesLayout } from '@/features/sales/layouts/SalesLayout';
+import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { SalesManagerDashboardScreen } from '@/features/sales/screens/SalesManagerDashboardScreen';
 import { SalesManagerQueueScreen } from '@/features/sales/screens/SalesManagerQueueScreen';
 import { SalesTeamScorecardsScreen } from '@/features/sales/screens/SalesTeamScorecardsScreen';
@@ -129,6 +132,10 @@ export const router = createBrowserRouter([
             element: <BulkLeadImportScreen />,
           },
           {
+            path: 'customers',
+            element: <AdminCustomerDirectoryScreen />,
+          },
+          {
             path: 'employees',
             element: <EmployeeManagementScreen />,
           },
@@ -137,8 +144,12 @@ export const router = createBrowserRouter([
             element: <DocumenterDepartmentScreen />,
           },
           {
+            path: 'prep-review',
+            element: <PrepDepartmentScreen />,
+          },
+          {
             path: 'sales',
-            element: <Navigate to="/sales/manager/queue" replace />,
+            element: <SalesDepartmentScreen />,
           },
           {
             path: 'filing',

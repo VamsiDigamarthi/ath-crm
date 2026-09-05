@@ -8,13 +8,15 @@ import type { SalesLeadItem } from '../types/sales.types';
 export interface SalesColumnsOptions {
   onOpenPitch: (lead: SalesLeadItem) => void;
   onOpenAssignModal: (lead: SalesLeadItem) => void;
+  isAdmin?: boolean;
 }
 
 export function getSalesColumns({
   onOpenPitch,
   onOpenAssignModal,
+  isAdmin = false,
 }: SalesColumnsOptions): ColumnDef<SalesLeadItem>[] {
-  return [
+  const columns: ColumnDef<SalesLeadItem>[] = [
     {
       header: 'Taxpayer Client',
       accessorKey: 'taxpayerName',
@@ -155,10 +157,10 @@ export function getSalesColumns({
           item.currentStage === 'FILING_SUCCESS';
 
         if (!item.assignedSalesAgent) {
-          if (isCompletedOrLocked) {
+          if (isCompletedOrLocked || isAdmin) {
             return (
               <span className="text-slate-400 font-medium text-[11px] bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
-                Completed
+                {isCompletedOrLocked ? 'Completed' : 'Unassigned'}
               </span>
             );
           }
@@ -198,7 +200,10 @@ export function getSalesColumns({
       accessorKey: 'currentStage',
       render: (item) => <SalesStageBadge stage={item.currentStage} />,
     },
-    {
+  ];
+
+  if (!isAdmin) {
+    columns.push({
       header: 'Actions',
       headerClassName: 'text-right',
       cellClassName: 'text-right',
@@ -239,6 +244,8 @@ export function getSalesColumns({
           </div>
         );
       },
-    },
-  ];
+    });
+  }
+
+  return columns;
 }

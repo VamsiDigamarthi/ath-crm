@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   CheckCheck, 
-  Trash2, 
   Search, 
   Send, 
   DollarSign, 
@@ -19,14 +18,19 @@ import {
 } from 'lucide-react';
 import { useNotificationStore } from '../store/notification-store';
 import { useAuthStore } from '@/features/auth/store/auth-store';
+import { AppPagination } from '@/shared/components/AppPagination';
 import type { AppNotification, NotificationCategory, NotificationPriority } from '../types/notification.types';
 import toast from 'react-hot-toast';
 
 export const NotificationCenterScreen: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<NotificationPriority | 'ALL'>('ALL');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
 
   const resolveNotificationClickUrl = (notif: AppNotification): string => {
     const appId = notif.relatedApplicationId;
@@ -147,6 +151,11 @@ export const NotificationCenterScreen: React.FC = () => {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  // Reset pagination when any filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterCategory, filterOnlyUnread, selectedPriority, searchTerm]);
+
   // Summary Metrics
   const totalCount = notifications.length;
   const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -181,6 +190,14 @@ export const NotificationCenterScreen: React.FC = () => {
       return true;
     });
   }, [notifications, filterCategory, filterOnlyUnread, selectedPriority, searchTerm]);
+
+  const totalItems = filteredNotifications.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+  const paginatedNotifications = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredNotifications.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredNotifications, currentPage, itemsPerPage]);
 
   const getCategoryIcon = (category: NotificationCategory) => {
     switch (category) {
@@ -281,22 +298,6 @@ export const NotificationCenterScreen: React.FC = () => {
             >
               <CheckCheck className="w-3.5 h-3.5" />
               <span>Mark All Read</span>
-            </button>
-          )}
-
-          {totalCount > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Are you sure you want to clear all notifications?')) {
-                  clearAll();
-                  toast.success('Notification feed cleared! 🗑️');
-                }
-              }}
-              className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Clear All</span>
             </button>
           )}
         </div>
@@ -405,7 +406,7 @@ export const NotificationCenterScreen: React.FC = () => {
 
       {/* Notifications List */}
       <div className="space-y-3">
-        {filteredNotifications.length === 0 ? (
+        {paginatedNotifications.length === 0 ? (
           <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-3">
             <Bell className="w-12 h-12 mx-auto text-slate-300" />
             <h3 className="font-bold text-base text-slate-700">No Notifications Found</h3>
@@ -414,7 +415,7 @@ export const NotificationCenterScreen: React.FC = () => {
             </p>
           </div>
         ) : (
-          filteredNotifications.map((notif) => (
+          paginatedNotifications.map((notif) => (
             <div
               key={notif.id}
               className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white shadow-xs hover:border-slate-300 ${
@@ -458,7 +459,7 @@ export const NotificationCenterScreen: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2 shrink-0 self-end sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto justify-between sm:justify-end">
-                {notif.actionUrl && (
+                {!isAdmin && notif.actionUrl && (
                   <button
                     type="button"
                     onClick={() => {
@@ -485,23 +486,29 @@ export const NotificationCenterScreen: React.FC = () => {
                 >
                   <CheckCircle2 className="w-4 h-4" />
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    deleteNotification(notif.id);
-                    toast.success('Notification removed');
-                  }}
-                  className="p-1.5 rounded-lg bg-slate-50 text-slate-400 border border-slate-200 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors cursor-pointer"
-                  title="Delete Notification"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* Pagination Footer */}
+      {totalItems > 0 && (
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <AppPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            perPageOptions={[5, 10, 20, 50]}
+            onPageChange={(page) => setCurrentPage(page)}
+            onPerPageChange={(perPage) => {
+              setItemsPerPage(perPage);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

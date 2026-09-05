@@ -5,7 +5,7 @@ import { validateLeadRow } from './lead-validator';
 /**
  * Generates and downloads a native Excel (.xlsx) file with Emerald Green background (#16A34A) and Bold 700 font
  */
-export async function downloadStyledExcelTemplate(taxYear: number = 2025): Promise<void> {
+export async function downloadStyledExcelTemplate(taxYear: number = new Date().getFullYear()): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'TaxCRM Engine';
   workbook.created = new Date();
@@ -276,7 +276,7 @@ function extractCleanCellValue(cellValue: unknown): string {
  */
 export async function parseExcelFileBuffer(
   arrayBuffer: ArrayBuffer,
-  defaultTaxYear: number = 2025
+  defaultTaxYear: number = new Date().getFullYear()
 ): Promise<ParsedLeadRow[]> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(arrayBuffer);

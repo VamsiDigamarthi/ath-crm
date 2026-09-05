@@ -12,7 +12,16 @@ export const BulkImportHero: React.FC<BulkImportHeroProps> = ({
   onTaxYearChange,
   totalLeadsCount,
 }) => {
-  const availableYears = [2024, 2025, 2026];
+  const currentCalendarYear = new Date().getFullYear();
+  // Dynamically compute rolling tax years (e.g., in 2026: [2024, 2025, 2026, 2027]; in 2027: [2025, 2026, 2027, 2028])
+  const baseYears = [
+    currentCalendarYear - 2,
+    currentCalendarYear - 1,
+    currentCalendarYear,
+    currentCalendarYear + 1,
+  ];
+
+  const availableYears = Array.from(new Set([...baseYears, taxYear])).sort((a, b) => a - b);
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-[#16A34A] to-emerald-700 p-6 sm:p-7 text-white border border-emerald-600 shadow-sm">

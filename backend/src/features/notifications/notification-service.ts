@@ -31,18 +31,23 @@ export class NotificationService {
   /**
    * Fetches real, persistent database notifications from the `Notification` table
    * targeted specifically for the authenticated user and their assigned role.
+   * Admins can view all department notifications across the platform.
    */
   public static async getNotificationsForUser(user: { id: string; role: string; email?: string }): Promise<ServerNotificationItem[]> {
+    const whereClause = user.role === 'ADMIN'
+      ? {}
+      : {
+          OR: [
+            ...(user.id ? [{ recipientUserId: user.id }] : []),
+            ...(user.role ? [{ targetRole: user.role as any, recipientUserId: null }] : []),
+            { targetRole: null, recipientUserId: null },
+          ],
+        };
+
     const dbNotifications = await prisma.notification.findMany({
-      where: {
-        OR: [
-          ...(user.id ? [{ recipientUserId: user.id }] : []),
-          ...(user.role ? [{ targetRole: user.role as any, recipientUserId: null }] : []),
-          { targetRole: null, recipientUserId: null },
-        ],
-      },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: 100,
     });
 
     return dbNotifications.map((n) => ({
@@ -59,5 +64,37 @@ export class NotificationService {
       relatedLeadName: n.relatedLeadName || undefined,
       relatedApplicationId: n.applicationId || undefined,
     }));
+  }
+
+  /**
+   * Marks a single notification as read in the database.
+   */
+  public static async markAsRead(id: string, _user?: { id: string; role: string }) {
+    return await prisma.notification.update({
+      where: { id },
+      data: { isRead: true },
+    });
+  }
+
+  /**
+   * Marks all unread notifications as read in the database.
+   * Admin marks all system notifications, whereas specific roles mark their assigned alerts.
+   */
+  public static async markAllAsRead(user: { id: string; role: string }) {
+    const whereClause = user.role === 'ADMIN'
+      ? { isRead: false }
+      : {
+          isRead: false,
+          OR: [
+            ...(user.id ? [{ recipientUserId: user.id }] : []),
+            ...(user.role ? [{ targetRole: user.role as any, recipientUserId: null }] : []),
+            { targetRole: null, recipientUserId: null },
+          ],
+        };
+
+    return await prisma.notification.updateMany({
+      where: whereClause,
+      data: { isRead: true },
+    });
   }
 }

@@ -7,6 +7,7 @@ export interface DocumenterMetricsProps {
   onQuickAutoDistribute: () => void;
   isDistributing?: boolean;
   showMyLeads?: boolean;
+  hideQuickAction?: boolean;
 }
 
 export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
@@ -14,6 +15,7 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
   onQuickAutoDistribute,
   isDistributing = false,
   showMyLeads = false,
+  hideQuickAction = false,
 }) => {
   const hasMyLeads = showMyLeads && stats.myLeads !== undefined;
 
@@ -33,7 +35,7 @@ export const DocumenterMetrics: React.FC<DocumenterMetricsProps> = ({
           <div className="text-2xl sm:text-3xl font-bold text-slate-900 font-sans tracking-tight">
             {stats.unassigned}
           </div>
-          {stats.unassigned > 0 && (
+          {!hideQuickAction && stats.unassigned > 0 && (
             <button
               onClick={onQuickAutoDistribute}
               disabled={isDistributing}

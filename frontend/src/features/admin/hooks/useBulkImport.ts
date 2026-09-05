@@ -16,7 +16,7 @@ export const useBulkImport = () => {
   // ---------------------------------------------------------------------------
   // 1. DATASET & TAX YEAR STATE
   // ---------------------------------------------------------------------------
-  const [taxYear, setTaxYear] = useState<number>(2025);
+  const [taxYear, setTaxYear] = useState<number>(new Date().getFullYear());
   const [rows, setRows] = useState<ParsedLeadRow[]>([]);
   const [isIngesting, setIsIngesting] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);

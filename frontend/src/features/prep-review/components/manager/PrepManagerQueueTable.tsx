@@ -15,6 +15,7 @@ import {
   UserPlus,
   X 
 } from 'lucide-react';
+import { useAuthStore } from '@/features/auth/store/auth-store';
 
 interface PrepManagerQueueTableProps {
   leads: PrepReviewLead[];
@@ -32,6 +33,7 @@ interface PrepManagerQueueTableProps {
   onViewLeadDetail: (lead: PrepReviewLead) => void;
   selectedStageFilter?: string;
   onStageFilterChange?: (stage: string) => void;
+  isAdmin?: boolean;
 }
 
 export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
@@ -43,7 +45,10 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
   onViewLeadDetail,
   selectedStageFilter = 'ALL',
   onStageFilterChange,
+  isAdmin = false,
 }) => {
+  const { user } = useAuthStore();
+  const isEffectiveAdmin = isAdmin || user?.role === 'ADMIN';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [internalTab, setInternalTab] = useState<string>(selectedStageFilter);
@@ -123,7 +128,9 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
             <span>Tax Preparation &amp; Quality Review Pipeline</span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Assign intake-ready taxpayer files to Preparers and designate Compliance Reviewers.
+            {isEffectiveAdmin 
+              ? 'Real-time monitoring of taxpayer files moving through 1040 computation and QA compliance sign-off.'
+              : 'Assign intake-ready taxpayer files to Preparers and designate Compliance Reviewers.'}
           </p>
         </div>
 
@@ -265,26 +272,28 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
               <tr>
-                <th className="py-3 px-4 w-10 text-center">
-                  <button
-                    type="button"
-                    onClick={toggleSelectAll}
-                    className="text-slate-400 hover:text-slate-700 cursor-pointer"
-                  >
-                    {selectedLeadIds.length === filteredLeads.length && filteredLeads.length > 0 ? (
-                      <CheckSquare className="w-4 h-4 text-[#16A34A]" />
-                    ) : (
-                      <Square className="w-4 h-4" />
-                    )}
-                  </button>
-                </th>
+                {!isEffectiveAdmin && (
+                  <th className="py-3 px-4 w-10 text-center">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                    >
+                      {selectedLeadIds.length === filteredLeads.length && filteredLeads.length > 0 ? (
+                        <CheckSquare className="w-4 h-4 text-[#16A34A]" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </button>
+                  </th>
+                )}
                 <th className="py-3 px-4">Taxpayer Client</th>
                 <th className="py-3 px-4">Complexity &amp; Location</th>
                 <th className="py-3 px-4 text-center">Intake &amp; Vault</th>
                 <th className="py-3 px-4">Assigned Preparer</th>
                 <th className="py-3 px-4">QA Reviewer</th>
                 <th className="py-3 px-4">Filing Lifecycle Stage</th>
-                <th className="py-3 px-4 text-right">Assign Action</th>
+                {!isEffectiveAdmin && <th className="py-3 px-4 text-right">Assign Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -299,19 +308,21 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
                     }`}
                   >
                     {/* Checkbox */}
-                    <td className="py-3.5 px-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() => toggleSelectOne(lead.id)}
-                        className="text-slate-400 hover:text-slate-700 cursor-pointer"
-                      >
-                        {isSelected ? (
-                          <CheckSquare className="w-4 h-4 text-[#16A34A]" />
-                        ) : (
-                          <Square className="w-4 h-4" />
-                        )}
-                      </button>
-                    </td>
+                    {!isEffectiveAdmin && (
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => toggleSelectOne(lead.id)}
+                          className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-4 h-4 text-[#16A34A]" />
+                          ) : (
+                            <Square className="w-4 h-4" />
+                          )}
+                        </button>
+                      </td>
+                    )}
 
                     {/* Taxpayer Client Info */}
                     <td className="py-3.5 px-4">
@@ -400,17 +411,19 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
                     </td>
 
                     {/* Assign Action */}
-                    <td className="py-3.5 px-4 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onOpenAssignModal([lead])}
-                        className="border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] text-xs font-bold h-7.5 px-2.5 cursor-pointer shadow-2xs"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>Assign</span>
-                      </Button>
-                    </td>
+                    {!isEffectiveAdmin && (
+                      <td className="py-3.5 px-4 text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onOpenAssignModal([lead])}
+                          className="border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] text-xs font-bold h-7.5 px-2.5 cursor-pointer shadow-2xs"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>Assign</span>
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -419,8 +432,8 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
         </div>
       )}
 
-      {/* Sleek Floating Action Bar at Bottom (Exact Documenter Manager UX) */}
-      {selectedLeadIds.length > 0 && (
+      {/* Floating Action Bar at Bottom (Hidden for Admin) */}
+      {!isEffectiveAdmin && selectedLeadIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-5 duration-200 font-sans">
           <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-900/95 backdrop-blur-md text-white border border-slate-700 shadow-2xl shadow-slate-950/40">
             <div className="flex items-center gap-2 pr-3 border-r border-slate-700">

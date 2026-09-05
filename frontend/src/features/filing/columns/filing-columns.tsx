@@ -8,12 +8,14 @@ export interface FilingColumnsOptions {
   onOpenWorkspace: (lead: FilingLeadItem) => void;
   onOpenAssignModal?: (lead: FilingLeadItem) => void;
   isSpecialist?: boolean;
+  isAdmin?: boolean;
 }
 
 export function getFilingColumns({
   onOpenWorkspace,
   onOpenAssignModal,
   isSpecialist = false,
+  isAdmin = false,
 }: FilingColumnsOptions): ColumnDef<FilingLeadItem>[] {
   const columns: ColumnDef<FilingLeadItem>[] = [
     {
@@ -130,7 +132,7 @@ export function getFilingColumns({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-xs text-slate-800">{item.assignedFilingAgent.name}</span>
-                {onOpenAssignModal && (
+                {!isAdmin && onOpenAssignModal && (
                   <button
                     type="button"
                     onClick={() => onOpenAssignModal(item)}
@@ -141,6 +143,14 @@ export function getFilingColumns({
                 )}
               </div>
             </div>
+          );
+        }
+
+        if (isAdmin) {
+          return (
+            <span className="text-amber-700 font-bold text-[11px] bg-amber-50 px-2 py-1 rounded-md border border-amber-200 whitespace-nowrap">
+              Unassigned
+            </span>
           );
         }
 
@@ -157,36 +167,37 @@ export function getFilingColumns({
     });
   }
 
-  columns.push(
-    {
-      header: 'Transmission Status',
-      accessorKey: 'currentStage',
-      render: (item) => {
-        if (item.currentStage === 'FILING_SUCCESS') {
-          return (
-            <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 inline-flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />
-              <span>IRS Accepted (0000)</span>
-            </span>
-          );
-        }
-        if (item.currentStage === 'FILING_IN_PROGRESS') {
-          return (
-            <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
-              <Clock className="w-3 h-3 text-amber-600" />
-              <span>Transmitting MeF</span>
-            </span>
-          );
-        }
+  columns.push({
+    header: 'Transmission Status',
+    accessorKey: 'currentStage',
+    render: (item) => {
+      if (item.currentStage === 'FILING_SUCCESS') {
         return (
-          <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
-            <Send className="w-3 h-3 text-blue-600" />
-            <span>Ready for Transmission</span>
+          <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 inline-flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />
+            <span>IRS Accepted (0000)</span>
           </span>
         );
-      },
+      }
+      if (item.currentStage === 'FILING_IN_PROGRESS') {
+        return (
+          <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1">
+            <Clock className="w-3 h-3 text-amber-600" />
+            <span>Transmitting MeF</span>
+          </span>
+        );
+      }
+      return (
+        <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
+          <Send className="w-3 h-3 text-blue-600" />
+          <span>Ready for Transmission</span>
+        </span>
+      );
     },
-    {
+  });
+
+  if (!isAdmin) {
+    columns.push({
       header: 'Actions',
       accessorKey: 'id',
       headerClassName: 'text-right',
@@ -219,8 +230,8 @@ export function getFilingColumns({
           </Button>
         </div>
       ),
-    }
-  );
+    });
+  }
 
   return columns;
 }

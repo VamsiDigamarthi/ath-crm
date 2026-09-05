@@ -77,12 +77,14 @@ export interface GetDocumenterColumnsProps {
   onOpenCallModal: (lead: DocumenterLeadItem) => void;
   onOpenAssignModal: (lead: DocumenterLeadItem) => void;
   hideAssignedStaff?: boolean;
+  isAdmin?: boolean;
 }
 
 export const getDocumenterColumns = ({
   onOpenCallModal,
   onOpenAssignModal,
   hideAssignedStaff = false,
+  isAdmin = false,
 }: GetDocumenterColumnsProps): ColumnDef<DocumenterLeadItem>[] => {
   const baseColumns: ColumnDef<DocumenterLeadItem>[] = [
     {
@@ -152,10 +154,19 @@ export const getDocumenterColumns = ({
       accessorKey: 'assignedDocAgent.email',
       render: (item) => {
         if (!item.assignedDocAgent) {
+          if (isAdmin) {
+            return (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200">
+                <UserX className="w-3 h-3 text-slate-400" />
+                Unassigned
+              </span>
+            );
+          }
+
           return (
             <button
               onClick={() => onOpenAssignModal(item)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
             >
               <UserX className="w-3 h-3 text-amber-600" />
               Unassigned (Click)
@@ -254,20 +265,22 @@ export const getDocumenterColumns = ({
             <Eye className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">View</span>
           </Link>
-          <Button
-            size="sm"
-            onClick={() => onOpenCallModal(item)}
-            className="h-8 px-3 rounded-lg text-xs font-bold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <PhoneCall className="w-3.5 h-3.5" />
-            Call
-          </Button>
-          {!hideAssignedStaff && (
+          {!isAdmin && (
+            <Button
+              size="sm"
+              onClick={() => onOpenCallModal(item)}
+              className="h-8 px-3 rounded-lg text-xs font-bold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <PhoneCall className="w-3.5 h-3.5" />
+              Call
+            </Button>
+          )}
+          {!hideAssignedStaff && !isAdmin && (
             <Button
               size="sm"
               variant="outline"
               onClick={() => onOpenAssignModal(item)}
-              className="h-8 px-2.5 rounded-lg text-xs font-medium border-slate-200 hover:bg-slate-100 text-slate-700"
+              className="h-8 px-2.5 rounded-lg text-xs font-medium border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer"
               title="Assign or Reassign Staff"
             >
               <UserCheck className="w-3.5 h-3.5 text-slate-600" />

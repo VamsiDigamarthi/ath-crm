@@ -111,7 +111,7 @@ function normalizeHeaderKey(header: string): string {
 /**
  * Parses raw CSV into strongly typed, syntax-validated ParsedLeadRow objects
  */
-export function parseCSVToLeads(csvText: string, defaultTaxYear: number = 2025): ParsedLeadRow[] {
+export function parseCSVToLeads(csvText: string, defaultTaxYear: number = new Date().getFullYear()): ParsedLeadRow[] {
   const rawRows = parseCSVText(csvText);
   if (rawRows.length < 2) return [];
 
@@ -203,7 +203,7 @@ export function getSampleCSVTemplate(): string {
 /**
  * Generates rich realistic demo data for testing the UI preview
  */
-export function getDemoLeadRows(): ParsedLeadRow[] {
+export function getDemoLeadRows(taxYear: number = new Date().getFullYear()): ParsedLeadRow[] {
   return [
     {
       id: 'LEAD-0001',
@@ -219,7 +219,7 @@ export function getDemoLeadRows(): ParsedLeadRow[] {
       occupation: 'Software Architect',
       visaType: 'H-1B',
       maritalStatus: 'Married',
-      taxYear: 2025,
+      taxYear,
       filingType: 'INDIVIDUAL',
       addressLine1: '742 Evergreen Terrace',
       city: 'Springfield',
@@ -244,7 +244,7 @@ export function getDemoLeadRows(): ParsedLeadRow[] {
       occupation: 'Data Scientist',
       visaType: 'F-1 OPT',
       maritalStatus: 'Single',
-      taxYear: 2025,
+      taxYear,
       filingType: 'INDIVIDUAL',
       addressLine1: '1044 Michigan Ave',
       city: 'Chicago',
@@ -269,7 +269,7 @@ export function getDemoLeadRows(): ParsedLeadRow[] {
       occupation: 'VP of Engineering',
       visaType: 'L-1',
       maritalStatus: 'Married',
-      taxYear: 2025,
+      taxYear,
       filingType: 'CORPORATE',
       addressLine1: '400 Pine St Suite 900',
       city: 'Seattle',
@@ -294,7 +294,7 @@ export function getDemoLeadRows(): ParsedLeadRow[] {
       occupation: 'UX Design Lead',
       visaType: 'US_CITIZEN',
       maritalStatus: 'Single',
-      taxYear: 2025,
+      taxYear,
       filingType: 'INDIVIDUAL',
       addressLine1: '1200 Congress Ave',
       city: 'Austin',
@@ -319,7 +319,7 @@ export function getDemoLeadRows(): ParsedLeadRow[] {
       occupation: 'Consultant',
       visaType: 'H-1B',
       maritalStatus: 'Married',
-      taxYear: 2025,
+      taxYear,
       filingType: 'INDIVIDUAL',
       addressLine1: '100 Silicon Way',
       city: 'San Jose',
@@ -344,7 +344,7 @@ export function getDemoLeadRows(): ParsedLeadRow[] {
       occupation: 'QA Manager',
       visaType: 'INVALID_XYZ_VISA',
       maritalStatus: 'Married',
-      taxYear: 2025,
+      taxYear,
       filingType: 'INDIVIDUAL',
       addressLine1: '85 Beacon St',
       city: 'Boston',

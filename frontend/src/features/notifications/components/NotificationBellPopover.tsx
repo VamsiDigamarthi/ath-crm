@@ -20,6 +20,7 @@ import type { AppNotification, NotificationCategory } from '../types/notificatio
 export const NotificationBellPopover: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -319,7 +320,7 @@ export const NotificationBellPopover: React.FC = () => {
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                           {notif.relatedLeadName}
                         </span>
-                        {notif.actionLabel && (
+                        {!isAdmin && notif.actionLabel && (
                           <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-0.5 group-hover:underline">
                             <span>{notif.actionLabel}</span>
                             <ExternalLink className="w-2.5 h-2.5" />
@@ -329,22 +330,11 @@ export const NotificationBellPopover: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Actions: Unread dot & Delete */}
-                  <div className="shrink-0 flex flex-col items-center justify-between gap-2 self-stretch">
+                  {/* Actions: Unread dot */}
+                  <div className="shrink-0 flex items-center justify-center self-stretch">
                     {!notif.isRead && (
                       <span className="w-2 h-2 rounded-full bg-blue-600" title="Unread" />
                     )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteNotification(notif.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 p-1 transition-opacity cursor-pointer"
-                      title="Dismiss notification"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
                   </div>
                 </div>
               ))

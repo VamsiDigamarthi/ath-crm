@@ -127,4 +127,42 @@ export const adminService = {
   }[]): Promise<BulkOnboardApiResponse> => {
     return apiClient.post('/admin/employees/bulk-onboard', { employees });
   },
+
+  getCustomers: async (params?: {
+    search?: string;
+    taxYear?: number;
+    filingStatus?: 'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS';
+    page?: number;
+    limit?: number;
+  }): Promise<any> => {
+    return apiClient.get('/admin/customers', { params });
+  },
+
+  getCustomerDetails: async (id: string): Promise<any> => {
+    return apiClient.get(`/admin/customers/${id}`);
+  },
+
+  getDashboardStats: async (): Promise<{
+    success: boolean;
+    data: {
+      counts: {
+        totalProspects: number;
+        documenterCount: number;
+        prepReviewCount: number;
+        salesCount: number;
+        filingQueueCount: number;
+        completedFilingsCount: number;
+        totalEmployees: number;
+      };
+      recentActivities: Array<{
+        id: string;
+        title: string;
+        details: string;
+        time: string;
+        type: 'success' | 'info' | 'warning' | 'primary';
+      }>;
+    };
+  }> => {
+    return apiClient.get('/admin/dashboard-stats');
+  },
 };

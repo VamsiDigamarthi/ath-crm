@@ -37,6 +37,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const navigate = useNavigate();
 
   const {
+    isAdmin,
     isLoading: isWorkspaceLoading,
     refreshData,
     handleSaveCallDisposition,
@@ -200,7 +201,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
               <span>Sent to Sales</span>
             </span>
-          ) : (
+          ) : !isAdmin ? (
             <Button
               size="sm"
               onClick={() => setIsMoveToPrepModalOpen(true)}
@@ -209,17 +210,19 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               <FileCheck2 className="w-3.5 h-3.5" />
               <span>Move to Tax Preparation</span>
             </Button>
-          )}
+          ) : null}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsCallModalOpen(true)}
-            className="border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <PhoneCall className="w-3.5 h-3.5 text-[#16A34A]" />
-            <span>Log Outreach Call</span>
-          </Button>
+          {!isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCallModalOpen(true)}
+              className="border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <PhoneCall className="w-3.5 h-3.5 text-[#16A34A]" />
+              <span>Log Outreach Call</span>
+            </Button>
+          )}
 
           <Button
             variant="outline"
