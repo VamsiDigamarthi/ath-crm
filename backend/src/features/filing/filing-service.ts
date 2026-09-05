@@ -1,6 +1,13 @@
 import { prisma } from '../../config/db.js';
 import { irsConfig } from '../../config/irs-config.js';
-import { ApplicationStage, Role } from '@prisma/client';
+import { 
+  ApplicationStage, 
+  Role, 
+  AuditActorType, 
+  AuditActionType, 
+  NotificationCategory, 
+  NotificationPriority 
+} from '@prisma/client';
 import type { FilingLeadItem, FilingStaffMember, FilingManagerStats } from './filing-types.js';
 
 export class FilingService {
@@ -15,16 +22,16 @@ export class FilingService {
     const lastName = customer.lastName || 'Client';
     const taxpayerName = `${firstName} ${lastName}`.trim();
 
-    const fedRefund = Number(draft.federalRefund) || Number(draft.fedRefund) || 2840;
-    const fedDue = Number(draft.federalBalanceDue) || 0;
-    const stateRefund = Number(draft.stateRefund) || 680;
-    const stateDue = Number(draft.stateBalanceDue) || 0;
+    const fedRefund = Number(draft.federalRefund ?? draft.fedRefund ?? 0);
+    const fedDue = Number(draft.balanceDue ?? draft.federalBalanceDue ?? 0);
+    const stateRefund = Number(draft.stateRefund ?? draft.stateTaxRefund ?? 0);
+    const stateDue = Number(draft.stateBalanceDue ?? 0);
 
     const totalRefundOrDue = fedRefund > 0 || stateRefund > 0
       ? fedRefund + stateRefund
       : -(fedDue + stateDue);
 
-    const serviceFeePaid = Number(draft.paidAmount) || 227;
+    const serviceFeePaid = Number(draft.paidAmount ?? 227);
 
     // Transmission status
     const transmissionInfo = draft.transmissionInfo || {
@@ -52,6 +59,42 @@ export class FilingService {
       generatedAt: draft.mefGeneratedAt || app.updatedAt.toISOString(),
     };
 
+    const stageHistories = (app.stageHistories || []).map((sh: any) => ({
+      id: sh.id,
+      fromStage: sh.fromStage,
+      toStage: sh.toStage,
+      createdAt: sh.createdAt.toISOString(),
+      remarks: sh.remarks,
+      movedBy: sh.movedByUser
+        ? {
+            id: sh.movedByUser.id,
+            name: `${sh.movedByUser.firstName || ''} ${sh.movedByUser.lastName || ''}`.trim() || sh.movedByUser.email || 'Staff',
+            role: sh.movedByUser.role,
+          }
+        : null,
+    }));
+
+    const auditLogs = (app.auditLogs || []).map((al: any) => ({
+      id: al.id,
+      action: al.action,
+      actorType: al.actorType,
+      actorName: al.actorName,
+      actorRole: al.actorRole,
+      moduleKey: al.moduleKey || 'FILING',
+      details: al.details,
+      createdAt: al.createdAt.toISOString(),
+    }));
+
+    const callLogs = (app.callLogs || []).map((cl: any) => ({
+      id: cl.id,
+      callType: cl.callType || 'OUTBOUND',
+      callStatus: cl.callStatus || 'COMPLETED',
+      duration: cl.duration || 0,
+      notes: cl.notes || '',
+      callerName: cl.callerName || 'Agent',
+      createdAt: cl.createdAt.toISOString(),
+    }));
+
     return {
       id: app.id,
       taxYear: app.taxYear || 2025,
@@ -61,9 +104,9 @@ export class FilingService {
       taxpayerName,
       taxpayerEmail: customer.email || 'taxpayer@client.com',
       taxpayerPhone: customer.phone || '(555) 392-1084',
-      ssnMasked: customer.ssn ? `***-**-${customer.ssn.slice(-4)}` : '***-**-4829',
-      stateOfResidence: draft.stateOfResidence || customer.state || 'CA',
-      filingStatus: draft.filingStatus || 'Single',
+      ssnMasked: customer.ssn ? `***-**-${customer.ssn.slice(-4)}` : (customer.ssnTin ? `***-**-${customer.ssnTin.slice(-4)}` : '***-**-4829'),
+      stateOfResidence: draft.stateOfResidence || customer.state || 'AZ',
+      filingStatus: draft.filingStatus || customer.maritalStatus || 'Single',
       federalRefund: fedRefund,
       federalBalanceDue: fedDue,
       stateRefund: stateRefund,
@@ -73,7 +116,7 @@ export class FilingService {
       serviceFeePaid,
       esignStatus: draft.esignStatus === 'SIGNED' ? 'SIGNED' : 'PENDING',
       esignCompletedAt: draft.esignCompletedAt || null,
-      taxpayerPin: draft.taxpayerPin || '84920',
+      taxpayerPin: draft.taxpayerPin || '66666',
       assignedFilingAgent: app.assignedFileOp ? {
         id: app.assignedFileOp.id,
         name: `${app.assignedFileOp.firstName || ''} ${app.assignedFileOp.lastName || ''}`.trim() || 'Filing Specialist',
@@ -84,57 +127,51 @@ export class FilingService {
       customerProfile: {
         fullName: taxpayerName,
         email: customer.email || 'taxpayer@client.com',
-        phone: customer.phone || '+1 (732) 555-0155',
-        ssnMasked: customer.ssn ? `***-**-${customer.ssn.slice(-4)}` : '***-**-4829',
-        dob: '1988-06-14',
+        phone: customer.phone || '+1 (480) 555-0166',
+        ssnMasked: customer.ssn ? `***-**-${customer.ssn.slice(-4)}` : (customer.ssnTin ? `***-**-${customer.ssnTin.slice(-4)}` : '***-**-4829'),
+        dob: customer.dob || '1988-06-14',
         visaType: draft.visaType || customer.visaType || 'H-1B',
-        filingStatus: draft.filingStatus || 'Single',
-        address: customer.address || '100 Wood Ave S, Suite 400',
-        city: customer.city || 'Iselin',
-        state: draft.stateOfResidence || customer.state || 'NJ',
-        zipCode: customer.zipCode || '08830',
+        filingStatus: draft.filingStatus || customer.maritalStatus || 'Single',
+        address: customer.address || customer.addressLine1 || '2400 E Camelback Rd',
+        city: customer.city || 'Phoenix',
+        state: draft.stateOfResidence || customer.state || 'AZ',
+        zipCode: customer.zipCode || '85016',
       },
       taxReturnSummary: {
-        w2Wages: Number(draft.w2Wages) || 94500,
-        federalWithheld: Number(draft.federalWithheld) || 14800,
-        standardDeduction: Number(draft.standardDeduction) || 14600,
-        taxableIncome: Number(draft.taxableIncome) || 79900,
-        totalFederalTax: Number(draft.totalFederalTax) || 11960,
+        w2Wages: Number(draft.w2Wages ?? 0),
+        federalWithheld: Number(draft.fedWithheld ?? draft.federalWithheld ?? 0),
+        standardDeduction: Number(draft.standardDeduction ?? draft.itemizedDeduction ?? 14600),
+        taxableIncome: Number(draft.taxableIncome ?? 0),
+        totalFederalTax: Number(draft.taxLiability ?? draft.totalFederalTax ?? 0),
         federalRefund: fedRefund,
         federalBalanceDue: fedDue,
-        stateWages: Number(draft.stateWages) || 94500,
-        stateWithheld: Number(draft.stateWithheld) || 4800,
-        stateTaxLiability: Number(draft.stateTaxLiability) || 4120,
+        stateWages: Number(draft.stateWages ?? draft.w2Wages ?? 0),
+        stateWithheld: Number(draft.stateWithheld ?? 0),
+        stateTaxLiability: Number(draft.stateTaxLiability ?? draft.stateBalanceDue ?? 0),
         stateRefund: stateRefund,
         stateBalanceDue: stateDue,
-        qaAuditorName: draft.qaAuditorName || 'Vikram Deshmukh, CPA',
+        qaAuditorName: draft.qaAuditorName || 'Senior QA CPA Reviewer',
       },
       bankDirectDeposit: {
-        bankName: draft.bankName || 'Chase Bank (JPMorgan Chase)',
-        accountType: draft.accountType || 'Checking',
-        routingNumber: draft.routingNumber || '021000021',
-        accountNumberMasked: draft.accountNumber ? `••••••••${draft.accountNumber.slice(-4)}` : '••••••••4920',
+        bankName: draft.bankName || draft.organizer?.m9_directDeposit?.bankName || 'Chase Bank (JPMorgan Chase)',
+        accountType: draft.accountType || draft.organizer?.m9_directDeposit?.accountType || 'Checking',
+        routingNumber: draft.routingNumber || draft.organizer?.m9_directDeposit?.routingNumber || '021000021',
+        accountNumberMasked: draft.accountNumber
+          ? `••••••••${draft.accountNumber.slice(-4)}`
+          : draft.organizer?.m9_directDeposit?.accountNumber
+          ? `••••••••${draft.organizer.m9_directDeposit.accountNumber.slice(-4)}`
+          : '••••••••4819',
       },
-      sourceDocuments: Array.isArray(app.documents) && app.documents.length > 0
+      sourceDocuments: app.documents && app.documents.length > 0
         ? app.documents.map((d: any) => ({
             id: d.id,
             title: d.fileName || 'Tax Document',
-            type: d.documentCategory || 'TAX_DOCUMENT',
-            issuer: d.documentCategory === 'FORM_8879'
-              ? `Taxpayer Signed (PIN: ${draft.taxpayerPin || '33445'})`
-              : `Client Vault (${d.documentCategory || 'VERIFIED'})`,
+            type: d.documentCategory || 'W2_INCOME',
+            issuer: 'Uploaded by Client / Prep Staff',
             status: d.verificationStatus || 'VERIFIED',
-            verifiedAt: d.createdAt ? new Date(d.createdAt).toLocaleDateString() : '2026-08-28',
+            verifiedAt: d.createdAt.toISOString().split('T')[0],
           }))
         : [
-            {
-              id: 'doc-w2',
-              title: 'W-2 Wage & Tax Statement (2025)',
-              type: 'W-2',
-              issuer: 'Global Tech Inc (EIN: 12-3456789)',
-              status: 'VERIFIED',
-              verifiedAt: '2026-08-15',
-            },
             {
               id: 'doc-1040',
               title: 'Form 1040 Tax Return (Certified)',
@@ -160,6 +197,9 @@ export class FilingService {
               verifiedAt: draft.paidAt || '2026-08-28',
             },
           ],
+      stageHistories,
+      auditLogs,
+      callLogs,
       createdAt: app.createdAt.toISOString(),
       updatedAt: app.updatedAt.toISOString(),
     };
@@ -240,6 +280,17 @@ export class FilingService {
         customer: true,
         assignedFileOp: true,
         documents: true,
+        stageHistories: {
+          include: {
+            movedByUser: {
+              select: { id: true, firstName: true, lastName: true, role: true, email: true },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+        auditLogs: {
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -505,6 +556,18 @@ export class FilingService {
       },
     });
 
+    // Mark taxpayer as officially converted customer
+    if (app.customerId) {
+      try {
+        await prisma.customerProfile.update({
+          where: { id: app.customerId },
+          data: { isConvertedCustomer: true },
+        });
+      } catch {
+        // ignore
+      }
+    }
+
     if (validUserId) {
       try {
         await prisma.stageHistory.create({
@@ -514,6 +577,18 @@ export class FilingService {
             toStage: ApplicationStage.FILING_SUCCESS,
             movedByUserId: validUserId,
             remarks: `Transmitted to IRS MeF Gateway (Submission ID: ${submissionId}) - Official IRS Acceptance Verified (Ack: 0000).`,
+          },
+        });
+
+        await prisma.auditLog.create({
+          data: {
+            applicationId,
+            action: 'STAGE_CHANGE',
+            actorType: 'AGENT',
+            actorName: 'Filing Specialist',
+            actorRole: 'FILING_SPECIALIST',
+            moduleKey: 'FILING',
+            details: `Return electronically transmitted to IRS Modernized e-File (MeF). Certificate: ${certificateId}`,
           },
         });
       } catch {
@@ -535,6 +610,34 @@ export class FilingService {
   public static async assignFilingAgent(applicationIds: string | string[], filingAgentId: string, managerUserId: string) {
     const ids = Array.isArray(applicationIds) ? applicationIds : [applicationIds];
 
+    // Fetch target agent info
+    const targetAgent = await prisma.user.findUnique({
+      where: { id: filingAgentId },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    });
+
+    const agentName = targetAgent
+      ? `${targetAgent.firstName || ''} ${targetAgent.lastName || ''}`.trim() || targetAgent.email
+      : 'Filing Specialist';
+
+    // Fetch manager info
+    const manager = managerUserId && managerUserId !== 'SYSTEM'
+      ? await prisma.user.findUnique({
+          where: { id: managerUserId },
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+        })
+      : null;
+
+    const managerName = manager
+      ? `${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email
+      : 'Filing Operations Manager';
+
+    // Fetch applications for details
+    const apps = await prisma.taxApplication.findMany({
+      where: { id: { in: ids } },
+      include: { customer: true },
+    });
+
     const updated = await prisma.taxApplication.updateMany({
       where: { id: { in: ids } },
       data: {
@@ -543,37 +646,194 @@ export class FilingService {
       },
     });
 
-    return { success: true, count: updated.count };
+    // Create stageHistory, auditLog, and notification for each assigned return
+    for (const app of apps) {
+      const clientName = `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || 'Taxpayer';
+      const draft: any = (app.taxDraftSummary as any) || {};
+      const fedRefund = Number(draft.federalRefund) || Number(draft.estimatedRefund) || 0;
+      const balDue = Number(draft.balanceDue ?? draft.federalBalanceDue) || 0;
+      const refundOrDueText =
+        fedRefund > 0
+          ? `$${fedRefund.toLocaleString()} Federal Refund`
+          : balDue > 0
+          ? `-$${balDue.toLocaleString()} Balance Due`
+          : 'Form 1040 QA Approved';
+
+      // 1. Stage History
+      try {
+        await prisma.stageHistory.create({
+          data: {
+            applicationId: app.id,
+            fromStage: app.currentStage,
+            toStage: ApplicationStage.FILING_QUEUE,
+            movedByUserId: manager?.id || (await prisma.user.findFirst({ select: { id: true } }))?.id || '',
+            remarks: `Form 1040 return for ${clientName} assigned to Filing Specialist ${agentName} by ${managerName}`,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create stage history for filing assignment:', err);
+      }
+
+      // 2. Audit Log
+      try {
+        await prisma.auditLog.create({
+          data: {
+            applicationId: app.id,
+            actorId: manager?.id || null,
+            actorType: AuditActorType.MANAGER,
+            actorName: managerName,
+            actorRole: manager?.role || 'FILE_OP_MANAGER',
+            action: AuditActionType.STAGE_CHANGE,
+            moduleKey: 'FILING',
+            details: {
+              actionDescription: `Form 1040 return assigned to Filing Specialist ${agentName} by ${managerName}`,
+              assignedAgentId: filingAgentId,
+              assignedAgentName: agentName,
+              taxYear: app.taxYear || 2025,
+              clientName,
+              currentStage: 'FILING_QUEUE',
+            },
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create audit log for filing assignment:', err);
+      }
+
+      // 3. Notification to Filing Specialist
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: filingAgentId,
+            targetRole: Role.FILE_OP_AGENT,
+            applicationId: app.id,
+            category: NotificationCategory.FILING,
+            priority: NotificationPriority.HIGH,
+            title: `New Return Assigned for IRS Transmission: ${clientName}`,
+            message: `${managerName} assigned certified Form 1040 return (${clientName} • TY ${app.taxYear || 2025} • ${refundOrDueText}) to you for IRS MeF transmission.`,
+            actionUrl: `/filing/workspace/${app.id}`,
+            actionLabel: 'Open Transmission Desk',
+            relatedLeadName: clientName,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to send notification to assigned filing agent:', err);
+      }
+    }
+
+    return { success: true, count: updated.count, targetAgent };
   }
 
   /**
    * Auto-round-robin balance unassigned filing returns across active specialists
    */
-  public static async autoRoundRobin() {
+  public static async autoRoundRobin(managerUserId?: string) {
     const filingAgents = await prisma.user.findMany({
       where: {
         role: { in: [Role.FILE_OP_AGENT, Role.FILE_OP_TEAM_LEAD, Role.FILE_OP_MANAGER] },
         isActive: true,
       },
-      select: { id: true },
+      select: { id: true, firstName: true, lastName: true, email: true },
     });
 
     if (filingAgents.length === 0) return { success: false, assigned: 0 };
+
+    const manager = managerUserId && managerUserId !== 'SYSTEM'
+      ? await prisma.user.findUnique({
+          where: { id: managerUserId },
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+        })
+      : null;
+
+    const managerName = manager
+      ? `${manager.firstName || ''} ${manager.lastName || ''}`.trim() || manager.email
+      : 'Filing Operations Manager';
 
     const unassigned = await prisma.taxApplication.findMany({
       where: {
         currentStage: { in: [ApplicationStage.FILING_QUEUE, ApplicationStage.FILING_IN_PROGRESS] },
         assignedFileOpId: null,
       },
-      select: { id: true },
+      include: { customer: true },
     });
 
     for (let i = 0; i < unassigned.length; i++) {
+      const app = unassigned[i];
       const agent = filingAgents[i % filingAgents.length];
+      const agentName = `${agent.firstName || ''} ${agent.lastName || ''}`.trim() || agent.email;
+      const clientName = `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || 'Taxpayer';
+      const draft: any = (app.taxDraftSummary as any) || {};
+      const fedRefund = Number(draft.federalRefund) || Number(draft.estimatedRefund) || 0;
+      const balDue = Number(draft.balanceDue ?? draft.federalBalanceDue) || 0;
+      const refundOrDueText =
+        fedRefund > 0
+          ? `$${fedRefund.toLocaleString()} Federal Refund`
+          : balDue > 0
+          ? `-$${balDue.toLocaleString()} Balance Due`
+          : 'Form 1040 QA Approved';
+
       await prisma.taxApplication.update({
-        where: { id: unassigned[i].id },
+        where: { id: app.id },
         data: { assignedFileOpId: agent.id },
       });
+
+      // Stage History
+      try {
+        await prisma.stageHistory.create({
+          data: {
+            applicationId: app.id,
+            fromStage: app.currentStage,
+            toStage: ApplicationStage.FILING_QUEUE,
+            movedByUserId: manager?.id || agent.id,
+            remarks: `Form 1040 return for ${clientName} auto-assigned to ${agentName} via Auto Round-Robin`,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create stage history for filing round-robin:', err);
+      }
+
+      // Audit Log
+      try {
+        await prisma.auditLog.create({
+          data: {
+            applicationId: app.id,
+            actorId: manager?.id || null,
+            actorType: AuditActorType.MANAGER,
+            actorName: managerName,
+            actorRole: manager?.role || 'FILE_OP_MANAGER',
+            action: AuditActionType.STAGE_CHANGE,
+            moduleKey: 'FILING',
+            details: {
+              actionDescription: `Form 1040 return auto-assigned to ${agentName} via 1-Click Auto Round-Robin`,
+              assignedAgentId: agent.id,
+              assignedAgentName: agentName,
+              taxYear: app.taxYear || 2025,
+              clientName,
+            },
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create audit log for filing round-robin:', err);
+      }
+
+      // Notification
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: agent.id,
+            targetRole: Role.FILE_OP_AGENT,
+            applicationId: app.id,
+            category: NotificationCategory.FILING,
+            priority: NotificationPriority.HIGH,
+            title: `New Return Assigned (Round-Robin): ${clientName}`,
+            message: `${managerName} assigned certified Form 1040 return (${clientName} • TY ${app.taxYear || 2025} • ${refundOrDueText}) to you via 1-Click Auto Round-Robin.`,
+            actionUrl: `/filing/workspace/${app.id}`,
+            actionLabel: 'Open Transmission Desk',
+            relatedLeadName: clientName,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to send notification for filing round-robin:', err);
+      }
     }
 
     return { success: true, assigned: unassigned.length };

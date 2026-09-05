@@ -7,6 +7,7 @@ import { PitchFeeCalculator } from '../components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
+import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesFeeBreakdown } from '../types/sales.types';
 import apiClient from '@/lib/api-client';
@@ -24,6 +25,8 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isEsignModalOpen, setIsEsignModalOpen] = useState(false);
+  const [isDispatchConfirmOpen, setIsDispatchConfirmOpen] = useState(false);
+  const [isDispatching, setIsDispatching] = useState(false);
 
   const fetchLeadDetail = useCallback(async () => {
     if (!id) return;
@@ -59,24 +62,20 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 p-16 flex flex-col items-center justify-center gap-3">
-        <div className="w-8 h-8 rounded-full border-3 border-emerald-600 border-t-transparent animate-spin" />
-        <span className="text-xs font-bold text-slate-500">Loading live certified Form 1040 pitch deck...</span>
+      <div className="flex items-center justify-center min-h-[420px]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-9 h-9 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-slate-500">Loading pitch workspace &amp; calculations...</p>
+        </div>
       </div>
     );
   }
 
   if (!lead) {
     return (
-      <div className="p-12 text-center text-slate-500 bg-white rounded-2xl border border-slate-200">
-        <h3 className="font-bold text-slate-800 text-base">Sales Lead not found</h3>
-        <p className="text-xs text-slate-500 mt-1">The requested tax return lead could not be located in the sales pipeline.</p>
-        <button
-          onClick={() => navigate(backQueuePath)}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-blue-700"
-        >
-          {isManager ? 'Back to Department Queue' : 'Back to Pitch Queue'}
-        </button>
+      <div className="p-8 text-center bg-white rounded-xl border border-slate-200">
+        <h3 className="font-bold text-slate-800 text-sm">Lead Not Found</h3>
+        <p className="text-xs text-slate-500 mt-1">This sales return could not be retrieved from active pipeline records.</p>
       </div>
     );
   }
@@ -171,20 +170,25 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   };
 
   const handleDispatchToFiling = async () => {
+    if (!lead) return;
+    setIsDispatching(true);
     try {
       await salesService.dispatchToFiling(lead.id || lead.applicationId);
       setLead((prev) => (prev ? { ...prev, currentStage: 'FILING_QUEUE' } : prev));
       toast.success(`Form 1040 for ${lead.taxpayerName} successfully dispatched to IRS E-Filing Queue! 🚀🏛️`);
+      setIsDispatchConfirmOpen(false);
       setTimeout(() => {
         navigate(backQueuePath);
       }, 1200);
     } catch {
       toast.error('Failed to dispatch return to filing operations');
+    } finally {
+      setIsDispatching(false);
     }
   };
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-150">
+    <div className="space-y-6 pb-12 animate-in fade-in duration-150 font-sans">
       {/* 1. Taxpayer Header & Certified 1040 Refund Banner */}
       <PitchTaxpayerHeader lead={lead} />
 
@@ -212,7 +216,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
             lead={lead}
             paymentStatus={lead.paymentStatus}
             esignStatus={lead.esignStatus}
-            onDispatchToFiling={handleDispatchToFiling}
+            onDispatchToFiling={() => setIsDispatchConfirmOpen(true)}
           />
         </div>
       </div>
@@ -236,6 +240,19 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         isEsignModalOpen={isEsignModalOpen}
         onCloseEsignModal={() => setIsEsignModalOpen(false)}
         onEsignSuccess={handleEsignSuccess}
+      />
+
+      {/* 5. Dispatch to Filing Confirmation Dialog */}
+      <AppConfirmDialog
+        isOpen={isDispatchConfirmOpen}
+        onClose={() => setIsDispatchConfirmOpen(false)}
+        onConfirm={handleDispatchToFiling}
+        title="Dispatch Return to IRS E-Filing Queue?"
+        description={`Are you sure you want to authorize and transfer the certified Form 1040 return for ${lead.taxpayerName} (TY ${lead.taxYear || 2025}) to the IRS Modernized e-File (MeF) Department? This will notify the Filing Operations Team and transfer the lead to the Filing Queue.`}
+        confirmLabel="Yes, Dispatch to Filing"
+        cancelLabel="Cancel"
+        variant="success"
+        isLoading={isDispatching}
       />
     </div>
   );

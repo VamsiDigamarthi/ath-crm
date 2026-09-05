@@ -94,6 +94,37 @@ export interface FilingLeadItem {
   taxReturnSummary?: FilingTaxReturnSummary;
   bankDirectDeposit?: FilingBankDirectDeposit;
   sourceDocuments?: FilingSourceDoc[];
+  stageHistories?: Array<{
+    id: string;
+    fromStage: string;
+    toStage: string;
+    createdAt: string;
+    remarks?: string | null;
+    movedBy?: {
+      id: string;
+      name: string;
+      role: string;
+    } | null;
+  }>;
+  callLogs?: Array<{
+    id: string;
+    callType?: string;
+    callStatus?: string;
+    duration?: number;
+    notes?: string;
+    callerName?: string;
+    createdAt: string;
+  }>;
+  auditLogs?: Array<{
+    id: string;
+    action: string;
+    actorType: string;
+    actorName?: string;
+    actorRole?: string;
+    moduleKey: string;
+    details?: any;
+    createdAt: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }

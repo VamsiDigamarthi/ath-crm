@@ -23,8 +23,11 @@ export interface CustomerDashboardResponse {
   };
   refund: {
     fedRefund: number;
+    fedDue?: number;
     stateRefund: number;
+    stateDue?: number;
     totalRefund: number;
+    totalBalanceDue?: number;
     stateName: string;
     bankMasked: string;
     isDraft: boolean;

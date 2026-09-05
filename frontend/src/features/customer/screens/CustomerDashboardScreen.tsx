@@ -25,19 +25,24 @@ export const CustomerDashboardScreen: React.FC = () => {
   const { dashboardData, loading, refetch } = useCustomerDashboard(selectedTaxYear);
 
   const isConverted = dashboardData?.taxpayer?.isConvertedCustomer ?? contextConverted ?? false;
-  const taxpayerName = dashboardData?.taxpayer?.name || 'Naveen Krishnan';
-  const visaBadge = dashboardData?.taxpayer?.visaType ? `${dashboardData.taxpayer.visaType} Taxpayer` : 'H-1B Dual-Status';
-  const assignedAgentName = dashboardData?.assignedTeam?.docAgent?.name || 'Kavya R';
+  const taxpayerName = dashboardData?.taxpayer?.name || 'Taxpayer';
+  const visaBadge = dashboardData?.taxpayer?.visaType ? `${dashboardData.taxpayer.visaType} Taxpayer` : 'Taxpayer';
+  const assignedAgentName = dashboardData?.assignedTeam?.docAgent?.name || 'Assigned Specialist';
 
-  const fedRefund = dashboardData?.refund?.fedRefund ?? 2840;
+  const fedRefund = dashboardData?.refund?.fedRefund ?? 0;
+  const fedDue = (dashboardData?.refund as any)?.fedDue ?? 0;
   const stateRefund = dashboardData?.refund?.stateRefund ?? 0;
-  const stateLabel = dashboardData?.refund?.stateName || 'Texas (TX - 0% State Tax)';
-  const bankMasked = dashboardData?.refund?.bankMasked || 'Chase Bank (•••• 4819)';
+  const stateDue = (dashboardData?.refund as any)?.stateDue ?? 0;
+  const totalRefund = dashboardData?.refund?.totalRefund ?? 0;
+  const totalBalanceDue = (dashboardData?.refund as any)?.totalBalanceDue ?? 0;
+  const stateLabel = dashboardData?.refund?.stateName || 'State Tax';
+  const bankMasked = dashboardData?.refund?.bankMasked || '-';
 
-  const currentStage = dashboardData?.application?.currentStage || 'DOC_PREP';
+  const currentStage = dashboardData?.application?.currentStage || 'RAW_PROSPECT';
   const docCount = dashboardData?.stats?.docCount ?? 0;
-  const organizerPercent = dashboardData?.stats?.organizerPercent ?? 85;
-  const organizerVerifiedCount = dashboardData?.stats?.organizerVerifiedCount ?? 7;
+  const organizerPercent = dashboardData?.stats?.organizerPercent ?? 0;
+  const organizerVerifiedCount = dashboardData?.stats?.organizerVerifiedCount ?? 0;
+
   const getGreetingMessage = () => {
     if (isConverted || currentStage === 'FILING_SUCCESS') {
       return `Congratulations, ${taxpayerName}! Your TY ${selectedTaxYear || '2025'} Form 1040 has been certified and successfully e-filed with the IRS.`;
@@ -48,11 +53,19 @@ export const CustomerDashboardScreen: React.FC = () => {
     if (currentStage === 'DOC_PREP') {
       return `Welcome back, ${taxpayerName}. Your TY ${selectedTaxYear || '2025'} return has been transferred to the Tax Preparation Department. Our CPA team is calculating your deductions.`;
     }
-    if (currentStage === 'SALES_PITCH_QUEUE' || currentStage === 'SALES_PITCHING') {
-      return `Welcome back, ${taxpayerName}. Your tax return draft is ready! Review your transparent fee quote and approve to initiate CPA e-filing.`;
+    if (currentStage === 'QA_IN_REVIEW' || currentStage === 'QA_REVISION') {
+      return `Welcome back, ${taxpayerName}. Your return is undergoing Senior CPA Quality Assurance & 4-Eyes compliance audit.`;
     }
-    if (currentStage === 'QA_IN_REVIEW' || currentStage === 'QA_APPROVED' || currentStage === 'FILING_QUEUE') {
-      return `Welcome back, ${taxpayerName}. Your return is in Senior CPA Quality Assurance audit before IRS electronic submission.`;
+    if (
+      currentStage === 'QA_APPROVED' || 
+      currentStage === 'SALES_PITCH_QUEUE' || 
+      currentStage === 'SALES_PITCHING' || 
+      currentStage === 'PAYMENT_PENDING'
+    ) {
+      return `Welcome back, ${taxpayerName}. Your tax return draft has been CPA approved! Review your transparent fee quote and approve to initiate filing.`;
+    }
+    if (currentStage === 'FILING_QUEUE' || currentStage === 'FILING_IN_PROGRESS') {
+      return `Welcome back, ${taxpayerName}. Your return is fee-paid, Form 8879 e-signed, and queued with the IRS Modernized e-File (MeF) transmission desk.`;
     }
     return `Welcome back, ${taxpayerName}. Your return is actively in progress with agent ${assignedAgentName}.`;
   };
@@ -105,10 +118,14 @@ export const CustomerDashboardScreen: React.FC = () => {
         currentStage={currentStage} 
       />
 
-      {/* 3. Refund Hero Calculation Card */}
+      {/* 3. Refund / Balance Due Hero Calculation Card */}
       <CustomerRefundHeroCard
         fedRefund={fedRefund}
+        fedDue={fedDue}
         stateRefund={stateRefund}
+        stateDue={stateDue}
+        totalRefund={totalRefund}
+        totalBalanceDue={totalBalanceDue}
         stateName={stateLabel}
         bankMasked={bankMasked}
         isConvertedCustomer={isConverted}

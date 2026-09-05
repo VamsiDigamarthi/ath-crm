@@ -34,8 +34,8 @@ export const CustomerBillingInvoices: React.FC<CustomerBillingInvoicesProps> = (
           discount: 50,
           totalAmount: 199,
           status: 'PAID',
-          paymentMethod: 'Visa ending in •••• 4819',
-          date: 'Today 11:50 AM',
+          paymentMethod: 'Electronic Payment (Stripe / Card)',
+          date: 'TY 2025 Filing Fee',
         },
         {
           id: 'inv-2',
@@ -46,7 +46,7 @@ export const CustomerBillingInvoices: React.FC<CustomerBillingInvoicesProps> = (
           discount: 0,
           totalAmount: 179,
           status: 'PAID',
-          paymentMethod: 'Visa ending in •••• 4819',
+          paymentMethod: 'Electronic Payment (Stripe / Card)',
           date: 'Apr 12, 2025',
         },
       ]
@@ -72,13 +72,13 @@ export const CustomerBillingInvoices: React.FC<CustomerBillingInvoicesProps> = (
           discount: 0,
           totalAmount: 179,
           status: 'PAID',
-          paymentMethod: 'Visa ending in •••• 4819',
+          paymentMethod: 'Electronic Payment (Stripe / Card)',
           date: 'Apr 12, 2025',
         },
       ];
 
   const handlePayNow = () => {
-    toast.success('Simulated Stripe Payment: $199 paid successfully! 🎉');
+    toast.success('Stripe Payment: Paid successfully! 🎉');
   };
 
   const handleDownloadInvoice = (invNum: string) => {
@@ -107,7 +107,7 @@ export const CustomerBillingInvoices: React.FC<CustomerBillingInvoicesProps> = (
           <div className="text-right sm:text-right">
             <span className="text-xs text-slate-400 block line-through">$249.00 Standard</span>
             <div className="text-3xl font-extrabold text-emerald-400">
-              $199.00 <span className="text-xs text-slate-300 font-medium">{isConvertedCustomer ? 'Paid via Visa •••• 4819' : 'All-Inclusive'}</span>
+              $199.00 <span className="text-xs text-slate-300 font-medium">{isConvertedCustomer ? 'Paid' : 'All-Inclusive'}</span>
             </div>
           </div>
         </div>

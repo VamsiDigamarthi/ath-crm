@@ -121,25 +121,34 @@ export const NotificationBellPopover: React.FC = () => {
       directUrl = directUrl.replace('/prep/', '/prep-review/');
     }
 
-    // 1. SALES NOTIFICATIONS & SALES ROLES
+    // 1. FILING NOTIFICATIONS & FILING USERS (Priority #1)
+    const isFilingUser = userRole === 'FILE_OP_MANAGER' || userRole === 'FILE_OP_TEAM_LEAD' || userRole === 'FILE_OP_AGENT';
+    const isFilingCategory = notif.category === 'FILING' || rawUrl.includes('/filing') || title.includes('filing queue') || title.includes('dispatched to filing') || title.includes('filing');
+    if (isFilingCategory || isFilingUser) {
+      if (directUrl && directUrl.startsWith('/filing')) return directUrl;
+      if (userRole === 'FILE_OP_MANAGER' || userRole === 'ADMIN') return '/filing/manager/queue';
+      if (appId) return `/filing/workspace/${appId}`;
+      return '/filing/agent/queue';
+    }
+
+    // 2. SALES NOTIFICATIONS & SALES ROLES
     const isSalesUser = userRole === 'SALES_MANAGER' || userRole === 'SALES_CLOSER' || userRole === 'SALES_AGENT';
-    const isSalesCategory = notif.category === 'SALES' || rawUrl.startsWith('/sales') || title.includes('sales queue') || title.includes('sales pitch');
-    if (isSalesCategory || (isSalesUser && !rawUrl.includes('/prep-review') && !rawUrl.includes('/documenter') && !rawUrl.includes('/filing'))) {
+    const isSalesCategory = notif.category === 'SALES' || rawUrl.startsWith('/sales') || title.includes('sales queue') || title.includes('sales pitch') || title.includes('assigned');
+    if (isSalesCategory || isSalesUser) {
       if (directUrl && directUrl.startsWith('/sales')) return directUrl;
       if (userRole === 'SALES_MANAGER') return '/sales/manager/queue';
       if (appId) return `/sales/agent/pitch/${appId}`;
       return '/sales/agent/queue';
     }
 
-    // 2. REVISION REQUESTED -> Always Preparer Workspace so preparer can correct computation
+    // 3. REVISION REQUESTED -> Always Preparer Workspace so preparer can correct computation
     const isRevision = title.includes('revision') || msg.includes('revision') || title.includes('discrepancy');
     if (isRevision) {
       if (appId) return `/prep-review/preparer/workspace/${appId}`;
       return '/prep-review/preparer';
     }
 
-    // 3. QA REVIEW & COMPLIANCE NOTIFICATIONS -> Always Senior QA Reviewer Audit Screen
-    // (e.g. "New QA Compliance Audit Assigned", "Form 1040 Submitted for QA Review", "4-Eyes Compliance Review")
+    // 4. QA REVIEW & COMPLIANCE NOTIFICATIONS -> Always Senior QA Reviewer Audit Screen
     const isQANotification = 
       title.includes('qa compliance') ||
       title.includes('submitted for qa') ||
@@ -152,7 +161,7 @@ export const NotificationBellPopover: React.FC = () => {
       return '/prep-review/reviewer';
     }
 
-    // 4. TAX PREPARATION ASSIGNED NOTIFICATIONS -> Always Tax Preparer 1040 Workspace
+    // 5. TAX PREPARATION ASSIGNED NOTIFICATIONS -> Always Tax Preparer 1040 Workspace
     const isPrepNotification = 
       title.includes('preparation assigned') ||
       title.includes('1040 preparation') ||
@@ -164,17 +173,18 @@ export const NotificationBellPopover: React.FC = () => {
       return '/prep-review/preparer';
     }
 
-    // 5. PREPARATION MANAGER NOTIFICATIONS
+    // 6. PREPARATION MANAGER NOTIFICATIONS
     const isManagerNotification = 
       title.includes('ready for preparation') ||
       title.includes('ready for preparer allocation') ||
-      rawUrl.includes('/manager');
+      rawUrl.includes('/manager') ||
+      userRole === 'PREP_MANAGER';
 
     if (isManagerNotification) {
       return '/prep-review/manager/queue';
     }
 
-    // 6. DOCUMENTER AGENT NOTIFICATIONS
+    // 7. DOCUMENTER AGENT NOTIFICATIONS
     const isDocAgentNotification = 
       title.includes('calling queue') ||
       title.includes('outreach') ||
@@ -185,19 +195,12 @@ export const NotificationBellPopover: React.FC = () => {
       return '/documenter/agent/queue';
     }
 
-    // 7. DOCUMENTER MANAGER NOTIFICATIONS
+    // 8. DOCUMENTER MANAGER NOTIFICATIONS
     if (rawUrl.includes('/documenter/manager') || title.includes('ingested') || userRole === 'DOC_MANAGER') {
       return '/documenter/manager/queue';
     }
 
-    // 8. FILING SPECIALIST NOTIFICATIONS
-    if (notif.category === 'FILING' || rawUrl.startsWith('/filing') || userRole === 'FILE_OP_MANAGER' || userRole === 'FILE_OP_AGENT') {
-      if (directUrl && directUrl.startsWith('/filing')) return directUrl;
-      if (userRole === 'FILE_OP_MANAGER') return '/filing/manager/queue';
-      return '/filing/agent/queue';
-    }
-
-    // 9. Direct actionUrl fallback (ensuring /prep-review/ prefix)
+    // 9. Direct actionUrl fallback
     if (directUrl) {
       return directUrl;
     }

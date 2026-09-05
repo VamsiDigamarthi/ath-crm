@@ -251,24 +251,45 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
 
                   {/* Assigned Closer */}
                   <td className="py-3.5 px-4">
-                    {lead.assignedSalesAgent ? (
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center">
-                          {lead.assignedSalesAgent.name.charAt(0)}
-                        </div>
-                        <span className="text-slate-800 font-medium text-xs">
-                          {lead.assignedSalesAgent.name}
-                        </span>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAssignModal(lead)}
-                        className="text-amber-700 font-bold text-[11px] bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
-                      >
-                        Unassigned (Click)
-                      </button>
-                    )}
+                    {(() => {
+                      const isCompletedOrLocked =
+                        (lead.paymentStatus === 'PAID' && lead.esignStatus === 'SIGNED') ||
+                        lead.currentStage === 'PAID_AND_AUTHORIZED' ||
+                        lead.currentStage === 'FILING_QUEUE' ||
+                        lead.currentStage === 'FILING_IN_PROGRESS' ||
+                        lead.currentStage === 'FILING_SUCCESS';
+
+                      if (lead.assignedSalesAgent) {
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center">
+                              {lead.assignedSalesAgent.name.charAt(0)}
+                            </div>
+                            <span className="text-slate-800 font-medium text-xs">
+                              {lead.assignedSalesAgent.name}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      if (isCompletedOrLocked) {
+                        return (
+                          <span className="text-slate-400 font-medium text-[11px] bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                            Completed
+                          </span>
+                        );
+                      }
+
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAssignModal(lead)}
+                          className="text-amber-700 font-bold text-[11px] bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+                        >
+                          Unassigned (Click)
+                        </button>
+                      );
+                    })()}
                   </td>
 
                   {/* Stage Badge */}
@@ -278,26 +299,43 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
 
                   {/* Actions */}
                   <td className="py-3.5 px-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenAssignModal(lead)}
-                        className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
-                      >
-                        <UserCheck className="w-3 h-3" />
-                        <span>Assign</span>
-                      </Button>
+                    {(() => {
+                      const isCompletedOrLocked =
+                        (lead.paymentStatus === 'PAID' && lead.esignStatus === 'SIGNED') ||
+                        lead.currentStage === 'PAID_AND_AUTHORIZED' ||
+                        lead.currentStage === 'FILING_QUEUE' ||
+                        lead.currentStage === 'FILING_IN_PROGRESS' ||
+                        lead.currentStage === 'FILING_SUCCESS';
 
-                      <Button
-                        size="sm"
-                        onClick={() => navigate(`/sales/agent/pitch/${lead.id}`)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer"
-                      >
-                        <PhoneCall className="w-3 h-3" />
-                        <span>Pitch</span>
-                      </Button>
-                    </div>
+                      return (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isCompletedOrLocked}
+                            title={isCompletedOrLocked ? "Lead is already Paid & E-Signed / Completed" : "Assign to closer"}
+                            onClick={() => !isCompletedOrLocked && handleOpenAssignModal(lead)}
+                            className={`border-slate-200 text-[11px] font-semibold flex items-center gap-1 cursor-pointer ${
+                              isCompletedOrLocked
+                                ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 pointer-events-none'
+                                : 'bg-white hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <UserCheck className="w-3 h-3" />
+                            <span>Assign</span>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            onClick={() => navigate(`/sales/agent/pitch/${lead.id}`)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                          >
+                            <PhoneCall className="w-3 h-3" />
+                            <span>Pitch</span>
+                          </Button>
+                        </div>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))
@@ -313,7 +351,19 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
           setIsAssignModalOpen(false);
           setSelectedLeadForAssign(null);
         }}
-        selectedLeads={selectedLeadForAssign ? [selectedLeadForAssign] : leads.filter((l) => !l.assignedSalesAgent)}
+        selectedLeads={
+          selectedLeadForAssign
+            ? [selectedLeadForAssign]
+            : leads.filter(
+                (l) =>
+                  !l.assignedSalesAgent &&
+                  l.currentStage !== 'PAID_AND_AUTHORIZED' &&
+                  l.currentStage !== 'FILING_QUEUE' &&
+                  l.currentStage !== 'FILING_IN_PROGRESS' &&
+                  l.currentStage !== 'FILING_SUCCESS' &&
+                  !(l.paymentStatus === 'PAID' && l.esignStatus === 'SIGNED')
+              )
+        }
         salesReps={salesReps}
         onConfirmDirectAssign={handleConfirmDirectAssign}
         onConfirmRoundRobin={handleConfirmRoundRobin}

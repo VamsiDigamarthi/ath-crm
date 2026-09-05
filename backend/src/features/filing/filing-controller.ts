@@ -80,7 +80,8 @@ export class FilingController {
 
   public static async autoRoundRobin(req: Request, res: Response) {
     try {
-      const result = await FilingService.autoRoundRobin();
+      const managerUserId = (req as any).user?.id || 'SYSTEM';
+      const result = await FilingService.autoRoundRobin(managerUserId);
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to balance filing workload' });

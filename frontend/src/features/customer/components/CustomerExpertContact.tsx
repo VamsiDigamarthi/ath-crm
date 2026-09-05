@@ -16,9 +16,9 @@ import { useOutletContext } from 'react-router-dom';
 export const CustomerExpertContact: React.FC = () => {
   const { customerProfile } = useOutletContext<{ customerProfile?: any }>() || {};
   const docAgent = customerProfile?.applications?.[0]?.assignedDocAgent;
-  const agentName = docAgent?.firstName ? `${docAgent.firstName} ${docAgent.lastName || ''}`.trim() : 'Kavya R';
-  const agentEmail = docAgent?.email || 'kavya.r@taxcrm.com';
-  const agentInitials = docAgent?.firstName ? `${docAgent.firstName[0]}${docAgent.lastName?.[0] || ''}`.toUpperCase() : 'KR';
+  const agentName = docAgent?.firstName ? `${docAgent.firstName} ${docAgent.lastName || ''}`.trim() : 'Assigned Tax Specialist';
+  const agentEmail = docAgent?.email || 'support@taxcrm.com';
+  const agentInitials = docAgent?.firstName ? `${docAgent.firstName[0]}${docAgent.lastName?.[0] || ''}`.toUpperCase() : 'TS';
 
   const [messages, setMessages] = useState<Array<{ sender: 'CLIENT' | 'AGENT'; text: string; time: string }>>([
     {

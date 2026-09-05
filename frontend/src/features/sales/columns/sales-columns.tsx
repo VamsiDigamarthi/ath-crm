@@ -147,7 +147,22 @@ export function getSalesColumns({
       header: 'Assigned Staff',
       accessorKey: 'assignedSalesAgent',
       render: (item) => {
+        const isCompletedOrLocked =
+          (item.paymentStatus === 'PAID' && item.esignStatus === 'SIGNED') ||
+          item.currentStage === 'PAID_AND_AUTHORIZED' ||
+          item.currentStage === 'FILING_QUEUE' ||
+          item.currentStage === 'FILING_IN_PROGRESS' ||
+          item.currentStage === 'FILING_SUCCESS';
+
         if (!item.assignedSalesAgent) {
+          if (isCompletedOrLocked) {
+            return (
+              <span className="text-slate-400 font-medium text-[11px] bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
+                Completed
+              </span>
+            );
+          }
+
           return (
             <button
               type="button"
@@ -187,28 +202,43 @@ export function getSalesColumns({
       header: 'Actions',
       headerClassName: 'text-right',
       cellClassName: 'text-right',
-      render: (item) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenAssignModal(item)}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-semibold flex items-center gap-1 cursor-pointer h-7 px-2"
-          >
-            <UserCheck className="w-3 h-3" />
-            <span>Assign</span>
-          </Button>
+      render: (item) => {
+        const isCompletedOrLocked =
+          (item.paymentStatus === 'PAID' && item.esignStatus === 'SIGNED') ||
+          item.currentStage === 'PAID_AND_AUTHORIZED' ||
+          item.currentStage === 'FILING_QUEUE' ||
+          item.currentStage === 'FILING_IN_PROGRESS' ||
+          item.currentStage === 'FILING_SUCCESS';
 
-          <Button
-            size="sm"
-            onClick={() => onOpenPitch(item)}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer h-7 px-2.5 shadow-2xs"
-          >
-            <PhoneCall className="w-3 h-3" />
-            <span>Pitch</span>
-          </Button>
-        </div>
-      ),
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isCompletedOrLocked}
+              title={isCompletedOrLocked ? "Lead is already Paid & E-Signed / Completed" : "Assign to closer"}
+              onClick={() => !isCompletedOrLocked && onOpenAssignModal(item)}
+              className={`border-slate-200 text-[11px] font-semibold flex items-center gap-1 h-7 px-2 ${
+                isCompletedOrLocked
+                  ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 pointer-events-none'
+                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer'
+              }`}
+            >
+              <UserCheck className="w-3 h-3" />
+              <span>Assign</span>
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => onOpenPitch(item)}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer h-7 px-2.5 shadow-2xs"
+            >
+              <PhoneCall className="w-3 h-3" />
+              <span>Pitch</span>
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 }

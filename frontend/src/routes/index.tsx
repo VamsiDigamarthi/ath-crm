@@ -159,7 +159,25 @@ export const router = createBrowserRouter([
 
   // 4. Documenter Department Portal (/documenter/*)
   {
-    element: <ProtectedRoute allowedRoles={['ADMIN', 'DOC_MANAGER', 'DOC_TEAM_LEAD', 'DOC_AGENT']} />,
+    element: (
+      <ProtectedRoute
+        allowedRoles={[
+          'ADMIN',
+          'DOC_MANAGER',
+          'DOC_TEAM_LEAD',
+          'DOC_AGENT',
+          'PREP_MANAGER',
+          'TAX_REVIEWER',
+          'TAX_PREPARER',
+          'SALES_MANAGER',
+          'SALES_CLOSER',
+          'SALES_AGENT',
+          'FILE_OP_MANAGER',
+          'FILE_OP_TEAM_LEAD',
+          'FILE_OP_AGENT',
+        ]}
+      />
+    ),
     children: [
       {
         path: '/documenter',
@@ -220,7 +238,21 @@ export const router = createBrowserRouter([
   {
     element: (
       <ProtectedRoute
-        allowedRoles={['ADMIN', 'PREP_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER']}
+        allowedRoles={[
+          'ADMIN',
+          'PREP_MANAGER',
+          'TAX_REVIEWER',
+          'TAX_PREPARER',
+          'DOC_MANAGER',
+          'DOC_TEAM_LEAD',
+          'DOC_AGENT',
+          'SALES_MANAGER',
+          'SALES_CLOSER',
+          'SALES_AGENT',
+          'FILE_OP_MANAGER',
+          'FILE_OP_TEAM_LEAD',
+          'FILE_OP_AGENT',
+        ]}
       />
     ),
     children: [
@@ -299,7 +331,21 @@ export const router = createBrowserRouter([
   {
     element: (
       <ProtectedRoute
-        allowedRoles={['ADMIN', 'SALES_MANAGER', 'SALES_CLOSER', 'SALES_AGENT', 'DOC_MANAGER', 'PREP_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER', 'DOC_AGENT']}
+        allowedRoles={[
+          'ADMIN',
+          'SALES_MANAGER',
+          'SALES_CLOSER',
+          'SALES_AGENT',
+          'DOC_MANAGER',
+          'DOC_TEAM_LEAD',
+          'DOC_AGENT',
+          'PREP_MANAGER',
+          'TAX_REVIEWER',
+          'TAX_PREPARER',
+          'FILE_OP_MANAGER',
+          'FILE_OP_TEAM_LEAD',
+          'FILE_OP_AGENT',
+        ]}
       />
     ),
     children: [

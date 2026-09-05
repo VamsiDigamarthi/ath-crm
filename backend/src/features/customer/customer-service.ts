@@ -58,10 +58,13 @@ export class CustomerService {
     // Parse draft summary
     const draft = (activeApp.taxDraftSummary as any) || {};
 
-    // Calculate real numbers
-    const fedRefund = draft.fedRefund ?? draft.federalRefund ?? draft.federalTaxRefund ?? 2840;
-    const stateRefund = draft.stateRefund ?? draft.stateTaxRefund ?? 0;
+    // Calculate real numbers (refunds vs balance dues)
+    const fedRefund = Number(draft.fedRefund ?? draft.federalRefund ?? draft.federalTaxRefund ?? 0);
+    const fedDue = Number(draft.balanceDue ?? draft.federalBalanceDue ?? 0);
+    const stateRefund = Number(draft.stateRefund ?? draft.stateTaxRefund ?? 0);
+    const stateDue = Number(draft.stateBalanceDue ?? 0);
     const totalRefund = fedRefund + stateRefund;
+    const totalBalanceDue = fedDue + stateDue;
     
     // Dynamic bank info
     const bankDetails = draft.organizer?.m9_directDeposit || {};
@@ -69,7 +72,7 @@ export class CustomerService {
     const rawAccount = bankDetails.accountNumber || draft.accountNumber || '';
     const bankMasked = rawAccount
       ? `${bankName} (•••• ${rawAccount.slice(-4)})`
-      : `${bankName} (•••• 4819)`;
+      : bankName;
 
     // Dynamic state label
     let stateName = 'State Return';
@@ -84,12 +87,12 @@ export class CustomerService {
     const submittedList = Array.isArray(draft.organizer?.submittedModules)
       ? draft.organizer.submittedModules
       : (draft.organizer?.m1_demographics?.firstName ? ['m1'] : (draft.organizerVerifiedCount ? ['m1'] : []));
-    const organizerVerifiedCount = Math.max(submittedList.length, draft.organizerVerifiedCount || 1);
+    const organizerVerifiedCount = Math.max(submittedList.length, draft.organizerVerifiedCount || 0);
     const organizerPercent = Math.min(100, Math.round((organizerVerifiedCount / 9) * 100));
 
     const docCount = activeApp.documents?.length || 0;
     const latestQuote = activeApp.quotes?.[0];
-    const quoteAmount = latestQuote ? Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount) : 199;
+    const quoteAmount = latestQuote ? Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount) : 0;
     const quoteStatus = latestQuote ? latestQuote.status : (profile.isConvertedCustomer ? 'PAID' : 'PENDING');
 
     return {
@@ -100,11 +103,11 @@ export class CustomerService {
         lastName: profile.lastName,
         email: profile.email,
         phone: profile.phone,
-        ssnMasked: profile.ssnTin ? `•••-••-${profile.ssnTin.slice(-4)}` : '•••-••-4819',
-        visaType: profile.visaType || 'H-1B',
-        maritalStatus: profile.maritalStatus || 'Single',
-        city: profile.city || 'Houston',
-        state: profile.state || 'TX',
+        ssnMasked: profile.ssnTin ? `•••-••-${profile.ssnTin.slice(-4)}` : '-',
+        visaType: profile.visaType || '-',
+        maritalStatus: profile.maritalStatus || '-',
+        city: profile.city || '-',
+        state: profile.state || '-',
         isConvertedCustomer: profile.isConvertedCustomer,
       },
       application: {
@@ -115,8 +118,11 @@ export class CustomerService {
       },
       refund: {
         fedRefund,
+        fedDue,
         stateRefund,
+        stateDue,
         totalRefund,
+        totalBalanceDue,
         stateName,
         bankMasked,
         isDraft: activeApp.currentStage !== 'FILING_SUCCESS',
@@ -140,7 +146,7 @@ export class CustomerService {
             credentials: 'IRS Enrolled Agent & Circular 230 Certified',
           }
           : {
-            name: 'Ramesh Rao, CPA, EA',
+            name: 'Assigned Senior CPA Reviewer',
             credentials: 'IRS Enrolled Agent & Circular 230 Certified',
           },
       },

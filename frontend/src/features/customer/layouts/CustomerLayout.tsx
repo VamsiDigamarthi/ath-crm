@@ -46,9 +46,9 @@ export const CustomerLayout: React.FC = () => {
     ? `${customerProfile.firstName} ${customerProfile.lastName || ''}`.trim()
     : user?.firstName
     ? `${user.firstName} ${user.lastName || ''}`.trim()
-    : 'Naveen Krishnan';
+    : 'Taxpayer';
 
-  const taxpayerEmail = customerProfile?.email || user?.email || 'taxpayer@client.com';
+  const taxpayerEmail = customerProfile?.email || user?.email || '-';
 
   const handleLogout = async () => {
     try {

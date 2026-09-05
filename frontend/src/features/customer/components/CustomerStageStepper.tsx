@@ -19,20 +19,32 @@ export const CustomerStageStepper: React.FC<CustomerStageStepperProps> = ({
 }) => {
   // Determine active step from currentStage
   let activeStepId = 1;
-  if (currentStage === 'RAW_PROSPECT' || currentStage === 'DOC_OUTREACH') activeStepId = 1;
-  else if (currentStage === 'DOC_PREP') activeStepId = 2;
-  else if (currentStage === 'SALES_PITCH_QUEUE' || currentStage === 'SALES_PITCHING') activeStepId = 3;
-  else if (currentStage === 'QA_IN_REVIEW' || currentStage === 'QA_APPROVED' || currentStage === 'FILING_QUEUE') activeStepId = 4;
-  else if (currentStage === 'FILING_IN_PROGRESS') activeStepId = 5;
-  else if (currentStage === 'FILING_SUCCESS' || isConvertedCustomer) activeStepId = 6;
+  if (currentStage === 'RAW_PROSPECT' || currentStage === 'DOC_OUTREACH') {
+    activeStepId = 1;
+  } else if (currentStage === 'DOC_PREP') {
+    activeStepId = 2;
+  } else if (currentStage === 'QA_IN_REVIEW' || currentStage === 'QA_REVISION') {
+    activeStepId = 3;
+  } else if (
+    currentStage === 'QA_APPROVED' || 
+    currentStage === 'SALES_PITCH_QUEUE' || 
+    currentStage === 'SALES_PITCHING' || 
+    currentStage === 'PAYMENT_PENDING'
+  ) {
+    activeStepId = 4;
+  } else if (currentStage === 'FILING_QUEUE' || currentStage === 'FILING_IN_PROGRESS') {
+    activeStepId = 5;
+  } else if (currentStage === 'FILING_SUCCESS' || isConvertedCustomer) {
+    activeStepId = 6;
+  }
 
   const baseSteps = [
     { id: 1, name: 'Intake Started', description: 'Account verified & organizer initiated', icon: CheckCircle2 },
     { id: 2, name: 'Tax Prep & W-2 Review', description: 'Documenter & Preparer reviewing wage slips', icon: Clock },
-    { id: 3, name: 'Quotation & Fee Approval', description: 'Review transparent CPA fee quotation', icon: CreditCard },
-    { id: 4, name: 'Form 1040 QA & Audit', description: 'Senior CPA validating Federal & State return', icon: FileCheck2 },
-    { id: 5, name: 'Form 8879 E-Signature', description: 'Verify draft & electronically sign', icon: FileSignature },
-    { id: 6, name: 'IRS E-Filed & Accepted', description: 'Return transmitted to IRS & State Dept', icon: SendHorizontal },
+    { id: 3, name: 'Form 1040 QA & Audit', description: 'Senior CPA validating Federal & State return', icon: FileCheck2 },
+    { id: 4, name: 'Quotation & Fee Approval', description: 'Review transparent CPA fee quote & payment', icon: CreditCard },
+    { id: 5, name: 'Form 8879 & Filing Queue', description: 'Form 8879 e-signed & queued for IRS MeF', icon: FileSignature },
+    { id: 6, name: 'IRS E-Filed & Accepted', description: 'Return transmitted & certified by IRS', icon: SendHorizontal },
   ];
 
   const steps = baseSteps.map((s) => {
@@ -45,7 +57,9 @@ export const CustomerStageStepper: React.FC<CustomerStageStepperProps> = ({
     return { ...s, status };
   });
 
-  const progressPercent = isConvertedCustomer || currentStage === 'FILING_SUCCESS' ? 100 : Math.round((activeStepId / 6) * 100);
+  const progressPercent = isConvertedCustomer || currentStage === 'FILING_SUCCESS' 
+    ? 100 
+    : Math.round((activeStepId / 6) * 100);
 
   const getStageBadge = () => {
     if (isConvertedCustomer || currentStage === 'FILING_SUCCESS' || activeStepId === 6) {
@@ -74,17 +88,25 @@ export const CustomerStageStepper: React.FC<CustomerStageStepperProps> = ({
     }
     if (activeStepId === 3) {
       return (
-        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-50 text-purple-800 border border-purple-200 flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-          Stage: Quotation Ready for Approval
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+          Stage: Senior CPA QA Compliance Audit
         </span>
       );
     }
     if (activeStepId === 4) {
       return (
-        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-          Stage: Senior CPA QA & Audit
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-50 text-purple-800 border border-purple-200 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+          Stage: Quotation Ready / Fee Approval
+        </span>
+      );
+    }
+    if (activeStepId === 5) {
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-50 text-teal-800 border border-teal-200 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+          Stage: E-Signed & IRS Filing Queue
         </span>
       );
     }
@@ -107,10 +129,13 @@ export const CustomerStageStepper: React.FC<CustomerStageStepperProps> = ({
       return 'Our Tax Preparation team is calculating your deductions and drafting your Form 1040.';
     }
     if (activeStepId === 3) {
-      return 'Your return calculation is finalized. Review transparent fee quotation and approve.';
+      return 'Senior CPA is reviewing your return attachments and validating IRS compliance.';
     }
     if (activeStepId === 4) {
-      return 'Senior CPA is reviewing your return attachments and validating IRS compliance.';
+      return 'Your return calculation is finalized. Review transparent fee quotation and approve.';
+    }
+    if (activeStepId === 5) {
+      return 'Form 8879 PIN signed & fee paid. Certified return is in the IRS Modernized e-File (MeF) transmission queue.';
     }
     return 'Form 8879 verified. Your return is being transmitted to IRS & State departments.';
   };

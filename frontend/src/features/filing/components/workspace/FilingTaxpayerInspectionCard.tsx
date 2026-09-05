@@ -23,40 +23,40 @@ export const FilingTaxpayerInspectionCard: React.FC<FilingTaxpayerInspectionCard
   const [selectedDoc, setSelectedDoc] = useState<FilingSourceDoc | null>(null);
 
   const profile = lead.customerProfile || {
-    fullName: lead.taxpayerName,
-    email: lead.taxpayerEmail,
-    phone: lead.taxpayerPhone,
-    ssnMasked: lead.ssnMasked,
-    dob: '1988-06-14',
-    visaType: lead.visaType || 'H-1B',
-    filingStatus: lead.filingStatus || 'Single',
-    address: '100 Wood Ave S, Suite 400',
-    city: 'Iselin',
-    state: lead.stateOfResidence || 'NJ',
-    zipCode: '08830',
+    fullName: lead.taxpayerName || '-',
+    email: lead.taxpayerEmail || '-',
+    phone: lead.taxpayerPhone || '-',
+    ssnMasked: lead.ssnMasked || '-',
+    dob: '-',
+    visaType: lead.visaType || '-',
+    filingStatus: lead.filingStatus || '-',
+    address: '-',
+    city: '-',
+    state: lead.stateOfResidence || '-',
+    zipCode: '-',
   };
 
   const returnSummary = lead.taxReturnSummary || {
-    w2Wages: 94500,
-    federalWithheld: 14800,
-    standardDeduction: 14600,
-    taxableIncome: 79900,
-    totalFederalTax: 11960,
-    federalRefund: lead.federalRefund || 2840,
-    federalBalanceDue: lead.federalBalanceDue || 0,
-    stateWages: 94500,
-    stateWithheld: 4800,
-    stateTaxLiability: 4120,
-    stateRefund: lead.stateRefund || 680,
-    stateBalanceDue: lead.stateBalanceDue || 0,
-    qaAuditorName: 'Vikram Deshmukh, CPA',
+    w2Wages: 0,
+    federalWithheld: 0,
+    standardDeduction: 0,
+    taxableIncome: 0,
+    totalFederalTax: 0,
+    federalRefund: lead.federalRefund ?? 0,
+    federalBalanceDue: lead.federalBalanceDue ?? 0,
+    stateWages: 0,
+    stateWithheld: 0,
+    stateTaxLiability: 0,
+    stateRefund: lead.stateRefund ?? 0,
+    stateBalanceDue: lead.stateBalanceDue ?? 0,
+    qaAuditorName: '-',
   };
 
   const bank = lead.bankDirectDeposit || {
-    bankName: 'Chase Bank (JPMorgan Chase)',
-    accountType: 'Checking',
-    routingNumber: '021000021',
-    accountNumberMasked: '••••••••4920',
+    bankName: '-',
+    accountType: '-',
+    routingNumber: '-',
+    accountNumberMasked: '-',
   };
 
   const docs: FilingSourceDoc[] = lead.sourceDocuments || [
@@ -212,25 +212,47 @@ export const FilingTaxpayerInspectionCard: React.FC<FilingTaxpayerInspectionCard
             </div>
           </div>
 
-          {/* Refund Callouts */}
+          {/* Refund / Balance Due Callouts */}
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
-            <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
-              <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider">
-                Federal 1040 Refund
-              </span>
-              <span className="text-base font-black text-[#16A34A] block mt-0.5">
-                +${returnSummary.federalRefund.toLocaleString()}.00
-              </span>
-            </div>
+            {returnSummary.federalBalanceDue > 0 ? (
+              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-wider">
+                  Federal Balance Due
+                </span>
+                <span className="text-base font-black text-amber-700 block mt-0.5">
+                  -${returnSummary.federalBalanceDue.toLocaleString()}.00
+                </span>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider">
+                  Federal 1040 Refund
+                </span>
+                <span className="text-base font-black text-[#16A34A] block mt-0.5">
+                  +${returnSummary.federalRefund.toLocaleString()}.00
+                </span>
+              </div>
+            )}
 
-            <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
-              <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider">
-                {lead.stateOfResidence} State Refund
-              </span>
-              <span className="text-base font-black text-[#16A34A] block mt-0.5">
-                +${returnSummary.stateRefund.toLocaleString()}.00
-              </span>
-            </div>
+            {returnSummary.stateBalanceDue > 0 ? (
+              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                <span className="text-[10px] text-amber-800 font-bold block uppercase tracking-wider">
+                  {lead.stateOfResidence} State Balance Due
+                </span>
+                <span className="text-base font-black text-amber-700 block mt-0.5">
+                  -${returnSummary.stateBalanceDue.toLocaleString()}.00
+                </span>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider">
+                  {lead.stateOfResidence} State Refund
+                </span>
+                <span className="text-base font-black text-[#16A34A] block mt-0.5">
+                  +${returnSummary.stateRefund.toLocaleString()}.00
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -240,10 +262,12 @@ export const FilingTaxpayerInspectionCard: React.FC<FilingTaxpayerInspectionCard
             <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <Building2 className="w-3.5 h-3.5 text-indigo-600" />
-                Refund Direct Deposit
+                {returnSummary.federalBalanceDue > 0 ? 'Direct Debit / Bank Account' : 'Refund Direct Deposit'}
               </span>
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">
-                IRS Direct Pay
+              <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                returnSummary.federalBalanceDue > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                {returnSummary.federalBalanceDue > 0 ? 'IRS Direct Debit' : 'IRS Direct Pay'}
               </span>
             </div>
 

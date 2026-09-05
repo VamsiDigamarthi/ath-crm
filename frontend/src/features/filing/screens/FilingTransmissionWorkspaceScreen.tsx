@@ -12,6 +12,7 @@ import { FilingComplianceGate } from '../components/workspace/FilingComplianceGa
 import { FilingTaxpayerInspectionCard } from '../components/workspace/FilingTaxpayerInspectionCard';
 import { MeFXMLViewer } from '../components/workspace/MeFXMLViewer';
 import { FilingTransmissionStatusCard } from '../components/workspace/FilingTransmissionStatusCard';
+import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { useFilingWorkspace } from '../hooks/useFilingWorkspace';
 
 export type WorkspaceViewMode = 'AUDIT_FILE' | 'XML_SCHEMA' | 'FULL_INSPECTION';
@@ -153,6 +154,16 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
           taxYear={lead.taxYear}
         />
       )}
+
+      {/* 6. Comprehensive Lead Audit Trail & Lifecycle Activity Stream (Matching Reviewer & Sales Screen) */}
+      <LeadAuditTrailSection
+        leadId={lead.id}
+        taxpayerName={lead.taxpayerName}
+        currentStage={lead.currentStage}
+        stageHistories={(lead.stageHistories as any) || []}
+        callLogs={(lead.callLogs as any) || []}
+        auditLogs={(lead.auditLogs as any) || []}
+      />
     </div>
   );
 };

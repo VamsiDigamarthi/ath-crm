@@ -4,7 +4,8 @@ import {
   PhoneOff, 
   Sparkles, 
   Rocket,
-  AlertCircle
+  AlertCircle,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { SalesLeadItem } from '../../types/sales.types';
@@ -41,134 +42,136 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
     };
   }, [isCalling]);
 
-  const formatTimer = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleToggleCall = () => {
-    if (isCalling) {
-      setIsCalling(false);
-      toast.success('Closer call ended. Call notes updated.');
-    } else {
-      setIsCalling(true);
-      toast.success(`Dialing ${lead.taxpayerName} (${lead.taxpayerPhone})... 📞`);
-    }
+  const handleStartCall = () => {
+    setIsCalling(true);
+    toast.success(`Dialing ${lead.taxpayerName} (${lead.taxpayerPhone})... 📞`);
   };
 
-  const isReadyForFiling = paymentStatus === 'PAID' && esignStatus === 'SIGNED';
+  const handleEndCall = () => {
+    setIsCalling(false);
+    toast(`Call completed (${formatTime(callDuration)}). Call log saved! ⏱️`, {
+      icon: '📞',
+    });
+  };
+
+  const isAlreadyDispatched =
+    lead.currentStage === 'FILING_QUEUE' ||
+    lead.currentStage === 'FILING_IN_PROGRESS' ||
+    lead.currentStage === 'FILING_SUCCESS';
+
+  const isReadyForFiling = paymentStatus === 'PAID' && esignStatus === 'SIGNED' && !isAlreadyDispatched;
+
+  const dispatchTooltip = isAlreadyDispatched
+    ? 'Already Dispatched: Form 1040 has been certified, fee-paid, authorized, and transferred to the IRS Modernized e-File (MeF) Queue.'
+    : !isReadyForFiling
+    ? paymentStatus !== 'PAID' && esignStatus !== 'SIGNED'
+      ? 'Cannot Dispatch: Both fee payment and Form 8879 taxpayer authorization are required before dispatching to IRS.'
+      : paymentStatus !== 'PAID'
+      ? 'Cannot Dispatch: Service fee payment is pending collection.'
+      : 'Cannot Dispatch: IRS Form 8879 taxpayer signature authorization is pending.'
+    : 'Click to authorize and transfer this certified return to the IRS Modernized e-File (MeF) Department Queue.';
 
   return (
-    <div className="space-y-6 font-sans">
-      {/* 1. Integrated Softphone / Call Controller */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+    <div className="space-y-4 font-sans">
+      {/* 1. Integrated Softphone Dialer Card */}
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Phone className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-bold text-xs sm:text-sm text-slate-900">
-                Closer Softphone &amp; Outreach
-              </h3>
-              <div className="text-[10px] text-slate-400 font-medium">
-                Integrated PBX CRM Dialer
-              </div>
-            </div>
+            <Phone className="w-4 h-4 text-blue-600" />
+            <h4 className="font-bold text-xs sm:text-sm text-slate-900">
+              Closer Softphone &amp; Outreach
+            </h4>
           </div>
-
-          {isCalling ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-[#16A34A] border border-emerald-200 text-xs font-bold animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>In Call • {formatTimer(callDuration)}</span>
-            </div>
-          ) : (
-            <span className="text-xs text-slate-400 font-medium">Ready to Call</span>
-          )}
+          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+            {isCalling ? 'Call in Progress' : 'Ready to Call'}
+          </span>
         </div>
 
-        {/* Taxpayer Contact Row & Dial Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
           <div>
-            <div className="font-bold text-xs text-slate-900">{lead.taxpayerName}</div>
-            <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5 mt-0.5">
-              <span>{lead.taxpayerPhone}</span>
-              <span className="text-slate-300">•</span>
-              <span className="text-slate-400">{lead.stateOfResidence}</span>
+            <div className="font-bold text-slate-900 text-xs">
+              {lead.taxpayerName}
+            </div>
+            <div className="text-[11px] text-slate-500 font-medium">
+              {lead.taxpayerPhone} • {lead.stateOfResidence}
             </div>
           </div>
 
-          <Button
-            size="sm"
-            onClick={handleToggleCall}
-            className={`text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs ${
-              isCalling
-                ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
-          >
+          <div className="flex items-center gap-2">
             {isCalling ? (
               <>
-                <PhoneOff className="w-3.5 h-3.5" />
-                <span>End Call</span>
+                <span className="text-xs font-mono font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200 animate-pulse">
+                  {formatTime(callDuration)}
+                </span>
+                <Button
+                  size="sm"
+                  onClick={handleEndCall}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <PhoneOff className="w-3.5 h-3.5" />
+                  <span>End Call</span>
+                </Button>
               </>
             ) : (
-              <>
+              <Button
+                size="sm"
+                onClick={handleStartCall}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
                 <Phone className="w-3.5 h-3.5" />
                 <span>Call Client</span>
-              </>
+              </Button>
             )}
-          </Button>
-        </div>
-
-        {/* 2. Talking Points & Pitch Script Assistant */}
-        <div className="space-y-2">
-          <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Recommended Closer Talking Points</span>
-          </div>
-
-          <div className="space-y-1.5 text-[11px] text-slate-600 bg-amber-50/50 p-3 rounded-xl border border-amber-200/80 leading-relaxed">
-            <p>
-              • <strong>Certified {lead.federalRefund > 0 ? 'Refund' : 'Calculation'} Pitch:</strong> {lead.federalRefund > 0 ? (
-                <span>"Our Senior Auditor certified your 1040 return with eligible <strong>+${lead.federalRefund.toLocaleString()}</strong> Federal refund."</span>
-              ) : lead.balanceDue > 0 ? (
-                <span>"Our Senior Auditor finalized your 1040 Form with a minimized balance due of <strong>-${lead.balanceDue.toLocaleString()}</strong> under standard deductions."</span>
-              ) : (
-                <span>"Our Senior Auditor reconciled your 1040 return to an exact $0 balance."</span>
-              )}
-            </p>
-            <p>
-              • <strong>Compliance &amp; State:</strong> "We audited your W-2 wages and optimized state credits to eliminate audit risk."
-            </p>
-            <p>
-              • <strong>Payment Close:</strong> {lead.feeBreakdown?.totalServiceFee > 0 ? (
-                <span>"We can transmit this return to the IRS today for <strong>${lead.feeBreakdown.totalServiceFee}</strong> all-inclusive."</span>
-              ) : (
-                <span>"We can calculate and quote your custom preparation fee to authorize filing today."</span>
-              )}
-            </p>
           </div>
         </div>
+      </div>
 
-        {/* 3. Closer Notes */}
-        <div className="space-y-2 pt-2 border-t border-slate-100">
-          <label className="text-xs font-bold text-slate-700 block">Closer Call Notes</label>
-          <textarea
-            rows={2}
-            value={callNotes}
-            onChange={(e) => setCallNotes(e.target.value)}
-            placeholder="Record client questions, promised payment time, or discount discussed..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      {/* 2. Recommended Talking Points */}
+      <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200/80 shadow-2xs space-y-2">
+        <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
+          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+          <span>Recommended Closer Talking Points</span>
         </div>
+
+        <ul className="text-[11px] text-amber-900/80 space-y-1.5 list-disc list-inside leading-relaxed">
+          <li>
+            <strong className="text-amber-950">Certified Calculation Pitch:</strong> &quot;Our Senior Auditor finalized your 1040 Form with a {lead.federalRefund > 0 ? `maximized refund of $${lead.federalRefund.toLocaleString()}` : `minimized balance due of -$${lead.balanceDue.toLocaleString()}`}.&quot;
+          </li>
+          <li>
+            <strong className="text-amber-950">Compliance &amp; State:</strong> &quot;We audited your W-2 wages and optimized state credits to eliminate audit risk.&quot;
+          </li>
+          <li>
+            <strong className="text-amber-950">Payment Close:</strong> &quot;We can transmit this return to the IRS today for ${lead.feeBreakdown.totalServiceFee} all-inclusive.&quot;
+          </li>
+        </ul>
+      </div>
+
+      {/* 3. Call Disposition & Notes */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-2">
+        <label className="block text-xs font-bold text-slate-700">
+          Closer Call Notes
+        </label>
+        <textarea
+          rows={2}
+          value={callNotes}
+          onChange={(e) => setCallNotes(e.target.value)}
+          placeholder="Record client questions, promised payment time, or discount discussed..."
+          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
 
       {/* 4. Final Handoff: Dispatch to IRS E-Filing Queue */}
       <div
         className={`p-5 rounded-xl border transition-all ${
-          isReadyForFiling
+          isAlreadyDispatched
+            ? 'bg-slate-50 border-slate-200'
+            : isReadyForFiling
             ? 'bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300 shadow-xs'
             : 'bg-slate-50 border-slate-200'
         }`}
@@ -176,7 +179,7 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Rocket
-              className={`w-4 h-4 ${isReadyForFiling ? 'text-[#16A34A]' : 'text-slate-400'}`}
+              className={`w-4 h-4 ${isAlreadyDispatched ? 'text-slate-400' : isReadyForFiling ? 'text-[#16A34A]' : 'text-slate-400'}`}
             />
             <h4 className="font-bold text-xs sm:text-sm text-slate-900">
               IRS E-Filing Dispatch Handoff
@@ -185,12 +188,18 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
 
           <span
             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              isReadyForFiling
+              isAlreadyDispatched
+                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                : isReadyForFiling
                 ? 'bg-emerald-100 text-emerald-800'
                 : 'bg-slate-200 text-slate-600'
             }`}
           >
-            {isReadyForFiling ? 'Ready to Dispatch' : 'Requirements Incomplete'}
+            {isAlreadyDispatched
+              ? 'Transferred to Filing Queue'
+              : isReadyForFiling
+              ? 'Ready to Dispatch'
+              : 'Requirements Incomplete'}
           </span>
         </div>
 
@@ -210,8 +219,8 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
           </div>
         </div>
 
-        {/* Clear Explanation of Why Button is Disabled */}
-        {!isReadyForFiling && (
+        {/* Clear Explanation when Requirements are Incomplete */}
+        {!isReadyForFiling && !isAlreadyDispatched && (
           <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div>
@@ -227,18 +236,48 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
           </div>
         )}
 
-        <Button
-          onClick={onDispatchToFiling}
-          disabled={!isReadyForFiling}
-          className={`w-full text-xs font-bold py-2.5 flex items-center justify-center gap-2 shadow-sm cursor-pointer ${
-            isReadyForFiling
-              ? 'bg-[#16A34A] hover:bg-[#15803D] text-white'
-              : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
-          }`}
-        >
-          <Rocket className="w-4 h-4" />
-          <span>Dispatch to IRS E-Filing Queue 🚀</span>
-        </Button>
+        {/* Button with Floating Tooltip matching Reviewer Screen Reference */}
+        <div className="relative group w-full" title={dispatchTooltip}>
+          <Button
+            onClick={onDispatchToFiling}
+            disabled={!isReadyForFiling || isAlreadyDispatched}
+            className={`w-full text-xs font-bold py-2.5 flex items-center justify-center gap-2 shadow-sm transition-all ${
+              isAlreadyDispatched
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 hover:bg-slate-100 pointer-events-none'
+                : isReadyForFiling
+                ? 'bg-[#16A34A] hover:bg-[#15803D] text-white cursor-pointer'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+            }`}
+          >
+            {isAlreadyDispatched ? (
+              <>
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span>Dispatched to Filing Queue</span>
+              </>
+            ) : (
+              <>
+                <Rocket className="w-4 h-4" />
+                <span>Dispatch to IRS E-Filing Queue 🚀</span>
+              </>
+            )}
+          </Button>
+
+          {/* Hover Tooltip Popup Card - Matching Reviewer Screen Styling */}
+          {(isAlreadyDispatched || !isReadyForFiling) && (
+            <div
+              className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block w-72 p-2.5 rounded-lg shadow-2xl border border-slate-700 text-left transition-all duration-150"
+              style={{ backgroundColor: '#0f172a', color: '#ffffff', zIndex: 9999 }}
+            >
+              <p className="text-[11px] font-medium leading-relaxed m-0 p-0" style={{ color: '#ffffff' }}>
+                {dispatchTooltip}
+              </p>
+              <div
+                className="w-2.5 h-2.5 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2 border-r border-b border-slate-700"
+                style={{ backgroundColor: '#0f172a' }}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
