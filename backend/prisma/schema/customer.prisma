@@ -2,7 +2,7 @@ model CustomerProfile {
   id                  String   @id @default(uuid())
   userId              String?  @unique
   user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  ssnTin              String?  @unique
+  ssnTin              String?
   firstName           String
   middleName          String?
   lastName            String

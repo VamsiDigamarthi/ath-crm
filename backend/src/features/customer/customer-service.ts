@@ -445,11 +445,11 @@ export class CustomerService {
         middleName,
         lastName,
         fullName,
-        ssnMasked: m1Saved.ssnMasked || (profile.ssnTin ? `•••-••-${profile.ssnTin.slice(-4)}` : '••••••-6789'),
+        ssnMasked: m1Saved.ssnMasked || profile.ssnTin || '',
         dob: m1Saved.dob || profile.dob || '05/14/1988',
         occupation: m1Saved.occupation || profile.occupation || 'Principal Cloud Architect',
         phone,
-        workPhone: m1Saved.workPhone || '+1 (713) 555-9821',
+        workPhone: m1Saved.workPhone || '',
         email,
         relationshipToPrimary: m1Saved.relationshipToPrimary || 'SELF',
         visaType: m1Saved.visaType || profile.visaType || 'H-1B',
@@ -584,7 +584,7 @@ export class CustomerService {
     const cleanOrganizerData = sanitizeObject(organizerData);
     const m1 = cleanOrganizerData.m1_demographics || {};
 
-    // 2. Synchronize Demographics with CustomerProfile in PostgreSQL
+    // 2. Synchronize Demographics directly with CustomerProfile in PostgreSQL
     const profileUpdateData: Record<string, any> = {};
     if (m1.firstName) profileUpdateData.firstName = m1.firstName;
     if (m1.middleName !== undefined) profileUpdateData.middleName = m1.middleName;
@@ -600,9 +600,9 @@ export class CustomerService {
     if (m1.state) profileUpdateData.state = m1.state;
     if (m1.zipCode) profileUpdateData.zipCode = m1.zipCode;
 
-    // Only update SSN if provided and not masked placeholder
-    if (m1.ssnMasked && !m1.ssnMasked.includes('•••')) {
-      profileUpdateData.ssnTin = m1.ssnMasked;
+    // Store customer's exact raw SSN/TIN into database without modification or masking
+    if (m1.ssnMasked !== undefined && m1.ssnMasked !== null) {
+      profileUpdateData.ssnTin = String(m1.ssnMasked).trim();
     }
 
     if (Object.keys(profileUpdateData).length > 0) {

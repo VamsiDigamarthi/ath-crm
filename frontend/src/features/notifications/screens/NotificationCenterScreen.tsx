@@ -20,6 +20,7 @@ import { useNotificationStore } from '../store/notification-store';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { AppPagination } from '@/shared/components/AppPagination';
 import type { AppNotification, NotificationCategory, NotificationPriority } from '../types/notification.types';
+import { resolveNotificationClickUrl } from '../utils/notification-router';
 import toast from 'react-hot-toast';
 
 export const NotificationCenterScreen: React.FC = () => {
@@ -31,107 +32,6 @@ export const NotificationCenterScreen: React.FC = () => {
   const [selectedPriority, setSelectedPriority] = useState<NotificationPriority | 'ALL'>('ALL');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(10);
-
-  const resolveNotificationClickUrl = (notif: AppNotification): string => {
-    const appId = notif.relatedApplicationId;
-    const title = (notif.title || '').toLowerCase();
-    const msg = (notif.message || '').toLowerCase();
-    const rawUrl = (notif.actionUrl || '').toLowerCase();
-    const userRole = user?.role;
-
-    // 0. Explicit Action URL with compatibility fix
-    let directUrl = notif.actionUrl || '';
-    if (directUrl.startsWith('/prep/')) {
-      directUrl = directUrl.replace('/prep/', '/prep-review/');
-    }
-
-    // 1. FILING NOTIFICATIONS & FILING USERS (Priority #1)
-    const isFilingUser = userRole === 'FILE_OP_MANAGER' || userRole === 'FILE_OP_TEAM_LEAD' || userRole === 'FILE_OP_AGENT';
-    const isFilingCategory = notif.category === 'FILING' || rawUrl.includes('/filing') || title.includes('filing queue') || title.includes('dispatched to filing') || title.includes('filing');
-    if (isFilingCategory || isFilingUser) {
-      if (directUrl && directUrl.startsWith('/filing')) return directUrl;
-      if (userRole === 'FILE_OP_MANAGER' || userRole === 'ADMIN') return '/filing/manager/queue';
-      if (appId) return `/filing/workspace/${appId}`;
-      return '/filing/agent/queue';
-    }
-
-    // 2. SALES NOTIFICATIONS & SALES ROLES
-    const isSalesUser = userRole === 'SALES_MANAGER' || userRole === 'SALES_CLOSER' || userRole === 'SALES_AGENT';
-    const isSalesCategory = notif.category === 'SALES' || rawUrl.startsWith('/sales') || title.includes('sales queue') || title.includes('sales pitch') || title.includes('assigned');
-    if (isSalesCategory || isSalesUser) {
-      if (directUrl && directUrl.startsWith('/sales')) return directUrl;
-      if (userRole === 'SALES_MANAGER') return '/sales/manager/queue';
-      if (appId) return `/sales/agent/pitch/${appId}`;
-      return '/sales/agent/queue';
-    }
-
-    // 3. REVISION REQUESTED -> Always Preparer Workspace so preparer can correct computation
-    const isRevision = title.includes('revision') || msg.includes('revision') || title.includes('discrepancy');
-    if (isRevision) {
-      if (appId) return `/prep-review/preparer/workspace/${appId}`;
-      return '/prep-review/preparer';
-    }
-
-    // 4. QA REVIEW & COMPLIANCE NOTIFICATIONS -> Always Senior QA Reviewer Audit Screen
-    const isQANotification = 
-      title.includes('qa compliance') ||
-      title.includes('submitted for qa') ||
-      title.includes('new qa compliance audit assigned') ||
-      title.includes('compliance review') ||
-      rawUrl.includes('/reviewer');
-
-    if (isQANotification) {
-      if (appId) return `/prep-review/reviewer/audit/${appId}`;
-      return '/prep-review/reviewer';
-    }
-
-    // 5. TAX PREPARATION ASSIGNED NOTIFICATIONS -> Always Tax Preparer 1040 Workspace
-    const isPrepNotification = 
-      title.includes('preparation assigned') ||
-      title.includes('1040 preparation') ||
-      msg.includes('assigned you form 1040') ||
-      rawUrl.includes('/preparer');
-
-    if (isPrepNotification) {
-      if (appId) return `/prep-review/preparer/workspace/${appId}`;
-      return '/prep-review/preparer';
-    }
-
-    // 6. PREPARATION MANAGER NOTIFICATIONS
-    const isPrepManagerNotification = 
-      title.includes('ready for preparation') ||
-      title.includes('ready for preparer allocation') ||
-      rawUrl.includes('/prep-review/manager') ||
-      rawUrl.includes('/prep/manager') ||
-      userRole === 'PREP_MANAGER';
-
-    if (isPrepManagerNotification) {
-      return '/prep-review/manager/queue';
-    }
-
-    // 7. DOCUMENTER AGENT NOTIFICATIONS
-    const isDocAgentNotification = 
-      title.includes('calling queue') ||
-      title.includes('outreach') ||
-      rawUrl.includes('/documenter/agent');
-
-    if (isDocAgentNotification) {
-      if (appId) return `/documenter/agent/lead/${appId}`;
-      return '/documenter/agent/queue';
-    }
-
-    // 8. DOCUMENTER MANAGER NOTIFICATIONS
-    if (rawUrl.includes('/documenter/manager') || title.includes('ingested') || userRole === 'DOC_MANAGER') {
-      return '/documenter/manager/queue';
-    }
-
-    // 9. Direct actionUrl fallback
-    if (directUrl) {
-      return directUrl;
-    }
-
-    return '';
-  };
 
   const {
     notifications,
@@ -464,7 +364,7 @@ export const NotificationCenterScreen: React.FC = () => {
                     type="button"
                     onClick={() => {
                       markAsRead(notif.id);
-                      const targetUrl = resolveNotificationClickUrl(notif);
+                      const targetUrl = resolveNotificationClickUrl(notif, user?.role);
                       navigate(targetUrl || notif.actionUrl!);
                     }}
                     className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"

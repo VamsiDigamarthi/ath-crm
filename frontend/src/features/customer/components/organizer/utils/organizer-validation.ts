@@ -148,8 +148,14 @@ export const validateModule1 = (data?: OrganizerData['m1_demographics']): Valida
     errors.zipCode = 'Please enter a valid 5-digit US ZIP code (e.g. 77002)';
   }
 
-  // 14. Marriage Date (if married)
-  if (data.maritalStatus?.includes('Married')) {
+  // 14. Filing / Marital Status
+  const marital = (data.maritalStatus || '').trim();
+  if (!marital) {
+    errors.maritalStatus = 'Filing / Marital Status is required';
+  }
+
+  // 15. Marriage Date (ONLY required when Married filing status is selected)
+  if (marital.includes('Married')) {
     if (!data.dateOfMarriage || !data.dateOfMarriage.trim()) {
       errors.dateOfMarriage = 'Date of marriage is required for married filing status';
     } else {
@@ -195,71 +201,65 @@ export const validateModule2 = (
   const today = new Date();
   today.setHours(23, 59, 59, 999);
 
-  const spouses = data.spouseList && data.spouseList.length > 0
-    ? data.spouseList
-    : (data.spouseFirstName || data.spouseName ? [{
-        firstName: data.spouseFirstName || data.spouseName?.split(' ')[0] || '',
+  // 1. Validate Spouse Details (Required if Married filing status, optional if Single)
+  const isMarried = maritalStatus?.includes('Married');
+  const sp = (data.spouseList && data.spouseList.length > 0)
+    ? data.spouseList[0]
+    : {
+        firstName: data.spouseFirstName || '',
         middleName: data.spouseMiddleName || '',
-        lastName: data.spouseLastName || data.spouseName?.split(' ').slice(1).join(' ') || '',
+        lastName: data.spouseLastName || '',
         dob: data.spouseDob || '',
         ssn: data.spouseSsn || '',
         occupation: data.spouseOccupation || '',
-        visaType: data.spouseVisaType || 'H-4 EAD',
-        workPhone: data.spouseWorkPhone || '',
-        email: data.spouseEmail || '',
-        relationship: data.spouseRelationship || 'Spouse',
-      }] : []);
+      };
 
-  // 1. If filing as Married, require at least 1 Spouse record
-  if (maritalStatus?.includes('Married') && spouses.length === 0) {
-    errors.spouse_general = 'Spouse details are required for Married filing status. Please click "+ Add Spouse Details".';
-  }
+  const hasAnySpouseField = !!(sp.firstName || sp.lastName || sp.dob || sp.ssn || sp.occupation);
 
-  // 2. Validate each spouse entry
-  spouses.forEach((sp, idx) => {
+  if (isMarried || hasAnySpouseField) {
     const first = (sp.firstName || '').trim();
     if (!first) {
-      errors[`spouse_${idx}_firstName`] = 'Spouse First Name is required as per SSN';
+      errors.spouse_0_firstName = 'Spouse First Name is required as per SSN';
     } else if (first.length < 2) {
-      errors[`spouse_${idx}_firstName`] = 'Spouse First Name must be at least 2 characters';
+      errors.spouse_0_firstName = 'Spouse First Name must be at least 2 characters';
     }
 
     const last = (sp.lastName || '').trim();
     if (!last) {
-      errors[`spouse_${idx}_lastName`] = 'Spouse Last Name is required as per SSN';
+      errors.spouse_0_lastName = 'Spouse Last Name is required as per SSN';
     } else if (last.length < 2) {
-      errors[`spouse_${idx}_lastName`] = 'Spouse Last Name must be at least 2 characters';
+      errors.spouse_0_lastName = 'Spouse Last Name must be at least 2 characters';
     }
 
     const dob = (sp.dob || '').trim();
     if (!dob) {
-      errors[`spouse_${idx}_dob`] = 'Spouse Date of Birth is required (MM/DD/YYYY)';
+      errors.spouse_0_dob = 'Spouse Date of Birth is required (MM/DD/YYYY)';
     } else {
       const dobDate = parseUsDate(dob);
       if (!dobDate || isNaN(dobDate.getTime())) {
-        errors[`spouse_${idx}_dob`] = 'Please enter a valid date (MM/DD/YYYY)';
+        errors.spouse_0_dob = 'Please enter a valid date (MM/DD/YYYY)';
       } else if (dobDate > today) {
-        errors[`spouse_${idx}_dob`] = 'Spouse Date of Birth cannot be in the future!';
+        errors.spouse_0_dob = 'Spouse Date of Birth cannot be in the future!';
       } else if (dobDate.getFullYear() < 1900) {
-        errors[`spouse_${idx}_dob`] = 'Please enter a valid birth year (1900 or later)';
+        errors.spouse_0_dob = 'Please enter a valid birth year (1900 or later)';
       }
     }
 
     const ssn = (sp.ssn || '').trim();
     if (!ssn) {
-      errors[`spouse_${idx}_ssn`] = 'Spouse SSN / ITIN is required';
+      errors.spouse_0_ssn = 'Spouse SSN / ITIN is required';
     } else if (!ssn.includes('•')) {
       const rawSsn = ssn.replace(/\D/g, '');
       if (rawSsn.length !== 9) {
-        errors[`spouse_${idx}_ssn`] = 'Spouse SSN must be 9 digits (e.g. 123-45-6789)';
+        errors.spouse_0_ssn = 'Spouse SSN must be 9 digits (e.g. 123-45-6789)';
       }
     }
 
     const occupation = (sp.occupation || '').trim();
     if (!occupation) {
-      errors[`spouse_${idx}_occupation`] = 'Spouse Occupation is required (e.g. Financial Analyst or Homemaker)';
+      errors.spouse_0_occupation = 'Spouse Occupation is required (e.g. Financial Analyst or Homemaker)';
     }
-  });
+  }
 
   // 3. Validate each dependent entry
   const dependents = data.dependentsList || [];

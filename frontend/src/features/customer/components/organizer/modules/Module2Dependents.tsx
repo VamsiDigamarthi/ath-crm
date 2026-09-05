@@ -39,13 +39,13 @@ export const Module2Dependents: React.FC<Module2Props> = ({
   errors = {},
   clearError,
 }) => {
-  // Compute active spouses list (fallback to legacy spouse fields if list is empty)
-  const spouses = data.spouseList && data.spouseList.length > 0
-    ? data.spouseList
-    : (data.spouseFirstName || data.spouseName ? [{
+  // Resolve single spouse details smoothly
+  const spouse = (data.spouseList && data.spouseList.length > 0)
+    ? data.spouseList[0]
+    : {
         firstName: data.spouseFirstName || data.spouseName?.split(' ')[0] || '',
         middleName: data.spouseMiddleName || '',
-        lastName: data.spouseLastName || data.spouseName?.split(' ').slice(1).join(' ') || primaryTaxpayerLastName,
+        lastName: data.spouseLastName || data.spouseName?.split(' ').slice(1).join(' ') || (maritalStatus?.includes('Married') ? primaryTaxpayerLastName : ''),
         dob: data.spouseDob || '',
         ssn: data.spouseSsn || '',
         occupation: data.spouseOccupation || '',
@@ -53,7 +53,9 @@ export const Module2Dependents: React.FC<Module2Props> = ({
         workPhone: data.spouseWorkPhone || '',
         email: data.spouseEmail || '',
         relationship: data.spouseRelationship || 'Spouse',
-      }] : []);
+      };
+
+  const isMarried = maritalStatus?.includes('Married');
 
   const handleFieldChange = <K extends keyof OrganizerData['m2_dependents']>(
     field: K,
@@ -63,6 +65,46 @@ export const Module2Dependents: React.FC<Module2Props> = ({
     updateField(field, value);
     if (errorKey && clearError) {
       clearError(errorKey);
+    }
+  };
+
+  const handleSpouseChange = (field: string, value: any, errorKey?: string) => {
+    const updatedSpouse = {
+      ...spouse,
+      [field]: value,
+    };
+
+    if (field === 'firstName') {
+      updateField('spouseFirstName', value);
+      updateField('spouseName', `${value} ${updatedSpouse.lastName || ''}`.trim());
+    } else if (field === 'middleName') {
+      updateField('spouseMiddleName', value);
+    } else if (field === 'lastName') {
+      updateField('spouseLastName', value);
+      updateField('spouseName', `${updatedSpouse.firstName || ''} ${value}`.trim());
+    } else if (field === 'dob') {
+      updateField('spouseDob', value);
+    } else if (field === 'ssn') {
+      updateField('spouseSsn', value);
+    } else if (field === 'occupation') {
+      updateField('spouseOccupation', value);
+    } else if (field === 'visaType') {
+      updateField('spouseVisaType', value);
+    } else if (field === 'workPhone') {
+      updateField('spouseWorkPhone', value);
+    } else if (field === 'relationship') {
+      updateField('spouseRelationship', value);
+    }
+
+    // Keep single-element list for full backward compatibility
+    updateField('spouseList', [updatedSpouse]);
+    updateField('hasSpouse', true);
+
+    if (errorKey && clearError) {
+      clearError(errorKey);
+    }
+    if (clearError) {
+      clearError('spouse_general');
     }
   };
 
@@ -76,277 +118,122 @@ export const Module2Dependents: React.FC<Module2Props> = ({
         </div>
       </div>
 
-      {/* General Spouse Error Banner if Married but No Spouse Added */}
-      {errors.spouse_general && (
+      {/* General Spouse Error Banner if Married but Incomplete */}
+      {errors.spouse_general && isMarried && (
         <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
           <span className="font-bold">{errors.spouse_general}</span>
         </div>
       )}
 
-      {/* Dynamic Spouse / Joint Filer Details */}
+      {/* Single Spouse / Joint Filer Details Card */}
       <div className={`p-4 sm:p-5 rounded-xl border bg-white space-y-4 ${
-        errors.spouse_general ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200'
+        errors.spouse_general && isMarried ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200'
       }`}>
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div>
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
               <User className="w-4 h-4 text-indigo-600" />
               <span>Spouse / Joint Filer Details</span>
-              {maritalStatus?.includes('Married') && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+              {isMarried ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
                   Required for {maritalStatus}
+                </span>
+              ) : (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold border border-slate-200">
+                  Optional (Single / Not Married)
                 </span>
               )}
             </h4>
             <p className="text-[11px] text-slate-500 mt-0.5">Spouse legal name, DOB, SSN, occupation and visa status</p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              const currentSpouses = spouses && spouses.length > 0 ? [...spouses] : [];
-              const updated = [
-                ...currentSpouses,
-                {
-                  firstName: '',
-                  middleName: '',
-                  lastName: primaryTaxpayerLastName,
-                  dob: '',
-                  ssn: '',
-                  occupation: '',
-                  visaType: 'H-4 EAD',
-                  workPhone: '',
-                  email: '',
-                  relationship: 'Spouse',
-                },
-              ];
-              handleFieldChange('spouseList', updated);
-              handleFieldChange('hasSpouse', true);
-              if (updated.length > 0) {
-                handleFieldChange('spouseFirstName', updated[0].firstName);
-                handleFieldChange('spouseLastName', updated[0].lastName);
-                handleFieldChange('spouseName', `${updated[0].firstName} ${updated[0].lastName}`.trim());
-                handleFieldChange('spouseDob', updated[0].dob);
-                handleFieldChange('spouseSsn', updated[0].ssn);
-              }
-              if (clearError) clearError('spouse_general');
-            }}
-            className="text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Spouse Details</span>
-          </Button>
         </div>
 
-        {spouses.length === 0 ? (
-          <div className="p-5 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
-            <p>No spouse or joint filer details added yet.</p>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const updated = [{
-                  firstName: '',
-                  middleName: '',
-                  lastName: primaryTaxpayerLastName,
-                  dob: '',
-                  ssn: '',
-                  occupation: '',
-                  visaType: 'H-4 EAD',
-                  workPhone: '',
-                  email: '',
-                  relationship: 'Spouse',
-                }];
-                handleFieldChange('spouseList', updated);
-                handleFieldChange('hasSpouse', true);
-                if (clearError) clearError('spouse_general');
-              }}
-              className="text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              <span>Add Spouse Details</span>
-            </Button>
+        <div className="space-y-4">
+          {/* Row 1: First Name, Middle Name, Last Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <AppInput
+              label={`Spouse First Name (as per SSN) ${isMarried ? '*' : ''}`}
+              placeholder="e.g. Priya"
+              error={errors['spouse_0_firstName'] || errors.spouseFirstName}
+              value={spouse.firstName || ''}
+              onChange={(e) => handleSpouseChange('firstName', e.target.value, 'spouse_0_firstName')}
+            />
+
+            <AppInput
+              label="Spouse Middle Name"
+              placeholder="e.g. Lakshmi"
+              value={spouse.middleName || ''}
+              onChange={(e) => handleSpouseChange('middleName', e.target.value)}
+            />
+
+            <AppInput
+              label={`Spouse Last Name (as per SSN) ${isMarried ? '*' : ''}`}
+              placeholder="e.g. Varma"
+              error={errors['spouse_0_lastName'] || errors.spouseLastName}
+              value={spouse.lastName !== undefined ? spouse.lastName : (primaryTaxpayerLastName || '')}
+              onChange={(e) => handleSpouseChange('lastName', e.target.value, 'spouse_0_lastName')}
+            />
           </div>
-        ) : (
-          <div className="space-y-4">
-            {spouses.map((sp, idx) => (
-              <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                  <span className="text-xs font-bold text-slate-900">
-                    {spouses.length > 1 ? `Spouse / Joint Filer #${idx + 1}` : 'Spouse / Joint Filer'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const list = spouses.filter((_, i) => i !== idx);
-                      handleFieldChange('spouseList', list);
-                      handleFieldChange('hasSpouse', list.length > 0);
-                      if (list.length > 0) {
-                        handleFieldChange('spouseFirstName', list[0].firstName);
-                        handleFieldChange('spouseLastName', list[0].lastName);
-                        handleFieldChange('spouseName', `${list[0].firstName} ${list[0].lastName}`.trim());
-                        handleFieldChange('spouseDob', list[0].dob);
-                        handleFieldChange('spouseSsn', list[0].ssn);
-                      } else {
-                        handleFieldChange('spouseFirstName', '');
-                        handleFieldChange('spouseLastName', '');
-                        handleFieldChange('spouseName', '');
-                        handleFieldChange('spouseDob', '');
-                        handleFieldChange('spouseSsn', '');
-                      }
-                    }}
-                    className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Remove</span>
-                  </button>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <AppInput
-                    label="Spouse First Name (as per SSN) *"
-                    placeholder="e.g. Priya"
-                    error={errors[`spouse_${idx}_firstName`]}
-                    value={sp.firstName || ''}
-                    onChange={(e) => {
-                      const list = [...spouses];
-                      list[idx].firstName = e.target.value;
-                      handleFieldChange('spouseList', list, `spouse_${idx}_firstName`);
-                      if (idx === 0) {
-                        handleFieldChange('spouseFirstName', e.target.value);
-                        handleFieldChange('spouseName', `${e.target.value} ${list[idx].lastName || ''}`.trim());
-                      }
-                    }}
-                  />
+          {/* Row 2: DOB, SSN/ITIN, Visa Type */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <AppDatePicker
+              label={`Spouse Date of Birth (MM/DD/YYYY) ${isMarried ? '*' : ''}`}
+              placeholder="MM/DD/YYYY"
+              format="MM/dd/yyyy"
+              accentColor="#16A34A"
+              maxDate={new Date()}
+              error={errors['spouse_0_dob'] || errors.spouseDob}
+              value={parseUsDate(spouse.dob)}
+              onChange={(d) => handleSpouseChange('dob', formatUsDate(d), 'spouse_0_dob')}
+            />
 
-                  <AppInput
-                    label="Spouse Middle Name"
-                    placeholder="e.g. Lakshmi"
-                    value={sp.middleName || ''}
-                    onChange={(e) => {
-                      const list = [...spouses];
-                      list[idx].middleName = e.target.value;
-                      handleFieldChange('spouseList', list);
-                      if (idx === 0) handleFieldChange('spouseMiddleName', e.target.value);
-                    }}
-                  />
+            <AppInput
+              label={`Spouse SSN / ITIN (Editable) ${isMarried ? '*' : ''}`}
+              type="password"
+              placeholder="982-14-9812"
+              leftIcon={<CreditCard className="w-4 h-4" />}
+              error={errors['spouse_0_ssn'] || errors.spouseSsn}
+              value={spouse.ssn || ''}
+              onChange={(e) => handleSpouseChange('ssn', e.target.value, 'spouse_0_ssn')}
+            />
 
-                  <AppInput
-                    label="Spouse Last Name (as per SSN) *"
-                    placeholder="e.g. Varma"
-                    error={errors[`spouse_${idx}_lastName`]}
-                    value={sp.lastName !== undefined ? sp.lastName : (primaryTaxpayerLastName || '')}
-                    onChange={(e) => {
-                      const list = [...spouses];
-                      list[idx].lastName = e.target.value;
-                      handleFieldChange('spouseList', list, `spouse_${idx}_lastName`);
-                      if (idx === 0) {
-                        handleFieldChange('spouseLastName', e.target.value);
-                        handleFieldChange('spouseName', `${list[idx].firstName || ''} ${e.target.value}`.trim());
-                      }
-                    }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <AppDatePicker
-                    label="Spouse Date of Birth (MM/DD/YYYY) *"
-                    placeholder="MM/DD/YYYY"
-                    format="MM/dd/yyyy"
-                    accentColor="#16A34A"
-                    maxDate={new Date()}
-                    error={errors[`spouse_${idx}_dob`]}
-                    value={parseUsDate(sp.dob)}
-                    onChange={(d) => {
-                      const list = [...spouses];
-                      list[idx].dob = formatUsDate(d);
-                      handleFieldChange('spouseList', list, `spouse_${idx}_dob`);
-                      if (idx === 0) handleFieldChange('spouseDob', formatUsDate(d));
-                    }}
-                  />
-
-                  <AppInput
-                    label="Spouse SSN / ITIN (Editable) *"
-                    type="password"
-                    placeholder="982-14-9812"
-                    leftIcon={<CreditCard className="w-4 h-4" />}
-                    error={errors[`spouse_${idx}_ssn`]}
-                    value={sp.ssn || ''}
-                    onChange={(e) => {
-                      const list = [...spouses];
-                      list[idx].ssn = e.target.value;
-                      handleFieldChange('spouseList', list, `spouse_${idx}_ssn`);
-                      if (idx === 0) handleFieldChange('spouseSsn', e.target.value);
-                    }}
-                  />
-
-                  <AppSelect
-                    label="Relationship With Primary Taxpayer"
-                    options={[
-                      { label: 'Spouse (Married Partner)', value: 'SPOUSE' },
-                      { label: 'Joint Tax Filer', value: 'JOINT_FILER' },
-                    ]}
-                    value={sp.relationship || 'SPOUSE'}
-                    onChange={(val) => {
-                      const list = [...spouses];
-                      list[idx].relationship = val || 'SPOUSE';
-                      handleFieldChange('spouseList', list);
-                      if (idx === 0) handleFieldChange('spouseRelationship', val || 'SPOUSE');
-                    }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <AppInput
-                    label="Spouse Occupation *"
-                    placeholder="e.g. Financial Analyst or Homemaker"
-                    leftIcon={<Briefcase className="w-4 h-4" />}
-                    error={errors[`spouse_${idx}_occupation`]}
-                    value={sp.occupation || ''}
-                    onChange={(e) => {
-                      const list = [...spouses];
-                      list[idx].occupation = e.target.value;
-                      handleFieldChange('spouseList', list, `spouse_${idx}_occupation`);
-                      if (idx === 0) handleFieldChange('spouseOccupation', e.target.value);
-                    }}
-                  />
-
-                  <AppSelect
-                    label={`Spouse VISA Type as of 12/31/${selectedTaxYear}`}
-                    options={[
-                      { label: 'H-4 EAD (Work Authorized)', value: 'H-4 EAD' },
-                      { label: 'H-1B (Specialty Worker)', value: 'H-1B' },
-                      { label: 'L-2 / L-2 EAD (Dependent)', value: 'L-2' },
-                      { label: 'F-1 OPT (Student)', value: 'F-1 OPT' },
-                      { label: 'Green Card / Citizen', value: 'GREEN_CARD' },
-                    ]}
-                    value={sp.visaType || 'H-4 EAD'}
-                    onChange={(val) => {
-                      const list = [...spouses];
-                      list[idx].visaType = val || 'H-4 EAD';
-                      handleFieldChange('spouseList', list);
-                      if (idx === 0) handleFieldChange('spouseVisaType', val || 'H-4 EAD');
-                    }}
-                  />
-
-                  <AppInput
-                    label="Spouse Work / Mobile Phone"
-                    placeholder="+1 (713) 555-0921"
-                    leftIcon={<Phone className="w-4 h-4" />}
-                    value={sp.workPhone || ''}
-                    onChange={(e) => {
-                      const list = [...spouses];
-                      list[idx].workPhone = e.target.value;
-                      handleFieldChange('spouseList', list);
-                      if (idx === 0) handleFieldChange('spouseWorkPhone', e.target.value);
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+            <AppSelect
+              label={`Spouse VISA Type as of 12/31/${selectedTaxYear}`}
+              options={[
+                { label: 'H-4 EAD (Work Authorized)', value: 'H-4 EAD' },
+                { label: 'H-1B (Specialty Worker)', value: 'H-1B' },
+                { label: 'L-2 / L-2 EAD (Dependent)', value: 'L-2' },
+                { label: 'F-1 OPT (Student)', value: 'F-1 OPT' },
+                { label: 'Green Card / Citizen', value: 'GREEN_CARD' },
+                { label: 'B-2 / Other Visa', value: 'OTHER' },
+              ]}
+              value={spouse.visaType || 'H-4 EAD'}
+              onChange={(val) => handleSpouseChange('visaType', val || 'H-4 EAD')}
+            />
           </div>
-        )}
+
+          {/* Row 3: Occupation & Work Phone */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <AppInput
+              label={`Spouse Occupation ${isMarried ? '*' : ''}`}
+              placeholder="e.g. Financial Analyst or Homemaker"
+              leftIcon={<Briefcase className="w-4 h-4" />}
+              error={errors['spouse_0_occupation'] || errors.spouseOccupation}
+              value={spouse.occupation || ''}
+              onChange={(e) => handleSpouseChange('occupation', e.target.value, 'spouse_0_occupation')}
+            />
+
+            <AppInput
+              label="Spouse Work / Mobile Phone"
+              placeholder="+1 (713) 555-0921"
+              leftIcon={<Phone className="w-4 h-4" />}
+              value={spouse.workPhone || ''}
+              onChange={(e) => handleSpouseChange('workPhone', e.target.value)}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Qualifying Children & Dependents Table */}

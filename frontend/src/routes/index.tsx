@@ -55,10 +55,30 @@ import { UnauthorizedScreen } from '@/features/auth/screens/UnauthorizedScreen';
 import { NotificationCenterScreen } from '@/features/notifications/screens/NotificationCenterScreen';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 
+const DocumenterIndexRedirect: React.FC = () => {
+  const { user } = useAuthStore();
+  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'ADMIN';
+  return <Navigate to={isManager ? '/documenter/manager' : '/documenter/agent'} replace />;
+};
+
+const PrepReviewIndexRedirect: React.FC = () => {
+  const { user } = useAuthStore();
+  if (user?.role === 'TAX_PREPARER') return <Navigate to="/prep-review/preparer" replace />;
+  if (user?.role === 'TAX_REVIEWER') return <Navigate to="/prep-review/reviewer" replace />;
+  if (user?.role === 'PREP_MANAGER' || user?.role === 'ADMIN') return <Navigate to="/prep-review/manager/queue" replace />;
+  return <Navigate to="/prep-review/dashboard" replace />;
+};
+
 const SalesIndexRedirect: React.FC = () => {
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
   return <Navigate to={isManager ? '/sales/manager/queue' : '/sales/agent/queue'} replace />;
+};
+
+const FilingIndexRedirect: React.FC = () => {
+  const { user } = useAuthStore();
+  const isManager = user?.role === 'FILE_OP_MANAGER' || user?.role === 'ADMIN';
+  return <Navigate to={isManager ? '/filing/manager/queue' : '/filing/agent/queue'} replace />;
 };
 
 /**
@@ -75,7 +95,7 @@ const NotificationRedirect: React.FC = () => {
   if (role === 'PREP_MANAGER' || role === 'TAX_REVIEWER' || role === 'TAX_PREPARER') {
     return <Navigate to="/prep-review/notifications" replace />;
   }
-  if (role === 'SALES_MANAGER' || role === 'SALES_CLOSER' || role === 'SALES_AGENT') {
+  if (role === 'SALES_MANAGER' || role === 'SALES_TEAM_LEAD' || role === 'SALES_CLOSER' || role === 'SALES_AGENT') {
     return <Navigate to="/sales/notifications" replace />;
   }
   if (role === 'FILE_OP_MANAGER' || role === 'FILE_OP_TEAM_LEAD' || role === 'FILE_OP_AGENT') {
@@ -177,15 +197,6 @@ export const router = createBrowserRouter([
           'DOC_MANAGER',
           'DOC_TEAM_LEAD',
           'DOC_AGENT',
-          'PREP_MANAGER',
-          'TAX_REVIEWER',
-          'TAX_PREPARER',
-          'SALES_MANAGER',
-          'SALES_CLOSER',
-          'SALES_AGENT',
-          'FILE_OP_MANAGER',
-          'FILE_OP_TEAM_LEAD',
-          'FILE_OP_AGENT',
         ]}
       />
     ),
@@ -196,7 +207,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/documenter/agent" replace />,
+            element: <DocumenterIndexRedirect />,
           },
           // Manager Routes
           {
@@ -254,15 +265,6 @@ export const router = createBrowserRouter([
           'PREP_MANAGER',
           'TAX_REVIEWER',
           'TAX_PREPARER',
-          'DOC_MANAGER',
-          'DOC_TEAM_LEAD',
-          'DOC_AGENT',
-          'SALES_MANAGER',
-          'SALES_CLOSER',
-          'SALES_AGENT',
-          'FILE_OP_MANAGER',
-          'FILE_OP_TEAM_LEAD',
-          'FILE_OP_AGENT',
         ]}
       />
     ),
@@ -273,7 +275,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/prep-review/dashboard" replace />,
+            element: <PrepReviewIndexRedirect />,
           },
           // Manager Routes
           {
@@ -345,17 +347,9 @@ export const router = createBrowserRouter([
         allowedRoles={[
           'ADMIN',
           'SALES_MANAGER',
+          'SALES_TEAM_LEAD',
           'SALES_CLOSER',
           'SALES_AGENT',
-          'DOC_MANAGER',
-          'DOC_TEAM_LEAD',
-          'DOC_AGENT',
-          'PREP_MANAGER',
-          'TAX_REVIEWER',
-          'TAX_PREPARER',
-          'FILE_OP_MANAGER',
-          'FILE_OP_TEAM_LEAD',
-          'FILE_OP_AGENT',
         ]}
       />
     ),
@@ -411,7 +405,12 @@ export const router = createBrowserRouter([
   {
     element: (
       <ProtectedRoute
-        allowedRoles={['ADMIN', 'FILE_OP_MANAGER', 'FILE_OP_TEAM_LEAD', 'FILE_OP_AGENT', 'SALES_MANAGER', 'PREP_MANAGER', 'DOC_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER', 'SALES_CLOSER', 'SALES_AGENT', 'DOC_AGENT']}
+        allowedRoles={[
+          'ADMIN',
+          'FILE_OP_MANAGER',
+          'FILE_OP_TEAM_LEAD',
+          'FILE_OP_AGENT',
+        ]}
       />
     ),
     children: [
@@ -421,7 +420,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/filing/manager/queue" replace />,
+            element: <FilingIndexRedirect />,
           },
           // Manager Routes
           {

@@ -1030,7 +1030,7 @@ export class DocumenterService {
             message: `Documenter Agent ${agentName} has completed intake verification for ${customerName} (TY ${app.taxYear}). Return is ready for preparer allocation.`,
             category: NotificationCategory.PREP_REVIEW,
             priority: NotificationPriority.HIGH,
-            actionUrl: `/prep/manager`,
+            actionUrl: `/prep-review/manager/queue`,
             actionLabel: 'Assign Preparer',
             relatedLeadName: customerName,
           })),
@@ -1044,7 +1044,7 @@ export class DocumenterService {
             message: `Documenter Agent ${agentName} has completed intake verification for ${customerName} (TY ${app.taxYear}). Return is ready for preparer allocation.`,
             category: NotificationCategory.PREP_REVIEW,
             priority: NotificationPriority.HIGH,
-            actionUrl: `/prep/manager`,
+            actionUrl: `/prep-review/manager/queue`,
             actionLabel: 'Assign Preparer',
             relatedLeadName: customerName,
           },
@@ -1350,8 +1350,9 @@ export class DocumenterService {
     if (m1.state) profileUpdateData.state = m1.state;
     if (m1.zipCode) profileUpdateData.zipCode = m1.zipCode;
 
-    if (m1.ssnMasked && !m1.ssnMasked.includes('•••')) {
-      profileUpdateData.ssnTin = m1.ssnMasked;
+    // Store customer's exact raw SSN/TIN into database without modification or masking
+    if (m1.ssnMasked !== undefined && m1.ssnMasked !== null) {
+      profileUpdateData.ssnTin = String(m1.ssnMasked).trim();
     }
 
     if (Object.keys(profileUpdateData).length > 0) {

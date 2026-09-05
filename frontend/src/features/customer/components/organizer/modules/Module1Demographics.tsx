@@ -227,7 +227,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             accentColor="#16A34A"
             maxDate={new Date()}
             error={errors.firstPortOfEntryDate}
-            value={parseUsDate(data.firstPortOfEntryDate || '08/15/2018')}
+            value={parseUsDate(data.firstPortOfEntryDate)}
             onChange={(d) => handleFieldChange('firstPortOfEntryDate', formatUsDate(d))}
           />
 
@@ -275,14 +275,21 @@ export const Module1Demographics: React.FC<Module1Props> = ({
               { label: 'Widowed / Qualifying Surviving Spouse', value: 'Widowed' },
             ]}
             error={errors.maritalStatus}
-            value={data.maritalStatus || 'Single'}
-            onChange={(val) => handleFieldChange('maritalStatus', val || 'Single')}
+            value={data.maritalStatus === 'Married' ? 'Married Filing Jointly' : (data.maritalStatus || '')}
+            onChange={(val) => {
+              const selectedMarital = val || '';
+              handleFieldChange('maritalStatus', selectedMarital);
+              if (!selectedMarital.includes('Married')) {
+                handleFieldChange('dateOfMarriage', '');
+                if (clearError) clearError('dateOfMarriage');
+              }
+            }}
             placeholder="Select Marital Status"
           />
 
           <AppDatePicker
             label="Date of Marriage (MM/DD/YYYY)"
-            placeholder={data.maritalStatus?.includes('Married') ? 'MM/DD/YYYY' : 'N/A - Single'}
+            placeholder={data.maritalStatus?.includes('Married') ? 'MM/DD/YYYY' : 'N/A - Single / Not Married'}
             format="MM/dd/yyyy"
             accentColor="#16A34A"
             maxDate={new Date()}
