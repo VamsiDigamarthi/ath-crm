@@ -19,7 +19,7 @@ import {
 import { useNotificationStore } from '../store/notification-store';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { AppPagination } from '@/shared/components/AppPagination';
-import type { AppNotification, NotificationCategory, NotificationPriority } from '../types/notification.types';
+import type { NotificationCategory, NotificationPriority } from '../types/notification.types';
 import { resolveNotificationClickUrl } from '../utils/notification-router';
 import toast from 'react-hot-toast';
 
@@ -40,8 +40,6 @@ export const NotificationCenterScreen: React.FC = () => {
     filterOnlyUnread,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
-    clearAll,
     setCategoryFilter,
     setOnlyUnreadFilter,
   } = useNotificationStore();

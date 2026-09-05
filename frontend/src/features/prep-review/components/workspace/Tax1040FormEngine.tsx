@@ -24,6 +24,7 @@ interface Tax1040FormEngineProps {
   setPreparerNotes: (v: string) => void;
   standardDeductionAmount: number;
   isReadOnly?: boolean;
+  readOnlyReason?: 'QA_AUDIT' | 'REVERTED_DOCS';
   calculations: {
     totalGrossIncome: number;
     effectiveDeduction: number;
@@ -61,12 +62,26 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
   setPreparerNotes,
   standardDeductionAmount,
   isReadOnly = false,
+  readOnlyReason = 'QA_AUDIT',
   calculations,
 }) => {
   return (
     <div className="space-y-6">
-      {/* Read-Only QA Locked Alert */}
-      {isReadOnly && (
+      {/* Read-Only Locked Alerts */}
+      {isReadOnly && readOnlyReason === 'REVERTED_DOCS' && (
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between text-xs text-amber-900 shadow-2xs">
+          <div className="flex items-center gap-2 font-semibold">
+            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Form 1040 Locked — Awaiting Documenter Intake:</strong> This return is currently with the Documenter department. Inputs are locked until documents are re-submitted to Preparation.
+            </span>
+          </div>
+          <span className="px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-900 text-[10px] font-bold uppercase tracking-wider">
+            Awaiting Docs
+          </span>
+        </div>
+      )}
+      {isReadOnly && readOnlyReason !== 'REVERTED_DOCS' && (
         <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-between text-xs text-purple-900 shadow-2xs">
           <div className="flex items-center gap-2 font-semibold">
             <Lock className="w-4 h-4 text-purple-600 shrink-0" />

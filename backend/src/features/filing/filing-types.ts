@@ -66,6 +66,8 @@ export interface FilingLeadItem {
   esignStatus: 'SIGNED' | 'PENDING';
   esignCompletedAt?: string | null;
   taxpayerPin?: string;
+  lastRevert?: any;
+  taxDraftSummary?: any;
   assignedFilingAgent?: {
     id: string;
     name: string;

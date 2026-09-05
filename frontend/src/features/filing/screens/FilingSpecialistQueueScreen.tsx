@@ -9,7 +9,8 @@ import {
   ListFilter,
   CreditCard,
   Scale,
-  Globe
+  Globe,
+  RotateCcw
 } from 'lucide-react';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
@@ -19,7 +20,7 @@ import { getFilingColumns } from '../columns/filing-columns';
 import { useFilingQueue } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
 
-export type FilingTabType = 'ALL' | 'FILING_QUEUE' | 'FILING_IN_PROGRESS' | 'FILING_SUCCESS';
+export type FilingTabType = 'ALL' | 'FILING_QUEUE' | 'FILING_IN_PROGRESS' | 'FILING_SUCCESS' | 'REVERTED';
 
 export const FilingSpecialistQueueScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -44,12 +45,16 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
     const inProg = leads.filter((l) => l.currentStage === 'FILING_IN_PROGRESS').length;
     const accepted = leads.filter((l) => l.currentStage === 'FILING_SUCCESS').length;
     const failed = leads.filter((l) => l.currentStage === 'FILING_FAILED').length;
+    const reverted = leads.filter((l) =>
+      ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'SALES_PITCH_QUEUE', 'SALES_PITCHING'].includes(l.currentStage)
+    ).length;
 
     return {
       ready,
       inProg,
       accepted,
       failed,
+      reverted,
       all: leads.length,
     };
   }, [leads]);
@@ -67,12 +72,22 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
     { id: 'FILING_QUEUE' as FilingTabType, label: 'Ready for Transmission', count: counts.ready, icon: Send },
     { id: 'FILING_IN_PROGRESS' as FilingTabType, label: 'In Transmission', count: counts.inProg, icon: Clock },
     { id: 'FILING_SUCCESS' as FilingTabType, label: 'Accepted by IRS', count: counts.accepted, icon: CheckCircle2 },
+    { id: 'REVERTED' as FilingTabType, label: 'Reverted / In Revision', count: counts.reverted, icon: RotateCcw },
     { id: 'ALL' as FilingTabType, label: 'All My Returns', count: counts.all, icon: ListFilter },
   ];
 
   // Filtered dataset based on extra dropdowns
   const filteredLeads = useMemo(() => {
     return leads.filter((item) => {
+      if (stageFilter === 'FILING_QUEUE' && item.currentStage !== 'FILING_QUEUE') return false;
+      if (stageFilter === 'FILING_IN_PROGRESS' && item.currentStage !== 'FILING_IN_PROGRESS') return false;
+      if (stageFilter === 'FILING_SUCCESS' && item.currentStage !== 'FILING_SUCCESS') return false;
+      if (
+        stageFilter === 'REVERTED' &&
+        !['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'SALES_PITCH_QUEUE', 'SALES_PITCHING'].includes(item.currentStage)
+      )
+        return false;
+
       if (paymentFilter === 'PAID' && item.paymentStatus !== 'PAID') return false;
       if (paymentFilter === 'UNPAID' && item.paymentStatus === 'PAID') return false;
       const balVal = item.balanceDue || item.federalBalanceDue || 0;
@@ -81,7 +96,7 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
       if (visaFilter !== 'ALL' && item.visaType !== visaFilter) return false;
       return true;
     });
-  }, [leads, paymentFilter, liabilityFilter, visaFilter]);
+  }, [leads, stageFilter, paymentFilter, liabilityFilter, visaFilter]);
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">

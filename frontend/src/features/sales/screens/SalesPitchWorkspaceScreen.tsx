@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { RotateCcw } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
 import { PitchTaxDraftSummaryCard } from '../components/pitch/PitchTaxDraftSummaryCard';
@@ -8,6 +9,7 @@ import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
+import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesFeeBreakdown } from '../types/sales.types';
 import apiClient from '@/lib/api-client';
@@ -27,6 +29,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   const [isEsignModalOpen, setIsEsignModalOpen] = useState(false);
   const [isDispatchConfirmOpen, setIsDispatchConfirmOpen] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
+  const [isSendBackOpen, setIsSendBackOpen] = useState(false);
 
   const fetchLeadDetail = useCallback(async () => {
     if (!id) return;
@@ -79,6 +82,13 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
       </div>
     );
   }
+
+  const lastRevert =
+    (lead.taxDraftSummary as any)?.revertsByTarget?.SALES ||
+    (lead.taxDraftSummary as any)?.revertsByTarget?.['FILING_TO_SALES'] ||
+    ((lead.taxDraftSummary as any)?.lastRevert?.targetDepartment === 'SALES' ? (lead.taxDraftSummary as any)?.lastRevert : null);
+  const isDispatchedToFiling = ['FILING_QUEUE', 'FILING_IN_PROGRESS', 'FILING_SUCCESS'].includes(lead.currentStage as string);
+  const isReverted = Boolean(lastRevert && !lastRevert.resolved && !isDispatchedToFiling);
 
   const handleUpdateFeeBreakdown = (updated: SalesFeeBreakdown) => {
     setLead((prev) => (prev ? { ...prev, feeBreakdown: updated } : prev));
@@ -190,7 +200,63 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-150 font-sans">
       {/* 1. Taxpayer Header & Certified 1040 Refund Banner */}
-      <PitchTaxpayerHeader lead={lead} />
+      <PitchTaxpayerHeader lead={lead} onOpenSendBack={() => setIsSendBackOpen(true)} />
+
+      {/* 1.1 Revert Alert Banner */}
+      {isReverted && lastRevert && (
+        <div className="bg-amber-50/70 border border-amber-300/80 rounded-xl p-3.5 sm:p-4 text-amber-950 shadow-2xs animate-in fade-in duration-200">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200 mt-0.5">
+              <RotateCcw className="w-4 h-4 text-amber-700" />
+            </div>
+            <div className="space-y-2 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2 font-bold text-xs sm:text-sm text-amber-950">
+                  <span>Return Reverted by {lastRevert.sourceDepartment === 'FILING' ? 'IRS Filing Operations' : lastRevert.sourceDepartment}:</span>
+                  {lastRevert.reasonCategory && (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-200/90 text-amber-950 text-[10px] font-bold border border-amber-300">
+                      {lastRevert.reasonCategory.replace(/_/g, ' ')}
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
+                  {lastRevert.revertedByName && (
+                    <span>By <strong>{lastRevert.revertedByName}</strong> ({lastRevert.revertedByRole || 'Filing Specialist'})</span>
+                  )}
+                  {lastRevert.revertedAt && (
+                    <span>• {new Date(lastRevert.revertedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Specialist's Note Box */}
+              <div className="bg-white/95 p-3 rounded-lg border border-amber-200 shadow-2xs space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                  Filing Specialist Revert Instructions &amp; Feedback:
+                </div>
+                <p className="text-xs font-semibold text-slate-900 leading-relaxed">
+                  "{lastRevert.revertNotes || 'Filing Operations requested clarification or re-authorization.'}"
+                </p>
+                {lastRevert.missingDocumentTypes && lastRevert.missingDocumentTypes.length > 0 && (
+                  <div className="pt-1.5 flex flex-wrap items-center gap-1.5 border-t border-amber-100">
+                    <span className="text-[10px] font-bold text-amber-900">Requested Items:</span>
+                    {lastRevert.missingDocumentTypes.map((doc: string, idx: number) => (
+                      <span key={idx} className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-200">
+                        {doc}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Action guidance */}
+              <div className="pt-0.5 text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
+                <span>👉 <strong>Closer Action Required:</strong> Contact client to review the requested data/notes above. Once addressed, collect any updated authorization and click <strong>"Dispatch to IRS E-Filing Queue 🚀"</strong> below.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 2. Main Two-Column Pitching Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -207,6 +273,15 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
             onOpenEsignModal={() => setIsEsignModalOpen(true)}
             paymentStatus={lead.paymentStatus}
             esignStatus={lead.esignStatus}
+            isLocked={
+              ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'QA_REVISION_REQUESTED'].includes(lead.currentStage as string) ||
+              ['REVISION_REQUESTED', 'REVERTED_TO_DOCUMENTER'].includes((lead.taxDraftSummary as any)?.status)
+            }
+            lockReason={
+              (lead.currentStage as string) === 'DOC_OUTREACH' || (lead.taxDraftSummary as any)?.status === 'REVERTED_TO_DOCUMENTER'
+                ? 'Payment & E-Sign are locked while return is in Documenter outreach'
+                : 'Payment & E-Sign are locked while Form 1040 is in revision with Tax Preparer'
+            }
           />
         </div>
 
@@ -253,6 +328,43 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         cancelLabel="Cancel"
         variant="success"
         isLoading={isDispatching}
+      />
+
+      {/* 6. Send Back / Workflow Revert Modal (Sales Closer -> Preparer or Documenter) */}
+      <SendBackLeadModal
+        isOpen={isSendBackOpen}
+        onClose={() => setIsSendBackOpen(false)}
+        applicationId={lead.id || lead.applicationId}
+        taxpayerName={lead.taxpayerName}
+        taxYear={lead.taxYear || 2025}
+        currentDepartment="SALES"
+        assignedPreparerName={
+          (lead.taxDraftSummary as any)?.preparerName ||
+          (lead as any).assignedPrepAgent?.name ||
+          (lead as any).assignedPrepAgentName
+        }
+        assignedDocumenterName={
+          (lead as any).assignedDocAgent?.name ||
+          (lead as any).assignedDocAgentName
+        }
+        availableTargetDepartments={[
+          {
+            key: 'PREPARATION',
+            label: 'Tax Preparation Department (CPA / Preparer)',
+            badge: 'CORRECTION_NEEDED',
+            description: 'Send back to assigned Tax Preparer to recalculate Form 1040 deductions, tax credits, or filing status as requested by client.',
+          },
+          {
+            key: 'DOCUMENTER',
+            label: 'Documenter Department (Intake & Verification)',
+            badge: 'DOC_OUTREACH',
+            description: 'Send back to Documenter agent to collect missing paperwork, additional W-2/1099s, or clarify client intake.',
+          },
+        ]}
+        defaultTargetDepartment="PREPARATION"
+        onRevertSuccess={() => {
+          navigate(backQueuePath);
+        }}
       />
     </div>
   );

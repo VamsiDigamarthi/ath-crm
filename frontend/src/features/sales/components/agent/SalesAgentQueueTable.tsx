@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PhoneCall, ArrowRight } from 'lucide-react';
+import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { SalesStageBadge } from '../common/SalesStageBadge';
@@ -13,33 +13,24 @@ interface SalesAgentQueueTableProps {
 
 export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ leads, isLoading = false }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'ALL' | 'AWAITING' | 'QUOTED' | 'PAID'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'AWAITING' | 'QUOTED' | 'PAID' | 'REVERTED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const isAwaitingPitch = (lead: SalesLeadItem) => {
+  const isReturnReverted = (lead: SalesLeadItem) => {
+    const draftStatus = (lead.taxDraftSummary as any)?.status;
+    const lastRevert = (lead.taxDraftSummary as any)?.lastRevert;
     return (
-      lead.paymentStatus !== 'PAID' &&
-      lead.currentStage !== 'FILING_QUEUE' &&
-      lead.currentStage !== 'PAID_AND_AUTHORIZED' &&
-      lead.currentStage !== 'QUOTATION_SENT' &&
-      lead.currentStage !== 'PAYMENT_PENDING' &&
-      lead.paymentStatus !== 'PAYMENT_LINK_SENT'
-    );
-  };
-
-  const isQuotedOrPaymentPending = (lead: SalesLeadItem) => {
-    return (
-      lead.paymentStatus !== 'PAID' &&
-      lead.currentStage !== 'FILING_QUEUE' &&
-      lead.currentStage !== 'PAID_AND_AUTHORIZED' &&
-      (lead.currentStage === 'QUOTATION_SENT' ||
-        lead.currentStage === 'PAYMENT_PENDING' ||
-        lead.paymentStatus === 'PAYMENT_LINK_SENT' ||
-        Boolean(lead.feeBreakdown?.isQuoted))
+      lead.currentStage === 'CORRECTION_NEEDED' ||
+      lead.currentStage === 'DOC_OUTREACH' ||
+      lead.currentStage === 'DOC_PREP' ||
+      draftStatus === 'REVISION_REQUESTED' ||
+      draftStatus === 'REVERTED_TO_DOCUMENTER' ||
+      Boolean(lastRevert && !lastRevert.resolved)
     );
   };
 
   const isPaidOrClosed = (lead: SalesLeadItem) => {
+    if (isReturnReverted(lead)) return false;
     return (
       lead.paymentStatus === 'PAID' ||
       lead.currentStage === 'PAID_AND_AUTHORIZED' ||
@@ -49,13 +40,30 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
     );
   };
 
+  const isQuotedOrPaymentPending = (lead: SalesLeadItem) => {
+    if (isReturnReverted(lead) || isPaidOrClosed(lead)) return false;
+    return (
+      lead.currentStage === 'QUOTATION_SENT' ||
+      lead.currentStage === 'PAYMENT_PENDING' ||
+      lead.paymentStatus === 'PAYMENT_LINK_SENT' ||
+      Boolean(lead.feeBreakdown?.isQuoted)
+    );
+  };
+
+  const isAwaitingPitch = (lead: SalesLeadItem) => {
+    if (isReturnReverted(lead) || isPaidOrClosed(lead) || isQuotedOrPaymentPending(lead)) return false;
+    return true;
+  };
+
   const counts = useMemo(() => {
     let awaiting = 0;
     let quoted = 0;
     let paid = 0;
+    let reverted = 0;
 
     leads.forEach((lead) => {
-      if (isPaidOrClosed(lead)) paid++;
+      if (isReturnReverted(lead)) reverted++;
+      else if (isPaidOrClosed(lead)) paid++;
       else if (isQuotedOrPaymentPending(lead)) quoted++;
       else awaiting++;
     });
@@ -65,6 +73,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
       awaiting,
       quoted,
       paid,
+      reverted,
     };
   }, [leads]);
 
@@ -73,6 +82,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
       if (activeTab === 'AWAITING' && !isAwaitingPitch(lead)) return false;
       if (activeTab === 'QUOTED' && !isQuotedOrPaymentPending(lead)) return false;
       if (activeTab === 'PAID' && !isPaidOrClosed(lead)) return false;
+      if (activeTab === 'REVERTED' && !isReturnReverted(lead)) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -182,6 +192,24 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
             {counts.paid}
           </span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('REVERTED')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'REVERTED'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300'
+          }`}
+        >
+          <RotateCcw className="w-3 h-3 text-amber-600" />
+          <span>Sent Back for Revision</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+            activeTab === 'REVERTED' ? 'bg-white/20 text-white' : 'bg-amber-200 text-amber-900'
+          }`}>
+            {counts.reverted}
+          </span>
+        </button>
       </div>
 
       {/* 3. Table: Full Width Edge-to-Edge Flush with Outer Card */}
@@ -211,125 +239,137 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
             ) : filteredLeads.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
-                  No assigned returns in your pitch queue right now.
+                  No returns found in this filter tab.
                 </td>
               </tr>
             ) : (
-              filteredLeads.map((lead) => (
-                <tr key={lead.id || lead.applicationId} className="hover:bg-slate-50/70 transition-colors">
-                  {/* Taxpayer Client */}
-                  <td className="py-3.5 px-4">
-                    <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
-                      <span>{lead.taxpayerName}</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                        TY {lead.taxYear || 2025}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-medium">{lead.taxpayerEmail}</div>
-                    <div className="text-[10px] text-slate-400">{lead.taxpayerPhone}</div>
-                  </td>
+              filteredLeads.map((lead) => {
+                const isReverted = isReturnReverted(lead);
+                const lastRevert = (lead.taxDraftSummary as any)?.lastRevert;
 
-                  {/* State & Visa */}
-                  <td className="py-3.5 px-4">
-                    <div className="text-slate-800 font-semibold text-xs">{lead.stateOfResidence}</div>
-                    <div className="text-[10px] text-slate-500 font-medium">{lead.visaType}</div>
-                  </td>
+                return (
+                  <tr key={lead.id || lead.applicationId} className={`hover:bg-slate-50/70 transition-colors ${isReverted ? 'bg-amber-50/30' : ''}`}>
+                    {/* Taxpayer Client */}
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                        <span>{lead.taxpayerName}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                          TY {lead.taxYear || 2025}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium">{lead.taxpayerEmail}</div>
+                      <div className="text-[10px] text-slate-400">{lead.taxpayerPhone}</div>
+                      {isReverted && lastRevert && (
+                        <div className="mt-1 text-[10px] text-amber-800 font-semibold bg-amber-100/80 px-2 py-0.5 rounded border border-amber-200 inline-block max-w-xs truncate" title={lastRevert.revertNotes}>
+                          Revert: {lastRevert.reasonCategory?.replace(/_/g, ' ') || 'Revision Needed'}
+                        </div>
+                      )}
+                    </td>
 
-                  {/* Certified 1040 Refund */}
-                  <td className="py-3.5 px-4">
-                    {Number(lead.federalRefund) > 0 ? (
-                      <span className="font-bold text-[#16A34A] text-xs bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
-                        +${Number(lead.federalRefund).toLocaleString()} Fed Refund
-                      </span>
-                    ) : Number(lead.balanceDue) > 0 ? (
-                      <span className="font-bold text-rose-600 text-xs bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 inline-block">
-                        -${Number(lead.balanceDue).toLocaleString()} Tax Due
-                      </span>
-                    ) : (
-                      <span className="font-bold text-slate-600 text-xs bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 inline-block">
-                        $0 Fed Balance
-                      </span>
-                    )}
-                    <div className="text-[10px] text-slate-400 mt-0.5">QA by {lead.qaAuditorName || 'Senior Reviewer'}</div>
-                  </td>
+                    {/* State & Visa */}
+                    <td className="py-3.5 px-4">
+                      <div className="text-slate-800 font-semibold text-xs">{lead.stateOfResidence}</div>
+                      <div className="text-[10px] text-slate-500 font-medium">{lead.visaType}</div>
+                    </td>
 
-                  {/* Quoted Fee */}
-                  <td className="py-3.5 px-4">
-                    {lead.feeBreakdown?.isQuoted ? (
-                      <>
-                        <div className="font-bold text-slate-900 text-xs">
-                          ${lead.feeBreakdown.totalServiceFee}
-                        </div>
-                        <div className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span>Quoted &amp; Sent</span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                          <span>{lead.feeBreakdown?.totalServiceFee > 0 ? `$${lead.feeBreakdown.totalServiceFee}` : '$0'}</span>
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold">
-                            Unquoted
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 font-medium mt-0.5">
-                          {lead.feeBreakdown?.selectedStates?.length > 0
-                            ? `Fed + ${lead.feeBreakdown.selectedStates.length} State`
-                            : 'Federal Only'}
-                        </div>
-                      </>
-                    )}
-                  </td>
+                    {/* Certified 1040 Refund */}
+                    <td className="py-3.5 px-4">
+                      {Number(lead.federalRefund) > 0 ? (
+                        <span className="font-bold text-[#16A34A] text-xs bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
+                          +${Number(lead.federalRefund).toLocaleString()} Fed Refund
+                        </span>
+                      ) : Number(lead.balanceDue) > 0 ? (
+                        <span className="font-bold text-rose-600 text-xs bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 inline-block">
+                          -${Number(lead.balanceDue).toLocaleString()} Tax Due
+                        </span>
+                      ) : (
+                        <span className="font-bold text-slate-600 text-xs bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 inline-block">
+                          $0 Fed Balance
+                        </span>
+                      )}
+                      <div className="text-[10px] text-slate-400 mt-0.5">QA by {lead.qaAuditorName || 'Senior Reviewer'}</div>
+                    </td>
 
-                  {/* E-Sign & Payment Status */}
-                  <td className="py-3.5 px-4">
-                    <div className="flex flex-col gap-1 items-start">
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                          lead.paymentStatus === 'PAID'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : lead.paymentStatus === 'PAYMENT_LINK_SENT'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-slate-100 text-slate-600'
+                    {/* Quoted Fee */}
+                    <td className="py-3.5 px-4">
+                      {lead.feeBreakdown?.isQuoted ? (
+                        <>
+                          <div className="font-bold text-slate-900 text-xs">
+                            ${lead.feeBreakdown.totalServiceFee}
+                          </div>
+                          <div className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span>Quoted &amp; Sent</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                            <span>{lead.feeBreakdown?.totalServiceFee > 0 ? `$${lead.feeBreakdown.totalServiceFee}` : '$0'}</span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold">
+                              Unquoted
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-medium mt-0.5">
+                            {lead.feeBreakdown?.selectedStates?.length > 0
+                              ? `Fed + ${lead.feeBreakdown.selectedStates.length} State`
+                              : 'Federal Only'}
+                          </div>
+                        </>
+                      )}
+                    </td>
+
+                    {/* E-Sign & Payment Status */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex flex-col gap-1 items-start">
+                        <span
+                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                            lead.paymentStatus === 'PAID'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : lead.paymentStatus === 'PAYMENT_LINK_SENT'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          Payment: {lead.paymentStatus || 'UNPAID'}
+                        </span>
+
+                        <span
+                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                            lead.esignStatus === 'SIGNED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : lead.esignStatus === 'SENT'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          8879: {lead.esignStatus || 'NOT_SENT'}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Sales Stage */}
+                    <td className="py-3.5 px-4">
+                      <SalesStageBadge stage={lead.currentStage} />
+                    </td>
+
+                    {/* Action */}
+                    <td className="py-3.5 px-4 text-right">
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/sales/agent/pitch/${lead.id || lead.applicationId}`)}
+                        className={`text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer ml-auto ${
+                          isReverted ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'
                         }`}
                       >
-                        Payment: {lead.paymentStatus || 'UNPAID'}
-                      </span>
-
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                          lead.esignStatus === 'SIGNED'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : lead.esignStatus === 'SENT'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        8879: {lead.esignStatus || 'NOT_SENT'}
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* Sales Stage */}
-                  <td className="py-3.5 px-4">
-                    <SalesStageBadge stage={lead.currentStage} />
-                  </td>
-
-                  {/* Action */}
-                  <td className="py-3.5 px-4 text-right">
-                    <Button
-                      size="sm"
-                      onClick={() => navigate(`/sales/agent/pitch/${lead.id || lead.applicationId}`)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer ml-auto"
-                    >
-                      <PhoneCall className="w-3.5 h-3.5" />
-                      <span>Open Pitch Deck</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </Button>
-                  </td>
-                </tr>
-              ))
+                        {isReverted ? <RotateCcw className="w-3.5 h-3.5" /> : <PhoneCall className="w-3.5 h-3.5" />}
+                        <span>{isReverted ? 'View Pitch Live' : 'Open Pitch Deck'}</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

@@ -98,7 +98,6 @@ export const SalesDepartmentScreen: React.FC = () => {
         paidSignedCount={counts.paidSigned}
         filingReadyCount={counts.filingReady}
         unassignedCount={counts.unassigned}
-        hideQuickAction={true}
       />
 
       {/* 3. Dedicated Tabs & Multi-Filter Card */}

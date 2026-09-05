@@ -16,6 +16,7 @@ interface PreparerFilterBarProps {
     qaSubmitted: number;
     qaApproved?: number;
     revisions: number;
+    reverted?: number;
   };
 }
 
@@ -105,6 +106,19 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
           >
             <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
             <span>Revisions Needed ({counts.revisions || 0})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onTabChange('REVERTED')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'REVERTED'
+                ? 'bg-white text-amber-800 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+            <span>Reverted to Docs ({counts.reverted || 0})</span>
           </button>
         </div>
       </div>

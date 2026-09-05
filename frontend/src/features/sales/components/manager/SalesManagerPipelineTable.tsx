@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
   PhoneCall, 
-  UserCheck 
+  UserCheck,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
@@ -25,27 +26,43 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
   onAutoRoundRobin,
 }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'ALL' | 'UNASSIGNED' | 'PITCHING' | 'QUOTED' | 'PAID'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'UNASSIGNED' | 'PITCHING' | 'QUOTED' | 'PAID' | 'REVERTED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedLeadForAssign, setSelectedLeadForAssign] = useState<SalesLeadItem | null>(null);
+
+  const isReturnReverted = (lead: SalesLeadItem) => {
+    const draftStatus = (lead.taxDraftSummary as any)?.status;
+    const lastRevert = (lead.taxDraftSummary as any)?.lastRevert;
+    return (
+      lead.currentStage === 'CORRECTION_NEEDED' ||
+      lead.currentStage === 'DOC_OUTREACH' ||
+      lead.currentStage === 'DOC_PREP' ||
+      draftStatus === 'REVISION_REQUESTED' ||
+      draftStatus === 'REVERTED_TO_DOCUMENTER' ||
+      Boolean(lastRevert && !lastRevert.resolved)
+    );
+  };
 
   const counts = useMemo(() => {
     return {
       all: leads.length,
       unassigned: leads.filter((l) => !l.assignedSalesAgent).length,
-      pitching: leads.filter((l) => l.currentStage === 'SALES_PITCH_QUEUE' || l.currentStage === 'SALES_PITCHING').length,
-      quoted: leads.filter((l) => l.currentStage === 'QUOTATION_SENT' || l.currentStage === 'PAYMENT_PENDING').length,
-      paid: leads.filter((l) => l.currentStage === 'PAID_AND_AUTHORIZED' || l.currentStage === 'FILING_QUEUE').length,
+      pitching: leads.filter((l) => !isReturnReverted(l) && (l.currentStage === 'SALES_PITCH_QUEUE' || l.currentStage === 'SALES_PITCHING')).length,
+      quoted: leads.filter((l) => !isReturnReverted(l) && (l.currentStage === 'QUOTATION_SENT' || l.currentStage === 'PAYMENT_PENDING')).length,
+      paid: leads.filter((l) => !isReturnReverted(l) && (l.currentStage === 'PAID_AND_AUTHORIZED' || l.currentStage === 'FILING_QUEUE')).length,
+      reverted: leads.filter((l) => isReturnReverted(l)).length,
     };
   }, [leads]);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
+      const isReverted = isReturnReverted(lead);
       if (activeTab === 'UNASSIGNED' && Boolean(lead.assignedSalesAgent)) return false;
-      if (activeTab === 'PITCHING' && lead.currentStage !== 'SALES_PITCH_QUEUE' && lead.currentStage !== 'SALES_PITCHING') return false;
-      if (activeTab === 'QUOTED' && lead.currentStage !== 'QUOTATION_SENT' && lead.currentStage !== 'PAYMENT_PENDING') return false;
-      if (activeTab === 'PAID' && lead.currentStage !== 'PAID_AND_AUTHORIZED' && lead.currentStage !== 'FILING_QUEUE') return false;
+      if (activeTab === 'PITCHING' && (isReverted || (lead.currentStage !== 'SALES_PITCH_QUEUE' && lead.currentStage !== 'SALES_PITCHING'))) return false;
+      if (activeTab === 'QUOTED' && (isReverted || (lead.currentStage !== 'QUOTATION_SENT' && lead.currentStage !== 'PAYMENT_PENDING'))) return false;
+      if (activeTab === 'PAID' && (isReverted || (lead.currentStage !== 'PAID_AND_AUTHORIZED' && lead.currentStage !== 'FILING_QUEUE'))) return false;
+      if (activeTab === 'REVERTED' && !isReverted) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -157,6 +174,17 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
           >
             Paid &amp; E-Signed ({counts.paid})
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('REVERTED')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+              activeTab === 'REVERTED' ? 'bg-white text-amber-800 shadow-xs' : 'text-amber-800 hover:text-amber-900'
+            }`}
+          >
+            <RotateCcw className="w-3 h-3 text-amber-600" />
+            <span>Reverted ({counts.reverted})</span>
+          </button>
         </div>
       </div>
 
@@ -182,19 +210,28 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
                 </td>
               </tr>
             ) : (
-              filteredLeads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-slate-50/60 transition-colors">
-                  {/* Taxpayer Client */}
-                  <td className="py-3.5 px-4 font-sans">
-                    <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                      <span>{lead.taxpayerName}</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-bold">
-                        TY {lead.taxYear}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-medium">{lead.taxpayerEmail}</div>
-                    <div className="text-[10px] text-slate-400">{lead.taxpayerPhone}</div>
-                  </td>
+              filteredLeads.map((lead) => {
+                const isReverted = isReturnReverted(lead);
+                const lastRevert = (lead.taxDraftSummary as any)?.lastRevert;
+
+                return (
+                  <tr key={lead.id} className={`hover:bg-slate-50/60 transition-colors ${isReverted ? 'bg-amber-50/30' : ''}`}>
+                    {/* Taxpayer Client */}
+                    <td className="py-3.5 px-4 font-sans">
+                      <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                        <span>{lead.taxpayerName}</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-bold">
+                          TY {lead.taxYear}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium">{lead.taxpayerEmail}</div>
+                      <div className="text-[10px] text-slate-400">{lead.taxpayerPhone}</div>
+                      {isReverted && lastRevert && (
+                        <div className="mt-1 text-[10px] text-amber-800 font-semibold bg-amber-100/80 px-2 py-0.5 rounded border border-amber-200 inline-block max-w-xs truncate" title={lastRevert.revertNotes}>
+                          Revert: {lastRevert.reasonCategory?.replace(/_/g, ' ') || 'Revision Needed'}
+                        </div>
+                      )}
+                    </td>
 
                   {/* Location & Visa */}
                   <td className="py-3.5 px-4">
@@ -338,8 +375,9 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
                     })()}
                   </td>
                 </tr>
-              ))
-            )}
+              );
+            })
+          )}
           </tbody>
         </table>
       </div>

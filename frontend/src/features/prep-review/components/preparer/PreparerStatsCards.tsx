@@ -7,13 +7,14 @@ interface PreparerStatsCardsProps {
     inQA: number;
     qaApproved?: number;
     revisions: number;
+    reverted?: number;
     accuracyRate: number;
   };
 }
 
 export const PreparerStatsCards: React.FC<PreparerStatsCardsProps> = ({ stats }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {/* Card 1: Assigned 1040 Drafts */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
@@ -91,7 +92,28 @@ export const PreparerStatsCards: React.FC<PreparerStatsCardsProps> = ({ stats })
             {stats.revisions || 0}
           </div>
           <div className="text-xs text-rose-600 font-medium mt-1">
-            {stats.revisions === 0 ? 'Zero-defect audit rate' : `${stats.revisions} discrepancy rework items`}
+            {stats.revisions === 0 ? 'Zero-defect audit rate' : `${stats.revisions} discrepancy items`}
+          </div>
+        </div>
+      </div>
+
+      {/* Card 5: Reverted to Documenter */}
+      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-500">
+            Reverted to Documenter
+          </span>
+          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200">
+            <RotateCcw className="w-4 h-4" />
+          </div>
+        </div>
+        <div className="mt-3">
+          <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            {stats.reverted || 0}
+          </div>
+          <div className="text-xs text-amber-700 font-medium mt-1 flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
+            <span>Awaiting Intake Documents</span>
           </div>
         </div>
       </div>

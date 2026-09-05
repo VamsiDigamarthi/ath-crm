@@ -35,6 +35,16 @@ export class DocumenterService {
             role: true,
           },
         },
+        assignedPrepAgent: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobile: true,
+            role: true,
+          },
+        },
         assignedSalesAgent: {
           select: {
             id: true,
@@ -983,6 +993,20 @@ export class DocumenterService {
         throw new NotFoundError('Application not found');
       }
 
+      if (app.currentStage === ApplicationStage.DOC_PREP) {
+        throw new Error('This tax application is already transferred to the Tax Preparation Department.');
+      }
+      const lockedStages: ApplicationStage[] = [
+        ApplicationStage.SALES_PITCH_QUEUE,
+        ApplicationStage.SALES_PITCHING,
+        ApplicationStage.FILING_QUEUE,
+        ApplicationStage.FILING_IN_PROGRESS,
+        ApplicationStage.FILING_SUCCESS,
+      ];
+      if (lockedStages.includes(app.currentStage)) {
+        throw new Error(`Cannot transfer to preparation: This tax application is already in downstream stage (${app.currentStage}).`);
+      }
+
       const agentUser = await tx.user.findUnique({
         where: { id: agentUserId },
       });
@@ -991,13 +1015,61 @@ export class DocumenterService {
       const agentName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Documenter Agent';
       const transitionRemarks = `Documenter Agent ${agentName} (${agentUser?.email || ''}) completed document verification and transferred taxpayer return to Tax Preparation Department queue.${remarks ? ` Intake Handover Notes: "${remarks}"` : ''}`;
 
+      const currentDraft = (app.taxDraftSummary as any) || {};
+      const existingRevertsByTarget = currentDraft.revertsByTarget || {};
+      const updatedRevertsByTarget = { ...existingRevertsByTarget };
+      if (updatedRevertsByTarget.DOCUMENTER) {
+        updatedRevertsByTarget.DOCUMENTER = {
+          ...updatedRevertsByTarget.DOCUMENTER,
+          resolved: true,
+          resolvedAt: new Date().toISOString(),
+          resolutionRemarks: remarks || undefined,
+        };
+      }
+      if (updatedRevertsByTarget.PREPARATION_TO_DOCUMENTER) {
+        updatedRevertsByTarget.PREPARATION_TO_DOCUMENTER = {
+          ...updatedRevertsByTarget.PREPARATION_TO_DOCUMENTER,
+          resolved: true,
+          resolvedAt: new Date().toISOString(),
+          resolutionRemarks: remarks || undefined,
+        };
+      }
+      if (updatedRevertsByTarget.SALES_TO_DOCUMENTER) {
+        updatedRevertsByTarget.SALES_TO_DOCUMENTER = {
+          ...updatedRevertsByTarget.SALES_TO_DOCUMENTER,
+          resolved: true,
+          resolvedAt: new Date().toISOString(),
+          resolutionRemarks: remarks || undefined,
+        };
+      }
+
+      const updatedDraft = {
+        ...currentDraft,
+        status: currentDraft.status === 'REVERTED_TO_DOCUMENTER' ? 'IN_PROGRESS' : (currentDraft.status || 'IN_PROGRESS'),
+        documenterNotes: remarks || currentDraft.documenterNotes || undefined,
+        documenterNotesBy: agentName,
+        documenterNotesAt: new Date().toISOString(),
+        revertResolvedAt: new Date().toISOString(),
+        revertsByTarget: updatedRevertsByTarget,
+        lastRevert: currentDraft.lastRevert ? {
+          ...currentDraft.lastRevert,
+          resolved: true,
+          resolvedAt: new Date().toISOString(),
+          resolvedByAgent: agentName,
+          resolvedByUserId: agentUserId,
+          resolutionRemarks: remarks || undefined,
+        } : undefined,
+      };
+
       const updatedApp = await tx.taxApplication.update({
         where: { id: applicationId },
         data: {
           currentStage: ApplicationStage.DOC_PREP,
+          taxDraftSummary: updatedDraft,
         },
         include: {
           customer: true,
+          assignedPrepAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
         },
       });
 
@@ -1012,43 +1084,46 @@ export class DocumenterService {
         },
       });
 
-      // 2. Broadcast Notifications to ALL active Preparation Managers
-      const prepManagers = await tx.user.findMany({
-        where: {
-          role: Role.PREP_MANAGER,
-          isActive: true,
-        },
-      });
-
-      if (prepManagers.length > 0) {
-        await tx.notification.createMany({
-          data: prepManagers.map((manager) => ({
-            recipientUserId: manager.id,
-            targetRole: Role.PREP_MANAGER,
-            applicationId: app.id,
-            title: `New Tax Return Ready for Preparation: ${customerName}`,
-            message: `Documenter Agent ${agentName} has completed intake verification for ${customerName} (TY ${app.taxYear}). Return is ready for preparer allocation.`,
-            category: NotificationCategory.PREP_REVIEW,
-            priority: NotificationPriority.HIGH,
-            actionUrl: `/prep-review/manager/queue`,
-            actionLabel: 'Assign Preparer',
-            relatedLeadName: customerName,
-          })),
-        });
-      } else {
+      // 2. Broadcast Notifications: if already assigned to a Preparer, notify them directly. Otherwise, notify Preparation Managers.
+      if (app.assignedPrepAgentId) {
         await tx.notification.create({
           data: {
-            targetRole: Role.PREP_MANAGER,
+            recipientUserId: app.assignedPrepAgentId,
+            targetRole: Role.TAX_PREPARER,
             applicationId: app.id,
-            title: `New Tax Return Ready for Preparation: ${customerName}`,
-            message: `Documenter Agent ${agentName} has completed intake verification for ${customerName} (TY ${app.taxYear}). Return is ready for preparer allocation.`,
+            title: `Intake Verified - Return Resumed: ${customerName}`,
+            message: `Documenter Agent ${agentName} has re-verified documents for ${customerName} (TY ${app.taxYear}). Return is now active in your drafting workbench.`,
             category: NotificationCategory.PREP_REVIEW,
             priority: NotificationPriority.HIGH,
-            actionUrl: `/prep-review/manager/queue`,
-            actionLabel: 'Assign Preparer',
+            actionUrl: `/prep-review/preparer/workspace/${app.id}`,
+            actionLabel: 'Open 1040 Workspace',
             relatedLeadName: customerName,
           },
         });
+      } else {
+        const prepManagers = await tx.user.findMany({
+          where: {
+            role: Role.PREP_MANAGER,
+            isActive: true,
+          },
+        });
+
+        if (prepManagers.length > 0) {
+          await tx.notification.createMany({
+            data: prepManagers.map((manager) => ({
+              recipientUserId: manager.id,
+              targetRole: Role.PREP_MANAGER,
+              applicationId: app.id,
+              title: `New Tax Return Ready for Preparation: ${customerName}`,
+              message: `Documenter Agent ${agentName} has completed intake verification for ${customerName} (TY ${app.taxYear}). Return is ready for preparer allocation.`,
+              category: NotificationCategory.PREP_REVIEW,
+              priority: NotificationPriority.HIGH,
+              actionUrl: `/prep-review/manager/queue`,
+              actionLabel: 'Assign Preparer',
+              relatedLeadName: customerName,
+            })),
+          });
+        }
       }
 
       return updatedApp;

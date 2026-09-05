@@ -65,10 +65,22 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
     lead.currentStage === 'FILING_IN_PROGRESS' ||
     lead.currentStage === 'FILING_SUCCESS';
 
-  const isReadyForFiling = paymentStatus === 'PAID' && esignStatus === 'SIGNED' && !isAlreadyDispatched;
+  const currentStageStr = (lead.currentStage as string);
+  const isRevertedToPrecedingDept =
+    ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'QA_REVISION_REQUESTED'].includes(currentStageStr) ||
+    (lead.taxDraftSummary as any)?.status === 'REVISION_REQUESTED' ||
+    (lead.taxDraftSummary as any)?.status === 'REVERTED_TO_DOCUMENTER';
+
+  const isReadyForFiling = paymentStatus === 'PAID' && esignStatus === 'SIGNED' && !isAlreadyDispatched && !isRevertedToPrecedingDept;
+
+  const targetDeptName = lead.currentStage === 'DOC_OUTREACH' || (lead.taxDraftSummary as any)?.status === 'REVERTED_TO_DOCUMENTER'
+    ? 'Documenter Intake'
+    : 'Tax Preparation (CPA)';
 
   const dispatchTooltip = isAlreadyDispatched
     ? 'Already Dispatched: Form 1040 has been certified, fee-paid, authorized, and transferred to the IRS Modernized e-File (MeF) Queue.'
+    : isRevertedToPrecedingDept
+    ? `Cannot Dispatch: Return has been sent back for revision and is currently with ${targetDeptName}. It must be corrected and certified by QA before dispatching to IRS.`
     : !isReadyForFiling
     ? paymentStatus !== 'PAID' && esignStatus !== 'SIGNED'
       ? 'Cannot Dispatch: Both fee payment and Form 8879 taxpayer authorization are required before dispatching to IRS.'
@@ -190,6 +202,8 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
             className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
               isAlreadyDispatched
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                : isRevertedToPrecedingDept
+                ? 'bg-amber-100 text-amber-900 border border-amber-300 font-bold'
                 : isReadyForFiling
                 ? 'bg-emerald-100 text-emerald-800'
                 : 'bg-slate-200 text-slate-600'
@@ -197,6 +211,8 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
           >
             {isAlreadyDispatched
               ? 'Transferred to Filing Queue'
+              : isRevertedToPrecedingDept
+              ? `In Revision with ${targetDeptName}`
               : isReadyForFiling
               ? 'Ready to Dispatch'
               : 'Requirements Incomplete'}
@@ -219,8 +235,18 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
           </div>
         </div>
 
-        {/* Clear Explanation when Requirements are Incomplete */}
-        {!isReadyForFiling && !isAlreadyDispatched && (
+        {/* Clear Explanation when Requirements are Incomplete or Reverted */}
+        {isRevertedToPrecedingDept ? (
+          <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-[11px] text-amber-900 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <strong className="font-bold">Return in Revision:</strong>
+              <span className="ml-1">
+                This return is currently with <strong>{targetDeptName}</strong> for Form 1040 corrections. Dispatching to IRS E-Filing is disabled until corrections are completed and certified.
+              </span>
+            </div>
+          </div>
+        ) : !isReadyForFiling && !isAlreadyDispatched && (
           <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div>
@@ -240,9 +266,9 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
         <div className="relative group w-full" title={dispatchTooltip}>
           <Button
             onClick={onDispatchToFiling}
-            disabled={!isReadyForFiling || isAlreadyDispatched}
+            disabled={!isReadyForFiling || isAlreadyDispatched || isRevertedToPrecedingDept}
             className={`w-full text-xs font-bold py-2.5 flex items-center justify-center gap-2 shadow-sm transition-all ${
-              isAlreadyDispatched
+              isAlreadyDispatched || isRevertedToPrecedingDept
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 hover:bg-slate-100 pointer-events-none'
                 : isReadyForFiling
                 ? 'bg-[#16A34A] hover:bg-[#15803D] text-white cursor-pointer'
@@ -254,6 +280,11 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
                 <Lock className="w-3.5 h-3.5 text-slate-400" />
                 <span>Dispatched to Filing Queue</span>
               </>
+            ) : isRevertedToPrecedingDept ? (
+              <>
+                <Lock className="w-3.5 h-3.5 text-amber-700" />
+                <span>With {targetDeptName} (In Revision)</span>
+              </>
             ) : (
               <>
                 <Rocket className="w-4 h-4" />
@@ -263,7 +294,7 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
           </Button>
 
           {/* Hover Tooltip Popup Card - Matching Reviewer Screen Styling */}
-          {(isAlreadyDispatched || !isReadyForFiling) && (
+          {(isAlreadyDispatched || !isReadyForFiling || isRevertedToPrecedingDept) && (
             <div
               className="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block w-72 p-2.5 rounded-lg shadow-2xl border border-slate-700 text-left transition-all duration-150"
               style={{ backgroundColor: '#0f172a', color: '#ffffff', zIndex: 9999 }}

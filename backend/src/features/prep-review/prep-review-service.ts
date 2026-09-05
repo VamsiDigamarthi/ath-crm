@@ -165,25 +165,36 @@ export class PrepReviewService {
     }
 
     // Helper to determine exact real lifecycle stage based on workflow actions
-    const determineStage = (app: any): 'DOC_PREP_COMPLETE' | 'PREP_IN_PROGRESS' | 'QA_IN_REVIEW' | 'QA_REVISION_REQUESTED' | 'QA_APPROVED' => {
+    const determineStage = (app: any): 'DOC_PREP_COMPLETE' | 'PREP_IN_PROGRESS' | 'QA_IN_REVIEW' | 'QA_REVISION_REQUESTED' | 'QA_APPROVED' | 'REVERTED_TO_DOC' => {
       const draftStatus = (app.taxDraftSummary as any)?.status;
+      const lastRevert = (app.taxDraftSummary as any)?.lastRevert;
+      const isRevertedToDocsActive = (draftStatus === 'REVERTED_TO_DOCUMENTER' || app.currentStage === ApplicationStage.DOC_OUTREACH || lastRevert?.targetDepartment === 'DOCUMENTER') &&
+        (lastRevert ? !lastRevert.resolved : true);
+
+      if (isRevertedToDocsActive) {
+        return 'REVERTED_TO_DOC';
+      }
       if (
         app.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
         app.currentStage === ApplicationStage.SALES_PITCHING ||
         app.currentStage === ApplicationStage.FILING_QUEUE ||
         app.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
         app.currentStage === ApplicationStage.FILING_SUCCESS ||
-        draftStatus === 'QA_APPROVED' ||
-        Boolean((app.taxDraftSummary as any)?.qaApprovedByUserId) ||
-        Boolean((app.taxDraftSummary as any)?.qaApprovedAt)
+        draftStatus === 'REVERTED_TO_SALES' ||
+        (lastRevert && !lastRevert.resolved && lastRevert.targetDepartment === 'SALES') ||
+        draftStatus === 'QA_APPROVED'
       ) {
         return 'QA_APPROVED';
       }
+      if (
+        app.currentStage === ApplicationStage.CORRECTION_NEEDED ||
+        (lastRevert && !lastRevert.resolved && lastRevert.targetDepartment === 'PREPARATION') ||
+        (draftStatus === 'REVISION_REQUESTED' && lastRevert?.targetDepartment !== 'SALES')
+      ) {
+        return 'QA_REVISION_REQUESTED';
+      }
       if (draftStatus === 'SUBMITTED_FOR_QA') {
         return 'QA_IN_REVIEW';
-      }
-      if (draftStatus === 'REVISION_REQUESTED' || app.currentStage === ApplicationStage.CORRECTION_NEEDED) {
-        return 'QA_REVISION_REQUESTED';
       }
       if (app.assignedPrepAgentId) {
         return 'PREP_IN_PROGRESS';
@@ -222,6 +233,7 @@ export class PrepReviewService {
     let qaReviewCount = 0;
     let revisionsCount = 0;
     let qaApprovedCount = 0;
+    let revertedCount = 0;
 
     allApplications.forEach((app) => {
       const st = determineStage(app);
@@ -230,6 +242,7 @@ export class PrepReviewService {
       else if (st === 'QA_IN_REVIEW') qaReviewCount++;
       else if (st === 'QA_REVISION_REQUESTED') revisionsCount++;
       else if (st === 'QA_APPROVED') qaApprovedCount++;
+      else if (st === 'REVERTED_TO_DOC') revertedCount++;
     });
 
     // Filter applications for the active tab
@@ -241,6 +254,7 @@ export class PrepReviewService {
       if (query.tab === 'QA_REVIEW') return st === 'QA_IN_REVIEW';
       if (query.tab === 'REVISIONS') return st === 'QA_REVISION_REQUESTED';
       if (query.tab === 'QA_APPROVED') return st === 'QA_APPROVED';
+      if (query.tab === 'REVERTED' || query.tab === 'REVERTED_TO_DOC') return st === 'REVERTED_TO_DOC';
       return true;
     });
 
@@ -336,6 +350,7 @@ export class PrepReviewService {
         qaReview: qaReviewCount,
         revisions: revisionsCount,
         qaApproved: qaApprovedCount,
+        reverted: revertedCount,
       },
       pagination: {
         currentPage: page,
@@ -473,13 +488,23 @@ export class PrepReviewService {
    */
   public static async getDashboardStats() {
     const baseWhere = {
-      currentStage: {
-        in: [
-          ApplicationStage.DOC_PREP,
-          ApplicationStage.CORRECTION_NEEDED,
-          ApplicationStage.SALES_PITCH_QUEUE,
-        ],
-      },
+      OR: [
+        {
+          currentStage: {
+            in: [
+              ApplicationStage.DOC_PREP,
+              ApplicationStage.CORRECTION_NEEDED,
+              ApplicationStage.SALES_PITCH_QUEUE,
+            ],
+          },
+        },
+        {
+          assignedPrepAgentId: { not: null },
+        },
+        {
+          assignedReviewAgentId: { not: null },
+        },
+      ],
     };
 
     const apps = await prisma.taxApplication.findMany({
@@ -495,6 +520,7 @@ export class PrepReviewService {
     let inQualityReview = 0;
     let revisionsPending = 0;
     let readyForSales = 0;
+    let revertedToDocs = 0;
 
     let standardCount = 0;
     let investmentsCount = 0;
@@ -503,12 +529,22 @@ export class PrepReviewService {
 
     apps.forEach((app) => {
       const draftStatus = (app.taxDraftSummary as any)?.status;
-      if (app.currentStage === ApplicationStage.SALES_PITCH_QUEUE || draftStatus === 'QA_APPROVED') {
-        readyForSales++;
+      const lastRevert = (app.taxDraftSummary as any)?.lastRevert;
+      const isRevertedToDocsActive = (draftStatus === 'REVERTED_TO_DOCUMENTER' || app.currentStage === ApplicationStage.DOC_OUTREACH || lastRevert?.targetDepartment === 'DOCUMENTER') &&
+        (lastRevert ? !lastRevert.resolved : true);
+
+      if (isRevertedToDocsActive) {
+        revertedToDocs++;
+      } else if (
+        draftStatus === 'REVISION_REQUESTED' ||
+        app.currentStage === ApplicationStage.CORRECTION_NEEDED ||
+        (lastRevert && !lastRevert.resolved && lastRevert.targetDepartment === 'PREPARATION')
+      ) {
+        revisionsPending++;
       } else if (draftStatus === 'SUBMITTED_FOR_QA') {
         inQualityReview++;
-      } else if (draftStatus === 'REVISION_REQUESTED' || app.currentStage === ApplicationStage.CORRECTION_NEEDED) {
-        revisionsPending++;
+      } else if (app.currentStage === ApplicationStage.SALES_PITCH_QUEUE || draftStatus === 'QA_APPROVED') {
+        readyForSales++;
       } else if (app.assignedPrepAgentId) {
         underPreparation++;
       } else {
@@ -718,13 +754,38 @@ export class PrepReviewService {
       : 'Taxpayer Client';
 
     const draft: any = app.taxDraftSummary || {};
-    const effectiveStage = draft.status === 'SUBMITTED_FOR_QA'
-      ? 'QA_IN_REVIEW'
-      : draft.status === 'REVISION_REQUESTED'
+    const lastRevert = draft.lastRevert;
+    const isRevertedToDocsActive = (draft.status === 'REVERTED_TO_DOCUMENTER' || app.currentStage === ApplicationStage.DOC_OUTREACH || lastRevert?.targetDepartment === 'DOCUMENTER') &&
+      (lastRevert ? !lastRevert.resolved : true);
+
+    const effectiveStage = isRevertedToDocsActive
+      ? 'REVERTED_TO_DOC'
+      : (draft.status === 'REVISION_REQUESTED' || app.currentStage === ApplicationStage.CORRECTION_NEEDED || (lastRevert && !lastRevert.resolved && lastRevert.targetDepartment === 'PREPARATION'))
         ? 'QA_REVISION_REQUESTED'
-        : draft.status === 'QA_APPROVED'
-          ? 'QA_APPROVED'
-          : 'PREP_IN_PROGRESS';
+        : draft.status === 'SUBMITTED_FOR_QA'
+          ? 'QA_IN_REVIEW'
+          : (draft.status === 'QA_APPROVED' || app.currentStage === ApplicationStage.SALES_PITCH_QUEUE)
+            ? 'QA_APPROVED'
+            : 'PREP_IN_PROGRESS';
+
+    let documenterNotes = draft.documenterNotes || draft.lastRevert?.resolutionRemarks || null;
+    let documenterNotesBy = draft.documenterNotesBy || draft.lastRevert?.resolvedByAgent || null;
+    let documenterNotesAt = draft.documenterNotesAt || draft.lastRevert?.resolvedAt || null;
+
+    // Fallback: search stageHistories for any DOC_PREP handover remarks
+    if (!documenterNotes && app.stageHistories?.length > 0) {
+      const prepHist = app.stageHistories.find(
+        (s: any) => (s.toStage === ApplicationStage.DOC_PREP || s.toStage === 'DOC_PREP') && Boolean(s.remarks?.includes('Intake Handover Notes:'))
+      );
+      if (prepHist && prepHist.remarks) {
+        const match = prepHist.remarks.match(/Intake Handover Notes:\s*"([^"]+)"/);
+        if (match && match[1]) {
+          documenterNotes = match[1];
+          documenterNotesBy = prepHist.movedByUser ? `${prepHist.movedByUser.firstName || ''} ${prepHist.movedByUser.lastName || ''}`.trim() || prepHist.movedByUser.email?.split('@')[0] : 'Documenter Agent';
+          documenterNotesAt = prepHist.createdAt?.toISOString ? prepHist.createdAt.toISOString() : String(prepHist.createdAt);
+        }
+      }
+    }
 
     return {
       applicationId: app.id,
@@ -732,6 +793,9 @@ export class PrepReviewService {
       currentStage: effectiveStage,
       targetDueDate: draft.targetDueDate || null,
       prepNotes: draft.preparerNotes || draft.prepNotes || '',
+      documenterNotes,
+      documenterNotesBy,
+      documenterNotesAt,
       taxDraftSummary: app.taxDraftSummary,
       taxpayer: {
         id: customer?.id || '',
@@ -849,12 +913,29 @@ export class PrepReviewService {
       throw new Error('Tax application not found');
     }
 
+    const draftState = (app.taxDraftSummary as any)?.status;
+    const lastRevert = (app.taxDraftSummary as any)?.lastRevert;
+    const isReverted = (draftState === 'REVERTED_TO_DOCUMENTER' || app.currentStage === ApplicationStage.DOC_OUTREACH) && (lastRevert ? !lastRevert.resolved : true);
+
+    if (isReverted) {
+      throw new Error('Cannot submit return for QA review while it is currently reverted to Documenter department awaiting intake documents.');
+    }
+
+    const existingLastRevert = (app.taxDraftSummary as any)?.lastRevert;
+    const resolvedLastRevert = existingLastRevert ? {
+      ...existingLastRevert,
+      resolved: true,
+      resolvedAt: new Date().toISOString(),
+      resolvedByUserId: userId,
+    } : undefined;
+
     const updatedSummary = {
       ...(app.taxDraftSummary as any || {}),
       ...payload,
       status: 'SUBMITTED_FOR_QA',
       submittedAt: new Date().toISOString(),
       submittedByUserId: userId,
+      ...(resolvedLastRevert ? { lastRevert: resolvedLastRevert } : {}),
     };
 
     const updated = await prisma.taxApplication.update({
@@ -1027,12 +1108,32 @@ export class PrepReviewService {
         : '$0 Net Balance';
 
     // 4. Update Application to SALES_PITCH_QUEUE
+    const existingRevertsByTarget: Record<string, any> = currentDraft.revertsByTarget || {};
+    const resolvedRevertsByTarget: Record<string, any> = {};
+    for (const [key, rev] of Object.entries(existingRevertsByTarget)) {
+      resolvedRevertsByTarget[key] = {
+        ...(rev as any),
+        resolved: true,
+        resolvedAt: new Date().toISOString(),
+        resolvedByAgent: reviewerName,
+        resolvedByUserId: userId,
+      };
+    }
+
     const updatedSummary = {
-      ...(app.taxDraftSummary as any || {}),
+      ...currentDraft,
       status: 'QA_APPROVED',
       qaApprovedAt: new Date().toISOString(),
       qaApprovedByUserId: userId,
       qaRemarks: remarks,
+      revertsByTarget: resolvedRevertsByTarget,
+      lastRevert: currentDraft.lastRevert ? {
+        ...currentDraft.lastRevert,
+        resolved: true,
+        resolvedAt: new Date().toISOString(),
+        resolvedByAgent: reviewerName,
+        resolvedByUserId: userId,
+      } : null,
     };
 
     const updated = await prisma.taxApplication.update({

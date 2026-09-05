@@ -7,6 +7,7 @@ import {
   getPrepReviewWorkspaceDetails,
   savePrepReviewWorkspaceDraft,
   submitPrepReviewWorkspaceToQA,
+  revertPrepReviewWorkspace,
   viewPrepReviewDocument,
   downloadPrepReviewDocument,
   signOffPrepReviewQAReturn,
@@ -41,6 +42,7 @@ router.post('/assign', requireAuth, authorize(Role.ADMIN, Role.PREP_MANAGER), as
 router.get('/workspace/:id', requireAuth, authorize(...PREP_ROLES), getPrepReviewWorkspaceDetails);
 router.post('/workspace/:id/save-draft', requireAuth, authorize(...PREP_ROLES), savePrepReviewWorkspaceDraft);
 router.post('/workspace/:id/submit-qa', requireAuth, authorize(...PREP_ROLES), submitPrepReviewWorkspaceToQA);
+router.post('/workspace/:id/revert', requireAuth, authorize(...PREP_ROLES), revertPrepReviewWorkspace);
 
 // 6. Document View & Download
 router.get('/documents/:id/view', requireAuth, authorize(...PREP_ROLES), viewPrepReviewDocument);
@@ -51,3 +53,4 @@ router.post('/reviewer/audit/:id/sign-off', requireAuth, authorize(...PREP_ROLES
 router.post('/reviewer/audit/:id/request-revision', requireAuth, authorize(...PREP_ROLES), requestRevisionPrepReviewQAReturn);
 
 export { router as prepReviewRouter };
+

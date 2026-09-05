@@ -10,8 +10,7 @@ import {
   FolderArchive, 
   AlertTriangle,
   Info,
-  ExternalLink,
-  Trash2
+  ExternalLink
 } from 'lucide-react';
 import { useNotificationStore } from '../store/notification-store';
 import { useAuthStore } from '@/features/auth/store/auth-store';
@@ -30,7 +29,6 @@ export const NotificationBellPopover: React.FC = () => {
     fetchNotifications,
     markAsRead, 
     markAllAsRead, 
-    deleteNotification,
     getUnreadCount 
   } = useNotificationStore();
 

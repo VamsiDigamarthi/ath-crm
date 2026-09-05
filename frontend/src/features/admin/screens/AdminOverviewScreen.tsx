@@ -52,11 +52,11 @@ export const AdminOverviewScreen: React.FC = () => {
         if (res.data.counts) {
           setCounts(res.data.counts);
         }
-        if (res.data.pipelineFlow) {
-          setPipelineFlow(res.data.pipelineFlow);
+        if ((res.data as any).pipelineFlow) {
+          setPipelineFlow((res.data as any).pipelineFlow);
         }
-        if (res.data.visaMix) {
-          setVisaMix(res.data.visaMix);
+        if ((res.data as any).visaMix) {
+          setVisaMix((res.data as any).visaMix);
         }
         if (res.data.recentActivities) {
           setActivities(res.data.recentActivities);

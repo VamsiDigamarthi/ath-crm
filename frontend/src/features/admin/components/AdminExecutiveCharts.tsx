@@ -16,9 +16,6 @@ import {
   BarChart3, 
   PieChart as PieIcon, 
   TrendingUp, 
-  ShieldCheck, 
-  DollarSign, 
-  CheckCircle2 
 } from 'lucide-react';
 
 export interface PipelineFlowItem {

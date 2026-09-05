@@ -5,7 +5,7 @@ import { prepReviewService } from '../services/prep-review-service';
 import type { PrepReviewLead } from '../types/prep-review.types';
 import toast from 'react-hot-toast';
 
-export type PreparerQueueTab = 'ALL' | 'DRAFTING' | 'QA_SUBMITTED' | 'QA_APPROVED' | 'REVISIONS';
+export type PreparerQueueTab = 'ALL' | 'DRAFTING' | 'QA_SUBMITTED' | 'QA_APPROVED' | 'REVISIONS' | 'REVERTED';
 
 export function useTaxPreparerQueue() {
   const navigate = useNavigate();
@@ -49,12 +49,34 @@ export function useTaxPreparerQueue() {
   }, [fetchPreparerLeads]);
 
   // Helper checks
+  const isReturnReverted = (lead: PrepReviewLead) => {
+    return (
+      (lead.prepStage as any) === 'REVERTED_TO_DOC' ||
+      (lead.prepStage as any) === 'REVERTED_TO_DOCUMENTER' ||
+      lead.currentStage === 'DOC_OUTREACH' ||
+      lead.taxDraftSummary?.status === 'REVERTED_TO_DOCUMENTER' ||
+      (Boolean(lead.taxDraftSummary?.lastRevert) && (lead.taxDraftSummary?.lastRevert as any)?.targetDepartment === 'DOCUMENTER')
+    );
+  };
+
+  const isReturnRevision = (lead: PrepReviewLead) => {
+    const lastRevert = lead.taxDraftSummary?.lastRevert as any;
+    return (
+      lead.prepStage === 'QA_REVISION_REQUESTED' ||
+      lead.currentStage === 'QA_REVISION_REQUESTED' ||
+      lead.currentStage === 'CORRECTION_NEEDED' ||
+      lead.taxDraftSummary?.status === 'REVISION_REQUESTED' ||
+      (Boolean(lastRevert && !lastRevert.resolved) && lastRevert.targetDepartment === 'PREPARATION')
+    );
+  };
+
   const isReturnApproved = (lead: PrepReviewLead) => {
+    if (isReturnReverted(lead) || isReturnRevision(lead) || lead.currentStage === 'CORRECTION_NEEDED' || lead.currentStage === 'DOC_OUTREACH') {
+      return false;
+    }
     return (
       lead.prepStage === 'QA_APPROVED' ||
       lead.taxDraftSummary?.status === 'QA_APPROVED' ||
-      Boolean(lead.taxDraftSummary?.qaApprovedByUserId) ||
-      Boolean(lead.taxDraftSummary?.qaApprovedAt) ||
       [
         'QA_APPROVED',
         'SALES_PITCH_QUEUE',
@@ -66,15 +88,6 @@ export function useTaxPreparerQueue() {
         'FILING_IN_PROGRESS',
         'FILING_SUCCESS',
       ].includes(lead.currentStage)
-    );
-  };
-
-  const isReturnRevision = (lead: PrepReviewLead) => {
-    return (
-      lead.prepStage === 'QA_REVISION_REQUESTED' ||
-      lead.currentStage === 'QA_REVISION_REQUESTED' ||
-      lead.currentStage === 'CORRECTION_NEEDED' ||
-      lead.taxDraftSummary?.status === 'REVISION_REQUESTED'
     );
   };
 
@@ -93,9 +106,11 @@ export function useTaxPreparerQueue() {
     let qaSubmitted = 0;
     let qaApproved = 0;
     let revisions = 0;
+    let reverted = 0;
 
     allLeads.forEach((lead) => {
-      if (isReturnRevision(lead)) revisions++;
+      if (isReturnReverted(lead)) reverted++;
+      else if (isReturnRevision(lead)) revisions++;
       else if (isReturnApproved(lead)) qaApproved++;
       else if (isReturnSubmittedToQA(lead)) qaSubmitted++;
       else drafting++;
@@ -107,6 +122,7 @@ export function useTaxPreparerQueue() {
       qaSubmitted,
       qaApproved,
       revisions,
+      reverted,
     };
   }, [allLeads]);
 
@@ -117,6 +133,7 @@ export function useTaxPreparerQueue() {
       inQA: counts.qaSubmitted,
       qaApproved: counts.qaApproved,
       revisions: counts.revisions,
+      reverted: counts.reverted,
       accuracyRate: counts.revisions === 0 ? 100 : Math.round(((allLeads.length - counts.revisions) / (allLeads.length || 1)) * 100),
     };
   }, [allLeads.length, counts]);
@@ -124,11 +141,13 @@ export function useTaxPreparerQueue() {
   // Filtered Leads
   const filteredReturns = useMemo(() => {
     return allLeads.filter((item) => {
-      const approved = isReturnApproved(item);
-      const revision = isReturnRevision(item);
-      const submitted = isReturnSubmittedToQA(item);
-      const drafting = !approved && !revision && !submitted;
+      const reverted = isReturnReverted(item);
+      const approved = !reverted && isReturnApproved(item);
+      const revision = !reverted && isReturnRevision(item);
+      const submitted = !reverted && isReturnSubmittedToQA(item);
+      const drafting = !reverted && !approved && !revision && !submitted;
 
+      if (activeTab === 'REVERTED' && !reverted) return false;
       if (activeTab === 'DRAFTING' && !drafting) return false;
       if (activeTab === 'QA_SUBMITTED' && !submitted) return false;
       if (activeTab === 'QA_APPROVED' && !approved) return false;

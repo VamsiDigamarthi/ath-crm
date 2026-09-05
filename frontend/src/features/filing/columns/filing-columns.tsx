@@ -1,7 +1,7 @@
 import type { ColumnDef } from '@/shared/components/AppTable';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
-import { Send, CheckCircle2, Clock, UserCheck, ArrowRight } from 'lucide-react';
+import { Send, CheckCircle2, Clock, UserCheck, ArrowRight, RotateCcw } from 'lucide-react';
 import type { FilingLeadItem } from '../types/filing.types';
 
 export interface FilingColumnsOptions {
@@ -30,30 +30,27 @@ export function getFilingColumns({
               <span className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">
                 {item.taxpayerName}
               </span>
-              {item.visaType && item.visaType !== '-' && (
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  {item.visaType}
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                TY {item.taxYear} Form 1040
+              </span>
+              {item.lastRevert?.resolved && item.currentStage === 'FILING_QUEUE' && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-teal-50 text-teal-800 border border-teal-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+                  <span>Resubmitted (Corrected)</span>
                 </span>
               )}
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                TY {item.taxYear || 2025} Form 1040
-              </span>
             </div>
 
-            {/* Line 2: Email and Phone stacked cleanly with tight space */}
-            <div className="space-y-0.5 pt-0.5">
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-700 font-medium">
-                <span>{item.taxpayerEmail}</span>
-                {item.taxpayerEmail && item.taxpayerEmail !== '-' && (
-                  <AppCopyButton text={item.taxpayerEmail} size="sm" />
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                <span>{item.taxpayerPhone}</span>
-                {item.taxpayerPhone && item.taxpayerPhone !== '-' && (
-                  <AppCopyButton text={item.taxpayerPhone} size="sm" />
-                )}
-              </div>
+            {/* Line 2: Email */}
+            <div className="flex items-center gap-1 text-[11px] text-slate-500">
+              <span className="truncate max-w-[170px]">{item.taxpayerEmail}</span>
+              <AppCopyButton text={item.taxpayerEmail} size="sm" />
+            </div>
+
+            {/* Line 3: Phone */}
+            <div className="flex items-center gap-1 text-[11px] text-slate-500">
+              <span>{item.taxpayerPhone}</span>
+              <AppCopyButton text={item.taxpayerPhone} size="sm" />
             </div>
           </div>
         );
@@ -62,41 +59,40 @@ export function getFilingColumns({
     {
       header: 'Location & SSN',
       accessorKey: 'stateOfResidence',
-      render: (item) => (
-        <div className="space-y-0.5 whitespace-nowrap">
-          <div className="text-xs font-bold text-slate-800">
-            {item.stateOfResidence || 'United States'}
+      render: (item) => {
+        return (
+          <div className="space-y-1 text-xs">
+            <div className="font-bold text-slate-800">{item.stateOfResidence}</div>
+            <div className="font-mono text-[11px] text-slate-500 tracking-wider">
+              {item.ssnMasked}
+            </div>
           </div>
-          <div className="text-[10px] text-slate-400 font-mono font-medium">
-            {item.ssnMasked || '***-**-****'}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       header: 'Certified 1040 Refund',
-      accessorKey: 'federalRefund',
+      accessorKey: 'totalRefundOrDue',
+      sortable: true,
       render: (item) => {
-        const hasRefund = item.federalRefund > 0;
-        const balanceDueVal = item.balanceDue || item.federalBalanceDue || 0;
-        const hasDue = balanceDueVal > 0;
+        const isRefund = item.federalRefund > 0;
+        const balVal = item.balanceDue || item.federalBalanceDue || 0;
 
         return (
-          <div className="space-y-0.5 whitespace-nowrap">
-            {hasRefund ? (
-              <span className="font-bold text-[#16A34A] text-xs bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
-                +${item.federalRefund.toLocaleString()} Fed Refund
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`text-xs sm:text-sm font-bold ${
+                  isRefund ? 'text-[#16A34A]' : 'text-rose-600'
+                }`}
+              >
+                {isRefund ? `+$${item.federalRefund.toLocaleString()}` : `-$${balVal.toLocaleString()}`}
               </span>
-            ) : hasDue ? (
-              <span className="font-bold text-rose-600 text-xs bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 inline-block">
-                -${balanceDueVal.toLocaleString()} Tax Due
+              <span className="text-[10px] text-slate-400 font-semibold">
+                {isRefund ? 'Fed Refund' : 'Tax Due'}
               </span>
-            ) : (
-              <span className="font-semibold text-slate-500 text-xs bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 inline-block">
-                $0 Liability
-              </span>
-            )}
-            <div className="text-[10px] text-slate-500">
+            </div>
+            <div className="text-[10px] text-slate-500 font-medium">
               +${item.stateRefund.toLocaleString()} {item.stateOfResidence} State
             </div>
           </div>
@@ -187,6 +183,30 @@ export function getFilingColumns({
           </span>
         );
       }
+      if (item.currentStage === 'SALES_PITCH_QUEUE' || item.currentStage === 'SALES_PITCHING') {
+        return (
+          <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
+            <RotateCcw className="w-3 h-3 text-amber-600" />
+            <span>Reverted to Sales</span>
+          </span>
+        );
+      }
+      if (item.currentStage === 'CORRECTION_NEEDED') {
+        return (
+          <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
+            <RotateCcw className="w-3 h-3 text-amber-600" />
+            <span>Reverted to Preparer</span>
+          </span>
+        );
+      }
+      if (item.currentStage === 'DOC_OUTREACH' || item.currentStage === 'DOC_PREP') {
+        return (
+          <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1">
+            <RotateCcw className="w-3 h-3 text-amber-600" />
+            <span>Reverted to Documenter</span>
+          </span>
+        );
+      }
       return (
         <span className="whitespace-nowrap px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">
           <Send className="w-3 h-3 text-blue-600" />
@@ -202,34 +222,55 @@ export function getFilingColumns({
       accessorKey: 'id',
       headerClassName: 'text-right',
       cellClassName: 'text-right',
-      render: (item) => (
-        <div className="flex items-center gap-1.5 justify-end whitespace-nowrap">
-          {!isSpecialist && onOpenAssignModal && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenAssignModal(item)}
-              className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold h-7 px-2.5 cursor-pointer flex items-center gap-1"
-            >
-              <UserCheck className="w-3 h-3 text-slate-500" />
-              <span>Assign</span>
-            </Button>
-          )}
+      render: (item) => {
+        const isAssigned = Boolean(item.assignedFilingAgent);
+        const isReverted = ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'SALES_PITCH_QUEUE', 'SALES_PITCHING'].includes(item.currentStage);
 
-          <Button
-            size="sm"
-            onClick={() => onOpenWorkspace(item)}
-            className={`text-xs font-bold h-7 px-3 flex items-center gap-1 cursor-pointer shadow-2xs whitespace-nowrap ${
-              item.currentStage === 'FILING_SUCCESS'
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-                : 'bg-[#16A34A] hover:bg-[#15803D] text-white'
-            }`}
-          >
-            <span>{item.currentStage === 'FILING_SUCCESS' ? 'Certificate' : 'Transmit E-File'}</span>
-            <ArrowRight className="w-3 h-3" />
-          </Button>
-        </div>
-      ),
+        return (
+          <div className="flex items-center gap-1.5 justify-end whitespace-nowrap">
+            {!isSpecialist && onOpenAssignModal && (
+              <span
+                title={
+                  isAssigned
+                    ? `Already assigned to ${item.assignedFilingAgent?.name}. Reassignment can be done via 'Change' in Assigned Staff column.`
+                    : 'Assign return to filing specialist'
+                }
+                className={isAssigned ? 'inline-block cursor-not-allowed' : 'inline-block'}
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => !isAssigned && onOpenAssignModal(item)}
+                  disabled={isAssigned}
+                  className={`text-xs font-semibold h-7 px-2.5 flex items-center gap-1 transition-all ${
+                    isAssigned
+                      ? 'border-slate-200 bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed shadow-none'
+                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer'
+                  }`}
+                >
+                  <UserCheck className={`w-3 h-3 ${isAssigned ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <span>Assign</span>
+                </Button>
+              </span>
+            )}
+
+            <Button
+              size="sm"
+              onClick={() => onOpenWorkspace(item)}
+              className={`text-xs font-bold h-7 px-3 flex items-center gap-1 cursor-pointer shadow-2xs whitespace-nowrap ${
+                item.currentStage === 'FILING_SUCCESS'
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                  : isReverted
+                  ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300'
+                  : 'bg-[#16A34A] hover:bg-[#15803D] text-white'
+              }`}
+            >
+              <span>{item.currentStage === 'FILING_SUCCESS' ? 'Certificate' : isReverted ? 'View in Revision' : 'Transmit E-File'}</span>
+              <ArrowRight className="w-3 h-3" />
+            </Button>
+          </div>
+        );
+      },
     });
   }
 

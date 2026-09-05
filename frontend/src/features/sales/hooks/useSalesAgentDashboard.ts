@@ -77,13 +77,22 @@ export function useSalesAgentDashboard() {
     let quoted = 0;
     let closed = 0;
     let revenueToday = 0;
+    let reverted = 0;
     let totalPotentialValue = 0;
 
     allLeads.forEach((l) => {
       const fee = Number(l.feeBreakdown?.totalServiceFee) || 0;
       totalPotentialValue += fee;
 
-      if (isPaidOrClosed(l)) {
+      const isReverted =
+        l.currentStage === 'CORRECTION_NEEDED' ||
+        l.currentStage === 'DOC_OUTREACH' ||
+        (l.taxDraftSummary as any)?.status === 'REVISION_REQUESTED' ||
+        (l.taxDraftSummary as any)?.status === 'REVERTED_TO_DOCUMENTER';
+
+      if (isReverted) {
+        reverted++;
+      } else if (isPaidOrClosed(l)) {
         closed++;
         revenueToday += fee;
       } else if (isQuotedOrPaymentPending(l)) {
@@ -104,6 +113,7 @@ export function useSalesAgentDashboard() {
       dealsClosedToday: closed,
       myRevenueToday: revenueToday,
       myConversionRate: conversionRate,
+      revertedLeads: reverted,
       avgDealSize,
       totalPotentialValue,
     };

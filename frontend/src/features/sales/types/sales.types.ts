@@ -9,6 +9,9 @@ export type SalesLeadStage =
   | 'FILING_QUEUE'          // Transferred to Filing Operations
   | 'FILING_IN_PROGRESS'    // Filing currently active
   | 'FILING_SUCCESS'        // Successfully accepted by IRS
+  | 'CORRECTION_NEEDED'     // Reverted to Tax Preparer for calculations revision
+  | 'DOC_OUTREACH'          // Reverted to Documenter for missing paperwork
+  | 'DOC_PREP'              // Resumed Tax Preparation
   | 'PITCH_REJECTED';       // Client declined / dropped
 
 export interface SalesFeeBreakdown {
@@ -62,6 +65,7 @@ export interface SalesLeadItem extends Record<string, unknown> {
 
   // Complete Form 1040 Tax Calculation Draft from Preparer & QA Reviewer
   taxDraftSummary?: {
+    status?: string;
     w2Wages?: number;
     taxableInterest?: number;
     capitalGains?: number;
@@ -84,6 +88,20 @@ export interface SalesLeadItem extends Record<string, unknown> {
     preparerNotes?: string;
     auditorRemarks?: string;
     targetDueDate?: string;
+    lastRevert?: {
+      sourceDepartment: string;
+      targetDepartment: string;
+      fromStage: string;
+      toStage: string;
+      reasonCategory: string;
+      missingDocumentTypes?: string[];
+      revertNotes: string;
+      revertedAt: string;
+      revertedByUserId: string;
+      revertedByName: string;
+      revertedByRole: string;
+      resolved?: boolean;
+    };
   };
 
   // Pricing & Payment Status
@@ -156,6 +174,7 @@ export interface SalesManagerStats {
   totalRevenueMTD: number;
   avgDealSize: number;
   conversionRatePct: number;
+  revertedLeads?: number;
 }
 
 export interface SalesAgentStats {
@@ -165,4 +184,5 @@ export interface SalesAgentStats {
   dealsClosedToday: number;
   myRevenueToday: number;
   myConversionRate: number;
+  revertedLeads: number;
 }

@@ -7,6 +7,7 @@ import { salesRouter } from "../features/sales/sales-routes.js";
 import { customerRouter } from "../features/customer/customer-routes.js";
 import { filingRouter } from "../features/filing/filing-routes.js";
 import { notificationRouter } from "../features/notifications/notification-routes.js";
+import { workflowRouter } from "../features/workflow/workflow-routes.js";
 
 const router = Router();
 
@@ -19,5 +20,7 @@ router.use("/sales", salesRouter);
 router.use("/customer", customerRouter);
 router.use("/filing", filingRouter);
 router.use("/notifications", notificationRouter);
+router.use("/workflow", workflowRouter);
 
 export { router as rootRouter };
+

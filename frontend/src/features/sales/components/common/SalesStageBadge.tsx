@@ -1,4 +1,5 @@
 import React from 'react';
+import { RotateCcw } from 'lucide-react';
 import type { SalesLeadStage } from '../../types/sales.types';
 
 interface SalesStageBadgeProps {
@@ -45,6 +46,30 @@ export const SalesStageBadge: React.FC<SalesStageBadgeProps> = ({ stage }) => {
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
           <span>In Filing Queue</span>
+        </span>
+      );
+
+    case 'CORRECTION_NEEDED':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+          <RotateCcw className="w-3 h-3 text-amber-700" />
+          <span>Sent to Prep (Revision)</span>
+        </span>
+      );
+
+    case 'DOC_OUTREACH':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-900 border border-orange-300">
+          <RotateCcw className="w-3 h-3 text-orange-700" />
+          <span>Sent to Documenter</span>
+        </span>
+      );
+
+    case 'DOC_PREP':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+          <RotateCcw className="w-3 h-3 text-amber-600" />
+          <span>In Tax Prep</span>
         </span>
       );
 

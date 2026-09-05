@@ -105,6 +105,7 @@ export const salesService = {
         dealsClosedToday: s?.dealsClosedToday || 0,
         myRevenueToday: s?.revenueToday || 0,
         myConversionRate: s?.conversionRate || 0,
+        revertedLeads: s?.revertedLeads || s?.revertedCount || 0,
       };
     } catch {
       return {
@@ -114,6 +115,7 @@ export const salesService = {
         dealsClosedToday: 0,
         myRevenueToday: 0,
         myConversionRate: 0,
+        revertedLeads: 0,
       };
     }
   },

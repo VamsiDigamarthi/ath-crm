@@ -25,6 +25,20 @@ export const PrepStageBadge: React.FC<PrepStageBadgeProps> = ({
   assignedCloserName,
   assignedFileOpName
 }) => {
+  // If stage is REVERTED_TO_DOC, REVERTED_TO_DOCUMENTER, or DOC_OUTREACH, always show Reverted badge
+  if (
+    stage === 'REVERTED_TO_DOC' ||
+    stage === 'REVERTED_TO_DOCUMENTER' ||
+    stage === 'DOC_OUTREACH'
+  ) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-300">
+        <RotateCcw className="w-3 h-3 text-amber-600 shrink-0" />
+        <span>Reverted to Documenter</span>
+      </span>
+    );
+  }
+
   // If assigned preparer exists and stage is DOC_PREP, show Under Preparation (1040)
   if (assignedPreparerName && (stage === 'DOC_PREP' || stage === 'DOC_PREP_COMPLETE')) {
     return (

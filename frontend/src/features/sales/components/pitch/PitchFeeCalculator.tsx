@@ -29,6 +29,8 @@ interface PitchFeeCalculatorProps {
   onOpenEsignModal: () => void;
   paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED';
   esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';
+  isLocked?: boolean;
+  lockReason?: string;
 }
 
 export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
@@ -38,6 +40,8 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   onOpenEsignModal,
   paymentStatus,
   esignStatus,
+  isLocked = false,
+  lockReason,
 }) => {
   const [couponCode, setCouponCode] = useState('');
 
@@ -338,8 +342,14 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
           {paymentStatus !== 'PAID' ? (
             <Button
               size="sm"
+              disabled={isLocked}
+              title={isLocked ? lockReason || 'Payment collection locked while return is in revision' : undefined}
               onClick={onOpenPaymentModal}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
+              className={`text-xs font-bold flex items-center gap-1.5 shadow-md ${
+                isLocked
+                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600 opacity-60'
+                  : 'bg-[#16A34A] hover:bg-[#15803D] text-white cursor-pointer'
+              }`}
             >
               <CreditCard className="w-4 h-4" />
               <span>Collect Payment ($ {feeBreakdown.totalServiceFee})</span>
@@ -355,8 +365,14 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
             <Button
               variant="outline"
               size="sm"
+              disabled={isLocked}
+              title={isLocked ? lockReason || 'E-Sign authorization locked while return is in revision' : undefined}
               onClick={onOpenEsignModal}
-              className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              className={`border-white/20 text-xs font-bold flex items-center gap-1.5 ${
+                isLocked
+                  ? 'bg-white/5 text-slate-400 cursor-not-allowed opacity-60'
+                  : 'bg-white/10 hover:bg-white/20 text-white cursor-pointer'
+              }`}
             >
               <FileCheck className="w-4 h-4" />
               <span>Authorize Form 8879</span>

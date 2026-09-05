@@ -68,6 +68,21 @@ export interface FilingLeadItem extends Record<string, unknown> {
   esignStatus: 'SIGNED' | 'PENDING';
   esignCompletedAt?: string | null;
   taxpayerPin?: string;
+  lastRevert?: {
+    sourceDepartment?: string;
+    targetDepartment?: string;
+    fromStage?: string;
+    toStage?: string;
+    reasonCategory?: string;
+    missingDocumentTypes?: string[];
+    revertNotes?: string;
+    revertedAt?: string;
+    revertedByName?: string;
+    revertedByRole?: string;
+    resolved?: boolean;
+    resolvedAt?: string;
+  } | null;
+  taxDraftSummary?: any;
   assignedFilingAgent?: {
     id: string;
     name: string;

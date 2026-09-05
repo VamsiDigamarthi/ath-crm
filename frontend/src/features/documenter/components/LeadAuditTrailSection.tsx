@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   History, 
   ArrowRight, 
@@ -8,8 +8,10 @@ import {
   Clock, 
   Search, 
   GitCommit,
-  UploadCloud
+  UploadCloud,
+  RotateCcw
 } from 'lucide-react';
+import { AppPagination } from '@/shared/components/AppPagination';
 import type { StageHistoryItem, AuditLogItem, CallLogItem } from '../types/documenter.types';
 
 export interface LeadAuditTrailSectionProps {
@@ -81,10 +83,17 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
   const [filter, setFilter] = useState<TimelineFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedEvents, setExpandedEvents] = useState<Record<string, boolean>>({});
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(5);
 
   const toggleExpand = (id: string) => {
     setExpandedEvents((prev) => ({ ...prev, [id]: !prev[id] }));
   };
+
+  // Reset pagination to page 1 on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchQuery]);
 
   // Unify and enrich all audit sources into a single chronologically sorted stream (No Duplicates)
   const unifiedEvents: UnifiedTimelineEvent[] = useMemo(() => {
@@ -141,13 +150,29 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
       const isQARevision = s.remarks?.toLowerCase().includes('revision requested') || 
                            s.remarks?.toLowerCase().includes('correction needed');
 
+      const isWorkflowRevert = s.remarks?.includes('[Workflow Revert:') || 
+                               s.remarks?.includes('[Reverted to Documenter]') || 
+                               s.remarks?.toLowerCase().includes('workflow revert');
+
       let displayFromStage = s.fromStage;
       let displayToStage = s.toStage;
       let eventType: UnifiedTimelineEvent['type'] = 'STAGE_CHANGE';
       let eventTitle = `Stage Transition: ${s.fromStage} → ${s.toStage}`;
       let eventDescription = s.remarks || `Application stage transitioned from ${s.fromStage} to ${s.toStage}`;
 
-      if (isIngestion) {
+      if (isWorkflowRevert) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Return File Reverted to Preceding Department';
+        if (s.remarks?.includes('PREPARATION → DOCUMENTER')) {
+          eventTitle = 'Tax Preparer Reverted Return to Documenter Intake';
+        } else if (s.remarks?.includes('SALES → PREPARATION')) {
+          eventTitle = 'Sales Closer Reverted Return to Tax Preparation';
+        } else if (s.remarks?.includes('SALES → DOCUMENTER')) {
+          eventTitle = 'Sales Closer Reverted Return to Documenter Intake';
+        } else if (s.remarks?.includes('QA_REVIEW → PREPARATION')) {
+          eventTitle = 'Senior QA Auditor Reverted Return to Tax Preparer';
+        }
+      } else if (isIngestion) {
         eventType = 'INGESTION';
         eventTitle = 'Raw Prospect Ingestion (Admin Bulk Import)';
         eventDescription = `Admin uploaded raw prospect lead into TaxCRM Intake Pipeline via Excel/CSV bulk ingestion. Lead deduplicated by SSN/Email and queued in Documenter Department Unassigned Pool at RAW_PROSPECT stage for manager assignment.`;
@@ -312,6 +337,14 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
     audit: unifiedEvents.filter((e) => e.type === 'AUDIT' || e.type === 'INGESTION').length,
   }), [unifiedEvents]);
 
+  const totalItems = filteredEvents.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+  const paginatedEvents = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredEvents.slice(start, start + itemsPerPage);
+  }, [filteredEvents, currentPage, itemsPerPage]);
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
       {/* 1. Header Bar */}
@@ -322,7 +355,7 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
               <History className="w-4 h-4" />
             </div>
             <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              Lead Audit Trail & Lifecycle Activity
+              Lead Audit Trail &amp; Lifecycle Activity
             </h3>
             <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
               {counts.all} Events Logged
@@ -376,7 +409,7 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
           }`}
         >
           <GitCommit className="w-3 h-3" />
-          <span>Stage & Ingestion Handoffs</span>
+          <span>Stage &amp; Ingestion Handoffs</span>
           <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
             filter === 'STAGES' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'
           }`}>
@@ -435,18 +468,21 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
           </div>
         ) : (
           <div className="relative pl-6 space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-            {filteredEvents.map((event, idx) => {
+            {paginatedEvents.map((event, idx) => {
               const isIngestion = event.type === 'INGESTION';
               const isStage = event.type === 'STAGE_CHANGE';
               const isAssignment = event.type === 'ASSIGNMENT';
               const isCall = event.type === 'CALL';
               const isAudit = event.type === 'AUDIT';
+              const isRevert = event.title.toLowerCase().includes('revert');
 
               return (
                 <div key={event.id || idx} className="relative group">
                   {/* Timeline Dot Marker */}
                   <div className={`absolute -left-6 top-1 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center shadow-xs ${
-                    isIngestion
+                    isRevert
+                      ? 'bg-amber-500 text-white'
+                      : isIngestion
                       ? 'bg-blue-600 text-white'
                       : isAssignment
                       ? 'bg-indigo-600 text-white'
@@ -456,21 +492,33 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                       ? 'bg-cyan-600 text-white'
                       : 'bg-purple-600 text-white'
                   }`}>
-                    {isIngestion && <UploadCloud className="w-3 h-3" />}
-                    {isAssignment && <UserCheck className="w-3 h-3" />}
-                    {isStage && <GitCommit className="w-3 h-3" />}
-                    {isCall && <PhoneCall className="w-3 h-3" />}
-                    {isAudit && <ShieldCheck className="w-3 h-3" />}
+                    {isRevert && <RotateCcw className="w-3 h-3" />}
+                    {!isRevert && isIngestion && <UploadCloud className="w-3 h-3" />}
+                    {!isRevert && isAssignment && <UserCheck className="w-3 h-3" />}
+                    {!isRevert && isStage && <GitCommit className="w-3 h-3" />}
+                    {!isRevert && isCall && <PhoneCall className="w-3 h-3" />}
+                    {!isRevert && isAudit && <ShieldCheck className="w-3 h-3" />}
                   </div>
 
                   {/* Card Container */}
-                  <div className="p-4 rounded-xl bg-slate-50/70 border border-slate-200/80 hover:bg-white hover:border-slate-300 hover:shadow-xs transition-all">
+                  <div className={`p-4 rounded-xl border transition-all ${
+                    isRevert 
+                      ? 'bg-amber-50/40 border-amber-200/80 hover:bg-amber-50/70 hover:border-amber-300' 
+                      : 'bg-slate-50/70 border-slate-200/80 hover:bg-white hover:border-slate-300 hover:shadow-xs'
+                  }`}>
                     {/* Top Row: Title, Badge, and Timestamp */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs sm:text-sm font-bold text-slate-900">
                           {event.title}
                         </span>
+
+                        {isRevert && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                            <RotateCcw className="w-2.5 h-2.5 text-amber-700" />
+                            Return Dispatched
+                          </span>
+                        )}
 
                         {isIngestion && (
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
@@ -487,9 +535,13 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                         )}
 
                         {isStage && event.fromStage && event.toStage && event.fromStage !== event.toStage ? (
-                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${
+                            isRevert 
+                              ? 'bg-amber-100/70 text-amber-800 border-amber-300' 
+                              : 'bg-emerald-50 text-[#16A34A] border-emerald-200'
+                          }`}>
                             <span>{event.fromStage}</span>
-                            <ArrowRight className="w-2.5 h-2.5 text-[#16A34A]" />
+                            <ArrowRight className="w-2.5 h-2.5" />
                             <span>{event.toStage}</span>
                           </div>
                         ) : isStage && event.toStage ? (
@@ -558,10 +610,10 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                     <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center">
-                          {event.actorName.charAt(0).toUpperCase()}
+                          {(event.actorName || 'U').charAt(0).toUpperCase()}
                         </div>
                         <span className="font-semibold text-slate-700 text-[11px]">
-                          {event.actorName}
+                          {event.actorName || 'System'}
                         </span>
                         {event.actorEmail && (
                           <span className="text-[10px] text-slate-400">
@@ -589,6 +641,24 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
           </div>
         )}
       </div>
+
+      {/* 4. Pagination Footer */}
+      {totalItems > 0 && (
+        <div className="px-5 sm:px-6 py-3.5 bg-slate-50/80 border-t border-slate-100">
+          <AppPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            perPageOptions={[5, 10, 20, 50]}
+            onPageChange={(page) => setCurrentPage(page)}
+            onPerPageChange={(perPage) => {
+              setItemsPerPage(perPage);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };

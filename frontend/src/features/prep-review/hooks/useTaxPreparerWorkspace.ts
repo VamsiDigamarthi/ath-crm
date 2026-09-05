@@ -63,6 +63,10 @@ export function useTaxPreparerWorkspace() {
   const [preparerNotes, setPreparerNotes] = useState<string>('');
   const [revisionCategory, setRevisionCategory] = useState<string>('');
   const [revisionInstructions, setRevisionInstructions] = useState<string>('');
+  const [lastRevertInfo, setLastRevertInfo] = useState<any | null>(null);
+  const [documenterNotes, setDocumenterNotes] = useState<string | null>(null);
+  const [documenterNotesBy, setDocumenterNotesBy] = useState<string | null>(null);
+  const [documenterNotesAt, setDocumenterNotesAt] = useState<string | null>(null);
 
   const [stageHistories, setStageHistories] = useState<any[]>([]);
   const [callLogs, setCallLogs] = useState<any[]>([]);
@@ -90,6 +94,9 @@ export function useTaxPreparerWorkspace() {
       if (data.stageHistories) setStageHistories(data.stageHistories);
       if (data.callLogs) setCallLogs(data.callLogs);
       if (data.auditLogs) setAuditLogs(data.auditLogs);
+      if (data.documenterNotes) setDocumenterNotes(data.documenterNotes);
+      if (data.documenterNotesBy) setDocumenterNotesBy(data.documenterNotesBy);
+      if (data.documenterNotesAt) setDocumenterNotesAt(data.documenterNotesAt);
 
       // If draft was previously saved in DB, load its values
       const draft = data.taxDraftSummary;
@@ -104,7 +111,24 @@ export function useTaxPreparerWorkspace() {
         if (draft.fedWithheld !== undefined) setFedWithheld(Number(draft.fedWithheld) || 0);
         if (draft.stateWithheld !== undefined) setStateWithheld(Number(draft.stateWithheld) || 0);
         if (draft.discrepancyCategory) setRevisionCategory(draft.discrepancyCategory);
-        if (draft.revisionNotes) setRevisionInstructions(draft.revisionNotes);
+        if (draft.discrepancyInstructions) setRevisionInstructions(draft.discrepancyInstructions);
+
+        const prepRevert =
+          draft.revertsByTarget?.PREPARATION ||
+          draft.revertsByTarget?.['SALES_TO_PREPARATION'] ||
+          draft.revertsByTarget?.['FILING_TO_PREPARATION'] ||
+          draft.revertsByTarget?.['QA_REVIEW_TO_PREPARATION'] ||
+          (draft.lastRevert?.targetDepartment === 'PREPARATION' ? draft.lastRevert : null);
+
+        if (prepRevert && !prepRevert.resolved) {
+          setLastRevertInfo(prepRevert);
+          if (prepRevert.reasonCategory) setRevisionCategory(prepRevert.reasonCategory);
+          if (prepRevert.revertNotes) setRevisionInstructions(prepRevert.revertNotes);
+        } else if (draft.status === 'REVERTED_TO_DOCUMENTER' || data.currentStage === 'REVERTED_TO_DOC' || data.currentStage === 'DOC_OUTREACH') {
+          setLastRevertInfo(draft.revertsByTarget?.DOCUMENTER || draft.lastRevert || { reasonCategory: 'MISSING_DOCUMENTS', revertNotes: 'Reverted to Documenter for missing paperwork', targetDepartment: 'DOCUMENTER' });
+        } else {
+          setLastRevertInfo(null);
+        }
       } else {
         // Default initial values for new intake
         setW2Wages(0);
@@ -262,8 +286,29 @@ export function useTaxPreparerWorkspace() {
     preparerNotes,
     setPreparerNotes,
     standardDeductionAmount,
-    isSubmittedToQA: currentStage === 'QA_IN_REVIEW' || currentStage === 'QA_APPROVED',
-    isRevisionRequested: currentStage === 'QA_REVISION_REQUESTED',
+    isSubmittedToQA: currentStage === 'QA_IN_REVIEW' || (currentStage === 'QA_APPROVED' && !lastRevertInfo),
+    isRevertedToDocs:
+      currentStage === 'DOC_OUTREACH' ||
+      currentStage === 'REVERTED_TO_DOC' ||
+      (Boolean(lastRevertInfo && !lastRevertInfo?.resolved) && lastRevertInfo?.targetDepartment === 'DOCUMENTER'),
+    isRevertedToSales:
+      currentStage === 'SALES_PITCH_QUEUE' ||
+      currentStage === 'SALES_PITCHING' ||
+      (Boolean(lastRevertInfo && !lastRevertInfo?.resolved) && lastRevertInfo?.targetDepartment === 'SALES'),
+    isRevisionRequested:
+      (currentStage === 'QA_REVISION_REQUESTED' ||
+        currentStage === 'CORRECTION_NEEDED' ||
+        (Boolean(lastRevertInfo && !lastRevertInfo?.resolved) && lastRevertInfo?.targetDepartment === 'PREPARATION')) &&
+      currentStage !== 'DOC_OUTREACH' &&
+      currentStage !== 'REVERTED_TO_DOC' &&
+      currentStage !== 'SALES_PITCH_QUEUE' &&
+      currentStage !== 'SALES_PITCHING' &&
+      lastRevertInfo?.targetDepartment !== 'SALES' &&
+      lastRevertInfo?.targetDepartment !== 'DOCUMENTER',
+    lastRevertInfo,
+    documenterNotes,
+    documenterNotesBy,
+    documenterNotesAt,
     revisionCategory,
     revisionInstructions,
     calculations,

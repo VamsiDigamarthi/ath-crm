@@ -4,7 +4,9 @@ import {
   CheckCircle2, 
   Printer, 
   ShieldCheck, 
-  Zap 
+  Zap,
+  RotateCcw,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { FilingLeadItem } from '../../types/filing.types';
@@ -22,6 +24,26 @@ export const FilingTransmissionStatusCard: React.FC<FilingTransmissionStatusCard
   isTransmitting,
 }) => {
   const isAccepted = lead.currentStage === 'FILING_SUCCESS' || lead.transmissionInfo?.status === 'ACCEPTED';
+  const isDispatchedToFiling =
+    lead.currentStage === 'FILING_QUEUE' ||
+    lead.currentStage === 'FILING_IN_PROGRESS' ||
+    isAccepted;
+
+  const lastRevert =
+    (lead as any).taxDraftSummary?.revertsByTarget?.['FILING_TO_SALES'] ||
+    (lead as any).taxDraftSummary?.revertsByTarget?.['FILING_TO_PREPARATION'] ||
+    (lead as any).taxDraftSummary?.revertsByTarget?.['FILING_TO_DOCUMENTER'] ||
+    (lead.lastRevert?.sourceDepartment === 'FILING' ? lead.lastRevert : null) ||
+    ((lead as any).taxDraftSummary?.lastRevert?.sourceDepartment === 'FILING' ? (lead as any).taxDraftSummary?.lastRevert : null) ||
+    lead.lastRevert ||
+    (lead as any).taxDraftSummary?.lastRevert ||
+    (lead.taxReturnSummary as any)?.lastRevert;
+
+  const isReverted = !isDispatchedToFiling && Boolean(
+    (lastRevert && !lastRevert.resolved) ||
+    ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'SALES_PITCH_QUEUE', 'SALES_PITCHING'].includes(lead.currentStage)
+  );
+
   const submissionId = lead.transmissionInfo?.submissionId || `5829102026${String(lead.id).replace(/[^0-9]/g, '').slice(0, 8).padEnd(8, '0')}`;
   const certificateId = lead.transmissionInfo?.acceptanceCertificateId || `IRS-ACK-2026-${lead.id.slice(0, 8).toUpperCase()}`;
 
@@ -30,22 +52,50 @@ export const FilingTransmissionStatusCard: React.FC<FilingTransmissionStatusCard
     toast.success('Printing IRS e-File Acceptance Certificate... 🖨️');
   };
 
+  const targetDeptLabel = lastRevert?.targetDepartment === 'SALES'
+    ? 'Sales Closer'
+    : lastRevert?.targetDepartment === 'DOCUMENTER'
+    ? 'Documenter'
+    : 'Tax Preparer';
+
   return (
     <div className="space-y-6 font-sans">
       {/* 1. Official IRS Transmission Gateway Control */}
-      <div className={`p-6 rounded-2xl border transition-all ${isAccepted ? 'bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white border-emerald-300 shadow-sm' : 'bg-white border-slate-200 shadow-xs'}`}>
+      <div className={`p-6 rounded-2xl border transition-all ${
+        isAccepted
+          ? 'bg-gradient-to-br from-emerald-50 via-teal-50/40 to-white border-emerald-300 shadow-sm'
+          : isReverted
+          ? 'bg-amber-50/30 border-amber-300 shadow-xs'
+          : 'bg-white border-slate-200 shadow-xs'
+      }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isAccepted ? 'bg-emerald-500 text-white shadow-xs' : 'bg-blue-50 text-blue-600'}`}>
-              {isAccepted ? <CheckCircle2 className="w-5 h-5" /> : <Send className="w-5 h-5" />}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              isAccepted
+                ? 'bg-emerald-500 text-white shadow-xs'
+                : isReverted
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-blue-50 text-blue-600'
+            }`}>
+              {isAccepted ? <CheckCircle2 className="w-5 h-5" /> : isReverted ? <RotateCcw className="w-5 h-5" /> : <Send className="w-5 h-5" />}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm sm:text-base text-slate-900">
                   IRS Modernized e-File (MeF) Gateway
                 </h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${isAccepted ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
-                  {isAccepted ? '✓ IRS E-File Accepted' : 'Ready to Transmit'}
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                  isAccepted
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : isReverted
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'
+                    : 'bg-blue-50 text-blue-700 border border-blue-200'
+                }`}>
+                  {isAccepted
+                    ? '✓ IRS E-File Accepted'
+                    : isReverted
+                    ? `🔄 In Revision with ${targetDeptLabel}`
+                    : 'Ready to Transmit'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -78,15 +128,19 @@ export const FilingTransmissionStatusCard: React.FC<FilingTransmissionStatusCard
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
             <div className="text-[10px] text-slate-400 font-medium">Federal Status</div>
-            <div className={`font-bold mt-0.5 ${isAccepted ? 'text-[#16A34A]' : 'text-blue-600'}`}>
-              {isAccepted ? 'ACCEPTED (Ack: 0000)' : 'Form 1040 Ready'}
+            <div className={`font-bold mt-0.5 ${
+              isAccepted ? 'text-[#16A34A]' : isReverted ? 'text-amber-700' : 'text-blue-600'
+            }`}>
+              {isAccepted ? 'ACCEPTED (Ack: 0000)' : isReverted ? `In Revision (${targetDeptLabel})` : 'Form 1040 Ready'}
             </div>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
             <div className="text-[10px] text-slate-400 font-medium">State Gateway ({lead.stateOfResidence})</div>
-            <div className={`font-bold mt-0.5 ${isAccepted ? 'text-[#16A34A]' : 'text-blue-600'}`}>
-              {isAccepted ? `ACCEPTED (${lead.stateOfResidence})` : 'Ready to Transmit'}
+            <div className={`font-bold mt-0.5 ${
+              isAccepted ? 'text-[#16A34A]' : isReverted ? 'text-amber-700' : 'text-blue-600'
+            }`}>
+              {isAccepted ? `ACCEPTED (${lead.stateOfResidence})` : isReverted ? `In Revision (${lead.stateOfResidence})` : 'Ready to Transmit'}
             </div>
           </div>
 
@@ -99,18 +153,42 @@ export const FilingTransmissionStatusCard: React.FC<FilingTransmissionStatusCard
           </div>
         </div>
 
+        {/* Reverted Warning Info */}
+        {isReverted && (
+          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium flex items-center gap-2.5 mb-4">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span><strong>IRS Transmission Disabled:</strong> This return was reverted to <strong>{targetDeptLabel}</strong>. Direct transmission to the IRS Gateway is locked until the return is updated, re-authorized, and dispatched back to Filing.</span>
+          </div>
+        )}
+
         {/* Action Button */}
         {!isAccepted ? (
           <Button
             size="lg"
             onClick={onTransmit}
-            disabled={isTransmitting || lead.paymentStatus !== 'PAID'}
-            className="w-full bg-[#16A34A] hover:bg-[#15803D] text-white text-sm font-bold py-3 flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:bg-slate-300 disabled:cursor-not-allowed"
+            disabled={isTransmitting || lead.paymentStatus !== 'PAID' || isReverted}
+            className={`w-full text-sm font-bold py-3 flex items-center justify-center gap-2 shadow-md transition-all ${
+              isReverted
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 hover:bg-slate-200 shadow-none'
+                : lead.paymentStatus !== 'PAID'
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
+                : 'bg-[#16A34A] hover:bg-[#15803D] text-white cursor-pointer'
+            }`}
+            title={
+              isReverted
+                ? `Cannot Transmit: Return is currently in revision with ${targetDeptLabel}.`
+                : undefined
+            }
           >
             {isTransmitting ? (
               <>
                 <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
                 <span>Transmitting MeF Package to IRS Gateway...</span>
+              </>
+            ) : isReverted ? (
+              <>
+                <RotateCcw className="w-4 h-4 text-slate-400" />
+                <span>Locked: Return is In Revision with {targetDeptLabel}</span>
               </>
             ) : (
               <>

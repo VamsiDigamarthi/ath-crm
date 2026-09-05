@@ -13,6 +13,7 @@ import {
   ShieldCheck, 
   Calculator, 
   UserPlus,
+  CheckCircle2,
   X 
 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
@@ -26,6 +27,7 @@ interface PrepManagerQueueTableProps {
     qaReview: number;
     revisions: number;
     qaApproved: number;
+    reverted?: number;
   };
   isLoading?: boolean;
   onOpenAssignModal: (leadsToAssign: PrepReviewLead[]) => void;
@@ -64,15 +66,17 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
     return leads.filter((lead) => {
       // Tab Filter
       if (activeTab === 'UNASSIGNED') {
-        if (lead.currentStage !== 'DOC_PREP_COMPLETE' && lead.assignedPreparer !== null) return false;
+        if (lead.prepStage !== 'DOC_PREP_COMPLETE' && (lead.currentStage !== 'DOC_PREP_COMPLETE' || lead.assignedPreparer !== null)) return false;
       } else if (activeTab === 'UNDER_PREP') {
-        if (lead.currentStage !== 'PREP_ASSIGNED' && lead.currentStage !== 'PREP_IN_PROGRESS') return false;
+        if (lead.prepStage !== 'PREP_IN_PROGRESS' && lead.currentStage !== 'PREP_ASSIGNED' && lead.currentStage !== 'PREP_IN_PROGRESS') return false;
       } else if (activeTab === 'QA_REVIEW') {
-        if (lead.currentStage !== 'QA_REVIEW_QUEUE' && lead.currentStage !== 'QA_IN_REVIEW') return false;
+        if (lead.prepStage !== 'QA_IN_REVIEW' && lead.currentStage !== 'QA_REVIEW_QUEUE' && lead.currentStage !== 'QA_IN_REVIEW') return false;
       } else if (activeTab === 'REVISIONS') {
-        if (lead.currentStage !== 'QA_REVISION_REQUESTED') return false;
+        if (lead.prepStage !== 'QA_REVISION_REQUESTED' && lead.currentStage !== 'QA_REVISION_REQUESTED' && lead.currentStage !== 'CORRECTION_NEEDED') return false;
       } else if (activeTab === 'QA_APPROVED') {
-        if (lead.currentStage !== 'QA_APPROVED' && lead.currentStage !== 'SALES_PITCH_QUEUE') return false;
+        if (lead.prepStage !== 'QA_APPROVED' && lead.currentStage !== 'QA_APPROVED' && lead.currentStage !== 'SALES_PITCH_QUEUE') return false;
+      } else if (activeTab === 'REVERTED' || activeTab === 'REVERTED_TO_DOC') {
+        if ((lead.prepStage as any) !== 'REVERTED_TO_DOC' && lead.currentStage !== 'DOC_OUTREACH' && lead.taxDraftSummary?.status !== 'REVERTED_TO_DOCUMENTER') return false;
       }
 
       // Search Query
@@ -111,11 +115,12 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
 
   const counts = tabStats || {
     all: leads.length,
-    unassigned: leads.filter((l) => l.currentStage === 'DOC_PREP_COMPLETE' || l.assignedPreparer === null).length,
-    underPrep: leads.filter((l) => l.currentStage === 'PREP_ASSIGNED' || l.currentStage === 'PREP_IN_PROGRESS').length,
-    qaReview: leads.filter((l) => l.currentStage === 'QA_REVIEW_QUEUE' || l.currentStage === 'QA_IN_REVIEW').length,
-    revisions: leads.filter((l) => l.currentStage === 'QA_REVISION_REQUESTED').length,
-    qaApproved: leads.filter((l) => l.currentStage === 'QA_APPROVED' || l.currentStage === 'SALES_PITCH_QUEUE').length,
+    unassigned: leads.filter((l) => l.prepStage === 'DOC_PREP_COMPLETE' || (l.currentStage === 'DOC_PREP_COMPLETE' && l.assignedPreparer === null)).length,
+    underPrep: leads.filter((l) => l.prepStage === 'PREP_IN_PROGRESS' || l.currentStage === 'PREP_ASSIGNED' || l.currentStage === 'PREP_IN_PROGRESS').length,
+    qaReview: leads.filter((l) => l.prepStage === 'QA_IN_REVIEW' || l.currentStage === 'QA_REVIEW_QUEUE' || l.currentStage === 'QA_IN_REVIEW').length,
+    revisions: leads.filter((l) => l.prepStage === 'QA_REVISION_REQUESTED' || l.currentStage === 'QA_REVISION_REQUESTED' || l.currentStage === 'CORRECTION_NEEDED').length,
+    qaApproved: leads.filter((l) => l.prepStage === 'QA_APPROVED' || l.currentStage === 'QA_APPROVED' || l.currentStage === 'SALES_PITCH_QUEUE').length,
+    reverted: leads.filter((l) => (l.prepStage as any) === 'REVERTED_TO_DOC' || l.currentStage === 'DOC_OUTREACH' || l.taxDraftSummary?.status === 'REVERTED_TO_DOCUMENTER').length,
   };
 
   return (
@@ -232,6 +237,21 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
           <span>Ready for Sales</span>
           <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
             {counts.qaApproved}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setTab('REVERTED')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'REVERTED' || activeTab === 'REVERTED_TO_DOC'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/60'
+          }`}
+        >
+          <span>Reverted to Docs</span>
+          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
+            {counts.reverted || 0}
           </span>
         </button>
       </div>
@@ -413,15 +433,29 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
                     {/* Assign Action */}
                     {!isEffectiveAdmin && (
                       <td className="py-3.5 px-4 text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onOpenAssignModal([lead])}
-                          className="border-slate-200 hover:border-emerald-300 hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] text-xs font-bold h-7.5 px-2.5 cursor-pointer shadow-2xs"
-                        >
-                          <UserCheck className="w-3.5 h-3.5" />
-                          <span>Assign</span>
-                        </Button>
+                        {lead.assignedPreparer ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={true}
+                            className="border-slate-200 bg-slate-50 text-slate-400 text-xs font-semibold h-7.5 px-2.5 cursor-not-allowed opacity-60 shadow-none inline-flex items-center gap-1.5"
+                            title={`Already assigned to ${lead.assignedPreparer.name}`}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Assigned</span>
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onOpenAssignModal([lead])}
+                            className="border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] text-xs font-bold h-7.5 px-2.5 cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
+                            title="Assign Tax Preparer and QA Reviewer"
+                          >
+                            <UserCheck className="w-3.5 h-3.5" />
+                            <span>Assign</span>
+                          </Button>
+                        )}
                       </td>
                     )}
                   </tr>

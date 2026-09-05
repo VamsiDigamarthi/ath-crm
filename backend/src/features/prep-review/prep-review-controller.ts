@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrepReviewService } from './prep-review-service.js';
+import { WorkflowRevertService } from '../workflow/workflow-revert-service.js';
 import { SuccessHandler } from '../../utils/success-handler.js';
 
 export const getPrepReviewStaff = async (req: Request, res: Response) => {
@@ -49,6 +50,24 @@ export const submitPrepReviewWorkspaceToQA = async (req: Request, res: Response)
   return SuccessHandler.handle(res, 'Form 1040 submitted for QA review successfully', data, 200);
 };
 
+export const revertPrepReviewWorkspace = async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const { reasonCategory, missingDocumentTypes, revertNotes, targetDepartment } = req.body;
+  const userId = req.currentUser?.id || 'SYSTEM';
+
+  const result = await WorkflowRevertService.revertLead({
+    applicationId: id,
+    sourceDepartment: 'PREPARATION',
+    targetDepartment: targetDepartment || 'DOCUMENTER',
+    reasonCategory,
+    missingDocumentTypes,
+    revertNotes,
+    userId,
+  });
+
+  return SuccessHandler.handle(res, 'Return successfully reverted to Documenter Intake', result, 200);
+};
+
 export const viewPrepReviewDocument = async (req: Request, res: Response, next: any) => {
   try {
     const id = String(req.params.id);
@@ -87,5 +106,6 @@ export const requestRevisionPrepReviewQAReturn = async (req: Request, res: Respo
   const data = await PrepReviewService.requestRevisionQAReturn(id, { discrepancyCategory, revisionNotes }, userId);
   return SuccessHandler.handle(res, 'Revision requested and dispatched to preparer', data, 200);
 };
+
 
 

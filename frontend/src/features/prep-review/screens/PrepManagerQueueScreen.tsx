@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { usePrepManagerQueue } from '../hooks/usePrepManagerQueue';
 import { PrepManagerQueueTable } from '../components/manager/PrepManagerQueueTable';
 import { PrepAssignLeadDrawer } from '../components/manager/PrepAssignLeadDrawer';
 import { PrepAutoDistributeModal } from '../components/manager/PrepAutoDistributeModal';
+import { PrepLeadDetailModal } from '../components/manager/PrepLeadDetailModal';
+import type { PrepReviewLead } from '../types/prep-review.types';
 import { Button } from '@/shared/components/Button';
 import { RefreshCw, Calculator, X } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 export const PrepManagerQueueScreen: React.FC = () => {
   const {
@@ -23,6 +24,8 @@ export const PrepManagerQueueScreen: React.FC = () => {
     staffIdFromUrl,
     clearStaffFilter,
   } = usePrepManagerQueue();
+
+  const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<PrepReviewLead | null>(null);
 
   const selectedStaffMember = staff.find((s) => s.id === staffIdFromUrl);
 
@@ -75,9 +78,7 @@ export const PrepManagerQueueScreen: React.FC = () => {
         onStageFilterChange={setActiveTab}
         onOpenAssignModal={(selectedLeads) => setAssignModalLeads(selectedLeads)}
         onOpenAutoDistribute={() => setIsAutoDistributeOpen(true)}
-        onViewLeadDetail={(lead) => {
-          toast(`Opening return file for ${lead.taxpayerName}`);
-        }}
+        onViewLeadDetail={(lead) => setSelectedLeadForDetail(lead)}
       />
 
       {assignModalLeads && (
@@ -100,6 +101,18 @@ export const PrepManagerQueueScreen: React.FC = () => {
           staff={staff}
           onDistributeSuccess={() => {
             fetchQueueData();
+          }}
+        />
+      )}
+
+      {selectedLeadForDetail && (
+        <PrepLeadDetailModal
+          isOpen={Boolean(selectedLeadForDetail)}
+          lead={selectedLeadForDetail}
+          onClose={() => setSelectedLeadForDetail(null)}
+          onAssign={(lead) => {
+            setSelectedLeadForDetail(null);
+            setAssignModalLeads([lead]);
           }}
         />
       )}

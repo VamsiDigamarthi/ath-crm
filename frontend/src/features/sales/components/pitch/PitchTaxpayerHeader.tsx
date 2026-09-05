@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
+import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface PitchTaxpayerHeaderProps {
   lead: SalesLeadItem;
+  onOpenSendBack?: () => void;
 }
 
-export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead }) => {
+export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, onOpenSendBack }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
@@ -44,6 +46,22 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead }
               TY {lead.taxYear} Form 1040
             </span>
             <SalesStageBadge stage={lead.currentStage} />
+            {(() => {
+              const lastRevert =
+                (lead.taxDraftSummary as any)?.revertsByTarget?.SALES ||
+                (lead.taxDraftSummary as any)?.revertsByTarget?.['FILING_TO_SALES'] ||
+                ((lead.taxDraftSummary as any)?.lastRevert?.targetDepartment === 'SALES' ? (lead.taxDraftSummary as any)?.lastRevert : null);
+              const isDispatched = ['FILING_QUEUE', 'FILING_IN_PROGRESS', 'FILING_SUCCESS'].includes(lead.currentStage as string);
+              if (lastRevert && !lastRevert.resolved && !isDispatched) {
+                return (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-950 border border-amber-300 shadow-2xs animate-pulse">
+                    <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Reverted from {lastRevert.sourceDepartment === 'FILING' ? 'IRS Filing Ops' : lastRevert.sourceDepartment}</span>
+                  </span>
+                );
+              }
+              return null;
+            })()}
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium mt-1">
@@ -62,17 +80,66 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead }
           </div>
         </div>
 
-        {/* Assigned Closer Pill */}
-        <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 shrink-0">
-          <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
-            {lead.assignedSalesAgent?.name?.charAt(0) || 'S'}
-          </div>
-          <div>
-            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-              Assigned Closer
+        <div className="flex items-center gap-2.5 shrink-0">
+          {onOpenSendBack && (() => {
+            const isDispatchedToFiling =
+              lead.currentStage === 'FILING_QUEUE' ||
+              lead.currentStage === 'FILING_IN_PROGRESS' ||
+              lead.currentStage === 'FILING_SUCCESS';
+
+            const currentStageStr = (lead.currentStage as string);
+            const isRevertedToPrecedingDept =
+              ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'QA_REVISION_REQUESTED'].includes(currentStageStr) ||
+              (lead.taxDraftSummary as any)?.status === 'REVISION_REQUESTED' ||
+              (lead.taxDraftSummary as any)?.status === 'REVERTED_TO_DOCUMENTER';
+
+            const isDisabled = isDispatchedToFiling || isRevertedToPrecedingDept;
+
+            const buttonLabel = isDispatchedToFiling
+              ? 'In IRS Filing'
+              : lead.currentStage === 'DOC_OUTREACH' || (lead.taxDraftSummary as any)?.status === 'REVERTED_TO_DOCUMENTER'
+              ? 'Sent to Documenter'
+              : isRevertedToPrecedingDept
+              ? 'Sent to Preparer'
+              : 'Send Back Lead';
+
+            const buttonTitle = isDispatchedToFiling
+              ? 'Return is currently in IRS Filing Operations. Cannot be reverted from Sales.'
+              : isRevertedToPrecedingDept
+              ? `Return has already been sent back for revision and is currently with ${lead.currentStage === 'DOC_OUTREACH' ? 'Documenter Intake' : 'Tax Preparation (CPA)'}.`
+              : 'Send return back to Tax Preparer or Documenter based on client pitch discussion';
+
+            return (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => !isDisabled && onOpenSendBack()}
+                disabled={isDisabled}
+                className={`text-xs font-bold flex items-center gap-1.5 shadow-2xs h-10 px-3.5 transition-all ${
+                  isDisabled
+                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-75 shadow-none'
+                    : 'border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 cursor-pointer'
+                }`}
+                title={buttonTitle}
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${isDisabled ? 'text-slate-400' : 'text-amber-600'}`} />
+                <span>{buttonLabel}</span>
+              </Button>
+            );
+          })()}
+
+          {/* Assigned Closer Pill */}
+          <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
+              {lead.assignedSalesAgent?.name?.charAt(0) || 'S'}
             </div>
-            <div className="text-xs font-bold text-slate-900">
-              {lead.assignedSalesAgent?.name || 'Unassigned'}
+            <div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                Assigned Closer
+              </div>
+              <div className="text-xs font-bold text-slate-900">
+                {lead.assignedSalesAgent?.name || 'Unassigned'}
+              </div>
             </div>
           </div>
         </div>

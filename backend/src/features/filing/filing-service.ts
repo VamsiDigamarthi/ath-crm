@@ -122,6 +122,8 @@ export class FilingService {
         name: `${app.assignedFileOp.firstName || ''} ${app.assignedFileOp.lastName || ''}`.trim() || 'Filing Specialist',
         email: app.assignedFileOp.email || '',
       } : null,
+      lastRevert: draft.lastRevert || null,
+      taxDraftSummary: draft,
       transmissionInfo,
       mefXmlSummary,
       customerProfile: {
@@ -218,17 +220,45 @@ export class FilingService {
     const limit = filters?.limit || 50;
     const offset = filters?.offset || 0;
 
-    const where: any = {
-      OR: [
-        { currentStage: ApplicationStage.FILING_QUEUE },
-        { currentStage: ApplicationStage.FILING_IN_PROGRESS },
-        { currentStage: ApplicationStage.FILING_SUCCESS },
-        { currentStage: ApplicationStage.FILING_FAILED },
-      ],
-    };
+    let where: any = {};
 
-    if (filters?.stage) {
-      where.currentStage = filters.stage as ApplicationStage;
+    if (filters?.stage === 'REVERTED') {
+      where = {
+        currentStage: {
+          in: [
+            ApplicationStage.CORRECTION_NEEDED,
+            ApplicationStage.DOC_OUTREACH,
+            ApplicationStage.DOC_PREP,
+            ApplicationStage.SALES_PITCH_QUEUE,
+            ApplicationStage.SALES_PITCHING,
+          ],
+        },
+      };
+    } else if (filters?.stage && filters.stage !== 'ALL') {
+      where = {
+        currentStage: filters.stage as ApplicationStage,
+      };
+    } else {
+      where = {
+        OR: [
+          { currentStage: ApplicationStage.FILING_QUEUE },
+          { currentStage: ApplicationStage.FILING_IN_PROGRESS },
+          { currentStage: ApplicationStage.FILING_SUCCESS },
+          { currentStage: ApplicationStage.FILING_FAILED },
+          {
+            currentStage: {
+              in: [
+                ApplicationStage.CORRECTION_NEEDED,
+                ApplicationStage.DOC_OUTREACH,
+                ApplicationStage.DOC_PREP,
+                ApplicationStage.SALES_PITCH_QUEUE,
+                ApplicationStage.SALES_PITCHING,
+              ],
+            },
+            assignedFileOpId: { not: null },
+          },
+        ],
+      };
     }
 
     if (filters?.filingAgentId) {

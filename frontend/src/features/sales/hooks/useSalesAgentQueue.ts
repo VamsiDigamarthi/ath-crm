@@ -5,7 +5,7 @@ import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesAgentStats } from '../types/sales.types';
 import toast from 'react-hot-toast';
 
-export type SalesAgentTab = 'ALL' | 'AWAITING' | 'QUOTED' | 'PAID';
+export type SalesAgentTab = 'ALL' | 'AWAITING' | 'QUOTED' | 'PAID' | 'REVERTED';
 
 export function useSalesAgentQueue() {
   const navigate = useNavigate();
@@ -58,30 +58,21 @@ export function useSalesAgentQueue() {
   };
 
   // Helper stage checks
-  const isAwaitingPitch = (lead: SalesLeadItem) => {
+  const isReturnReverted = (lead: SalesLeadItem) => {
+    const draftStatus = (lead.taxDraftSummary as any)?.status;
+    const lastRevert = (lead.taxDraftSummary as any)?.lastRevert;
     return (
-      lead.paymentStatus !== 'PAID' &&
-      lead.currentStage !== 'FILING_QUEUE' &&
-      lead.currentStage !== 'PAID_AND_AUTHORIZED' &&
-      lead.currentStage !== 'QUOTATION_SENT' &&
-      lead.currentStage !== 'PAYMENT_PENDING' &&
-      lead.paymentStatus !== 'PAYMENT_LINK_SENT'
-    );
-  };
-
-  const isQuotedOrPaymentPending = (lead: SalesLeadItem) => {
-    return (
-      lead.paymentStatus !== 'PAID' &&
-      lead.currentStage !== 'FILING_QUEUE' &&
-      lead.currentStage !== 'PAID_AND_AUTHORIZED' &&
-      (lead.currentStage === 'QUOTATION_SENT' ||
-        lead.currentStage === 'PAYMENT_PENDING' ||
-        lead.paymentStatus === 'PAYMENT_LINK_SENT' ||
-        Boolean(lead.feeBreakdown?.isQuoted))
+      lead.currentStage === 'CORRECTION_NEEDED' ||
+      lead.currentStage === 'DOC_OUTREACH' ||
+      lead.currentStage === 'DOC_PREP' ||
+      draftStatus === 'REVISION_REQUESTED' ||
+      draftStatus === 'REVERTED_TO_DOCUMENTER' ||
+      Boolean(lastRevert && !lastRevert.resolved)
     );
   };
 
   const isPaidOrClosed = (lead: SalesLeadItem) => {
+    if (isReturnReverted(lead)) return false;
     return (
       lead.paymentStatus === 'PAID' ||
       lead.currentStage === 'PAID_AND_AUTHORIZED' ||
@@ -91,14 +82,31 @@ export function useSalesAgentQueue() {
     );
   };
 
+  const isQuotedOrPaymentPending = (lead: SalesLeadItem) => {
+    if (isReturnReverted(lead) || isPaidOrClosed(lead)) return false;
+    return (
+      lead.currentStage === 'QUOTATION_SENT' ||
+      lead.currentStage === 'PAYMENT_PENDING' ||
+      lead.paymentStatus === 'PAYMENT_LINK_SENT' ||
+      Boolean(lead.feeBreakdown?.isQuoted)
+    );
+  };
+
+  const isAwaitingPitch = (lead: SalesLeadItem) => {
+    if (isReturnReverted(lead) || isPaidOrClosed(lead) || isQuotedOrPaymentPending(lead)) return false;
+    return true;
+  };
+
   // Compute live tab counts
   const counts = useMemo(() => {
     let awaiting = 0;
     let quoted = 0;
     let paid = 0;
+    let reverted = 0;
 
     allLeads.forEach((lead) => {
-      if (isPaidOrClosed(lead)) paid++;
+      if (isReturnReverted(lead)) reverted++;
+      else if (isPaidOrClosed(lead)) paid++;
       else if (isQuotedOrPaymentPending(lead)) quoted++;
       else awaiting++;
     });
@@ -108,6 +116,7 @@ export function useSalesAgentQueue() {
       awaiting,
       quoted,
       paid,
+      reverted,
     };
   }, [allLeads]);
 
@@ -126,12 +135,13 @@ export function useSalesAgentQueue() {
     const conversionRate = total > 0 ? Math.round((counts.paid / total) * 100) : 0;
 
     return {
-      assignedLeads: total,
+      assignedLeads: counts.awaiting,
       pitchInProgress: counts.awaiting,
       paymentsPending: counts.quoted,
       dealsClosedToday: counts.paid,
       myRevenueToday: revenueToday,
       myConversionRate: conversionRate,
+      revertedLeads: counts.reverted,
     };
   }, [allLeads, counts]);
 
@@ -141,6 +151,7 @@ export function useSalesAgentQueue() {
       if (activeTab === 'AWAITING' && !isAwaitingPitch(lead)) return false;
       if (activeTab === 'QUOTED' && !isQuotedOrPaymentPending(lead)) return false;
       if (activeTab === 'PAID' && !isPaidOrClosed(lead)) return false;
+      if (activeTab === 'REVERTED' && !isReturnReverted(lead)) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();

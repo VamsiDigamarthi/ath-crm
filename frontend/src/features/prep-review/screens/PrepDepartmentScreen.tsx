@@ -5,13 +5,11 @@ import { PrepAssignLeadDrawer } from '../components/manager/PrepAssignLeadDrawer
 import { PrepAutoDistributeModal } from '../components/manager/PrepAutoDistributeModal';
 import { Button } from '@/shared/components/Button';
 import {
-  Calculator,
   ShieldCheck,
   CheckCircle2,
   Clock,
   RotateCcw,
   RefreshCw,
-  Zap,
   Users,
   BarChart3,
   ListFilter,
@@ -278,7 +276,8 @@ export const PrepDepartmentScreen: React.FC = () => {
           isLoading={isLoading}
           selectedStageFilter={selectedStageFilter}
           onStageFilterChange={setSelectedStageFilter}
-          onOpenAssignModal={() => {}}
+          onOpenAssignModal={(selected) => setAssignModalLeads(selected)}
+          onOpenAutoDistribute={() => setIsAutoDistributeOpen(true)}
           onViewLeadDetail={(lead) => {
             toast.success(`Tax return for ${lead.taxpayerName} (TY ${lead.taxYear})`);
           }}
@@ -424,6 +423,23 @@ export const PrepDepartmentScreen: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Assignment Drawer & Auto Distribute Modal */}
+      <PrepAssignLeadDrawer
+        isOpen={Boolean(assignModalLeads && assignModalLeads.length > 0)}
+        onClose={() => setAssignModalLeads(null)}
+        targetLeads={assignModalLeads || []}
+        staff={staff}
+        onAssignSuccess={handleAssignSuccess}
+      />
+
+      <PrepAutoDistributeModal
+        isOpen={isAutoDistributeOpen}
+        onClose={() => setIsAutoDistributeOpen(false)}
+        unassignedLeads={leads.filter((l) => l.currentStage === 'DOC_PREP_COMPLETE' || !l.assignedPreparer)}
+        staff={staff}
+        onDistributeSuccess={handleAutoDistributeSuccess}
+      />
     </div>
   );
 };

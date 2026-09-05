@@ -37,8 +37,24 @@ export function getSalesColumns({
                   </span>
                 )}
               </div>
-              <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                TY {item.taxYear || 2025} • INDIVIDUAL
+              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                <span className="text-[11px] text-slate-500 font-medium">
+                  TY {item.taxYear || 2025} • INDIVIDUAL
+                </span>
+                {(() => {
+                  const lastRevert =
+                    (item.taxDraftSummary as any)?.revertsByTarget?.SALES ||
+                    (item.taxDraftSummary as any)?.revertsByTarget?.['FILING_TO_SALES'] ||
+                    ((item.taxDraftSummary as any)?.lastRevert?.targetDepartment === 'SALES' ? (item.taxDraftSummary as any)?.lastRevert : null);
+                  if (lastRevert && !lastRevert.resolved) {
+                    return (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-950 border border-amber-300">
+                        Reverted from {lastRevert.sourceDepartment === 'FILING' ? 'Filing' : lastRevert.sourceDepartment}
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </div>

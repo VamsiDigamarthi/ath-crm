@@ -14,7 +14,8 @@ import {
   CheckSquare, 
   RefreshCw,
   FileCheck2,
-  CheckCircle2
+  CheckCircle2,
+  RotateCcw
 } from 'lucide-react';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
@@ -164,6 +165,22 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     }
   };
 
+  const currentStage = (lead?.currentStage || currentLead.currentStage || 'DOC_OUTREACH') as string;
+  const assignedPrepAgent = (lead as any)?.assignedPrepAgent || (currentLead as any)?.assignedPrepAgent;
+  const lastRevert =
+    (lead?.taxDraftSummary as any)?.revertsByTarget?.DOCUMENTER ||
+    (currentLead?.taxDraftSummary as any)?.revertsByTarget?.DOCUMENTER ||
+    ((lead?.taxDraftSummary as any)?.lastRevert?.targetDepartment === 'DOCUMENTER' ? (lead?.taxDraftSummary as any)?.lastRevert : null) ||
+    ((currentLead?.taxDraftSummary as any)?.lastRevert?.targetDepartment === 'DOCUMENTER' ? (currentLead?.taxDraftSummary as any)?.lastRevert : null);
+  const isRevertedToDocumenter = currentStage === 'DOC_OUTREACH' && Boolean(lastRevert && !lastRevert.resolved);
+  const canMoveToPrep = currentStage === 'RAW_PROSPECT' || currentStage === 'DOC_OUTREACH';
+
+  const hasAssignedPreparer = Boolean(assignedPrepAgent?.id || (lead as any)?.assignedPrepAgentId);
+  const isRevertedFromPrep = lastRevert?.sourceDepartment === 'PREPARATION' || hasAssignedPreparer;
+  const preparerDisplayName = assignedPrepAgent 
+    ? `${assignedPrepAgent.firstName || ''} ${assignedPrepAgent.lastName || ''}`.trim() || assignedPrepAgent.email?.split('@')[0]
+    : lastRevert?.revertedByName || 'Assigned Tax Preparer';
+
   return (
     <div className="space-y-6 pb-16 font-sans animate-in fade-in duration-150">
       {/* 1. Back Navigation & Header */}
@@ -191,26 +208,54 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {currentLead.currentStage === 'DOC_PREP' || (lead as any)?.currentStage === 'DOC_PREP' ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-              <CheckCircle2 className="w-3.5 h-3.5 text-amber-600" />
-              <span>Transferred to Tax Prep</span>
-            </span>
-          ) : currentLead.currentStage === 'SALES_PITCH_QUEUE' || (lead as any)?.currentStage === 'SALES_PITCH_QUEUE' ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
-              <span>Sent to Sales</span>
-            </span>
-          ) : !isAdmin ? (
+          {!isAdmin && (
             <Button
               size="sm"
-              onClick={() => setIsMoveToPrepModalOpen(true)}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              disabled={!canMoveToPrep}
+              onClick={() => {
+                if (canMoveToPrep) {
+                  setIsMoveToPrepModalOpen(true);
+                }
+              }}
+              className={
+                canMoveToPrep
+                  ? "bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                  : "bg-slate-100 text-slate-400 border border-slate-200 text-xs font-semibold flex items-center gap-1.5 cursor-not-allowed opacity-75 shadow-none"
+              }
+              title={
+                !canMoveToPrep
+                  ? currentStage === 'DOC_PREP' || currentStage === 'CORRECTION_NEEDED'
+                    ? hasAssignedPreparer ? `Return is actively with Tax Preparer ${preparerDisplayName}` : 'Return transferred to Tax Preparation department'
+                    : currentStage === 'SALES_PITCH_QUEUE' || currentStage === 'SALES_PITCHING'
+                    ? 'Return transferred to Sales department'
+                    : currentStage.startsWith('FILING')
+                    ? 'Return transferred to IRS Filing department'
+                    : 'Not available in current stage'
+                  : hasAssignedPreparer || isRevertedFromPrep
+                  ? `Re-submit return directly to assigned Tax Preparer (${preparerDisplayName})`
+                  : 'Transfer return to Tax Preparation Department'
+              }
             >
-              <FileCheck2 className="w-3.5 h-3.5" />
-              <span>Move to Tax Preparation</span>
+              {canMoveToPrep ? (
+                <FileCheck2 className="w-3.5 h-3.5 text-white" />
+              ) : (
+                <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
+              )}
+              <span>
+                {canMoveToPrep
+                  ? hasAssignedPreparer || isRevertedFromPrep
+                    ? 'Resume Tax Preparation'
+                    : 'Move to Tax Preparation'
+                  : currentStage === 'DOC_PREP' || currentStage === 'CORRECTION_NEEDED'
+                  ? hasAssignedPreparer ? 'Active with Preparer' : 'Transferred to Tax Prep'
+                  : currentStage === 'SALES_PITCH_QUEUE' || currentStage === 'SALES_PITCHING'
+                  ? 'In Sales Pitch Queue'
+                  : currentStage.startsWith('FILING')
+                  ? 'In IRS Filing'
+                  : 'Moved to Preparation'}
+              </span>
             </Button>
-          ) : null}
+          )}
 
           {!isAdmin && (
             <Button
@@ -238,6 +283,44 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* 1.5 Revert from Preparation / Sales Alert Banner */}
+      {isRevertedToDocumenter && Boolean(lastRevert) && (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-50/60 to-orange-50/40 border border-amber-300/90 text-amber-950 flex items-start gap-3 shadow-xs animate-in fade-in duration-200">
+          <RotateCcw className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-xs sm:text-sm text-amber-950">
+                Return Reverted from {lastRevert?.sourceDepartment || 'Tax Preparation'}:
+              </span>
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-200/90 text-amber-900 border border-amber-300">
+                {lastRevert?.reasonCategory?.replace(/_/g, ' ') || 'Action Required'}
+              </span>
+              <span className="text-[11px] text-amber-700/80 font-medium">
+                by {lastRevert?.revertedByName || 'Tax Preparer'}
+              </span>
+            </div>
+            <p className="text-xs text-amber-900 font-semibold leading-relaxed">
+              "{lastRevert?.revertNotes}"
+            </p>
+            {lastRevert?.missingDocumentTypes?.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800">
+                  Missing Paperwork Requested:
+                </span>
+                {lastRevert?.missingDocumentTypes.map((docType: string) => (
+                  <span
+                    key={docType}
+                    className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-white text-amber-900 border border-amber-300 shadow-2xs"
+                  >
+                    {docType}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 2. Top Hero Profile Summary Card */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
@@ -477,24 +560,40 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         }}
       />
 
-      {/* 6. Move to Tax Preparation Confirmation Modal */}
+      {/* 6. Move / Resume Tax Preparation Confirmation Modal */}
       {isMoveToPrepModalOpen && (
         <AppModal
           isOpen={isMoveToPrepModalOpen}
           onClose={() => setIsMoveToPrepModalOpen(false)}
-          title={`Move to Tax Preparation: ${customer.fullName || `${customer.firstName} ${customer.lastName}`}`}
+          title={
+            hasAssignedPreparer || isRevertedFromPrep
+              ? `Resume Tax Preparation: ${customer.fullName || `${customer.firstName} ${customer.lastName}`}`
+              : `Move to Tax Preparation: ${customer.fullName || `${customer.firstName} ${customer.lastName}`}`
+          }
           width="520px"
         >
           <div className="space-y-4 font-sans py-1">
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
-              <div className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
-                <FileCheck2 className="w-4 h-4 text-[#16A34A]" />
-                <span>Ready for Tax Preparation &amp; 1040 Drafting?</span>
+            {hasAssignedPreparer || isRevertedFromPrep ? (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
+                <div className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
+                  <FileCheck2 className="w-4 h-4 text-[#16A34A]" />
+                  <span>Re-submit Return to Assigned Preparer: {preparerDisplayName}</span>
+                </div>
+                <p className="leading-relaxed text-emerald-800">
+                  You are re-submitting <strong>{customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY {currentLead.taxYear})</strong> directly to <strong>{preparerDisplayName}</strong>. This return will immediately reactivate in their 1040 Drafting Workbench without needing Preparation Manager re-allocation.
+                </p>
               </div>
-              <p className="leading-relaxed text-emerald-800">
-                You are transferring <strong>{customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY {currentLead.taxYear})</strong> to the <strong>Tax Preparation Department</strong>.
-              </p>
-            </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
+                <div className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
+                  <FileCheck2 className="w-4 h-4 text-[#16A34A]" />
+                  <span>Ready for Tax Preparation &amp; 1040 Drafting?</span>
+                </div>
+                <p className="leading-relaxed text-emerald-800">
+                  You are transferring <strong>{customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY {currentLead.taxYear})</strong> to the <strong>Tax Preparation Department</strong>.
+                </p>
+              </div>
+            )}
 
             {/* Checklist items */}
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2.5">
@@ -515,14 +614,20 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               </div>
             </div>
 
-            {/* Handover remarks for Prep Manager */}
+            {/* Handover remarks */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Handover Notes for Preparation Manager (Optional)
+                {hasAssignedPreparer || isRevertedFromPrep
+                  ? `Handover / Verification Notes for ${preparerDisplayName} (Optional)`
+                  : `Handover Notes for Preparation Manager (Optional)`}
               </label>
               <textarea
                 rows={2}
-                placeholder="e.g. Taxpayer has W-2 and 1099-B stock trades, please check state deductions..."
+                placeholder={
+                  hasAssignedPreparer || isRevertedFromPrep
+                    ? 'e.g. Uploaded missing W-2 and confirmed spouse residency status with client...'
+                    : 'e.g. Taxpayer has W-2 and 1099-B stock trades, please check state deductions...'
+                }
                 value={prepTransferNotes}
                 onChange={(e) => setPrepTransferNotes(e.target.value)}
                 className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] outline-none transition-all resize-none text-slate-800 placeholder-slate-400 bg-white"
@@ -530,10 +635,17 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             </div>
 
             {/* Notification notice */}
-            <div className="p-2.5 rounded-lg bg-indigo-50/70 border border-indigo-200/80 text-[11px] text-indigo-900 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
-              <span>All active Preparation Managers will be notified instantly to allocate a Tax Preparer.</span>
-            </div>
+            {hasAssignedPreparer || isRevertedFromPrep ? (
+              <div className="p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200/80 text-[11px] text-emerald-900 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0" />
+                <span>Tax Preparer <strong>{preparerDisplayName}</strong> will be directly notified to resume drafting Form 1040.</span>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-lg bg-indigo-50/70 border border-indigo-200/80 text-[11px] text-indigo-900 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span>All active Preparation Managers will be notified instantly to allocate a Tax Preparer.</span>
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
               <Button
@@ -553,7 +665,13 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                 className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold px-4 cursor-pointer shadow-2xs flex items-center gap-1.5"
               >
                 <FileCheck2 className={`w-3.5 h-3.5 ${isMovingToPrep ? 'animate-spin' : ''}`} />
-                <span>{isMovingToPrep ? 'Transferring...' : 'Confirm & Send to Prep Queue'}</span>
+                <span>
+                  {isMovingToPrep
+                    ? 'Submitting...'
+                    : hasAssignedPreparer || isRevertedFromPrep
+                    ? 'Confirm & Resume Preparation'
+                    : 'Confirm & Send to Prep Queue'}
+                </span>
               </Button>
             </div>
           </div>

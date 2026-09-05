@@ -15,7 +15,7 @@ export interface SalesManagerMetricsProps {
   paidSignedCount: number;
   filingReadyCount: number;
   unassignedCount: number;
-  onQuickAutoDistribute: () => void;
+  onQuickAutoDistribute?: () => void;
   isDistributing?: boolean;
 }
 

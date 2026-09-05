@@ -29,6 +29,21 @@ export class SalesService {
             equals: 'QA_APPROVED',
           },
         },
+        {
+          taxDraftSummary: {
+            path: ['status'],
+            equals: 'REVISION_REQUESTED',
+          },
+        },
+        {
+          taxDraftSummary: {
+            path: ['status'],
+            equals: 'REVERTED_TO_DOCUMENTER',
+          },
+        },
+        {
+          assignedSalesAgentId: { not: null },
+        },
       ],
     };
 
@@ -41,6 +56,8 @@ export class SalesService {
         baseWhere.currentStage = { in: [ApplicationStage.SALES_PITCH_QUEUE, ApplicationStage.SALES_PITCHING] };
       } else if (query.stage === 'PAID') {
         baseWhere.currentStage = { in: [ApplicationStage.FILING_QUEUE, ApplicationStage.FILING_IN_PROGRESS, ApplicationStage.FILING_SUCCESS] };
+      } else if (query.stage === 'REVERTED') {
+        baseWhere.currentStage = { in: [ApplicationStage.CORRECTION_NEEDED, ApplicationStage.DOC_OUTREACH, ApplicationStage.DOC_PREP] };
       }
     }
 
@@ -158,16 +175,26 @@ export class SalesService {
         esignStatus = 'SENT';
       }
 
-      // Map Sales Stage
+      // Map Sales Stage (Preserve reverted stages CORRECTION_NEEDED, DOC_OUTREACH, DOC_PREP)
       let currentStage: string = app.currentStage;
-      if (app.currentStage === ApplicationStage.SALES_PITCH_QUEUE && !app.assignedSalesAgentId) {
-        currentStage = 'SALES_PITCH_QUEUE';
+      if (
+        app.currentStage === ApplicationStage.CORRECTION_NEEDED ||
+        app.currentStage === ApplicationStage.DOC_OUTREACH ||
+        app.currentStage === ApplicationStage.DOC_PREP
+      ) {
+        currentStage = app.currentStage;
+      } else if (
+        draft?.status === 'REVERTED_TO_SALES' ||
+        (draft?.lastRevert && !draft?.lastRevert?.resolved && draft?.lastRevert?.targetDepartment === 'SALES') ||
+        app.currentStage === ApplicationStage.SALES_PITCH_QUEUE
+      ) {
+        currentStage = app.assignedSalesAgentId ? 'SALES_PITCHING' : 'SALES_PITCH_QUEUE';
+      } else if (app.currentStage === ApplicationStage.SALES_PITCHING) {
+        currentStage = 'SALES_PITCHING';
       } else if (paymentStatus === 'PAID' && esignStatus === 'SIGNED') {
         currentStage = app.currentStage === ApplicationStage.FILING_QUEUE ? 'FILING_QUEUE' : 'PAID_AND_AUTHORIZED';
       } else if (paymentStatus === 'PAYMENT_LINK_SENT') {
         currentStage = 'QUOTATION_SENT';
-      } else if (app.assignedSalesAgentId) {
-        currentStage = 'SALES_PITCHING';
       }
 
       return {
@@ -202,6 +229,9 @@ export class SalesService {
           role: app.assignedSalesAgent.role,
         } : null,
         taxDraftSummary: {
+          ...draft,
+          status: draft.status || null,
+          lastRevert: draft.lastRevert || null,
           w2Wages: Number(draft.w2Wages) || grossIncome,
           taxableInterest: Number(draft.taxableInterest) || 0,
           capitalGains: Number(draft.capitalGains) || 0,
@@ -810,6 +840,9 @@ export class SalesService {
         role: app.assignedSalesAgent.role,
       } : null,
       taxDraftSummary: {
+        ...draft,
+        status: draft.status || null,
+        lastRevert: draft.lastRevert || null,
         w2Wages: Number(draft.w2Wages) || grossIncome,
         taxableInterest: Number(draft.taxableInterest) || 0,
         capitalGains: Number(draft.capitalGains) || 0,
@@ -980,13 +1013,6 @@ export class SalesService {
         ? `$${balDue.toLocaleString()} Balance Due`
         : 'Form 1040 QA Approved';
 
-    const updated = await prisma.taxApplication.update({
-      where: { id: applicationId },
-      data: {
-        currentStage: ApplicationStage.FILING_QUEUE,
-      },
-    });
-
     let actorUser = userId && userId !== 'SYSTEM'
       ? await prisma.user.findUnique({
           where: { id: userId },
@@ -1009,6 +1035,40 @@ export class SalesService {
       ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email || 'Sales Closer'
       : 'Sales Closer';
     const actorRole = actorUser?.role || 'SALES_AGENT';
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const existingRevertsByTarget: Record<string, any> = currentDraft.revertsByTarget || {};
+    const resolvedRevertsByTarget: Record<string, any> = {};
+    for (const [key, rev] of Object.entries(existingRevertsByTarget)) {
+      resolvedRevertsByTarget[key] = {
+        ...(rev as any),
+        resolved: true,
+        resolvedAt: new Date().toISOString(),
+        resolvedByAgent: actorName,
+        resolvedByUserId: effectiveActorId,
+      };
+    }
+
+    const updatedDraftSummary = {
+      ...currentDraft,
+      status: 'QA_APPROVED',
+      revertsByTarget: resolvedRevertsByTarget,
+      lastRevert: currentDraft.lastRevert ? {
+        ...currentDraft.lastRevert,
+        resolved: true,
+        resolvedAt: new Date().toISOString(),
+        resolvedByAgent: actorName,
+        resolvedByUserId: effectiveActorId,
+      } : null,
+    };
+
+    const updated = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        currentStage: ApplicationStage.FILING_QUEUE,
+        taxDraftSummary: updatedDraftSummary,
+      },
+    });
 
     // 1. Stage History Trail
     if (effectiveActorId) {
