@@ -25,14 +25,17 @@ export function useSalesAgentDashboard() {
 
       const currentUserId = user?.id;
       const currentUserEmail = user?.email?.toLowerCase().trim();
+      const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
 
-      // Strictly assigned to this logged-in Sales Closer
-      const assignedToMe = rawLeads.filter((lead) => {
-        if (!lead.assignedSalesAgent) return false;
-        if (currentUserId && lead.assignedSalesAgent.id === currentUserId) return true;
-        if (currentUserEmail && lead.assignedSalesAgent.email?.toLowerCase().trim() === currentUserEmail) return true;
-        return false;
-      });
+      // Strictly assigned to this logged-in Sales Closer (or all leads if manager)
+      const assignedToMe = isManager
+        ? rawLeads
+        : rawLeads.filter((lead) => {
+            if (!lead.assignedSalesAgent) return false;
+            if (currentUserId && lead.assignedSalesAgent.id === currentUserId) return true;
+            if (currentUserEmail && lead.assignedSalesAgent.email?.toLowerCase().trim() === currentUserEmail) return true;
+            return false;
+          });
 
       setAllLeads(assignedToMe);
     } catch {
@@ -41,7 +44,7 @@ export function useSalesAgentDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, user?.email]);
+  }, [user?.id, user?.email, user?.role]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -77,7 +80,7 @@ export function useSalesAgentDashboard() {
     let totalPotentialValue = 0;
 
     allLeads.forEach((l) => {
-      const fee = Number(l.feeBreakdown?.totalServiceFee) || 227;
+      const fee = Number(l.feeBreakdown?.totalServiceFee) || 0;
       totalPotentialValue += fee;
 
       if (isPaidOrClosed(l)) {
@@ -92,7 +95,7 @@ export function useSalesAgentDashboard() {
 
     const total = allLeads.length;
     const conversionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
-    const avgDealSize = closed > 0 ? Math.round(revenueToday / closed) : (total > 0 ? Math.round(totalPotentialValue / total) : 227);
+    const avgDealSize = closed > 0 ? Math.round(revenueToday / closed) : (total > 0 ? Math.round(totalPotentialValue / total) : 0);
 
     return {
       assignedLeads: total,
@@ -153,7 +156,7 @@ export function useSalesAgentDashboard() {
         const dealSlot = slots.find((s) => s.hour === '18:00');
         if (dealSlot) {
           dealSlot.deals += 1;
-          dealSlot.revenue += Number(lead.feeBreakdown?.totalServiceFee || 227);
+          dealSlot.revenue += Number(lead.feeBreakdown?.totalServiceFee || 0);
         }
       }
     });
@@ -179,7 +182,7 @@ export function useSalesAgentDashboard() {
         slots[adjustedIdx].pitches += 1;
         if (isPaidOrClosed(lead)) {
           slots[adjustedIdx].deals += 1;
-          slots[adjustedIdx].revenue += Number(lead.feeBreakdown?.totalServiceFee || 227);
+          slots[adjustedIdx].revenue += Number(lead.feeBreakdown?.totalServiceFee || 0);
         }
       }
     });
@@ -209,12 +212,13 @@ export function useSalesAgentDashboard() {
     }> = [];
 
     allLeads.forEach((l) => {
+      const fee = l.feeBreakdown?.isQuoted ? `$${l.feeBreakdown.totalServiceFee}` : (l.feeBreakdown?.totalServiceFee > 0 ? `$${l.feeBreakdown.totalServiceFee}` : 'Unquoted');
       if (isPaidOrClosed(l)) {
         activities.push({
           id: `act-paid-${l.id}`,
           title: `Form 8879 Authorized & Fee Paid`,
           taxpayerName: l.taxpayerName,
-          amount: l.feeBreakdown?.totalServiceFee || 227,
+          amount: fee,
           type: 'PAID',
           time: 'Today',
         });
@@ -223,7 +227,7 @@ export function useSalesAgentDashboard() {
           id: `act-quote-${l.id}`,
           title: `Fee Quotation Dispatched`,
           taxpayerName: l.taxpayerName,
-          amount: l.feeBreakdown?.totalServiceFee || 227,
+          amount: fee,
           type: 'QUOTED',
           time: 'Today',
         });
@@ -232,7 +236,7 @@ export function useSalesAgentDashboard() {
           id: `act-assign-${l.id}`,
           title: `QA Certified Return Assigned to You`,
           taxpayerName: l.taxpayerName,
-          amount: l.federalRefund > 0 ? `+$${Number(l.federalRefund).toLocaleString()} Refund` : '$0 Balance',
+          amount: l.federalRefund > 0 ? `+$${Number(l.federalRefund).toLocaleString()} Refund` : (l.balanceDue > 0 ? `-$${Number(l.balanceDue).toLocaleString()} Tax Due` : '$0 Balance'),
           type: 'ASSIGNED',
           time: 'Today',
         });

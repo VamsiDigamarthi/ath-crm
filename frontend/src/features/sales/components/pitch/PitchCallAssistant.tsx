@@ -24,8 +24,22 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
   onDispatchToFiling,
 }) => {
   const [isCalling, setIsCalling] = useState(false);
-  const [callDuration] = useState(142); // 02:22
+  const [callDuration, setCallDuration] = useState(0);
   const [callNotes, setCallNotes] = useState(lead.notes || '');
+
+  React.useEffect(() => {
+    let interval: any = null;
+    if (isCalling) {
+      interval = setInterval(() => {
+        setCallDuration((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setCallDuration(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isCalling]);
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -117,13 +131,23 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
 
           <div className="space-y-1.5 text-[11px] text-slate-600 bg-amber-50/50 p-3 rounded-xl border border-amber-200/80 leading-relaxed">
             <p>
-              • <strong>Certified Refund Pitch:</strong> "Our Senior Auditor certified your 1040 return with eligible <strong>+${lead.federalRefund.toLocaleString()}</strong> Federal refund."
+              • <strong>Certified {lead.federalRefund > 0 ? 'Refund' : 'Calculation'} Pitch:</strong> {lead.federalRefund > 0 ? (
+                <span>"Our Senior Auditor certified your 1040 return with eligible <strong>+${lead.federalRefund.toLocaleString()}</strong> Federal refund."</span>
+              ) : lead.balanceDue > 0 ? (
+                <span>"Our Senior Auditor finalized your 1040 Form with a minimized balance due of <strong>-${lead.balanceDue.toLocaleString()}</strong> under standard deductions."</span>
+              ) : (
+                <span>"Our Senior Auditor reconciled your 1040 return to an exact $0 balance."</span>
+              )}
             </p>
             <p>
               • <strong>Compliance &amp; State:</strong> "We audited your W-2 wages and optimized state credits to eliminate audit risk."
             </p>
             <p>
-              • <strong>Payment Close:</strong> "We can transmit this return to the IRS today for just <strong>${lead.feeBreakdown.totalServiceFee}</strong> all-inclusive."
+              • <strong>Payment Close:</strong> {lead.feeBreakdown?.totalServiceFee > 0 ? (
+                <span>"We can transmit this return to the IRS today for <strong>${lead.feeBreakdown.totalServiceFee}</strong> all-inclusive."</span>
+              ) : (
+                <span>"We can calculate and quote your custom preparation fee to authorize filing today."</span>
+              )}
             </p>
           </div>
         </div>

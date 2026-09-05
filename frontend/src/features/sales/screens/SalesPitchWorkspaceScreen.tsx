@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/features/auth/store/auth-store';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
 import { PitchTaxDraftSummaryCard } from '../components/pitch/PitchTaxDraftSummaryCard';
 import { PitchFeeCalculator } from '../components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
+import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesFeeBreakdown } from '../types/sales.types';
 import apiClient from '@/lib/api-client';
@@ -13,6 +15,9 @@ import toast from 'react-hot-toast';
 export const SalesPitchWorkspaceScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
+  const backQueuePath = isManager ? '/sales/manager/queue' : '/sales/agent/queue';
 
   const [lead, setLead] = useState<SalesLeadItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,10 +72,10 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         <h3 className="font-bold text-slate-800 text-base">Sales Lead not found</h3>
         <p className="text-xs text-slate-500 mt-1">The requested tax return lead could not be located in the sales pipeline.</p>
         <button
-          onClick={() => navigate('/sales/agent/queue')}
+          onClick={() => navigate(backQueuePath)}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold cursor-pointer hover:bg-blue-700"
         >
-          Back to Pitch Queue
+          {isManager ? 'Back to Department Queue' : 'Back to Pitch Queue'}
         </button>
       </div>
     );
@@ -83,7 +88,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   const handleProcessPaymentSuccess = async (method: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER') => {
     if (!lead) return;
     const appId = lead.id || lead.applicationId;
-    const amount = lead.feeBreakdown?.totalServiceFee || 227;
+    const amount = Number(lead.feeBreakdown?.totalServiceFee) || 0;
     const txRef = `tx_live_${Math.random().toString(36).substring(2, 10)}`;
 
     try {
@@ -95,18 +100,25 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         notes: `Service fee payment collected via ${method}`,
       });
 
-      setLead((prev) =>
-        prev
-          ? {
-            ...prev,
-            paymentStatus: 'PAID',
-            paymentMethod: method,
-            paidAt: new Date().toISOString(),
-            transactionRef: txRef,
-            currentStage: prev.esignStatus === 'SIGNED' ? 'PAID_AND_AUTHORIZED' : 'PAYMENT_PENDING',
-          }
-          : prev
-      );
+      // Refetch live lead to get latest stageHistories & auditLogs from database
+      const updated = await salesService.getLeadById(appId);
+      if (updated) {
+        setLead(updated);
+      } else {
+        setLead((prev) =>
+          prev
+            ? {
+              ...prev,
+              paymentStatus: 'PAID',
+              paymentMethod: method,
+              paidAt: new Date().toISOString(),
+              transactionRef: txRef,
+              currentStage: prev.esignStatus === 'SIGNED' ? 'PAID_AND_AUTHORIZED' : 'PAYMENT_PENDING',
+            }
+            : prev
+        );
+      }
+      toast.success(`Service fee payment of $${amount.toLocaleString()} successfully recorded via ${method}! 💳✅`);
     } catch {
       toast.error('Payment recorded locally, but failed to sync with database');
     }
@@ -131,20 +143,26 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
       await salesService.recordEsign(appId, {
         esignMethod: meta?.method || 'UPLOAD_PDF',
         fileName: meta?.fileName || `IRS_Form_8879_Signed_${lead.taxpayerName.replace(/\s+/g, '_')}.pdf`,
-        taxpayerPin: meta?.pin || '84920',
+        taxpayerPin: meta?.pin || lead.taxpayerPin || '',
       });
 
-      setLead((prev) =>
-        prev
-          ? {
-            ...prev,
-            esignStatus: 'SIGNED',
-            taxpayerPin: meta?.pin || prev.taxpayerPin,
-            esignCompletedAt: new Date().toISOString(),
-            currentStage: prev.paymentStatus === 'PAID' ? 'PAID_AND_AUTHORIZED' : 'QUOTATION_SENT',
-          }
-          : prev
-      );
+      // Refetch live lead to get latest stageHistories & auditLogs from database
+      const updated = await salesService.getLeadById(appId);
+      if (updated) {
+        setLead(updated);
+      } else {
+        setLead((prev) =>
+          prev
+            ? {
+              ...prev,
+              esignStatus: 'SIGNED',
+              taxpayerPin: meta?.pin || prev.taxpayerPin,
+              esignCompletedAt: new Date().toISOString(),
+              currentStage: prev.paymentStatus === 'PAID' ? 'PAID_AND_AUTHORIZED' : 'QUOTATION_SENT',
+            }
+            : prev
+        );
+      }
       toast.success(`Form 8879 signed file ${meta?.fileName || ''} saved to vault and authorized with PIN ${meta?.pin || ''}! 📄✅`);
     } catch (err: any) {
       console.error('Failed to sync e-sign:', err);
@@ -158,7 +176,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
       setLead((prev) => (prev ? { ...prev, currentStage: 'FILING_QUEUE' } : prev));
       toast.success(`Form 1040 for ${lead.taxpayerName} successfully dispatched to IRS E-Filing Queue! 🚀🏛️`);
       setTimeout(() => {
-        navigate('/sales/agent/queue');
+        navigate(backQueuePath);
       }, 1200);
     } catch {
       toast.error('Failed to dispatch return to filing operations');
@@ -199,7 +217,17 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Checkout Modals (Stripe Simulation & E-Sign 8879) */}
+      {/* 3. Full Lead Audit Trail & Lifecycle Activity Stream (Matching Reviewer Screen) */}
+      <LeadAuditTrailSection
+        leadId={lead.id || lead.applicationId}
+        taxpayerName={lead.taxpayerName}
+        currentStage={lead.currentStage}
+        stageHistories={(lead.stageHistories as any) || []}
+        callLogs={(lead.callLogs as any) || []}
+        auditLogs={(lead.auditLogs as any) || []}
+      />
+
+      {/* 4. Checkout Modals (Stripe Simulation & E-Sign 8879) */}
       <PitchPaymentAndEsignModals
         lead={lead}
         isPaymentModalOpen={isPaymentModalOpen}

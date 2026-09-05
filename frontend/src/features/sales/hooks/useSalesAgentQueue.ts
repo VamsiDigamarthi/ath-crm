@@ -25,14 +25,17 @@ export function useSalesAgentQueue() {
 
       const currentUserId = user?.id;
       const currentUserEmail = user?.email?.toLowerCase().trim();
+      const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
 
-      // STRICT RELATIONAL FILTER: Only returns where current user is the assignedSalesAgent
-      const assignedToMe = rawLeads.filter((lead) => {
-        if (!lead.assignedSalesAgent) return false;
-        if (currentUserId && lead.assignedSalesAgent.id === currentUserId) return true;
-        if (currentUserEmail && lead.assignedSalesAgent.email?.toLowerCase().trim() === currentUserEmail) return true;
-        return false;
-      });
+      // If user is manager/admin, show all pipeline leads. Otherwise, show leads assigned to current Closer
+      const assignedToMe = isManager
+        ? rawLeads
+        : rawLeads.filter((lead) => {
+            if (!lead.assignedSalesAgent) return false;
+            if (currentUserId && lead.assignedSalesAgent.id === currentUserId) return true;
+            if (currentUserEmail && lead.assignedSalesAgent.email?.toLowerCase().trim() === currentUserEmail) return true;
+            return false;
+          });
 
       setAllLeads(assignedToMe);
     } catch {
@@ -42,7 +45,7 @@ export function useSalesAgentQueue() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [user?.id, user?.email]);
+  }, [user?.id, user?.email, user?.role]);
 
   useEffect(() => {
     fetchAgentLeads();
@@ -114,7 +117,7 @@ export function useSalesAgentQueue() {
 
     allLeads.forEach((lead) => {
       if (isPaidOrClosed(lead)) {
-        const fee = Number(lead.feeBreakdown?.totalServiceFee) || 227;
+        const fee = Number(lead.feeBreakdown?.totalServiceFee) || 0;
         revenueToday += fee;
       }
     });

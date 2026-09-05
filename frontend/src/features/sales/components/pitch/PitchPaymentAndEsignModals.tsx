@@ -49,13 +49,13 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
   const [cardCvc, setCardCvc] = useState('884');
 
   // Phone PIN & Call Recording Compliance
-  const [taxpayerPin, setTaxpayerPin] = useState('84920');
+  const [taxpayerPin, setTaxpayerPin] = useState(lead.taxpayerPin || '');
   const [callRecordingRef, setCallRecordingRef] = useState(`CALL_REC_${Math.floor(100000 + Math.random() * 900000)}`);
   const [hasEsignConsent, setHasEsignConsent] = useState(false);
 
   // File Upload State & PIN
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [uploadPin, setUploadPin] = useState<string>(typeof lead.taxpayerPin === 'string' ? lead.taxpayerPin : '84920');
+  const [uploadPin, setUploadPin] = useState<string>(typeof lead.taxpayerPin === 'string' ? lead.taxpayerPin : '');
 
   const handleChargeCard = () => {
     setIsProcessingPayment(true);
@@ -91,8 +91,8 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
       toast.error('Please select or drop the signed Form 8879 PDF file');
       return;
     }
-    const finalPin = uploadPin.trim() || taxpayerPin || '84920';
-    if (finalPin.length < 5) {
+    const finalPin = uploadPin.trim() || taxpayerPin;
+    if (finalPin && finalPin.length < 5) {
       toast.error('Please enter the 5-digit PIN written on the signed Form 8879');
       return;
     }

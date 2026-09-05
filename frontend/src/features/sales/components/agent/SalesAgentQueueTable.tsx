@@ -268,9 +268,9 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
                     ) : (
                       <>
                         <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                          <span>${lead.feeBreakdown?.totalServiceFee || 227}</span>
+                          <span>{lead.feeBreakdown?.totalServiceFee > 0 ? `$${lead.feeBreakdown.totalServiceFee}` : '$0'}</span>
                           <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold">
-                            Est.
+                            Unquoted
                           </span>
                         </div>
                         <div className="text-[10px] text-slate-400 font-medium mt-0.5">

@@ -95,10 +95,10 @@ export const SalesAgentPriorityTargets: React.FC<SalesAgentPriorityTargetsProps>
 
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
-                    Estimated Fee
+                    Quoted Fee
                   </div>
                   <span className="font-bold text-slate-900 text-xs">
-                    ${lead.feeBreakdown?.totalServiceFee || 227}
+                    {lead.feeBreakdown?.totalServiceFee > 0 ? `$${lead.feeBreakdown.totalServiceFee}` : 'Unquoted'}
                   </span>
                 </div>
 

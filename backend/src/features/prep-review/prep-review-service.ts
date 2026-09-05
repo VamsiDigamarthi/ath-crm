@@ -1,5 +1,5 @@
 import { prisma } from '../../config/db.js';
-import { ApplicationStage, Role, NotificationCategory, NotificationPriority } from '@prisma/client';
+import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType } from '@prisma/client';
 import { StorageService } from '../../utils/storage-service.js';
 import { NotFoundError } from '../../errors/not-found-error.js';
 
@@ -1000,6 +1000,33 @@ export class PrepReviewService {
       throw new Error('Cannot sign off: Form 1040 is currently Under Preparation by the Tax Preparer. Preparer must submit draft to QA first.');
     }
 
+    // 1. Fetch Reviewer details
+    const reviewerUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, firstName: true, lastName: true, role: true, email: true },
+    });
+    const reviewerName = reviewerUser
+      ? `${reviewerUser.firstName || ''} ${reviewerUser.lastName || ''}`.trim() || reviewerUser.email || 'Senior QA Reviewer'
+      : 'Senior QA Reviewer';
+
+    // 2. Fetch Customer details
+    const customer = await prisma.customerProfile.findUnique({
+      where: { id: app.customerId },
+    });
+    const clientName = customer
+      ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'Taxpayer Client'
+      : 'Taxpayer Client';
+
+    // 3. Format Refund Summary
+    const fedRefund = Number(currentDraft.federalRefund) || 0;
+    const balanceDue = Number(currentDraft.balanceDue) || 0;
+    const refundFormatted = fedRefund > 0 
+      ? `+$${fedRefund.toLocaleString()} Federal Refund` 
+      : balanceDue > 0 
+        ? `-$${balanceDue.toLocaleString()} Balance Due` 
+        : '$0 Net Balance';
+
+    // 4. Update Application to SALES_PITCH_QUEUE
     const updatedSummary = {
       ...(app.taxDraftSummary as any || {}),
       status: 'QA_APPROVED',
@@ -1016,6 +1043,7 @@ export class PrepReviewService {
       },
     });
 
+    // 5. Create StageHistory record
     try {
       await prisma.stageHistory.create({
         data: {
@@ -1030,7 +1058,88 @@ export class PrepReviewService {
       // Stage history resilience
     }
 
-    // In-App Notification to Preparer
+    // 6. Create Lead Audit Trail Record (AuditLog)
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId: app.id,
+          actorId: userId,
+          actorType: AuditActorType.AGENT,
+          actorName: reviewerName,
+          actorRole: 'TAX_REVIEWER',
+          action: AuditActionType.STAGE_CHANGE,
+          moduleKey: 'PREP_REVIEW',
+          details: {
+            fromStage: app.currentStage,
+            toStage: ApplicationStage.SALES_PITCH_QUEUE,
+            actionDescription: 'Senior QA 4-Eyes Compliance Verification Signed Off',
+            remarks,
+            refundSummary: refundFormatted,
+            transferredTo: 'SALES_PITCH_QUEUE',
+          },
+        },
+      });
+    } catch (e) {
+      console.error('AuditLog creation error on QA sign-off:', e);
+    }
+
+    // 7. Direct Notification to Sales Managers
+    const salesManagers = await prisma.user.findMany({
+      where: {
+        role: Role.SALES_MANAGER,
+        isActive: true,
+      },
+    });
+
+    for (const sm of salesManagers) {
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: sm.id,
+            targetRole: Role.SALES_MANAGER,
+            applicationId: app.id,
+            category: NotificationCategory.SALES,
+            priority: NotificationPriority.HIGH,
+            title: `Form 1040 QA Signed-Off: New Lead in Sales Queue`,
+            message: `Senior Auditor (${reviewerName}) certified Form 1040 for ${clientName} (${refundFormatted}). Lead is ready in Sales Pitch Queue for client quotation.`,
+            actionUrl: `/sales/manager/queue`,
+            actionLabel: 'View Sales Queue',
+            relatedLeadName: clientName,
+          },
+        });
+      } catch (e) {
+        console.error('Failed to notify Sales Manager:', e);
+      }
+    }
+
+    // Fallback if no Sales Manager exists: notify ADMIN
+    if (salesManagers.length === 0) {
+      const admins = await prisma.user.findMany({
+        where: { role: Role.ADMIN, isActive: true },
+      });
+      for (const admin of admins) {
+        try {
+          await prisma.notification.create({
+            data: {
+              recipientUserId: admin.id,
+              targetRole: Role.ADMIN,
+              applicationId: app.id,
+              category: NotificationCategory.SALES,
+              priority: NotificationPriority.HIGH,
+              title: `Form 1040 QA Signed-Off: New Lead in Sales Queue`,
+              message: `Senior Auditor (${reviewerName}) certified Form 1040 for ${clientName} (${refundFormatted}). Transferred to Sales Pitch Queue.`,
+              actionUrl: `/sales/manager/queue`,
+              actionLabel: 'View Sales Queue',
+              relatedLeadName: clientName,
+            },
+          });
+        } catch (e) {
+          console.error('Failed to notify Admin fallback:', e);
+        }
+      }
+    }
+
+    // 8. In-App Notification to Assigned Preparer
     if (app.assignedPrepAgentId) {
       try {
         await prisma.notification.create({
@@ -1040,13 +1149,14 @@ export class PrepReviewService {
             category: NotificationCategory.PREP_REVIEW,
             priority: NotificationPriority.NORMAL,
             title: `Form 1040 QA Approved: Tax Return Signed Off`,
-            message: `Senior Auditor approved Form 1040 draft for TY ${app.taxYear || 2025}. Transferred to Sales Pitch Queue.`,
+            message: `Senior Auditor (${reviewerName}) approved Form 1040 draft for TY ${app.taxYear || 2025} (${clientName}). Transferred to Sales Pitch Queue.`,
             actionUrl: `/prep-review/preparer/workspace/${app.id}`,
             actionLabel: 'View Workspace',
+            relatedLeadName: clientName,
           },
         });
       } catch (e) {
-        console.error('Sign-off notification error:', e);
+        console.error('Sign-off notification error to preparer:', e);
       }
     }
 

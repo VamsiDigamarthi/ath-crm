@@ -50,7 +50,7 @@ export class SalesController {
 
   public static async getAgentStats(req: Request, res: Response) {
     try {
-      const salesAgentId = (req.query.salesAgentId as string) || (req as any).user?.id;
+      const salesAgentId = (req.query.salesAgentId as string) || req.currentUser?.id || (req as any).user?.id;
       if (!salesAgentId) {
         return res.status(400).json({ message: 'salesAgentId is required' });
       }
@@ -72,7 +72,7 @@ export class SalesController {
           ? raw.split(',').map((s) => s.trim())
           : [raw]
         : [];
-      const managerUserId = (req as any).user?.id || 'SYSTEM';
+      const managerUserId = req.currentUser?.id || (req as any).user?.id || '';
       const result = await SalesService.assignLead(ids, salesAgentId, managerUserId);
       res.json(result);
     } catch (err: any) {
@@ -82,7 +82,7 @@ export class SalesController {
 
   public static async autoRoundRobin(req: Request, res: Response) {
     try {
-      const managerUserId = (req as any).user?.id || 'SYSTEM';
+      const managerUserId = req.currentUser?.id || (req as any).user?.id || '';
       const result = await SalesService.autoRoundRobin(managerUserId);
       res.json(result);
     } catch (err: any) {
@@ -93,7 +93,7 @@ export class SalesController {
   public static async dispatchToFiling(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
-      const userId = (req as any).user?.id || 'SYSTEM';
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
       const result = await SalesService.dispatchToFiling(id, userId);
       res.json(result);
     } catch (err: any) {
@@ -104,7 +104,7 @@ export class SalesController {
   public static async recordPayment(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
-      const userId = (req as any).user?.id || 'SYSTEM';
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
       const result = await SalesService.recordPayment(id, req.body, userId);
       res.json(result);
     } catch (err: any) {
@@ -115,7 +115,7 @@ export class SalesController {
   public static async recordEsign(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
-      const userId = (req as any).user?.id || 'SYSTEM';
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
       const result = await SalesService.recordEsign(id, req.body, userId);
       res.json(result);
     } catch (err: any) {

@@ -82,9 +82,10 @@ export const SalesLayout: React.FC = () => {
     if (currentPath.includes('/sales/manager/team')) return 'team';
     if (currentPath.includes('/sales/manager/queue')) return 'pipeline';
     if (currentPath.includes('/sales/manager')) return 'dashboard';
+    if (isManager && (currentPath.includes('/sales/agent/pitch') || currentPath.includes('/sales/pitch') || currentPath.includes('/sales/agent/queue'))) return 'pipeline';
     if (currentPath.includes('/sales/agent/queue') || currentPath.includes('/sales/agent/pitch')) return 'pitch_queue';
     if (currentPath.includes('/sales/agent')) return 'agent_hub';
-    return isManager ? 'dashboard' : 'pitch_queue';
+    return isManager ? 'pipeline' : 'pitch_queue';
   };
 
   const activeId = getActiveId();

@@ -33,7 +33,6 @@ import { SalesTeamScorecardsScreen } from '@/features/sales/screens/SalesTeamSco
 import { SalesAgentDashboardScreen } from '@/features/sales/screens/SalesAgentDashboardScreen';
 import { SalesAgentQueueScreen } from '@/features/sales/screens/SalesAgentQueueScreen';
 import { SalesPitchWorkspaceScreen } from '@/features/sales/screens/SalesPitchWorkspaceScreen';
-import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
 import { FilingLayout } from '@/features/filing/layouts/FilingLayout';
 import { FilingManagerDashboardScreen } from '@/features/filing/screens/FilingManagerDashboardScreen';
@@ -52,6 +51,12 @@ import { CustomerExpertScreen } from '@/features/customer/screens/CustomerExpert
 import { UnauthorizedScreen } from '@/features/auth/screens/UnauthorizedScreen';
 import { NotificationCenterScreen } from '@/features/notifications/screens/NotificationCenterScreen';
 import { useAuthStore } from '@/features/auth/store/auth-store';
+
+const SalesIndexRedirect: React.FC = () => {
+  const { user } = useAuthStore();
+  const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
+  return <Navigate to={isManager ? '/sales/manager/queue' : '/sales/agent/queue'} replace />;
+};
 
 /**
  * Smart redirect component: Navigates user to their role's layout-wrapped notification screen
@@ -133,7 +138,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'sales',
-            element: <SalesDepartmentScreen />,
+            element: <Navigate to="/sales/manager/queue" replace />,
           },
           {
             path: 'filing',
@@ -304,7 +309,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="/sales/agent/queue" replace />,
+            element: <SalesIndexRedirect />,
           },
           // Manager Routes
           {

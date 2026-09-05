@@ -98,6 +98,41 @@ export interface SalesLeadItem extends Record<string, unknown> {
   lastContactedAt?: string;
   callDisposition?: string;
   notes?: string;
+  taxpayerPin?: string;
+
+  // Real Database Stage History & Immutable Audit Logs
+  stageHistories?: Array<{
+    id: string;
+    fromStage: string;
+    toStage: string;
+    movedByUserId: string;
+    movedByName: string;
+    movedByEmail?: string;
+    movedByRole?: string;
+    remarks?: string;
+    createdAt: string;
+  }>;
+  callLogs?: Array<{
+    id: string;
+    disposition: string;
+    callSummary?: string;
+    agentId: string;
+    agentName: string;
+    agentEmail?: string;
+    agentRole?: string;
+    createdAt: string;
+  }>;
+  auditLogs?: Array<{
+    id: string;
+    action: string;
+    moduleKey?: string;
+    actorType?: string;
+    actorName: string;
+    actorEmail?: string;
+    actorRole?: string;
+    details?: Record<string, any>;
+    createdAt: string;
+  }>;
 }
 
 export interface SalesRepItem {

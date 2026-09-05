@@ -1,5 +1,5 @@
 import { prisma } from "../../config/db.js";
-import { ApplicationStage, Role } from "@prisma/client";
+import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType } from "@prisma/client";
 
 export class SalesService {
   /**
@@ -97,17 +97,19 @@ export class SalesService {
       const latestQuote = app.quotes?.[0];
 
       // Form 1040 financial figures
+      const hasDraftData = draft && (draft.federalRefund !== undefined || draft.balanceDue !== undefined || draft.federalBalanceDue !== undefined);
       const fedRefund = Number(draft.federalRefund) || 0;
-      const balanceDue = Number(draft.federalBalanceDue) || 0;
+      const balanceDue = Number(draft.balanceDue ?? draft.federalBalanceDue) || 0;
       const stateRefund = Number(draft.stateRefund) || 0;
+      const stateBalanceDue = Number(draft.stateBalanceDue) || 0;
       const computedGross = Number(draft.w2Wages || 0) + Number(draft.taxableInterest || 0) + Number(draft.capitalGains || 0) + Number(draft.otherIncome || 0);
-      const grossIncome = computedGross > 0 && computedGross < 5000000 ? computedGross : (Number(draft.grossIncome) || 145000);
-      const validFedRefund = fedRefund > 0 ? fedRefund : (Number(draft.estimatedRefund) || 3420);
-      const validStateRefund = stateRefund > 0 ? stateRefund : (Number(draft.estimatedStateRefund) || 680);
-      const stdDeduction = customer?.maritalStatus?.includes('Joint') ? 30000 : 15000;
+      const grossIncome = Number(draft.grossIncome) || computedGross;
+      const validFedRefund = hasDraftData ? fedRefund : (Number(draft.estimatedRefund) || 0);
+      const validStateRefund = hasDraftData ? stateRefund : (Number(draft.estimatedStateRefund) || 0);
+      const stdDeduction = Number(draft.standardDeduction) || (customer?.maritalStatus?.includes('Joint') ? 29200 : 14600);
       const validTaxable = Number(draft.taxableIncome) || Math.max(0, grossIncome - stdDeduction);
-      const validTax = Number(draft.taxLiability) || Math.round(validTaxable * 0.22);
-      const validWithholding = Number(draft.fedWithheld) || (validTax + validFedRefund);
+      const validTax = Number(draft.taxLiability) || 0;
+      const validWithholding = Number(draft.fedWithheld) || (validFedRefund > 0 ? (validTax + validFedRefund) : Math.max(0, validTax - balanceDue));
 
       // Fee Breakdown from real quotes or dynamic baseline based on taxpayer state
       const hasQuote = Boolean(latestQuote);
@@ -115,9 +117,8 @@ export class SalesService {
       const baseFee = 149;
       const stateFee = customer?.state ? 49 : 0;
       const auditDefenseAmount = 29;
-      const dynamicEstFee = baseFee + stateFee + auditDefenseAmount;
 
-      const totalServiceFee = hasQuote ? quoteAmount : dynamicEstFee;
+      const totalServiceFee = hasQuote ? quoteAmount : (baseFee + stateFee + auditDefenseAmount);
 
       const feeBreakdown = {
         fed1040PrepFee: baseFee,
@@ -177,7 +178,7 @@ export class SalesService {
         taxpayerEmail: customer?.email || '-',
         taxpayerPhone: customer?.phone || '-',
         taxYear: app.taxYear || 2025,
-        visaType: customer?.visaType || 'H-1B (Specialty Worker)',
+        visaType: customer?.visaType || '-',
         maritalStatus: customer?.maritalStatus || 'Single',
         stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
         complexity: 'STANDARD',
@@ -187,7 +188,7 @@ export class SalesService {
         stateRefund: validStateRefund,
         balanceDue,
         qaAuditorName: qaAuditor,
-        qaAuditorRemarks: draft.remarks || draft.auditorRemarks || 'Form 1040 draft verified and certified for Sales pitch.',
+        qaAuditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
         qaApprovedAt: draft.qaApprovedAt || app.updatedAt.toISOString(),
         assignedPrepAgent: app.assignedPrepAgent ? {
           id: app.assignedPrepAgent.id,
@@ -215,14 +216,14 @@ export class SalesService {
           fedWithheld: validWithholding,
           federalRefund: validFedRefund,
           federalBalanceDue: balanceDue,
-          stateTaxLiability: Number(draft.stateTaxLiability) || 4200,
-          stateWithheld: Number(draft.stateWithheld) || 4880,
+          stateTaxLiability: Number(draft.stateTaxLiability) || 0,
+          stateWithheld: Number(draft.stateWithheld) || 0,
           stateRefund: validStateRefund,
           stateBalanceDue: Number(draft.stateBalanceDue) || 0,
           combinedRefund: validFedRefund + validStateRefund,
-          preparerNotes: draft.preparerNotes || draft.prepNotes || 'Verified all W-2 boxes, optimized Standard Deduction, and reconciled state nexus.',
-          auditorRemarks: draft.remarks || draft.auditorRemarks || 'Form 1040 draft verified and certified for Sales pitch.',
-          targetDueDate: draft.targetDueDate || 'April 15, 2026',
+          preparerNotes: draft.preparerNotes || draft.prepNotes || '',
+          auditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
+          targetDueDate: draft.targetDueDate || '',
         },
         feeBreakdown,
         paymentStatus,
@@ -351,6 +352,40 @@ export class SalesService {
   public static async assignLead(applicationIds: string | string[], salesAgentId: string, managerUserId: string) {
     const ids = Array.isArray(applicationIds) ? applicationIds : [applicationIds];
 
+    // 1. Fetch manager details with safe fallback to active sales manager/admin
+    let managerUser = managerUserId && managerUserId !== 'SYSTEM'
+      ? await prisma.user.findUnique({
+          where: { id: managerUserId },
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+        })
+      : null;
+
+    if (!managerUser) {
+      managerUser = await prisma.user.findFirst({
+        where: {
+          role: { in: [Role.SALES_MANAGER, Role.ADMIN, Role.SALES_TEAM_LEAD] },
+          isActive: true,
+        },
+        select: { id: true, firstName: true, lastName: true, email: true, role: true },
+      });
+    }
+
+    const effectiveManagerId = managerUser?.id || null;
+    const managerName = managerUser
+      ? `${managerUser.firstName || ''} ${managerUser.lastName || ''}`.trim() || managerUser.email || 'Sales Manager'
+      : 'Sales Manager';
+    const managerRole = managerUser?.role || 'SALES_MANAGER';
+
+    // 2. Fetch target agent details
+    const targetAgent = await prisma.user.findUnique({
+      where: { id: salesAgentId },
+      select: { id: true, firstName: true, lastName: true, email: true, role: true },
+    });
+    const agentName = targetAgent
+      ? `${targetAgent.firstName || ''} ${targetAgent.lastName || ''}`.trim() || targetAgent.email || 'Sales Closer'
+      : 'Sales Closer';
+
+    // 3. Update database stage and assigned closer
     const updated = await prisma.taxApplication.updateMany({
       where: { id: { in: ids } },
       data: {
@@ -359,26 +394,88 @@ export class SalesService {
       },
     });
 
-    const targetAgent = await prisma.user.findUnique({
-      where: { id: salesAgentId },
-      select: { id: true, firstName: true, lastName: true, email: true },
+    // 4. Fetch the assigned applications for rich logging & notifications
+    const assignedApps = await prisma.taxApplication.findMany({
+      where: { id: { in: ids } },
+      include: { customer: true },
     });
 
-    if (managerUserId) {
-      for (const id of ids) {
+    for (const app of assignedApps) {
+      const clientName = app.customer
+        ? `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Client'
+        : 'Client';
+
+      const draft: any = app.taxDraftSummary || {};
+      const fedRefund = Number(draft.federalRefund) || Number(draft.estimatedRefund) || 0;
+      const balDue = Number(draft.balanceDue ?? draft.federalBalanceDue) || 0;
+      const refundOrDueText =
+        fedRefund > 0
+          ? `$${fedRefund.toLocaleString()} Federal Refund`
+          : balDue > 0
+          ? `$${balDue.toLocaleString()} Balance Due`
+          : 'Form 1040 QA Approved';
+
+      // A. StageHistory Audit Trail
+      if (effectiveManagerId) {
         try {
           await prisma.stageHistory.create({
             data: {
-              applicationId: id,
-              fromStage: ApplicationStage.SALES_PITCH_QUEUE,
+              applicationId: app.id,
+              fromStage: app.currentStage === ApplicationStage.SALES_PITCHING ? ApplicationStage.SALES_PITCH_QUEUE : app.currentStage,
               toStage: ApplicationStage.SALES_PITCHING,
-              movedByUserId: managerUserId,
-              remarks: `Assigned to Sales Closer (${targetAgent?.firstName || targetAgent?.email})`,
+              movedByUserId: effectiveManagerId,
+              remarks: `Lead assigned to Sales Closer (${agentName}) by ${managerName}`,
             },
           });
         } catch (err) {
           console.error('Failed to create stage history:', err);
         }
+      }
+
+      // B. Lead Audit Trail (AuditLog)
+      try {
+        await prisma.auditLog.create({
+          data: {
+            applicationId: app.id,
+            actorId: effectiveManagerId,
+            actorType: AuditActorType.MANAGER,
+            actorName: managerName,
+            actorRole: managerRole,
+            action: AuditActionType.STAGE_CHANGE,
+            moduleKey: 'SALES',
+            details: {
+              fromStage: ApplicationStage.SALES_PITCH_QUEUE,
+              toStage: ApplicationStage.SALES_PITCHING,
+              actionDescription: `Sales lead assigned to closer ${agentName}`,
+              assignedSalesAgentId: salesAgentId,
+              assignedSalesAgentName: agentName,
+              taxYear: app.taxYear || 2025,
+              refundOrDue: refundOrDueText,
+            },
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create audit log for lead assignment:', err);
+      }
+
+      // C. In-App Notification dispatched directly to the assigned Sales Closer
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: salesAgentId,
+            targetRole: Role.SALES_AGENT,
+            applicationId: app.id,
+            category: NotificationCategory.SALES,
+            priority: NotificationPriority.HIGH,
+            title: `New Sales Lead Assigned: ${clientName}`,
+            message: `${managerName} assigned certified Form 1040 lead (${clientName} • ${refundOrDueText}) to you for fee quotation & pitch.`,
+            actionUrl: `/sales/agent/pitch/${app.id}`,
+            actionLabel: 'Open Pitch Workspace',
+            relatedLeadName: clientName,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create notification for sales agent:', err);
       }
     }
 
@@ -389,12 +486,36 @@ export class SalesService {
    * 1-Click Auto Round-Robin Lead Distribution across active Sales Closers
    */
   public static async autoRoundRobin(managerUserId: string) {
+    let managerUser = managerUserId && managerUserId !== 'SYSTEM'
+      ? await prisma.user.findUnique({
+          where: { id: managerUserId },
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+        })
+      : null;
+
+    if (!managerUser) {
+      managerUser = await prisma.user.findFirst({
+        where: {
+          role: { in: [Role.SALES_MANAGER, Role.ADMIN, Role.SALES_TEAM_LEAD] },
+          isActive: true,
+        },
+        select: { id: true, firstName: true, lastName: true, email: true, role: true },
+      });
+    }
+
+    const effectiveManagerId = managerUser?.id || null;
+    const managerName = managerUser
+      ? `${managerUser.firstName || ''} ${managerUser.lastName || ''}`.trim() || managerUser.email || 'Sales Manager'
+      : 'Sales Manager';
+    const managerRole = managerUser?.role || 'SALES_MANAGER';
+
     const [unassignedLeads, closers] = await Promise.all([
       prisma.taxApplication.findMany({
         where: {
           currentStage: ApplicationStage.SALES_PITCH_QUEUE,
           assignedSalesAgentId: null,
         },
+        include: { customer: true },
       }),
       prisma.user.findMany({
         where: {
@@ -414,6 +535,7 @@ export class SalesService {
     for (const lead of unassignedLeads) {
       const assignedCloser = closers[closerIndex % closers.length];
       closerIndex++;
+      const closerName = `${assignedCloser.firstName || ''} ${assignedCloser.lastName || ''}`.trim() || assignedCloser.email || 'Sales Closer';
 
       const updated = await prisma.taxApplication.update({
         where: { id: lead.id },
@@ -424,6 +546,81 @@ export class SalesService {
       });
 
       assignments.push(updated);
+
+      // A. StageHistory
+      if (effectiveManagerId) {
+        try {
+          await prisma.stageHistory.create({
+            data: {
+              applicationId: lead.id,
+              fromStage: lead.currentStage,
+              toStage: ApplicationStage.SALES_PITCHING,
+              movedByUserId: effectiveManagerId,
+              remarks: `1-Click Auto Round-Robin assigned to Sales Closer (${closerName}) by ${managerName}`,
+            },
+          });
+        } catch (e) {
+          console.error('Failed to create stage history in autoRoundRobin:', e);
+        }
+      }
+
+      // B. AuditLog
+      try {
+        await prisma.auditLog.create({
+          data: {
+            applicationId: lead.id,
+            actorId: effectiveManagerId,
+            actorType: AuditActorType.MANAGER,
+            actorName: managerName,
+            actorRole: managerRole,
+            action: AuditActionType.STAGE_CHANGE,
+            moduleKey: 'SALES',
+            details: {
+              fromStage: lead.currentStage,
+              toStage: ApplicationStage.SALES_PITCHING,
+              actionDescription: `1-Click Auto Round-Robin assigned to closer ${closerName}`,
+              assignedSalesAgentId: assignedCloser.id,
+              assignedSalesAgentName: closerName,
+              taxYear: lead.taxYear || 2025,
+            },
+          },
+        });
+      } catch (e) {
+        console.error('Failed to create audit log in autoRoundRobin:', e);
+      }
+
+      // C. Notification
+      const clientName = lead.customer
+        ? `${lead.customer.firstName || ''} ${lead.customer.lastName || ''}`.trim() || lead.customer.email || 'Client'
+        : 'Client';
+      const draft: any = lead.taxDraftSummary || {};
+      const fedRefund = Number(draft.federalRefund) || Number(draft.estimatedRefund) || 0;
+      const balDue = Number(draft.balanceDue ?? draft.federalBalanceDue) || 0;
+      const refundOrDueText =
+        fedRefund > 0
+          ? `$${fedRefund.toLocaleString()} Federal Refund`
+          : balDue > 0
+          ? `$${balDue.toLocaleString()} Balance Due`
+          : 'Form 1040 QA Approved';
+
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: assignedCloser.id,
+            targetRole: Role.SALES_AGENT,
+            applicationId: lead.id,
+            category: NotificationCategory.SALES,
+            priority: NotificationPriority.HIGH,
+            title: `New Sales Lead Assigned (Round-Robin): ${clientName}`,
+            message: `${managerName} assigned certified Form 1040 lead (${clientName} • ${refundOrDueText}) to you via Auto Round-Robin for fee pitch.`,
+            actionUrl: `/sales/agent/pitch/${lead.id}`,
+            actionLabel: 'Open Pitch Workspace',
+            relatedLeadName: clientName,
+          },
+        });
+      } catch (e) {
+        console.error('Failed to send notification in autoRoundRobin:', e);
+      }
     }
 
     return {
@@ -436,29 +633,56 @@ export class SalesService {
    * Get single Sales Lead by ID for Pitch Workspace
    */
   public static async getLeadById(applicationId: string) {
-    const app: any = await prisma.taxApplication.findUnique({
-      where: { id: applicationId },
-      include: {
-        customer: true,
-        documents: true,
-        assignedDocAgent: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+    const [app, auditLogs] = await Promise.all([
+      prisma.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: {
+          customer: true,
+          documents: true,
+          assignedDocAgent: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          assignedPrepAgent: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          assignedReviewAgent: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          assignedSalesAgent: {
+            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          },
+          quotes: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+          stageHistories: {
+            include: {
+              movedByUser: {
+                select: { id: true, firstName: true, lastName: true, email: true, role: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
+          callLogs: {
+            include: {
+              agent: {
+                select: { id: true, firstName: true, lastName: true, email: true, role: true },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          },
         },
-        assignedPrepAgent: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+      }),
+      prisma.auditLog.findMany({
+        where: { applicationId },
+        include: {
+          actorUser: {
+            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          },
         },
-        assignedReviewAgent: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
-        assignedSalesAgent: {
-          select: { id: true, firstName: true, lastName: true, email: true, role: true },
-        },
-        quotes: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
-    });
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
     if (!app) return null;
 
@@ -470,17 +694,19 @@ export class SalesService {
     const draft: any = app.taxDraftSummary || {};
     const latestQuote = app.quotes?.[0];
 
+    const hasDraftData = draft && (draft.federalRefund !== undefined || draft.balanceDue !== undefined || draft.federalBalanceDue !== undefined);
     const fedRefund = Number(draft.federalRefund) || 0;
-    const balanceDue = Number(draft.federalBalanceDue) || 0;
+    const balanceDue = Number(draft.balanceDue ?? draft.federalBalanceDue) || 0;
     const stateRefund = Number(draft.stateRefund) || 0;
+    const stateBalanceDue = Number(draft.stateBalanceDue) || 0;
     const computedGross = Number(draft.w2Wages || 0) + Number(draft.taxableInterest || 0) + Number(draft.capitalGains || 0) + Number(draft.otherIncome || 0);
-    const grossIncome = computedGross > 0 && computedGross < 5000000 ? computedGross : (Number(draft.grossIncome) || 145000);
-    const validFedRefund = fedRefund > 0 ? fedRefund : (Number(draft.estimatedRefund) || 3420);
-    const validStateRefund = stateRefund > 0 ? stateRefund : (Number(draft.estimatedStateRefund) || 680);
-    const stdDeduction = customer?.maritalStatus?.includes('Joint') ? 30000 : 15000;
+    const grossIncome = Number(draft.grossIncome) || computedGross;
+    const validFedRefund = hasDraftData ? fedRefund : (Number(draft.estimatedRefund) || 0);
+    const validStateRefund = hasDraftData ? stateRefund : (Number(draft.estimatedStateRefund) || 0);
+    const stdDeduction = Number(draft.standardDeduction) || (customer?.maritalStatus?.includes('Joint') ? 29200 : 14600);
     const validTaxable = Number(draft.taxableIncome) || Math.max(0, grossIncome - stdDeduction);
-    const validTax = Number(draft.taxLiability) || Math.round(validTaxable * 0.22);
-    const validWithholding = Number(draft.fedWithheld) || (validTax + validFedRefund);
+    const validTax = Number(draft.taxLiability) || 0;
+    const validWithholding = Number(draft.fedWithheld) || (validFedRefund > 0 ? (validTax + validFedRefund) : Math.max(0, validTax - balanceDue));
 
     // Fee Breakdown from real quotes or dynamic baseline based on taxpayer state
     const hasQuote = Boolean(latestQuote);
@@ -488,9 +714,8 @@ export class SalesService {
     const baseFee = 149;
     const stateFee = customer?.state ? 49 : 0;
     const auditDefenseAmount = 29;
-    const dynamicEstFee = baseFee + stateFee + auditDefenseAmount;
 
-    const totalServiceFee = hasQuote ? quoteAmount : dynamicEstFee;
+    const totalServiceFee = hasQuote ? quoteAmount : (baseFee + stateFee + auditDefenseAmount);
 
     const feeBreakdown = {
       fed1040PrepFee: baseFee,
@@ -500,7 +725,7 @@ export class SalesService {
       auditDefenseFee: auditDefenseAmount,
       hasAuditDefense: true,
       discountAmount: hasQuote ? Number(latestQuote.discountAmount || 0) : 0,
-      discountCode: latestQuote?.discountCode || '',
+      discountCode: (latestQuote as any)?.discountCode || '',
       totalServiceFee,
       isQuoted: hasQuote,
     };
@@ -543,7 +768,7 @@ export class SalesService {
       taxpayerEmail: customer?.email || '-',
       taxpayerPhone: customer?.phone || '-',
       taxYear: app.taxYear || 2025,
-      visaType: customer?.visaType || 'H-1B (Specialty Worker)',
+      visaType: customer?.visaType || '-',
       maritalStatus: customer?.maritalStatus || 'Single',
       stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
       complexity: 'STANDARD',
@@ -553,7 +778,7 @@ export class SalesService {
       stateRefund: validStateRefund,
       balanceDue,
       qaAuditorName: qaAuditor,
-      qaAuditorRemarks: draft.remarks || draft.auditorRemarks || 'Form 1040 draft verified and certified for Sales pitch.',
+      qaAuditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
       qaApprovedAt: draft.qaApprovedAt || app.updatedAt.toISOString(),
       assignedPrepAgent: app.assignedPrepAgent ? {
         id: app.assignedPrepAgent.id,
@@ -572,7 +797,7 @@ export class SalesService {
         capitalGains: Number(draft.capitalGains) || 0,
         otherIncome: Number(draft.otherIncome) || 0,
         grossIncome,
-        deductionType: draft.deductionType || (customer?.maritalStatus?.includes('Joint') ? 'STANDARD (MFJ - $30,000)' : 'STANDARD (Single - $15,000)'),
+        deductionType: draft.deductionType || (customer?.maritalStatus?.includes('Joint') ? 'STANDARD (MFJ)' : 'STANDARD (Single)'),
         standardDeduction: stdDeduction,
         effectiveDeduction: Number(draft.effectiveDeduction) || stdDeduction,
         taxableIncome: validTaxable,
@@ -581,20 +806,62 @@ export class SalesService {
         fedWithheld: validWithholding,
         federalRefund: validFedRefund,
         federalBalanceDue: balanceDue,
-        stateTaxLiability: Number(draft.stateTaxLiability) || 4200,
-        stateWithheld: Number(draft.stateWithheld) || 4880,
+        stateTaxLiability: Number(draft.stateTaxLiability) || 0,
+        stateWithheld: Number(draft.stateWithheld) || 0,
         stateRefund: validStateRefund,
         stateBalanceDue: Number(draft.stateBalanceDue) || 0,
         combinedRefund: validFedRefund + validStateRefund,
-        preparerNotes: draft.preparerNotes || draft.prepNotes || 'Verified all W-2 boxes, optimized Standard Deduction, and reconciled state nexus.',
-        auditorRemarks: draft.remarks || draft.auditorRemarks || 'Form 1040 draft verified and certified for Sales pitch.',
-        targetDueDate: draft.targetDueDate || 'April 15, 2026',
+        preparerNotes: draft.preparerNotes || draft.prepNotes || '',
+        auditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
+        targetDueDate: draft.targetDueDate || '',
       },
       feeBreakdown,
       paymentStatus,
       esignStatus,
       paidAt: draft.paidAt || (latestQuote?.status === 'PAID' ? latestQuote.createdAt.toISOString() : null),
       esignCompletedAt: draft.esignCompletedAt || null,
+      stageHistories: (app.stageHistories || []).map((s: any) => ({
+        id: s.id,
+        fromStage: s.fromStage,
+        toStage: s.toStage,
+        movedByUserId: s.movedByUserId,
+        movedByName: s.movedByUser
+          ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email
+          : 'System User',
+        movedByEmail: s.movedByUser?.email,
+        movedByRole: s.movedByUser?.role,
+        remarks: s.remarks,
+        createdAt: s.createdAt?.toISOString ? s.createdAt.toISOString() : s.createdAt,
+      })),
+      callLogs: (app.callLogs || []).map((c: any) => ({
+        id: c.id,
+        disposition: c.disposition,
+        callSummary: c.callSummary,
+        agentId: c.agentId,
+        agentName: c.agent
+          ? `${c.agent.firstName || ''} ${c.agent.lastName || ''}`.trim() || c.agent.email
+          : 'Calling Agent',
+        agentEmail: c.agent?.email,
+        agentRole: c.agent?.role,
+        createdAt: c.createdAt?.toISOString ? c.createdAt.toISOString() : c.createdAt,
+      })),
+      auditLogs: (auditLogs || []).map((a: any) => ({
+        id: a.id,
+        action: a.action,
+        moduleKey: a.moduleKey,
+        actorType: a.actorType,
+        actorName:
+          a.actorName ||
+          (a.actorUser
+            ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email
+            : a.actorType === 'CLIENT'
+            ? 'Taxpayer Client'
+            : 'System User'),
+        actorEmail: a.actorUser?.email,
+        actorRole: a.actorRole || a.actorUser?.role,
+        details: a.details,
+        createdAt: a.createdAt?.toISOString ? a.createdAt.toISOString() : a.createdAt,
+      })),
       createdAt: app.createdAt.toISOString(),
       updatedAt: app.updatedAt.toISOString(),
     };
@@ -647,7 +914,7 @@ export class SalesService {
       if (isPaid) {
         closedDealsToday++;
         const quote = app.quotes?.[0];
-        const quoteAmount = quote ? Number(quote.quoteAmount) - Number(quote.discountAmount || 0) : 227;
+        const quoteAmount = quote ? Number(quote.quoteAmount) - Number(quote.discountAmount || 0) : 0;
         revenueToday += quoteAmount;
       } else if (isPendingPayment) {
         pendingPayment++;
@@ -672,9 +939,6 @@ export class SalesService {
   /**
    * Dispatch paid & e-signed return to IRS Filing Queue
    */
-  /**
-   * Dispatch paid & e-signed return to IRS Filing Queue
-   */
   public static async dispatchToFiling(applicationId: string, userId: string) {
     const updated = await prisma.taxApplication.update({
       where: { id: applicationId },
@@ -683,16 +947,64 @@ export class SalesService {
       },
     });
 
-    if (userId) {
-      await prisma.stageHistory.create({
+    let actorUser = userId && userId !== 'SYSTEM'
+      ? await prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+        })
+      : null;
+
+    if (!actorUser) {
+      actorUser = await prisma.user.findFirst({
+        where: {
+          role: { in: [Role.SALES_AGENT, Role.SALES_MANAGER, Role.ADMIN] },
+          isActive: true,
+        },
+        select: { id: true, firstName: true, lastName: true, email: true, role: true },
+      });
+    }
+
+    const effectiveActorId = actorUser?.id || null;
+    const actorName = actorUser
+      ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email || 'Sales Closer'
+      : 'Sales Closer';
+    const actorRole = actorUser?.role || 'SALES_AGENT';
+
+    if (effectiveActorId) {
+      try {
+        await prisma.stageHistory.create({
+          data: {
+            applicationId,
+            fromStage: ApplicationStage.SALES_PITCHING,
+            toStage: ApplicationStage.FILING_QUEUE,
+            movedByUserId: effectiveActorId,
+            remarks: 'Fee payment verified and authorized for IRS E-Filing transmission',
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create stage history on filing dispatch:', err);
+      }
+    }
+
+    try {
+      await prisma.auditLog.create({
         data: {
           applicationId,
-          fromStage: ApplicationStage.SALES_PITCHING,
-          toStage: ApplicationStage.FILING_QUEUE,
-          movedByUserId: userId,
-          remarks: 'Fee payment verified and authorized for IRS E-Filing transmission',
+          actorId: effectiveActorId,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole,
+          action: AuditActionType.STAGE_CHANGE,
+          moduleKey: 'SALES',
+          details: {
+            fromStage: ApplicationStage.SALES_PITCHING,
+            toStage: ApplicationStage.FILING_QUEUE,
+            actionDescription: 'Form 1040 certified return dispatched to IRS E-Filing Queue',
+          },
         },
       });
+    } catch (err) {
+      console.error('Failed to create audit log on filing dispatch:', err);
     }
 
     return { success: true, application: updated };
@@ -726,7 +1038,7 @@ export class SalesService {
       paidAt: new Date().toISOString(),
       paymentMethod: data.paymentMethod || 'STRIPE_CARD',
       transactionRef: data.transactionRef || `tx_card_${Date.now()}`,
-      paidAmount: Number(data.amount) || 227,
+      paidAmount: Number(data.amount) || 0,
     };
 
     // Safely resolve valid agentId for SalesQuote User foreign key
@@ -747,7 +1059,7 @@ export class SalesService {
           data: {
             applicationId,
             salesAgentId: validAgentId,
-            quoteAmount: Number(data.amount) || 227,
+            quoteAmount: Number(data.amount) || 0,
             discountAmount: Number(data.discountAmount || 0),
             status: 'PAID',
             userFeedback: data.notes || `Paid via ${data.paymentMethod || 'Card'} (${data.transactionRef || 'Direct'})`,
@@ -769,6 +1081,13 @@ export class SalesService {
       },
     });
 
+    const agentName = agentExists
+      ? `${agentExists.firstName || ''} ${agentExists.lastName || ''}`.trim() || agentExists.email || 'Sales Closer'
+      : 'Sales Closer';
+    const agentRole = agentExists?.role || 'SALES_AGENT';
+
+    const formattedAmount = Number(data.amount || 0).toLocaleString();
+
     if (validAgentId) {
       try {
         await prisma.stageHistory.create({
@@ -777,12 +1096,37 @@ export class SalesService {
             fromStage: app.currentStage,
             toStage: nextStage,
             movedByUserId: validAgentId,
-            remarks: `Service fee payment of $${data.amount || 227} recorded (${data.paymentMethod || 'Card'})`,
+            remarks: `Service fee payment of $${formattedAmount} collected via ${data.paymentMethod || 'Card'} (Ref: ${data.transactionRef || 'Direct'})`,
           },
         });
       } catch {
         // ignore log error
       }
+    }
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: validAgentId || null,
+          actorType: AuditActorType.AGENT,
+          actorName: agentName,
+          actorRole: agentRole,
+          action: AuditActionType.STAGE_CHANGE,
+          moduleKey: 'SALES',
+          details: {
+            fromStage: app.currentStage,
+            toStage: nextStage,
+            actionDescription: `Service fee payment of $${formattedAmount} collected via ${data.paymentMethod || 'Card'}`,
+            paidAmount: Number(data.amount) || 0,
+            paymentMethod: data.paymentMethod,
+            transactionRef: data.transactionRef,
+            remarks: `Client authorized and processed service fee payment of $${formattedAmount} via ${data.paymentMethod || 'Card'} (Tx: ${data.transactionRef || 'Direct'})`,
+          },
+        },
+      });
+    } catch (err) {
+      console.error('Failed to create audit log on payment record:', err);
     }
 
     return { success: true, quote, application: updatedApp };
@@ -816,7 +1160,7 @@ export class SalesService {
       esignStatus: 'SIGNED',
       esignCompletedAt: new Date().toISOString(),
       esignMethod: data.esignMethod || 'UPLOAD_PDF',
-      taxpayerPin: data.taxpayerPin || '84920',
+      taxpayerPin: data.taxpayerPin || '',
       callRecordingRef: data.callRecordingRef || '',
     };
 
@@ -864,6 +1208,11 @@ export class SalesService {
       },
     });
 
+    const authorName = userExists
+      ? `${userExists.firstName || ''} ${userExists.lastName || ''}`.trim() || userExists.email || 'Sales Closer'
+      : 'Sales Closer';
+    const authorRole = userExists?.role || 'SALES_AGENT';
+
     if (validAuthorId) {
       try {
         await prisma.stageHistory.create({
@@ -872,12 +1221,35 @@ export class SalesService {
             fromStage: app.currentStage,
             toStage: nextStage,
             movedByUserId: validAuthorId,
-            remarks: `IRS Form 8879 authorization recorded (${data.esignMethod || 'Signed Document Attached'})`,
+            remarks: `IRS Form 8879/8878 authorization signed (${data.esignMethod || 'Signed Document Attached'}) with PIN: ${data.taxpayerPin || 'Authorized'}`,
           },
         });
       } catch {
         // ignore log error
       }
+    }
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: validAuthorId || null,
+          actorType: AuditActorType.AGENT,
+          actorName: authorName,
+          actorRole: authorRole,
+          action: AuditActionType.DOCUMENT_UPLOAD,
+          moduleKey: 'SALES',
+          details: {
+            actionDescription: `IRS Form 8879/8878 authorization signed (${data.esignMethod || 'Signed PDF'}) with PIN: ${data.taxpayerPin || 'Authorized'}`,
+            fileName: docName,
+            esignMethod: data.esignMethod,
+            taxpayerPin: data.taxpayerPin,
+            remarks: `IRS Form 8879 E-File Signature Authorization signed and verified with Taxpayer PIN: ${data.taxpayerPin || 'Authorized'} (${docName})`,
+          },
+        },
+      });
+    } catch (err) {
+      console.error('Failed to create audit log on esign record:', err);
     }
 
     return { success: true, document: doc, application: updatedApp };

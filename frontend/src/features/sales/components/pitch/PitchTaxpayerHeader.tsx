@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { useAuthStore } from '@/features/auth/store/auth-store';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import type { SalesLeadItem } from '../../types/sales.types';
 
@@ -10,6 +11,16 @@ interface PitchTaxpayerHeaderProps {
 
 export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead }) => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
+  const backQueuePath = isManager ? '/sales/manager/queue' : '/sales/agent/queue';
+  const [isExpandedRemarks, setIsExpandedRemarks] = useState(false);
+
+  const rawRemarks = lead.qaAuditorRemarks || 'Form 1040 certified and approved for Sales pitch.';
+  const isLongRemarks = rawRemarks.length > 160;
+  const displayedRemarks = isLongRemarks && !isExpandedRemarks 
+    ? `${rawRemarks.slice(0, 160)}...` 
+    : rawRemarks;
 
   return (
     <div className="space-y-4">
@@ -18,11 +29,11 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead }
         <div>
           <button
             type="button"
-            onClick={() => navigate('/sales/agent/queue')}
+            onClick={() => navigate(backQueuePath)}
             className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1.5 transition-colors cursor-pointer mb-2"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Pitch Queue</span>
+            <span>{isManager ? 'Back to Department Queue' : 'Back to Pitch Queue'}</span>
           </button>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -67,36 +78,44 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead }
         </div>
       </div>
 
-      {/* 2. Hero Certified 1040 Refund Banner */}
-      <div className="bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 text-white p-6 rounded-2xl shadow-md space-y-4">
+      {/* 2. Hero Certified 1040 Refund / Balance Due Banner */}
+      <div className={`text-white p-6 rounded-2xl shadow-md space-y-4 ${
+        lead.federalRefund > 0 
+          ? 'bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800' 
+          : lead.balanceDue > 0 
+            ? 'bg-gradient-to-r from-slate-900 via-slate-800 to-rose-950' 
+            : 'bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900'
+      }`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-emerald-200 text-xs font-bold uppercase tracking-wider mb-1">
-              <ShieldCheck className="w-4 h-4 text-emerald-300" />
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-1 text-white/80">
+              <ShieldCheck className={`w-4 h-4 ${lead.federalRefund > 0 ? 'text-emerald-300' : 'text-rose-300'}`} />
               <span>4-Eyes QA Certified Form 1040 Calculation Result</span>
             </div>
             <div className="text-3xl sm:text-4xl font-black tracking-tight text-white flex items-baseline gap-2">
               {lead.federalRefund > 0 ? (
-                <span>+${lead.federalRefund.toLocaleString()}</span>
+                <span className="text-emerald-200">+{lead.federalRefund.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>
+              ) : lead.balanceDue > 0 ? (
+                <span className="text-rose-300">-{lead.balanceDue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>
               ) : (
-                <span>-${lead.balanceDue.toLocaleString()}</span>
+                <span>$0.00</span>
               )}
-              <span className="text-base font-bold text-emerald-200">
-                {lead.federalRefund > 0 ? 'Federal Tax Refund' : 'Federal Tax Due'}
+              <span className={`text-base font-bold ${lead.federalRefund > 0 ? 'text-emerald-200' : 'text-rose-200'}`}>
+                {lead.federalRefund > 0 ? 'Federal Tax Refund' : lead.balanceDue > 0 ? 'Federal Balance Due' : 'Federal Tax Balanced'}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-4 bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/15">
             <div>
-              <div className="text-[10px] text-emerald-200 font-bold uppercase">State Refund</div>
+              <div className="text-[10px] text-white/70 font-bold uppercase">State Refund</div>
               <div className="text-base font-black text-white">
                 {lead.stateRefund > 0 ? `+$${lead.stateRefund.toLocaleString()}` : '$0'}
               </div>
             </div>
             <div className="w-px h-8 bg-white/20" />
             <div>
-              <div className="text-[10px] text-emerald-200 font-bold uppercase">Gross Income (Line 9)</div>
+              <div className="text-[10px] text-white/70 font-bold uppercase">Gross Income (Line 9)</div>
               <div className="text-base font-black text-white">
                 ${lead.grossIncome.toLocaleString()}
               </div>
@@ -104,13 +123,25 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead }
           </div>
         </div>
 
-        {/* Auditor Remarks Stamp */}
-        <div className="pt-3 border-t border-white/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-emerald-100 font-medium">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-white">Audited by {lead.qaAuditorName}:</span>
-            <span className="italic">"{lead.qaAuditorRemarks}"</span>
+        {/* Auditor Remarks Stamp with Interactive Read More / Read Less Toggle */}
+        <div className="pt-3 border-t border-white/15 flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs text-white/90 font-medium">
+          <div className="flex-1 min-w-0">
+            <span className="font-bold text-white mr-1.5">Audited by {lead.qaAuditorName}:</span>
+            <span className="italic break-words">
+              "{displayedRemarks}"
+            </span>
+            {isLongRemarks && (
+              <button
+                type="button"
+                onClick={() => setIsExpandedRemarks(!isExpandedRemarks)}
+                className="ml-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-200 hover:text-amber-100 underline underline-offset-2 cursor-pointer transition-colors bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded"
+              >
+                <span>{isExpandedRemarks ? 'Read Less' : 'Read More'}</span>
+                {isExpandedRemarks ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+            )}
           </div>
-          <span className="text-[10px] text-emerald-200 shrink-0">
+          <span className="text-[10px] text-white/70 shrink-0 self-start sm:self-center">
             Sign-Off: {new Date(lead.qaApprovedAt).toLocaleDateString()}
           </span>
         </div>

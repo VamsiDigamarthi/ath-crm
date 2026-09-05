@@ -113,6 +113,24 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                                s.remarks?.toLowerCase().includes('auto-distributed') ||
                                s.remarks?.toLowerCase().includes('round-robin');
 
+      const isSalesAssignment = (s.remarks?.toLowerCase().includes('sales closer') ||
+                                 s.remarks?.toLowerCase().includes('sales agent') ||
+                                 s.remarks?.toLowerCase().includes('closer (') ||
+                                 (s.fromStage === 'SALES_PITCH_QUEUE' && s.toStage === 'SALES_PITCHING')) && !isAutoRoundRobin;
+
+      const isFilingDispatch = s.remarks?.toLowerCase().includes('filing transmission') ||
+                               s.remarks?.toLowerCase().includes('dispatched to irs') ||
+                               (s.fromStage === 'SALES_PITCHING' && s.toStage === 'FILING_QUEUE');
+
+      const isPaymentCollected = s.remarks?.toLowerCase().includes('service fee payment') ||
+                                 s.remarks?.toLowerCase().includes('payment of $') ||
+                                 s.remarks?.toLowerCase().includes('fee payment');
+
+      const isForm8879Signed = s.remarks?.toLowerCase().includes('form 8879') ||
+                               s.remarks?.toLowerCase().includes('form 8878') ||
+                               s.remarks?.toLowerCase().includes('8879 authorization') ||
+                               s.remarks?.toLowerCase().includes('8878 authorization');
+
       const isSubmitQA = s.remarks?.toLowerCase().includes('submitted for 4-eyes') || 
                          s.remarks?.toLowerCase().includes('form 1040 computation completed');
 
@@ -135,7 +153,29 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         eventDescription = `Admin uploaded raw prospect lead into TaxCRM Intake Pipeline via Excel/CSV bulk ingestion. Lead deduplicated by SSN/Email and queued in Documenter Department Unassigned Pool at RAW_PROSPECT stage for manager assignment.`;
       } else if (isAutoRoundRobin) {
         eventType = 'ASSIGNMENT';
-        eventTitle = '1-Click Auto Round-Robin Lead Allocation';
+        eventTitle = '1-Click Auto Round-Robin Lead Allocation (Sales Manager)';
+        displayFromStage = 'SALES_PITCH_QUEUE';
+        displayToStage = 'SALES_PITCHING';
+      } else if (isSalesAssignment) {
+        eventType = 'ASSIGNMENT';
+        eventTitle = 'Sales Closer Direct Assignment (Sales Manager)';
+        displayFromStage = 'SALES_PITCH_QUEUE';
+        displayToStage = 'SALES_PITCHING';
+      } else if (isPaymentCollected) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Service Fee Payment Collected & Verified';
+        displayFromStage = s.fromStage;
+        displayToStage = s.toStage;
+      } else if (isForm8879Signed) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'IRS Form 8879 / 8878 Taxpayer Authorization Signed';
+        displayFromStage = s.fromStage;
+        displayToStage = s.toStage;
+      } else if (isFilingDispatch) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Form 1040 Authorized & Dispatched to IRS Filing Queue';
+        displayFromStage = 'SALES_PITCHING';
+        displayToStage = 'FILING_QUEUE';
       } else if (isPrepAssignment) {
         eventType = 'ASSIGNMENT';
         eventTitle = 'Tax Preparer & QA Reviewer Assignment (Prep Manager)';
@@ -171,9 +211,9 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         description: eventDescription,
         fromStage: displayFromStage,
         toStage: displayToStage,
-        actorName: s.movedByName || s.movedByEmail?.split('@')[0] || (isIngestion ? 'Operations Admin' : isPrepAssignment ? 'Prep Manager' : 'Documenter Manager'),
+        actorName: s.movedByName || s.movedByEmail?.split('@')[0] || (isIngestion ? 'Operations Admin' : isPrepAssignment ? 'Prep Manager' : (isSalesAssignment || isAutoRoundRobin) ? 'Sales Manager' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'Sales Closer' : 'Documenter Manager'),
         actorEmail: s.movedByEmail || undefined,
-        actorRole: s.movedByRole || (isIngestion ? 'ADMIN' : isPrepAssignment ? 'PREP_MANAGER' : 'DOC_MANAGER'),
+        actorRole: s.movedByRole || (isIngestion ? 'ADMIN' : isPrepAssignment ? 'PREP_MANAGER' : (isSalesAssignment || isAutoRoundRobin) ? 'SALES_MANAGER' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'SALES_AGENT' : 'DOC_MANAGER'),
         timestamp: s.createdAt,
       });
     });
@@ -209,9 +249,12 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
       const isDocUpload = a.action === 'DOCUMENT_UPLOAD';
       const isDocDelete = a.action === 'DOCUMENT_DELETE';
       const isDocVerify = a.action === 'DOCUMENT_VERIFY';
+      const isSalesEsignUpload = a.moduleKey === 'SALES' && (isDocUpload || (a.details as any)?.fileName?.includes('8879') || (a.details as any)?.fileName?.includes('8878'));
 
       let eventTitle = `Audit Action: ${a.action.replace(/_/g, ' ')}`;
-      if (isOrganizer) {
+      if (isSalesEsignUpload) {
+        eventTitle = `IRS Form 8879 E-Sign Authorized & Attached (PIN: ${(a.details as any)?.taxpayerPin || 'Authorized'})`;
+      } else if (isOrganizer) {
         eventTitle = `9-Module Tax Organizer Saved`;
       } else if (isDocUpload) {
         eventTitle = `Document Uploaded: ${(a.details as any)?.fileName || (a.details as any)?.categoryLabel || 'Tax Document'}`;
