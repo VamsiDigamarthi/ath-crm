@@ -39,20 +39,22 @@ export const Module2Dependents: React.FC<Module2Props> = ({
   errors = {},
   clearError,
 }) => {
+  const d = (data || {}) as Partial<OrganizerData['m2_dependents']>;
+
   // Resolve single spouse details smoothly
-  const spouse = (data.spouseList && data.spouseList.length > 0)
-    ? data.spouseList[0]
+  const spouse = (d.spouseList && d.spouseList.length > 0)
+    ? d.spouseList[0]
     : {
-        firstName: data.spouseFirstName || data.spouseName?.split(' ')[0] || '',
-        middleName: data.spouseMiddleName || '',
-        lastName: data.spouseLastName || data.spouseName?.split(' ').slice(1).join(' ') || (maritalStatus?.includes('Married') ? primaryTaxpayerLastName : ''),
-        dob: data.spouseDob || '',
-        ssn: data.spouseSsn || '',
-        occupation: data.spouseOccupation || '',
-        visaType: data.spouseVisaType || 'H-4 EAD',
-        workPhone: data.spouseWorkPhone || '',
-        email: data.spouseEmail || '',
-        relationship: data.spouseRelationship || 'Spouse',
+        firstName: d.spouseFirstName || d.spouseName?.split(' ')[0] || '',
+        middleName: d.spouseMiddleName || '',
+        lastName: d.spouseLastName || d.spouseName?.split(' ').slice(1).join(' ') || (maritalStatus?.includes('Married') ? primaryTaxpayerLastName : ''),
+        dob: d.spouseDob || '',
+        ssn: d.spouseSsn || '',
+        occupation: d.spouseOccupation || '',
+        visaType: d.spouseVisaType || 'H-4 EAD',
+        workPhone: d.spouseWorkPhone || '',
+        email: d.spouseEmail || '',
+        relationship: d.spouseRelationship || 'Spouse',
       };
 
   const isMarried = maritalStatus?.includes('Married');
@@ -251,7 +253,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
             size="sm"
             variant="outline"
             onClick={() => {
-              const currentList = data.dependentsList || [];
+              const currentList = d.dependentsList || [];
               const updated = [
                 ...currentList,
                 {
@@ -275,20 +277,20 @@ export const Module2Dependents: React.FC<Module2Props> = ({
           </Button>
         </div>
 
-        {(data.dependentsList || []).length === 0 ? (
+        {(d.dependentsList || []).length === 0 ? (
           <div className="p-5 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500">
             No children or dependents added yet. Click &quot;Add Child / Dependent&quot; to claim Child Tax Credits.
           </div>
         ) : (
           <div className="space-y-4">
-            {(data.dependentsList || []).map((dep, idx) => (
+            {(d.dependentsList || []).map((dep, idx) => (
               <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 shadow-2xs space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
                   <span className="text-xs font-bold text-slate-900">Dependent #{idx + 1}</span>
                   <button
                     type="button"
                     onClick={() => {
-                      const list = (data.dependentsList || []).filter((_, i) => i !== idx);
+                      const list = (d.dependentsList || []).filter((_, i) => i !== idx);
                       handleFieldChange('dependentsList', list);
                       handleFieldChange('childCount', list.length);
                     }}
@@ -306,7 +308,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     error={errors[`dep_${idx}_firstName`]}
                     value={dep.firstName || dep.name?.split(' ')[0] || ''}
                     onChange={(e) => {
-                      const list = [...(data.dependentsList || [])];
+                      const list = [...(d.dependentsList || [])];
                       list[idx].firstName = e.target.value;
                       list[idx].name = `${e.target.value} ${list[idx].lastName || primaryTaxpayerLastName || ''}`.trim();
                       handleFieldChange('dependentsList', list, `dep_${idx}_firstName`);
@@ -318,7 +320,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     placeholder="e.g. V (Optional)"
                     value={dep.middleName || ''}
                     onChange={(e) => {
-                      const list = [...(data.dependentsList || [])];
+                      const list = [...(d.dependentsList || [])];
                       list[idx].middleName = e.target.value;
                       handleFieldChange('dependentsList', list);
                     }}
@@ -330,7 +332,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     error={errors[`dep_${idx}_lastName`]}
                     value={dep.lastName !== undefined ? dep.lastName : (primaryTaxpayerLastName || '')}
                     onChange={(e) => {
-                      const list = [...(data.dependentsList || [])];
+                      const list = [...(d.dependentsList || [])];
                       list[idx].lastName = e.target.value;
                       list[idx].name = `${list[idx].firstName || ''} ${e.target.value}`.trim();
                       handleFieldChange('dependentsList', list, `dep_${idx}_lastName`);
@@ -351,7 +353,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     ]}
                     value={dep.relationship || 'Son'}
                     onChange={(val) => {
-                      const list = [...(data.dependentsList || [])];
+                      const list = [...(d.dependentsList || [])];
                       list[idx].relationship = val || 'Son';
                       handleFieldChange('dependentsList', list);
                     }}
@@ -365,9 +367,9 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     maxDate={new Date()}
                     error={errors[`dep_${idx}_dob`]}
                     value={parseUsDate(dep.dob)}
-                    onChange={(d) => {
-                      const list = [...(data.dependentsList || [])];
-                      list[idx].dob = formatUsDate(d);
+                    onChange={(dateVal) => {
+                      const list = [...(d.dependentsList || [])];
+                      list[idx].dob = formatUsDate(dateVal);
                       handleFieldChange('dependentsList', list, `dep_${idx}_dob`);
                     }}
                   />
@@ -380,7 +382,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     error={errors[`dep_${idx}_ssn`]}
                     value={dep.ssn || ''}
                     onChange={(e) => {
-                      const list = [...(data.dependentsList || [])];
+                      const list = [...(d.dependentsList || [])];
                       list[idx].ssn = e.target.value;
                       handleFieldChange('dependentsList', list, `dep_${idx}_ssn`);
                     }}
@@ -395,7 +397,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     onChange={(e) => {
                       const raw = parseInt(e.target.value, 10);
                       const clamped = isNaN(raw) ? 0 : Math.min(12, Math.max(0, raw));
-                      const list = [...(data.dependentsList || [])];
+                      const list = [...(d.dependentsList || [])];
                       list[idx].monthsInHome = clamped;
                       handleFieldChange('dependentsList', list, `dep_${idx}_monthsInHome`);
                     }}
@@ -421,7 +423,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
             size="sm"
             variant="outline"
             onClick={() => {
-              const list = data.daycareList || [];
+              const list = d.daycareList || [];
               handleFieldChange('daycareList', [
                 ...list,
                 {
@@ -442,20 +444,20 @@ export const Module2Dependents: React.FC<Module2Props> = ({
           </Button>
         </div>
 
-        {(data.daycareList || []).length === 0 ? (
+        {(d.daycareList || []).length === 0 ? (
           <div className="p-5 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500">
             No daycare expenses claimed. Click &quot;Add Daycare Provider&quot; to claim Child &amp; Dependent Care Credit.
           </div>
         ) : (
           <div className="space-y-4">
-            {(data.daycareList || []).map((care, idx) => (
+            {(d.daycareList || []).map((care, idx) => (
               <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 shadow-2xs space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
                   <span className="text-xs font-bold text-slate-900">Daycare Provider #{idx + 1}</span>
                   <button
                     type="button"
                     onClick={() => {
-                      const list = (data.daycareList || []).filter((_, i) => i !== idx);
+                      const list = (d.daycareList || []).filter((_, i) => i !== idx);
                       handleFieldChange('daycareList', list);
                       handleFieldChange('daycareExpensesClaimed', list.length > 0);
                     }}
@@ -473,7 +475,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     error={errors[`daycare_${idx}_dependentName`]}
                     value={care.dependentName || ''}
                     onChange={(e) => {
-                      const list = [...(data.daycareList || [])];
+                      const list = [...(d.daycareList || [])];
                       list[idx].dependentName = e.target.value;
                       handleFieldChange('daycareList', list, `daycare_${idx}_dependentName`);
                     }}
@@ -484,7 +486,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     error={errors[`daycare_${idx}_providerName`]}
                     value={care.providerName || ''}
                     onChange={(e) => {
-                      const list = [...(data.daycareList || [])];
+                      const list = [...(d.daycareList || [])];
                       list[idx].providerName = e.target.value;
                       handleFieldChange('daycareList', list, `daycare_${idx}_providerName`);
                     }}
@@ -495,7 +497,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     error={errors[`daycare_${idx}_providerEinSsn`]}
                     value={care.providerEinSsn || ''}
                     onChange={(e) => {
-                      const list = [...(data.daycareList || [])];
+                      const list = [...(d.daycareList || [])];
                       list[idx].providerEinSsn = e.target.value;
                       handleFieldChange('daycareList', list, `daycare_${idx}_providerEinSsn`);
                     }}
@@ -510,7 +512,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                       error={errors[`daycare_${idx}_providerAddress`]}
                       value={care.providerAddress || ''}
                       onChange={(e) => {
-                        const list = [...(data.daycareList || [])];
+                        const list = [...(d.daycareList || [])];
                         list[idx].providerAddress = e.target.value;
                         handleFieldChange('daycareList', list, `daycare_${idx}_providerAddress`);
                       }}
@@ -524,7 +526,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     error={errors[`daycare_${idx}_amountPaid`]}
                     value={care.amountPaid ? care.amountPaid.toString() : ''}
                     onChange={(e) => {
-                      const list = [...(data.daycareList || [])];
+                      const list = [...(d.daycareList || [])];
                       list[idx].amountPaid = parseFloat(e.target.value) || 0;
                       handleFieldChange('daycareList', list, `daycare_${idx}_amountPaid`);
                     }}
@@ -536,7 +538,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     leftIcon={<DollarSign className="w-4 h-4" />}
                     value={care.employerReimbursed ? care.employerReimbursed.toString() : ''}
                     onChange={(e) => {
-                      const list = [...(data.daycareList || [])];
+                      const list = [...(d.daycareList || [])];
                       list[idx].employerReimbursed = parseFloat(e.target.value) || 0;
                       handleFieldChange('daycareList', list);
                     }}

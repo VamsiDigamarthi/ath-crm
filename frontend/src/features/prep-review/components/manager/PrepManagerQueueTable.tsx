@@ -94,15 +94,25 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
     });
   }, [leads, activeTab, searchQuery]);
 
+  const isLeadSelectable = (lead: PrepReviewLead) => !lead.assignedPreparer;
+
+  const selectableLeads = useMemo(() => {
+    return filteredLeads.filter(isLeadSelectable);
+  }, [filteredLeads]);
+
+  const allSelectableSelected =
+    selectableLeads.length > 0 && selectableLeads.every((l) => selectedLeadIds.includes(l.id));
+
   const toggleSelectAll = () => {
-    if (selectedLeadIds.length === filteredLeads.length) {
+    if (allSelectableSelected) {
       setSelectedLeadIds([]);
     } else {
-      setSelectedLeadIds(filteredLeads.map((l) => l.id));
+      setSelectedLeadIds(selectableLeads.map((l) => l.id));
     }
   };
 
-  const toggleSelectOne = (id: string) => {
+  const toggleSelectOne = (id: string, lead: PrepReviewLead) => {
+    if (!isLeadSelectable(lead)) return;
     setSelectedLeadIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
@@ -296,10 +306,16 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
                   <th className="py-3 px-4 w-10 text-center">
                     <button
                       type="button"
+                      disabled={selectableLeads.length === 0}
                       onClick={toggleSelectAll}
-                      className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                      title={selectableLeads.length === 0 ? "No unassigned returns available to select" : "Select all unassigned returns"}
+                      className={`cursor-pointer ${
+                        selectableLeads.length === 0
+                          ? "opacity-30 cursor-not-allowed text-slate-300"
+                          : "text-slate-400 hover:text-slate-700"
+                      }`}
                     >
-                      {selectedLeadIds.length === filteredLeads.length && filteredLeads.length > 0 ? (
+                      {allSelectableSelected ? (
                         <CheckSquare className="w-4 h-4 text-[#16A34A]" />
                       ) : (
                         <Square className="w-4 h-4" />
@@ -319,6 +335,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
             <tbody className="divide-y divide-slate-100">
               {filteredLeads.map((lead) => {
                 const isSelected = selectedLeadIds.includes(lead.id);
+                const isSelectable = isLeadSelectable(lead);
 
                 return (
                   <tr
@@ -330,17 +347,29 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
                     {/* Checkbox */}
                     {!isEffectiveAdmin && (
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => toggleSelectOne(lead.id)}
-                          className="text-slate-400 hover:text-slate-700 cursor-pointer"
-                        >
-                          {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-[#16A34A]" />
-                          ) : (
+                        {isSelectable ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleSelectOne(lead.id, lead)}
+                            className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                            title={`Select ${lead.taxpayerName}`}
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-[#16A34A]" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled
+                            className="opacity-30 cursor-not-allowed text-slate-300"
+                            title={`Already assigned to ${lead.assignedPreparer?.name || 'preparer'}`}
+                          >
                             <Square className="w-4 h-4" />
-                          )}
-                        </button>
+                          </button>
+                        )}
                       </td>
                     )}
 

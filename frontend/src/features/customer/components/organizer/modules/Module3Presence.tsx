@@ -22,7 +22,8 @@ export const Module3Presence: React.FC<Module3Props> = ({
   errors = {},
   clearError,
 }) => {
-  const historyList = data.statesResidedHistory || [];
+  const d = (data || {}) as Partial<OrganizerData['m3_presence']>;
+  const historyList = d.statesResidedHistory || [];
 
   const maxCurrentDays = isLeapYear(selectedTaxYear) ? 366 : 365;
   const maxPrior1Days = isLeapYear(selectedTaxYear - 1) ? 366 : 365;
@@ -62,7 +63,7 @@ export const Module3Presence: React.FC<Module3Props> = ({
           placeholder="e.g. 365"
           leftIcon={<Calendar className="w-4 h-4" />}
           error={errors.days2025}
-          value={data.days2025 !== undefined && data.days2025 !== null ? data.days2025.toString() : ''}
+          value={d.days2025 !== undefined && d.days2025 !== null ? d.days2025.toString() : ''}
           onChange={(e) => handleDaysChange('days2025', e.target.value, maxCurrentDays)}
         />
 
@@ -72,7 +73,7 @@ export const Module3Presence: React.FC<Module3Props> = ({
           placeholder={isLeapYear(selectedTaxYear - 1) ? 'e.g. 366 (Leap)' : 'e.g. 365'}
           leftIcon={<Calendar className="w-4 h-4" />}
           error={errors.days2024}
-          value={data.days2024 !== undefined && data.days2024 !== null ? data.days2024.toString() : ''}
+          value={d.days2024 !== undefined && d.days2024 !== null ? d.days2024.toString() : ''}
           onChange={(e) => handleDaysChange('days2024', e.target.value, maxPrior1Days)}
         />
 
@@ -82,7 +83,7 @@ export const Module3Presence: React.FC<Module3Props> = ({
           placeholder="e.g. 365"
           leftIcon={<Calendar className="w-4 h-4" />}
           error={errors.days2023}
-          value={data.days2023 !== undefined && data.days2023 !== null ? data.days2023.toString() : ''}
+          value={d.days2023 !== undefined && d.days2023 !== null ? d.days2023.toString() : ''}
           onChange={(e) => handleDaysChange('days2023', e.target.value, maxPrior2Days)}
         />
       </div>

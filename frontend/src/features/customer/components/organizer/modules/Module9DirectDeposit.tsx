@@ -20,7 +20,8 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
   errors = {},
   clearError,
 }) => {
-  const referrals = data.referrals || [];
+  const d = (data || {}) as Partial<OrganizerData['m9_directDeposit']>;
+  const referrals = d.referrals || [];
 
   return (
     <div className="space-y-6 font-sans">
@@ -37,7 +38,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
           placeholder="e.g. JPMorgan Chase / Bank of America / Wells Fargo"
           leftIcon={<Building2 className="w-4 h-4" />}
           error={errors.bankName}
-          value={data.bankName || ''}
+          value={d.bankName || ''}
           onChange={(e) => {
             updateField('bankName', e.target.value);
             if (clearError) clearError('bankName');
@@ -51,7 +52,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
               { label: 'Checking Account', value: 'CHECKING' },
               { label: 'Savings Account', value: 'SAVINGS' },
             ]}
-            value={data.accountType || 'CHECKING'}
+            value={d.accountType || 'CHECKING'}
             onChange={(val) => updateField('accountType', val || 'CHECKING')}
           />
         </div>
@@ -61,7 +62,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
           placeholder="e.g. 111000614"
           leftIcon={<CreditCard className="w-4 h-4" />}
           error={errors.routingNumber}
-          value={data.routingNumber || ''}
+          value={d.routingNumber || ''}
           onChange={(e) => {
             const raw = e.target.value.replace(/\D/g, '').slice(0, 9);
             updateField('routingNumber', raw);
@@ -74,7 +75,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
           placeholder="e.g. 849204819"
           leftIcon={<CreditCard className="w-4 h-4" />}
           error={errors.accountNumber}
-          value={data.accountNumber || ''}
+          value={d.accountNumber || ''}
           onChange={(e) => {
             updateField('accountNumber', e.target.value);
             if (clearError) clearError('accountNumber');
@@ -86,7 +87,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
             label="Account Owner Name (as appears on bank statement) *"
             placeholder="e.g. Taxpayer Full Name"
             error={errors.accountOwnerName}
-            value={data.accountOwnerName || ''}
+            value={d.accountOwnerName || ''}
             onChange={(e) => {
               updateField('accountOwnerName', e.target.value);
               if (clearError) clearError('accountOwnerName');
@@ -110,14 +111,14 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
               </label>
               <span
                 className={`text-[11px] font-mono transition-colors ${
-                  (data.notesToPreparer || '').length > 5000
+                  (d.notesToPreparer || '').length > 5000
                     ? 'text-rose-600 font-extrabold'
-                    : (data.notesToPreparer || '').length > 4500
+                    : (d.notesToPreparer || '').length > 4500
                     ? 'text-amber-600 font-bold'
                     : 'text-slate-400'
                 }`}
               >
-                {(data.notesToPreparer || '').length} / 5,000 chars
+                {(d.notesToPreparer || '').length} / 5,000 chars
               </span>
             </div>
 
@@ -125,11 +126,11 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
               rows={4}
               placeholder="Provide any feedback, special circumstances, or details for the tax preparer..."
               className={`w-full px-3.5 py-2.5 text-xs border rounded-xl transition-all focus:outline-none leading-relaxed ${
-                errors.notesToPreparer || (data.notesToPreparer || '').length > 5000
+                errors.notesToPreparer || (d.notesToPreparer || '').length > 5000
                   ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/20 text-slate-900'
                   : 'border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 bg-white text-slate-900'
               }`}
-              value={data.notesToPreparer || ''}
+              value={d.notesToPreparer || ''}
               onChange={(e) => {
                 updateField('notesToPreparer', e.target.value);
                 if (clearError) clearError('notesToPreparer');
@@ -142,7 +143,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
                 <span>{errors.notesToPreparer}</span>
               </p>
             )}
-            {(data.notesToPreparer || '').length > 5000 && !errors.notesToPreparer && (
+            {(d.notesToPreparer || '').length > 5000 && !errors.notesToPreparer && (
               <p className="text-xs font-bold text-rose-600 mt-1.5 flex items-center gap-1.5 animate-fadeIn">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0"></span>
                 <span>Maximum 5,000 characters allowed. Please shorten your note.</span>
@@ -157,19 +158,19 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
               </label>
               <span
                 className={`text-[11px] font-mono transition-colors ${
-                  (data.preferredContactTime || '').length > 500
+                  (d.preferredContactTime || '').length > 500
                     ? 'text-rose-600 font-extrabold'
                     : 'text-slate-400'
                 }`}
               >
-                {(data.preferredContactTime || '').length} / 500 chars
+                {(d.preferredContactTime || '').length} / 500 chars
               </span>
             </div>
 
             <AppInput
               placeholder="e.g. Call after 5:00 PM EST or Email anytime"
               error={errors.preferredContactTime}
-              value={data.preferredContactTime || ''}
+              value={d.preferredContactTime || ''}
               onChange={(e) => {
                 updateField('preferredContactTime', e.target.value);
                 if (clearError) clearError('preferredContactTime');

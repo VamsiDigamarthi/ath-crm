@@ -214,6 +214,7 @@ export const ManagerQueueScreen: React.FC = () => {
         data={leads}
         columns={columns}
         selectable
+        isRowSelectable={(item) => !item.assignedDocAgent}
         selectedRows={selectedRows}
         rowKey="id"
         onSelectionChange={(selected) => setSelectedRows(selected)}

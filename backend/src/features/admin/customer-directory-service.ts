@@ -1,5 +1,7 @@
 import { prisma } from "../../config/db.js";
 import { ApplicationStage } from "@prisma/client";
+import { BadRequestError } from "../../errors/bad-request-error.js";
+import { Role } from "../../types/index.js";
 
 export interface AdminCustomerQueryOptions {
   search?: string;
@@ -137,9 +139,18 @@ export class CustomerDirectoryService {
       prisma.customerProfile.count({ where: convertedFilter }),
     ]);
 
-    // Build dynamic list of tax years from database and current cycles
-    const rawYears = distinctTaxYearsRaw.map((y) => y.taxYear).filter(Boolean);
-    const availableTaxYears = Array.from(new Set([...rawYears, 2026, 2025, 2024])).sort((a, b) => b - a);
+    // Build fully dynamic list of tax years based on current calendar year + DB historical records
+    const currentYear = new Date().getFullYear();
+    const dynamicStandardYears = [
+      currentYear + 1,
+      currentYear,
+      currentYear - 1,
+      currentYear - 2,
+      currentYear - 3,
+      currentYear - 4,
+    ];
+    const rawDbYears = distinctTaxYearsRaw.map((y) => y.taxYear).filter(Boolean);
+    const availableTaxYears = Array.from(new Set([...rawDbYears, ...dynamicStandardYears])).sort((a, b) => b - a);
 
     // Calculate aggregated revenue & fees from paid converted clients
     const allQuotes = await prisma.salesQuote.findMany({
@@ -181,6 +192,33 @@ export class CustomerDirectoryService {
         irsStatusLabel = 'Queued for Filing';
       }
 
+      // Map all customer applications for multi-year awareness in frontend
+      const applications = (p.applications || []).map((app: any) => {
+        let appIrsStatus: 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS' | 'QUEUED' | 'PENDING' = 'PENDING';
+        let appIrsLabel = 'Awaiting E-Filing';
+        if (app.currentStage === 'FILING_SUCCESS') {
+          appIrsStatus = 'ACCEPTED';
+          appIrsLabel = 'IRS Accepted';
+        } else if (app.currentStage === 'FILING_FAILED') {
+          appIrsStatus = 'REJECTED';
+          appIrsLabel = 'IRS Rejected';
+        } else if (app.currentStage === 'FILING_IN_PROGRESS') {
+          appIrsStatus = 'IN_PROGRESS';
+          appIrsLabel = 'Transmitting';
+        } else if (app.currentStage === 'FILING_QUEUE') {
+          appIrsStatus = 'QUEUED';
+          appIrsLabel = 'Queued for Filing';
+        }
+        return {
+          id: app.id,
+          taxYear: app.taxYear,
+          currentStage: app.currentStage,
+          filingType: app.filingType,
+          irsStatus: appIrsStatus,
+          irsStatusLabel: appIrsLabel,
+        };
+      });
+
       return {
         id: p.id,
         customerId: p.id,
@@ -198,6 +236,7 @@ export class CustomerDirectoryService {
         isConvertedCustomer: true,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
+        applications,
         activeApplication: activeApp
           ? {
               id: activeApp.id,
@@ -217,8 +256,8 @@ export class CustomerDirectoryService {
               irsStatusLabel,
               rejectionCode: draft.rejectionCode || (activeApp.currentStage === 'FILING_FAILED' ? 'R0000-900-01' : null),
               rejectionReason: draft.rejectionReason || (activeApp.currentStage === 'FILING_FAILED' ? 'Primary SSN / Name Control mismatch with IRS master file.' : null),
-              submissionId: draft.transmissionInfo?.submissionId || (activeApp.currentStage === 'FILING_SUCCESS' ? `5829102026${activeApp.id.replace(/[^0-9]/g, '').slice(0, 8)}` : null),
-              certificateId: draft.acceptanceCertificateId || (activeApp.currentStage === 'FILING_SUCCESS' ? `IRS-ACK-2026-${activeApp.id.slice(0, 8).toUpperCase()}` : null),
+              submissionId: draft.transmissionInfo?.submissionId || (activeApp.currentStage === 'FILING_SUCCESS' ? `582910${activeApp.taxYear}${activeApp.id.replace(/[^0-9]/g, '').slice(0, 6)}` : null),
+              certificateId: draft.acceptanceCertificateId || (activeApp.currentStage === 'FILING_SUCCESS' ? `IRS-ACK-${activeApp.taxYear}-${activeApp.id.slice(0, 8).toUpperCase()}` : null),
               assignedTeam: {
                 docAgent: activeApp.assignedDocAgent ? `${activeApp.assignedDocAgent.firstName} ${activeApp.assignedDocAgent.lastName || ''}`.trim() : '-',
                 prepAgent: activeApp.assignedPrepAgent ? `${activeApp.assignedPrepAgent.firstName} ${activeApp.assignedPrepAgent.lastName || ''}`.trim() : '-',
@@ -285,9 +324,187 @@ export class CustomerDirectoryService {
     });
 
     if (!profile) {
-      throw new Error('Customer profile not found');
+      throw new BadRequestError('Customer profile not found');
     }
 
     return profile;
   }
+
+  /**
+   * Start a new tax year return for an existing converted/retained client
+   */
+  public static async createNextYearApplication(
+    customerId: string,
+    payload: {
+      taxYear: number;
+      filingType?: string;
+      currentStage?: ApplicationStage;
+      assignedDocAgentId?: string | null;
+      carryForwardDemographics?: boolean;
+      intakeRemarks?: string;
+    },
+    adminUserId: string
+  ) {
+    const {
+      taxYear,
+      filingType = "INDIVIDUAL",
+      currentStage = ApplicationStage.DOC_OUTREACH,
+      assignedDocAgentId = null,
+      carryForwardDemographics = true,
+      intakeRemarks,
+    } = payload;
+
+    const customer = await prisma.customerProfile.findUnique({
+      where: { id: customerId },
+      include: {
+        applications: {
+          orderBy: { taxYear: "desc" },
+        },
+      },
+    });
+
+    if (!customer) {
+      throw new BadRequestError("Customer profile not found");
+    }
+
+    // Check if an application for this tax year already exists for this customer
+    const existingYearApp = await prisma.taxApplication.findUnique({
+      where: {
+        customerId_taxYear: {
+          customerId,
+          taxYear,
+        },
+      },
+    });
+
+    if (existingYearApp) {
+      throw new BadRequestError(
+        `A tax application for Tax Year ${taxYear} already exists for this client (Stage: ${existingYearApp.currentStage.replace(/_/g, ' ')}). Please select a different tax year.`
+      );
+    }
+
+    // Carry forward demographics & bank details from previous application if requested
+    let initialTaxDraftSummary: any = {};
+    if (carryForwardDemographics && customer.applications.length > 0) {
+      const priorApp = customer.applications[0];
+      const priorDraft = (priorApp.taxDraftSummary as any) || {};
+
+      initialTaxDraftSummary = {
+        firstName: customer.firstName || priorDraft.firstName,
+        lastName: customer.lastName || priorDraft.lastName,
+        email: customer.email || priorDraft.email,
+        phone: customer.phone || priorDraft.phone,
+        ssnTin: customer.ssnTin || priorDraft.ssnTin,
+        dob: customer.dob || priorDraft.dob,
+        visaType: customer.visaType || priorDraft.visaType || "H-1B",
+        filingStatus: customer.maritalStatus || priorDraft.filingStatus || "Single",
+        occupation: customer.occupation || priorDraft.occupation,
+        addressLine1: customer.addressLine1 || priorDraft.addressLine1,
+        city: customer.city || priorDraft.city,
+        state: customer.state || priorDraft.state || priorDraft.stateOfResidence,
+        zipCode: customer.zipCode || priorDraft.zipCode,
+        bankDetails: priorDraft.bankDetails || null,
+        carriedForwardFromTaxYear: priorApp.taxYear,
+        carriedForwardAt: new Date().toISOString(),
+        paymentStatus: "PENDING",
+        esignStatus: "PENDING",
+        federalRefund: 0,
+        balanceDue: 0,
+        stateRefund: 0,
+        stateBalanceDue: 0,
+      };
+    } else {
+      initialTaxDraftSummary = {
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        email: customer.email,
+        phone: customer.phone,
+        ssnTin: customer.ssnTin,
+        dob: customer.dob,
+        visaType: customer.visaType || "H-1B",
+        filingStatus: customer.maritalStatus || "Single",
+        addressLine1: customer.addressLine1,
+        city: customer.city,
+        state: customer.state,
+        zipCode: customer.zipCode,
+        paymentStatus: "PENDING",
+        esignStatus: "PENDING",
+      };
+    }
+
+    // Create the new TaxApplication linked to the same CustomerProfile
+    const newApplication = await prisma.taxApplication.create({
+      data: {
+        customerId,
+        taxYear,
+        filingType,
+        currentStage,
+        assignedDocAgentId: assignedDocAgentId || null,
+        taxDraftSummary: initialTaxDraftSummary,
+        stageHistories: {
+          create: {
+            fromStage: null,
+            toStage: currentStage,
+            movedByUserId: adminUserId,
+            remarks: intakeRemarks || `Admin initiated Tax Year ${taxYear} return for retained client.`,
+          },
+        },
+        auditLogs: {
+          create: {
+            actorId: adminUserId,
+            actorType: "ADMIN",
+            actorName: "Admin User",
+            actorRole: "ADMIN",
+            action: "STAGE_CHANGE",
+            moduleKey: "TAX_YEAR_INITIATION",
+            details: {
+              taxYear,
+              filingType,
+              initialStage: currentStage,
+              carryForwardDemographics,
+              intakeRemarks: intakeRemarks || null,
+            },
+          },
+        },
+      },
+      include: {
+        customer: true,
+        assignedDocAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    // Notify DOC_MANAGER of new client intake
+    await prisma.notification.create({
+      data: {
+        targetRole: Role.DOC_MANAGER,
+        applicationId: newApplication.id,
+        title: `New Tax Year ${taxYear} Return Started`,
+        message: `Tax Year ${taxYear} filing created for client ${customer.firstName} ${customer.lastName} in Documenter Outreach.`,
+        category: "DOCUMENTER",
+        priority: "NORMAL",
+        actionUrl: "/documenter/manager/queue",
+        actionLabel: "View Intake Queue",
+        relatedLeadName: `${customer.firstName} ${customer.lastName}`.trim(),
+      },
+    });
+
+    // If a doc agent was assigned directly, notify them as well
+    if (assignedDocAgentId) {
+      await prisma.notification.create({
+        data: {
+          recipientUserId: assignedDocAgentId,
+          applicationId: newApplication.id,
+          title: `Assigned: ${customer.firstName} ${customer.lastName} (TY${taxYear})`,
+          message: `You have been assigned to handle TY${taxYear} intake for retained client ${customer.firstName} ${customer.lastName}.`,
+          category: "DOCUMENTER",
+          priority: "NORMAL",
+          relatedLeadName: `${customer.firstName} ${customer.lastName}`.trim(),
+        },
+      });
+    }
+
+
+    return newApplication;
+  }
 }
+

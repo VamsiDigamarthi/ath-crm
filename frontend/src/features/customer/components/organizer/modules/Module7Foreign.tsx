@@ -21,8 +21,9 @@ export const Module7Foreign: React.FC<Module7Props> = ({
   errors = {},
   clearError,
 }) => {
-  const accountsList = data.foreignAccountsList || [];
-  const isFbarYes = data.hasFbarOver10k === 'YES' || data.hasFbar || data.spouseFbarOver10k === 'YES';
+  const d = (data || {}) as Partial<OrganizerData['m7_foreign']>;
+  const accountsList = d.foreignAccountsList || [];
+  const isFbarYes = d.hasFbarOver10k === 'YES' || d.hasFbar || d.spouseFbarOver10k === 'YES';
 
   return (
     <div className="space-y-6 font-sans">
@@ -47,7 +48,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
               { label: 'No - Under $10,000 all year', value: 'NO' },
               { label: 'Yes - Balances exceeded $10,000', value: 'YES' },
             ]}
-            value={data.hasFbarOver10k || (data.hasFbar ? 'YES' : 'NO')}
+            value={d.hasFbarOver10k || (d.hasFbar ? 'YES' : 'NO')}
             onChange={(val) => {
               const yes = val === 'YES';
               updateField('hasFbarOver10k', (val || 'NO') as 'YES' | 'NO');
@@ -65,7 +66,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
               { label: 'No - Under $10,000 all year', value: 'NO' },
               { label: 'Yes - Balances exceeded $10,000', value: 'YES' },
             ]}
-            value={data.spouseFbarOver10k || 'NO'}
+            value={d.spouseFbarOver10k || 'NO'}
             onChange={(val) => updateField('spouseFbarOver10k', (val || 'NO') as 'YES' | 'NO')}
           />
         </div>
@@ -234,7 +235,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
             type="number"
             placeholder="₹ 0"
             error={errors.foreignSalaryInr}
-            value={data.foreignSalaryInr !== undefined && data.foreignSalaryInr !== null && data.foreignSalaryInr > 0 ? data.foreignSalaryInr.toString() : ''}
+            value={d.foreignSalaryInr !== undefined && d.foreignSalaryInr !== null && d.foreignSalaryInr > 0 ? d.foreignSalaryInr.toString() : ''}
             onChange={(e) => {
               updateField('foreignSalaryInr', Math.max(0, parseFloat(e.target.value) || 0));
               if (clearError) clearError('foreignSalaryInr');
@@ -246,7 +247,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
             type="number"
             placeholder="e.g. ₹ 85000"
             error={errors.foreignInterestInr}
-            value={data.foreignInterestInr !== undefined && data.foreignInterestInr !== null && data.foreignInterestInr > 0 ? data.foreignInterestInr.toString() : ''}
+            value={d.foreignInterestInr !== undefined && d.foreignInterestInr !== null && d.foreignInterestInr > 0 ? d.foreignInterestInr.toString() : ''}
             onChange={(e) => {
               updateField('foreignInterestInr', Math.max(0, parseFloat(e.target.value) || 0));
               if (clearError) clearError('foreignInterestInr');
@@ -258,7 +259,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
             type="number"
             placeholder="e.g. ₹ 25000"
             error={errors.foreignDividendInr}
-            value={data.foreignDividendInr !== undefined && data.foreignDividendInr !== null && data.foreignDividendInr > 0 ? data.foreignDividendInr.toString() : ''}
+            value={d.foreignDividendInr !== undefined && d.foreignDividendInr !== null && d.foreignDividendInr > 0 ? d.foreignDividendInr.toString() : ''}
             onChange={(e) => {
               updateField('foreignDividendInr', Math.max(0, parseFloat(e.target.value) || 0));
               if (clearError) clearError('foreignDividendInr');
@@ -270,7 +271,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
             type="number"
             placeholder="e.g. ₹ 180000"
             error={errors.foreignRentalInr}
-            value={data.foreignRentalInr !== undefined && data.foreignRentalInr !== null && data.foreignRentalInr > 0 ? data.foreignRentalInr.toString() : ''}
+            value={d.foreignRentalInr !== undefined && d.foreignRentalInr !== null && d.foreignRentalInr > 0 ? d.foreignRentalInr.toString() : ''}
             onChange={(e) => {
               updateField('foreignRentalInr', Math.max(0, parseFloat(e.target.value) || 0));
               if (clearError) clearError('foreignRentalInr');
@@ -281,7 +282,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
             label="Other Foreign Income Source"
             placeholder="e.g. Agriculture / Consulting"
             error={errors.otherForeignIncomeSource}
-            value={data.otherForeignIncomeSource || ''}
+            value={d.otherForeignIncomeSource || ''}
             onChange={(e) => {
               updateField('otherForeignIncomeSource', e.target.value);
               if (clearError) clearError('otherForeignIncomeSource');
@@ -293,7 +294,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
             type="number"
             placeholder="e.g. ₹ 32000"
             error={errors.foreignTaxesPaidInr}
-            value={data.foreignTaxesPaidInr !== undefined && data.foreignTaxesPaidInr !== null && data.foreignTaxesPaidInr > 0 ? data.foreignTaxesPaidInr.toString() : ''}
+            value={d.foreignTaxesPaidInr !== undefined && d.foreignTaxesPaidInr !== null && d.foreignTaxesPaidInr > 0 ? d.foreignTaxesPaidInr.toString() : ''}
             onChange={(e) => {
               updateField('foreignTaxesPaidInr', Math.max(0, parseFloat(e.target.value) || 0));
               if (clearError) clearError('foreignTaxesPaidInr');

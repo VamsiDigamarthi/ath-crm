@@ -9,6 +9,7 @@ import {
   bulkOnboardEmployees,
   getCustomers,
   getCustomerDetails,
+  startNextYearApplication,
   getAdminDashboardStats,
 } from "./admin-controller.js";
 import { validateRequest } from "../../middlewares/validate-request.js";
@@ -18,6 +19,7 @@ import {
   createEmployeeSchema,
   updateEmployeeSchema,
   bulkOnboardEmployeesSchema,
+  startNextYearApplicationSchema,
 } from "./admin-validator.js";
 import { requireAuth } from "../../middlewares/require-auth.js";
 import { authorize } from "../../middlewares/authorize.js";
@@ -91,6 +93,14 @@ router.get(
   getCustomerDetails
 );
 
+router.post(
+  "/customers/:id/new-application",
+  requireAuth,
+  authorize(Role.ADMIN),
+  validateRequest(startNextYearApplicationSchema),
+  startNextYearApplication
+);
+
 // Admin Executive Operations Dashboard Stats
 router.get(
   "/dashboard-stats",
@@ -100,3 +110,4 @@ router.get(
 );
 
 export { router as adminRouter };
+

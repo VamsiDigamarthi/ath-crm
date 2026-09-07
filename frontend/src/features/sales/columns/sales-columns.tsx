@@ -224,23 +224,31 @@ export function getSalesColumns({
       headerClassName: 'text-right',
       cellClassName: 'text-right',
       render: (item) => {
+        const isAssigned = Boolean(item.assignedSalesAgent);
         const isCompletedOrLocked =
           (item.paymentStatus === 'PAID' && item.esignStatus === 'SIGNED') ||
           item.currentStage === 'PAID_AND_AUTHORIZED' ||
           item.currentStage === 'FILING_QUEUE' ||
           item.currentStage === 'FILING_IN_PROGRESS' ||
           item.currentStage === 'FILING_SUCCESS';
+        const isAssignDisabled = isAssigned || isCompletedOrLocked;
 
         return (
           <div className="flex items-center justify-end gap-1.5">
             <Button
               variant="outline"
               size="sm"
-              disabled={isCompletedOrLocked}
-              title={isCompletedOrLocked ? "Lead is already Paid & E-Signed / Completed" : "Assign to closer"}
-              onClick={() => !isCompletedOrLocked && onOpenAssignModal(item)}
+              disabled={isAssignDisabled}
+              title={
+                isAssigned
+                  ? `Already assigned to ${item.assignedSalesAgent?.name || 'closer'}`
+                  : isCompletedOrLocked
+                  ? "Lead is already Paid & E-Signed / Completed"
+                  : "Assign to closer"
+              }
+              onClick={() => !isAssignDisabled && onOpenAssignModal(item)}
               className={`border-slate-200 text-[11px] font-semibold flex items-center gap-1 h-7 px-2 ${
-                isCompletedOrLocked
+                isAssignDisabled
                   ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 pointer-events-none'
                   : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer'
               }`}

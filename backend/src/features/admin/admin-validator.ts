@@ -149,3 +149,19 @@ export const bulkOnboardEmployeesSchema = z.object({
     ).min(1, "At least 1 staff member is required"),
   }),
 });
+
+export const startNextYearApplicationSchema = z.object({
+  body: z.object({
+    taxYear: z.number().int().min(2000).max(2100),
+    filingType: z.enum(['INDIVIDUAL', 'CORPORATE']).optional().default('INDIVIDUAL'),
+    currentStage: z.enum([
+      'RAW_PROSPECT',
+      'DOC_OUTREACH',
+      'DOC_PREP',
+    ]).optional().default('DOC_OUTREACH'),
+    assignedDocAgentId: z.string().uuid().optional().nullable(),
+    carryForwardDemographics: z.boolean().optional().default(true),
+    intakeRemarks: z.string().max(1000).optional().nullable(),
+  }),
+});
+

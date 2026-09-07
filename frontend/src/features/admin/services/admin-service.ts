@@ -136,6 +136,20 @@ export const adminService = {
     return apiClient.get(`/admin/customers/${id}`);
   },
 
+  startNextYearApplication: async (
+    customerId: string,
+    payload: {
+      taxYear: number;
+      filingType?: 'INDIVIDUAL' | 'CORPORATE';
+      currentStage?: 'RAW_PROSPECT' | 'DOC_OUTREACH' | 'DOC_PREP';
+      assignedDocAgentId?: string | null;
+      carryForwardDemographics?: boolean;
+      intakeRemarks?: string | null;
+    }
+  ): Promise<any> => {
+    return apiClient.post(`/admin/customers/${customerId}/new-application`, payload);
+  },
+
   getDashboardStats: async (): Promise<{
     success: boolean;
     data: {
@@ -160,3 +174,4 @@ export const adminService = {
     return apiClient.get('/admin/dashboard-stats');
   },
 };
+

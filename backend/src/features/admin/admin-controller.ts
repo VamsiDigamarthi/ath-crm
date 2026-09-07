@@ -353,3 +353,21 @@ export const getCustomerDetails = async (req: Request, res: Response) => {
   return SuccessHandler.handle(res, "Customer details fetched successfully", result, 200);
 };
 
+export const startNextYearApplication = async (req: Request, res: Response) => {
+  const customerId = req.params.id as string;
+  const adminUserId = (req as any).currentUser?.id || (req as any).user?.id || 'SYSTEM';
+  const payload = req.body;
+
+
+  const { CustomerDirectoryService } = await import("./customer-directory-service.js");
+  const result = await CustomerDirectoryService.createNextYearApplication(customerId, payload, adminUserId);
+
+  return SuccessHandler.handle(
+    res,
+    `Tax Year ${result.taxYear} application successfully started for ${result.customer.firstName} ${result.customer.lastName}`,
+    result,
+    201
+  );
+};
+
+

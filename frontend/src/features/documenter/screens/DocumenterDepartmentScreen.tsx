@@ -207,6 +207,7 @@ export const DocumenterDepartmentScreen: React.FC = () => {
         data={leads}
         columns={columns}
         selectable={!isAgent && !isAdmin}
+        isRowSelectable={(item) => !item.assignedDocAgent}
         selectedRows={selectedRows}
         rowKey="id"
         onSelectionChange={(selected) => setSelectedRows(selected)}

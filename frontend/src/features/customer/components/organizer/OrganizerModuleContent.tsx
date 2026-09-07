@@ -95,7 +95,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
         {/* Clean Module Sub-Components */}
         {selectedModId === 'm1' && (
           <Module1Demographics
-            data={organizerData.m1_demographics}
+            data={organizerData?.m1_demographics || ({} as any)}
             updateField={(field, val) => updateModuleField('m1_demographics', field, val)}
             selectedTaxYear={selectedTaxYear}
             errors={errors}
@@ -105,11 +105,11 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
         {selectedModId === 'm2' && (
           <Module2Dependents
-            data={organizerData.m2_dependents}
+            data={organizerData?.m2_dependents || ({} as any)}
             updateField={(field, val) => updateModuleField('m2_dependents', field, val)}
             selectedTaxYear={selectedTaxYear}
-            maritalStatus={organizerData.m1_demographics?.maritalStatus}
-            primaryTaxpayerLastName={organizerData.m1_demographics?.lastName || organizerData.m1_demographics?.fullName?.split(' ').slice(1).join(' ') || ''}
+            maritalStatus={organizerData?.m1_demographics?.maritalStatus}
+            primaryTaxpayerLastName={organizerData?.m1_demographics?.lastName || organizerData?.m1_demographics?.fullName?.split(' ').slice(1).join(' ') || ''}
             errors={errors}
             clearError={clearError}
           />
@@ -117,7 +117,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
         {selectedModId === 'm3' && (
           <Module3Presence
-            data={organizerData.m3_presence}
+            data={organizerData?.m3_presence || ({} as any)}
             updateField={(field, val) => updateModuleField('m3_presence', field, val)}
             selectedTaxYear={selectedTaxYear}
             errors={errors}
@@ -127,7 +127,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
         {selectedModId === 'm4' && (
           <Module4Wages
-            data={organizerData.m4_wages}
+            data={organizerData?.m4_wages || ({} as any)}
             updateField={(field, val) => updateModuleField('m4_wages', field, val)}
             selectedTaxYear={selectedTaxYear}
             errors={errors}
@@ -137,7 +137,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
         {selectedModId === 'm5' && (
           <Module5Interest
-            data={organizerData.m5_interest}
+            data={organizerData?.m5_interest || ({} as any)}
             updateField={(field, val) => updateModuleField('m5_interest', field, val)}
             selectedTaxYear={selectedTaxYear}
             errors={errors}
@@ -147,7 +147,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
         {selectedModId === 'm6' && (
           <Module6Stocks
-            data={organizerData.m6_stocks}
+            data={organizerData?.m6_stocks || ({} as any)}
             updateField={(field, val) => updateModuleField('m6_stocks', field, val)}
             selectedTaxYear={selectedTaxYear}
             errors={errors}
@@ -157,7 +157,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
         {selectedModId === 'm7' && (
           <Module7Foreign
-            data={organizerData.m7_foreign}
+            data={organizerData?.m7_foreign || ({} as any)}
             updateField={(field, val) => updateModuleField('m7_foreign', field, val)}
             selectedTaxYear={selectedTaxYear}
             errors={errors}
@@ -167,7 +167,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
         {selectedModId === 'm8' && (
           <Module8Deductions
-            data={organizerData.m8_deductions}
+            data={organizerData?.m8_deductions || ({} as any)}
             updateField={(field, val) => updateModuleField('m8_deductions', field, val)}
             selectedTaxYear={selectedTaxYear}
             errors={errors}
@@ -177,7 +177,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
         {selectedModId === 'm9' && (
           <Module9DirectDeposit
-            data={organizerData.m9_directDeposit}
+            data={organizerData?.m9_directDeposit || ({} as any)}
             updateField={(field, val) => updateModuleField('m9_directDeposit', field, val)}
             selectedTaxYear={selectedTaxYear}
             errors={errors}

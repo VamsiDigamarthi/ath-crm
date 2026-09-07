@@ -1,3 +1,12 @@
+export interface CustomerApplicationSummary {
+  id: string;
+  taxYear: number;
+  currentStage: string;
+  filingType: string;
+  irsStatus: 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS' | 'QUEUED' | 'PENDING';
+  irsStatusLabel: string;
+}
+
 export interface AdminCustomerItem {
   id: string;
   customerId: string;
@@ -15,6 +24,7 @@ export interface AdminCustomerItem {
   isConvertedCustomer: boolean;
   createdAt: string;
   updatedAt: string;
+  applications?: CustomerApplicationSummary[];
   activeApplication: {
     id: string;
     taxYear: number;
@@ -63,3 +73,13 @@ export interface AdminCustomerResponse {
     totalFeesCollected: number;
   };
 }
+
+export interface StartNewTaxYearPayload {
+  taxYear: number;
+  filingType?: 'INDIVIDUAL' | 'CORPORATE';
+  currentStage?: 'RAW_PROSPECT' | 'DOC_OUTREACH' | 'DOC_PREP';
+  assignedDocAgentId?: string | null;
+  carryForwardDemographics?: boolean;
+  intakeRemarks?: string | null;
+}
+

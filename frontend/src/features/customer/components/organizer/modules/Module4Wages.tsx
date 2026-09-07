@@ -23,6 +23,8 @@ export const Module4Wages: React.FC<Module4Props> = ({
   errors = {},
   clearError,
 }) => {
+  const d = (data || {}) as Partial<OrganizerData['m4_wages']>;
+
   return (
     <div className="space-y-6 font-sans">
       <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 flex items-start gap-2.5">
@@ -39,7 +41,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
           placeholder="e.g. Google LLC or Microsoft Corp"
           leftIcon={<Briefcase className="w-4 h-4" />}
           error={errors.employerName}
-          value={data.employerName || ''}
+          value={d.employerName || ''}
           onChange={(e) => {
             updateField('employerName', e.target.value);
             if (clearError) clearError('employerName');
@@ -52,7 +54,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
           placeholder="e.g. 148500"
           leftIcon={<DollarSign className="w-4 h-4" />}
           error={errors.estimatedWages}
-          value={data.estimatedWages !== undefined && data.estimatedWages !== null ? data.estimatedWages.toString() : ''}
+          value={d.estimatedWages !== undefined && d.estimatedWages !== null ? d.estimatedWages.toString() : ''}
           onChange={(e) => {
             const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
             updateField('estimatedWages', val as any);
@@ -77,7 +79,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
             size="sm"
             variant="outline"
             onClick={() => {
-              const list = data.rentalProperties || [];
+              const list = d.rentalProperties || [];
               updateField('rentalProperties', [
                 ...list,
                 {
@@ -100,14 +102,14 @@ export const Module4Wages: React.FC<Module4Props> = ({
           </Button>
         </div>
 
-        {(data.rentalProperties || []).length === 0 ? (
+        {(d.rentalProperties || []).length === 0 ? (
           <div className="p-6 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
             <p>No rental properties added.</p>
             <Button
               size="sm"
               variant="outline"
               onClick={() => {
-                const list = data.rentalProperties || [];
+                const list = d.rentalProperties || [];
                 updateField('rentalProperties', [
                   ...list,
                   {
@@ -131,14 +133,14 @@ export const Module4Wages: React.FC<Module4Props> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {(data.rentalProperties || []).map((prop, idx) => (
+            {(d.rentalProperties || []).map((prop, idx) => (
               <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 shadow-2xs space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <span className="text-xs font-bold text-slate-800">Rental Property #{idx + 1}</span>
                   <button
                     type="button"
                     onClick={() => {
-                      const list = (data.rentalProperties || []).filter((_, i) => i !== idx);
+                      const list = (d.rentalProperties || []).filter((_, i) => i !== idx);
                       updateField('rentalProperties', list);
                     }}
                     className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
@@ -157,7 +159,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                     ]}
                     value={prop.propertyType}
                     onChange={(val) => {
-                      const list = [...(data.rentalProperties || [])];
+                      const list = [...(d.rentalProperties || [])];
                       list[idx].propertyType = val || 'RESIDENTIAL';
                       updateField('rentalProperties', list);
                     }}
@@ -170,7 +172,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                       error={errors[`rental_${idx}_address`]}
                       value={prop.address || ''}
                       onChange={(e) => {
-                        const list = [...(data.rentalProperties || [])];
+                        const list = [...(d.rentalProperties || [])];
                         list[idx].address = e.target.value;
                         updateField('rentalProperties', list);
                         if (clearError) clearError(`rental_${idx}_address`);
@@ -184,7 +186,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                     placeholder="12"
                     value={prop.monthsRented2025 !== undefined ? prop.monthsRented2025.toString() : '12'}
                     onChange={(e) => {
-                      const list = [...(data.rentalProperties || [])];
+                      const list = [...(d.rentalProperties || [])];
                       const val = parseInt(e.target.value, 10);
                       list[idx].monthsRented2025 = isNaN(val) ? 0 : Math.min(12, Math.max(0, val));
                       updateField('rentalProperties', list);
@@ -197,7 +199,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                     placeholder="0"
                     value={prop.personalMonths2025 !== undefined ? prop.personalMonths2025.toString() : '0'}
                     onChange={(e) => {
-                      const list = [...(data.rentalProperties || [])];
+                      const list = [...(d.rentalProperties || [])];
                       const val = parseInt(e.target.value, 10);
                       list[idx].personalMonths2025 = isNaN(val) ? 0 : Math.min(12, Math.max(0, val));
                       updateField('rentalProperties', list);
@@ -213,7 +215,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                     ]}
                     value={prop.ownership}
                     onChange={(val) => {
-                      const list = [...(data.rentalProperties || [])];
+                      const list = [...(d.rentalProperties || [])];
                       list[idx].ownership = val || 'TAXPAYER';
                       updateField('rentalProperties', list);
                     }}
@@ -226,9 +228,9 @@ export const Module4Wages: React.FC<Module4Props> = ({
                     accentColor="#16A34A"
                     error={errors[`rental_${idx}_purchaseDate`]}
                     value={parseUsDate(prop.purchaseDate)}
-                    onChange={(d) => {
-                      const list = [...(data.rentalProperties || [])];
-                      list[idx].purchaseDate = formatUsDate(d);
+                    onChange={(dateVal) => {
+                      const list = [...(d.rentalProperties || [])];
+                      list[idx].purchaseDate = formatUsDate(dateVal);
                       updateField('rentalProperties', list);
                       if (clearError) clearError(`rental_${idx}_purchaseDate`);
                     }}
@@ -241,7 +243,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                     leftIcon={<DollarSign className="w-4 h-4" />}
                     value={prop.costOfProperty !== undefined && prop.costOfProperty !== null && prop.costOfProperty > 0 ? prop.costOfProperty.toString() : ''}
                     onChange={(e) => {
-                      const list = [...(data.rentalProperties || [])];
+                      const list = [...(d.rentalProperties || [])];
                       list[idx].costOfProperty = parseFloat(e.target.value) || 0;
                       updateField('rentalProperties', list);
                     }}
@@ -255,7 +257,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                     error={errors[`rental_${idx}_totalRentalIncome`]}
                     value={prop.totalRentalIncome !== undefined && prop.totalRentalIncome !== null && prop.totalRentalIncome > 0 ? prop.totalRentalIncome.toString() : ''}
                     onChange={(e) => {
-                      const list = [...(data.rentalProperties || [])];
+                      const list = [...(d.rentalProperties || [])];
                       list[idx].totalRentalIncome = parseFloat(e.target.value) || 0;
                       updateField('rentalProperties', list);
                       if (clearError) clearError(`rental_${idx}_totalRentalIncome`);
@@ -269,7 +271,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                     leftIcon={<DollarSign className="w-4 h-4" />}
                     value={prop.rentalExpenses !== undefined && prop.rentalExpenses !== null && prop.rentalExpenses > 0 ? prop.rentalExpenses.toString() : ''}
                     onChange={(e) => {
-                      const list = [...(data.rentalProperties || [])];
+                      const list = [...(d.rentalProperties || [])];
                       list[idx].rentalExpenses = parseFloat(e.target.value) || 0;
                       updateField('rentalProperties', list);
                     }}

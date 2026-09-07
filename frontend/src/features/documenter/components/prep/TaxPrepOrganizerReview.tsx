@@ -50,7 +50,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   taxDraftSummary,
   onOrganizerSaved,
 }) => {
-  const organizer = taxDraftSummary?.organizer || {};
+  const organizer = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
   const activeTaxYear = taxDraftSummary?.taxYear || organizer.taxYear || 2025;
 
   const [viewMode, setViewMode] = useState<'INSPECTOR' | 'GRID' | 'AGENT_EDIT'>('INSPECTOR');
@@ -58,12 +58,30 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});
   
   // Local state for Agent Editing on Call
-  const [localOrganizer, setLocalOrganizer] = useState<any>(organizer);
+  const [localOrganizer, setLocalOrganizer] = useState<any>(() => {
+    const raw = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
+    return {
+      ...raw,
+      m1_demographics: raw.m1_demographics || {
+        fullName: customerName,
+        firstName: customerName ? customerName.split(' ')[0] : '',
+        lastName: customerName ? customerName.split(' ').slice(1).join(' ') : '',
+      },
+    };
+  });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setLocalOrganizer(taxDraftSummary?.organizer || {});
-  }, [taxDraftSummary]);
+    const raw = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
+    setLocalOrganizer({
+      ...raw,
+      m1_demographics: raw.m1_demographics || {
+        fullName: customerName,
+        firstName: customerName ? customerName.split(' ')[0] : '',
+        lastName: customerName ? customerName.split(' ').slice(1).join(' ') : '',
+      },
+    });
+  }, [taxDraftSummary, customerName]);
 
   const toggleShow = (key: string) => {
     setShowSensitive((prev) => ({ ...prev, [key]: !prev[key] }));

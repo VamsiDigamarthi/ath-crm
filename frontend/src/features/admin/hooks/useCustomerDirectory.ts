@@ -69,15 +69,20 @@ export function useCustomerDirectory() {
   }, [data]);
 
   const taxYearOptions: SelectOption[] = useMemo(() => {
-    const rawYears = data?.availableTaxYears || [2026, 2025, 2024];
+    const curYear = new Date().getFullYear();
+    const dynamicDefaults = [curYear + 1, curYear, curYear - 1, curYear - 2, curYear - 3, curYear - 4];
+    const rawYears = data?.availableTaxYears || dynamicDefaults;
+    const sortedYears = Array.from(new Set([...rawYears, ...dynamicDefaults])).sort((a, b) => b - a);
+
     return [
       { label: 'All Tax Years', value: 'ALL' },
-      ...rawYears.map((yr) => ({
+      ...sortedYears.map((yr) => ({
         label: `Tax Year ${yr}`,
         value: String(yr),
       })),
     ];
   }, [data?.availableTaxYears]);
+
 
   return {
     loading,

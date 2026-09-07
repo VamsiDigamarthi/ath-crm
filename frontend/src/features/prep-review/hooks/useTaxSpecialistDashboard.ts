@@ -254,11 +254,11 @@ export function useTaxSpecialistDashboard() {
       designatedReviewer: item.assignedReviewer?.name || '-',
       slaDueTime: (item as any).targetDueDate
         ? new Date((item as any).targetDueDate).toLocaleString([], {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
         : '-',
       status: stageLabel,
     };
@@ -279,11 +279,11 @@ export function useTaxSpecialistDashboard() {
       computedRefund: draft.federalRefund ?? item.estimatedRefund ?? 0,
       slaDueTime: (item as any).targetDueDate
         ? new Date((item as any).targetDueDate).toLocaleString([], {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
         : '-',
       status: 'Pending QA Audit',
     };

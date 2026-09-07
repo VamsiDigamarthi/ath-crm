@@ -18,6 +18,8 @@ export const Module5Interest: React.FC<Module5Props> = ({
   errors = {},
   clearError,
 }) => {
+  const d = (data || {}) as Partial<OrganizerData['m5_interest']>;
+
   return (
     <div className="space-y-6 font-sans">
       <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 flex items-start gap-2.5">
@@ -33,7 +35,7 @@ export const Module5Interest: React.FC<Module5Props> = ({
           placeholder="e.g. Marcus by Goldman Sachs / Chase / Discover"
           leftIcon={<Building2 className="w-4 h-4" />}
           error={errors.bankName}
-          value={data.bankName || ''}
+          value={d.bankName || ''}
           onChange={(e) => {
             updateField('bankName', e.target.value);
             if (clearError) clearError('bankName');
@@ -46,7 +48,7 @@ export const Module5Interest: React.FC<Module5Props> = ({
           placeholder="e.g. 1850"
           leftIcon={<DollarSign className="w-4 h-4" />}
           error={errors.interestAmount}
-          value={data.interestAmount !== undefined && data.interestAmount !== null && data.interestAmount > 0 ? data.interestAmount.toString() : ''}
+          value={d.interestAmount !== undefined && d.interestAmount !== null && d.interestAmount > 0 ? d.interestAmount.toString() : ''}
           onChange={(e) => {
             const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
             const nonNeg = isNaN(val) ? 0 : Math.max(0, val);
@@ -61,7 +63,7 @@ export const Module5Interest: React.FC<Module5Props> = ({
           placeholder="e.g. 640"
           leftIcon={<DollarSign className="w-4 h-4" />}
           error={errors.dividendAmount}
-          value={data.dividendAmount !== undefined && data.dividendAmount !== null && data.dividendAmount > 0 ? data.dividendAmount.toString() : ''}
+          value={d.dividendAmount !== undefined && d.dividendAmount !== null && d.dividendAmount > 0 ? d.dividendAmount.toString() : ''}
           onChange={(e) => {
             const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
             const nonNeg = isNaN(val) ? 0 : Math.max(0, val);
@@ -76,7 +78,7 @@ export const Module5Interest: React.FC<Module5Props> = ({
           placeholder="0"
           leftIcon={<DollarSign className="w-4 h-4" />}
           error={errors.form1099OidAmount}
-          value={data.form1099OidAmount !== undefined && data.form1099OidAmount !== null && data.form1099OidAmount > 0 ? data.form1099OidAmount.toString() : ''}
+          value={d.form1099OidAmount !== undefined && d.form1099OidAmount !== null && d.form1099OidAmount > 0 ? d.form1099OidAmount.toString() : ''}
           onChange={(e) => {
             const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
             const nonNeg = isNaN(val) ? 0 : Math.max(0, val);

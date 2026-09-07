@@ -249,6 +249,7 @@ export const SalesManagerQueueScreen: React.FC = () => {
         data={leads}
         columns={columns}
         selectable
+        isRowSelectable={(item) => !item.assignedSalesAgent}
         selectedRows={selectedRows}
         rowKey="id"
         onSelectionChange={(selected) => setSelectedRows(selected)}

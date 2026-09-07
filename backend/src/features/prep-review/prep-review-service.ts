@@ -45,7 +45,7 @@ export class PrepReviewService {
     return staff.map((member) => {
       const isManager = member.role === Role.PREP_MANAGER;
       const isReviewer = member.role === Role.TAX_REVIEWER;
-      
+
       const activeStages: ApplicationStage[] = [
         ApplicationStage.DOC_PREP,
         ApplicationStage.CORRECTION_NEEDED,
@@ -79,8 +79,8 @@ export class PrepReviewService {
       const roleLabel = isManager
         ? 'Tax Prep Manager'
         : isReviewer
-        ? 'Senior QA Reviewer'
-        : 'Tax Preparer';
+          ? 'Senior QA Reviewer'
+          : 'Tax Preparer';
 
       const userEmail = member.email || 'staff@taxcrm.com';
 
@@ -280,7 +280,7 @@ export class PrepReviewService {
         complexity = 'SCHEDULE_C';
       }
 
-      const stateOfResidence = profile?.state 
+      const stateOfResidence = profile?.state
         ? `${profile.city ? `${profile.city}, ` : ''}${profile.state}`
         : profile?.city || 'State Not Set';
 
@@ -576,21 +576,14 @@ export class PrepReviewService {
       { name: 'Schedule C Self-Employed', value: businessCount, color: '#0EA5E9', pct: totalInPipeline > 0 ? Math.round((businessCount / totalInPipeline) * 100) : 0 },
     ];
 
-    // Compute dynamic Hourly Activity Chart Data (matching Documenter Service logic)
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - 7);
-    startOfWeek.setHours(0, 0, 0, 0);
+    // Compute dynamic Hourly Activity Chart Data (Today Hourly)
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const recentStageHistories = await prisma.stageHistory.findMany({
       where: {
-        createdAt: { gte: startOfWeek },
-        OR: [
-          { toStage: ApplicationStage.DOC_PREP },
-          { toStage: ApplicationStage.SALES_PITCH_QUEUE },
-        ],
+        createdAt: { gte: sevenDaysAgo },
       },
       select: {
         id: true,
@@ -602,86 +595,89 @@ export class PrepReviewService {
       orderBy: { createdAt: 'asc' },
     });
 
-    const currentHour = new Date().getHours();
-    const eventHours: number[] = [];
-    
+    const hours = [8, 10, 12, 14, 16, 18, 20];
+    const hourlyVelocity = hours.map((h) => ({
+      hour: `${h.toString().padStart(2, '0')}:00`,
+      prepared: 0,
+      reviewed: 0,
+    }));
+
+    // Evaluate Today's real events only for Today Hourly
     recentStageHistories.forEach((hist) => {
-      const histDate = new Date(hist.createdAt);
-      if (histDate >= startOfToday) {
-        eventHours.push(histDate.getHours());
+      const d = new Date(hist.createdAt);
+      if (d >= startOfToday) {
+        const hour = d.getHours();
+        let closestH = hours[0];
+        let minDiff = Math.abs(hour - closestH);
+        for (const h of hours) {
+          const diff = Math.abs(hour - h);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestH = h;
+          }
+        }
+        const slotKey = `${closestH.toString().padStart(2, '0')}:00`;
+        const slot = hourlyVelocity.find((s) => s.hour === slotKey);
+        if (slot) {
+          if (hist.toStage === ApplicationStage.DOC_PREP || (hist.toStage as any) === 'PREP_IN_PROGRESS') {
+            slot.prepared += 1;
+          } else if (hist.toStage === ApplicationStage.SALES_PITCH_QUEUE || (hist.toStage as any) === 'QA_APPROVED') {
+            slot.reviewed += 1;
+          }
+        }
       }
     });
 
-    const minHour = eventHours.length > 0 ? Math.min(8, ...eventHours) : 8;
-    const maxHour = Math.min(23, Math.max(18, currentHour, ...eventHours));
+    // 2. Dynamic weekly velocity (Rolling 7 days mapped to Mon - Sun)
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const weeklyVelocity = dayNames.map((name) => ({
+      day: name,
+      prepared: 0,
+      reviewed: 0,
+    }));
 
-    const hourlySlots: number[] = [];
-    for (let h = minHour; h <= maxHour; h++) {
-      hourlySlots.push(h);
-    }
+    const getDayIndex = (dateVal: Date): number => {
+      const diffMs = now.getTime() - dateVal.getTime();
+      if (diffMs >= 0 && diffMs <= 7 * 24 * 60 * 60 * 1000) {
+        const day = dateVal.getDay();
+        return day === 0 ? 6 : day - 1; // 0=Mon, ..., 5=Sat, 6=Sun
+      }
+      return -1;
+    };
 
-    const hourlyVelocity = hourlySlots.map((h) => {
-      const hourStr = `${h.toString().padStart(2, '0')}:00`;
-      const hourHistories = recentStageHistories.filter((hist) => {
-        const d = new Date(hist.createdAt);
-        return d >= startOfToday && d.getHours() === h;
-      });
-
-      // Count distinct applications that actually entered preparation / QA passed in this hour
-      const prepHistories = hourHistories.filter(
-        (hist) => hist.toStage === ApplicationStage.DOC_PREP && hist.fromStage !== ApplicationStage.DOC_PREP
-      );
-      const reviewHistories = hourHistories.filter(
-        (hist) => hist.toStage === ApplicationStage.SALES_PITCH_QUEUE && hist.fromStage !== ApplicationStage.SALES_PITCH_QUEUE
-      );
-
-      const prepCount = new Set(prepHistories.map((h) => h.applicationId)).size;
-      const reviewCount = new Set(reviewHistories.map((h) => h.applicationId)).size;
-
-      return {
-        hour: hourStr,
-        prepared: prepCount,
-        reviewed: reviewCount,
-      };
+    // Stage histories in past 7 days
+    recentStageHistories.forEach((hist) => {
+      const d = new Date(hist.createdAt);
+      const dayIdx = getDayIndex(d);
+      if (dayIdx >= 0 && dayIdx < 7) {
+        if (hist.toStage === ApplicationStage.DOC_PREP || (hist.toStage as any) === 'PREP_IN_PROGRESS') {
+          weeklyVelocity[dayIdx].prepared += 1;
+        } else if (hist.toStage === ApplicationStage.SALES_PITCH_QUEUE || (hist.toStage as any) === 'QA_APPROVED') {
+          weeklyVelocity[dayIdx].reviewed += 1;
+        }
+      }
     });
 
-    // 2. Dynamic weekly velocity (Monday to Sunday)
-    const now = new Date();
-    const currentDayOfWeek = now.getDay();
-    const distanceToMonday = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + distanceToMonday);
-    monday.setHours(0, 0, 0, 0);
-
-    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const weeklyVelocity = dayNames.map((name, i) => {
-      const dayDate = new Date(monday);
-      dayDate.setDate(monday.getDate() + i);
-      const nextDate = new Date(dayDate);
-      nextDate.setDate(dayDate.getDate() + 1);
-
-      const dayHistories = recentStageHistories.filter((hist) => {
-        const d = new Date(hist.createdAt);
-        return d >= dayDate && d < nextDate;
-      });
-
-      // Count distinct applications that entered preparation / QA passed on this day
-      const prepHistories = dayHistories.filter(
-        (hist) => hist.toStage === ApplicationStage.DOC_PREP && hist.fromStage !== ApplicationStage.DOC_PREP
-      );
-      const reviewHistories = dayHistories.filter(
-        (hist) => hist.toStage === ApplicationStage.SALES_PITCH_QUEUE && hist.fromStage !== ApplicationStage.SALES_PITCH_QUEUE
-      );
-
-      const prepCount = new Set(prepHistories.map((h) => h.applicationId)).size;
-      const reviewCount = new Set(reviewHistories.map((h) => h.applicationId)).size;
-
-      const monthName = dayDate.toLocaleString('en-US', { month: 'short' });
-      return {
-        day: `${name} (${monthName} ${dayDate.getDate()})`,
-        prepared: prepCount,
-        reviewed: reviewCount,
-      };
+    // Applications updated in past 7 days
+    apps.forEach((app) => {
+      const draftStatus = (app.taxDraftSummary as any)?.status;
+      const appUpdated = app.updatedAt ? new Date(app.updatedAt) : (app.createdAt ? new Date(app.createdAt) : null);
+      if (appUpdated) {
+        const dayIdx = getDayIndex(appUpdated);
+        if (dayIdx >= 0 && dayIdx < 7) {
+          if (app.assignedPrepAgentId) {
+            weeklyVelocity[dayIdx].prepared += 1;
+          }
+          if (
+            draftStatus === 'QA_APPROVED' ||
+            app.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
+            app.currentStage === ApplicationStage.FILING_QUEUE ||
+            app.currentStage === ApplicationStage.FILING_SUCCESS
+          ) {
+            weeklyVelocity[dayIdx].reviewed += 1;
+          }
+        }
+      }
     });
 
     return {
@@ -749,7 +745,7 @@ export class PrepReviewService {
     }
 
     const customer = app.customer;
-    const fullName = customer 
+    const fullName = customer
       ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || 'Taxpayer Client'
       : 'Taxpayer Client';
 
@@ -1101,10 +1097,10 @@ export class PrepReviewService {
     // 3. Format Refund Summary
     const fedRefund = Number(currentDraft.federalRefund) || 0;
     const balanceDue = Number(currentDraft.balanceDue) || 0;
-    const refundFormatted = fedRefund > 0 
-      ? `+$${fedRefund.toLocaleString()} Federal Refund` 
-      : balanceDue > 0 
-        ? `-$${balanceDue.toLocaleString()} Balance Due` 
+    const refundFormatted = fedRefund > 0
+      ? `+$${fedRefund.toLocaleString()} Federal Refund`
+      : balanceDue > 0
+        ? `-$${balanceDue.toLocaleString()} Balance Due`
         : '$0 Net Balance';
 
     // 4. Update Application to SALES_PITCH_QUEUE

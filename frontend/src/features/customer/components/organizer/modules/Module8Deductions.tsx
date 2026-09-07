@@ -39,8 +39,9 @@ export const Module8Deductions: React.FC<Module8Props> = ({
   errors = {},
   clearError,
 }) => {
-  const rentList = data.rentDeductionsList || [];
-  const charityList = data.charitableList || [];
+  const d = (data || {}) as Partial<OrganizerData['m8_deductions']>;
+  const rentList = d.rentDeductionsList || [];
+  const charityList = d.charitableList || [];
 
   const totalRentMonths = rentList.reduce((sum, r) => sum + (r.months || 0), 0);
   const totalRentClaimed = rentList.reduce((sum, r) => sum + ((r.months || 0) * (r.monthlyRent || 0)), 0);
@@ -385,11 +386,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.lastYearTaxPrepFeeTaxpayer !== undefined && data.lastYearTaxPrepFeeTaxpayer !== null && data.lastYearTaxPrepFeeTaxpayer > 0 ? data.lastYearTaxPrepFeeTaxpayer.toString() : ''}
+                    value={d.lastYearTaxPrepFeeTaxpayer !== undefined && d.lastYearTaxPrepFeeTaxpayer !== null && d.lastYearTaxPrepFeeTaxpayer > 0 ? d.lastYearTaxPrepFeeTaxpayer.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('lastYearTaxPrepFeeTaxpayer', val);
-                      updateField('lastYearTaxPrepFee', val + (data.lastYearTaxPrepFeeSpouse || 0));
+                      updateField('lastYearTaxPrepFee', val + (d.lastYearTaxPrepFeeSpouse || 0));
                     }}
                   />
                 </td>
@@ -398,11 +399,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.lastYearTaxPrepFeeSpouse !== undefined && data.lastYearTaxPrepFeeSpouse !== null && data.lastYearTaxPrepFeeSpouse > 0 ? data.lastYearTaxPrepFeeSpouse.toString() : ''}
+                    value={d.lastYearTaxPrepFeeSpouse !== undefined && d.lastYearTaxPrepFeeSpouse !== null && d.lastYearTaxPrepFeeSpouse > 0 ? d.lastYearTaxPrepFeeSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('lastYearTaxPrepFeeSpouse', val);
-                      updateField('lastYearTaxPrepFee', (data.lastYearTaxPrepFeeTaxpayer || 0) + val);
+                      updateField('lastYearTaxPrepFee', (d.lastYearTaxPrepFeeTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -419,11 +420,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.mortgageInterestTaxpayer !== undefined && data.mortgageInterestTaxpayer !== null && data.mortgageInterestTaxpayer > 0 ? data.mortgageInterestTaxpayer.toString() : (data.mortgageInterest1098 ? data.mortgageInterest1098.toString() : '')}
+                    value={d.mortgageInterestTaxpayer !== undefined && d.mortgageInterestTaxpayer !== null && d.mortgageInterestTaxpayer > 0 ? d.mortgageInterestTaxpayer.toString() : (d.mortgageInterest1098 ? d.mortgageInterest1098.toString() : '')}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('mortgageInterestTaxpayer', val);
-                      updateField('mortgageInterest1098', val + (data.mortgageInterestSpouse || 0));
+                      updateField('mortgageInterest1098', val + (d.mortgageInterestSpouse || 0));
                     }}
                   />
                 </td>
@@ -432,11 +433,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.mortgageInterestSpouse !== undefined && data.mortgageInterestSpouse !== null && data.mortgageInterestSpouse > 0 ? data.mortgageInterestSpouse.toString() : ''}
+                    value={d.mortgageInterestSpouse !== undefined && d.mortgageInterestSpouse !== null && d.mortgageInterestSpouse > 0 ? d.mortgageInterestSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('mortgageInterestSpouse', val);
-                      updateField('mortgageInterest1098', (data.mortgageInterestTaxpayer || 0) + val);
+                      updateField('mortgageInterest1098', (d.mortgageInterestTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -451,11 +452,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.propertyTaxesUsTaxpayer !== undefined && data.propertyTaxesUsTaxpayer !== null && data.propertyTaxesUsTaxpayer > 0 ? data.propertyTaxesUsTaxpayer.toString() : (data.propertyTaxesUs ? data.propertyTaxesUs.toString() : '')}
+                    value={d.propertyTaxesUsTaxpayer !== undefined && d.propertyTaxesUsTaxpayer !== null && d.propertyTaxesUsTaxpayer > 0 ? d.propertyTaxesUsTaxpayer.toString() : (d.propertyTaxesUs ? d.propertyTaxesUs.toString() : '')}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('propertyTaxesUsTaxpayer', val);
-                      updateField('propertyTaxesUs', val + (data.propertyTaxesUsSpouse || 0));
+                      updateField('propertyTaxesUs', val + (d.propertyTaxesUsSpouse || 0));
                     }}
                   />
                 </td>
@@ -464,11 +465,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.propertyTaxesUsSpouse !== undefined && data.propertyTaxesUsSpouse !== null && data.propertyTaxesUsSpouse > 0 ? data.propertyTaxesUsSpouse.toString() : ''}
+                    value={d.propertyTaxesUsSpouse !== undefined && d.propertyTaxesUsSpouse !== null && d.propertyTaxesUsSpouse > 0 ? d.propertyTaxesUsSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('propertyTaxesUsSpouse', val);
-                      updateField('propertyTaxesUs', (data.propertyTaxesUsTaxpayer || 0) + val);
+                      updateField('propertyTaxesUs', (d.propertyTaxesUsTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -483,11 +484,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.propertyTaxesIndiaTaxpayer !== undefined && data.propertyTaxesIndiaTaxpayer !== null && data.propertyTaxesIndiaTaxpayer > 0 ? data.propertyTaxesIndiaTaxpayer.toString() : (data.propertyTaxesIndia ? data.propertyTaxesIndia.toString() : '')}
+                    value={d.propertyTaxesIndiaTaxpayer !== undefined && d.propertyTaxesIndiaTaxpayer !== null && d.propertyTaxesIndiaTaxpayer > 0 ? d.propertyTaxesIndiaTaxpayer.toString() : (d.propertyTaxesIndia ? d.propertyTaxesIndia.toString() : '')}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('propertyTaxesIndiaTaxpayer', val);
-                      updateField('propertyTaxesIndia', val + (data.propertyTaxesIndiaSpouse || 0));
+                      updateField('propertyTaxesIndia', val + (d.propertyTaxesIndiaSpouse || 0));
                     }}
                   />
                 </td>
@@ -496,11 +497,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.propertyTaxesIndiaSpouse !== undefined && data.propertyTaxesIndiaSpouse !== null && data.propertyTaxesIndiaSpouse > 0 ? data.propertyTaxesIndiaSpouse.toString() : ''}
+                    value={d.propertyTaxesIndiaSpouse !== undefined && d.propertyTaxesIndiaSpouse !== null && d.propertyTaxesIndiaSpouse > 0 ? d.propertyTaxesIndiaSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('propertyTaxesIndiaSpouse', val);
-                      updateField('propertyTaxesIndia', (data.propertyTaxesIndiaTaxpayer || 0) + val);
+                      updateField('propertyTaxesIndia', (d.propertyTaxesIndiaTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -515,11 +516,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.medicalExpensesTaxpayer !== undefined && data.medicalExpensesTaxpayer !== null && data.medicalExpensesTaxpayer > 0 ? data.medicalExpensesTaxpayer.toString() : (data.medicalExpenses ? data.medicalExpenses.toString() : '')}
+                    value={d.medicalExpensesTaxpayer !== undefined && d.medicalExpensesTaxpayer !== null && d.medicalExpensesTaxpayer > 0 ? d.medicalExpensesTaxpayer.toString() : (d.medicalExpenses ? d.medicalExpenses.toString() : '')}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('medicalExpensesTaxpayer', val);
-                      updateField('medicalExpenses', val + (data.medicalExpensesSpouse || 0));
+                      updateField('medicalExpenses', val + (d.medicalExpensesSpouse || 0));
                     }}
                   />
                 </td>
@@ -528,11 +529,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.medicalExpensesSpouse !== undefined && data.medicalExpensesSpouse !== null && data.medicalExpensesSpouse > 0 ? data.medicalExpensesSpouse.toString() : ''}
+                    value={d.medicalExpensesSpouse !== undefined && d.medicalExpensesSpouse !== null && d.medicalExpensesSpouse > 0 ? d.medicalExpensesSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('medicalExpensesSpouse', val);
-                      updateField('medicalExpenses', (data.medicalExpensesTaxpayer || 0) + val);
+                      updateField('medicalExpenses', (d.medicalExpensesTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -547,11 +548,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.studentLoanInterestTaxpayer !== undefined && data.studentLoanInterestTaxpayer !== null && data.studentLoanInterestTaxpayer > 0 ? data.studentLoanInterestTaxpayer.toString() : (data.studentLoanInterest ? data.studentLoanInterest.toString() : '')}
+                    value={d.studentLoanInterestTaxpayer !== undefined && d.studentLoanInterestTaxpayer !== null && d.studentLoanInterestTaxpayer > 0 ? d.studentLoanInterestTaxpayer.toString() : (d.studentLoanInterest ? d.studentLoanInterest.toString() : '')}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('studentLoanInterestTaxpayer', val);
-                      updateField('studentLoanInterest', val + (data.studentLoanInterestSpouse || 0));
+                      updateField('studentLoanInterest', val + (d.studentLoanInterestSpouse || 0));
                     }}
                   />
                 </td>
@@ -560,11 +561,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.studentLoanInterestSpouse !== undefined && data.studentLoanInterestSpouse !== null && data.studentLoanInterestSpouse > 0 ? data.studentLoanInterestSpouse.toString() : ''}
+                    value={d.studentLoanInterestSpouse !== undefined && d.studentLoanInterestSpouse !== null && d.studentLoanInterestSpouse > 0 ? d.studentLoanInterestSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('studentLoanInterestSpouse', val);
-                      updateField('studentLoanInterest', (data.studentLoanInterestTaxpayer || 0) + val);
+                      updateField('studentLoanInterest', (d.studentLoanInterestTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -579,11 +580,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.solarCleanEnergyTaxpayer !== undefined && data.solarCleanEnergyTaxpayer !== null && data.solarCleanEnergyTaxpayer > 0 ? data.solarCleanEnergyTaxpayer.toString() : (data.solarCleanEnergyExpenses ? data.solarCleanEnergyExpenses.toString() : '')}
+                    value={d.solarCleanEnergyTaxpayer !== undefined && d.solarCleanEnergyTaxpayer !== null && d.solarCleanEnergyTaxpayer > 0 ? d.solarCleanEnergyTaxpayer.toString() : (d.solarCleanEnergyExpenses ? d.solarCleanEnergyExpenses.toString() : '')}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('solarCleanEnergyTaxpayer', val);
-                      updateField('solarCleanEnergyExpenses', val + (data.solarCleanEnergySpouse || 0));
+                      updateField('solarCleanEnergyExpenses', val + (d.solarCleanEnergySpouse || 0));
                     }}
                   />
                 </td>
@@ -592,11 +593,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.solarCleanEnergySpouse !== undefined && data.solarCleanEnergySpouse !== null && data.solarCleanEnergySpouse > 0 ? data.solarCleanEnergySpouse.toString() : ''}
+                    value={d.solarCleanEnergySpouse !== undefined && d.solarCleanEnergySpouse !== null && d.solarCleanEnergySpouse > 0 ? d.solarCleanEnergySpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('solarCleanEnergySpouse', val);
-                      updateField('solarCleanEnergyExpenses', (data.solarCleanEnergyTaxpayer || 0) + val);
+                      updateField('solarCleanEnergyExpenses', (d.solarCleanEnergyTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -611,11 +612,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.electricVehicleTaxpayer !== undefined && data.electricVehicleTaxpayer !== null && data.electricVehicleTaxpayer > 0 ? data.electricVehicleTaxpayer.toString() : (data.electricVehicleExpenses ? data.electricVehicleExpenses.toString() : '')}
+                    value={d.electricVehicleTaxpayer !== undefined && d.electricVehicleTaxpayer !== null && d.electricVehicleTaxpayer > 0 ? d.electricVehicleTaxpayer.toString() : (d.electricVehicleExpenses ? d.electricVehicleExpenses.toString() : '')}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('electricVehicleTaxpayer', val);
-                      updateField('electricVehicleExpenses', val + (data.electricVehicleSpouse || 0));
+                      updateField('electricVehicleExpenses', val + (d.electricVehicleSpouse || 0));
                     }}
                   />
                 </td>
@@ -624,11 +625,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.electricVehicleSpouse !== undefined && data.electricVehicleSpouse !== null && data.electricVehicleSpouse > 0 ? data.electricVehicleSpouse.toString() : ''}
+                    value={d.electricVehicleSpouse !== undefined && d.electricVehicleSpouse !== null && d.electricVehicleSpouse > 0 ? d.electricVehicleSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('electricVehicleSpouse', val);
-                      updateField('electricVehicleExpenses', (data.electricVehicleTaxpayer || 0) + val);
+                      updateField('electricVehicleExpenses', (d.electricVehicleTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -643,11 +644,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.hsaTaxpayer !== undefined && data.hsaTaxpayer !== null && data.hsaTaxpayer > 0 ? data.hsaTaxpayer.toString() : (data.hsaContribution ? data.hsaContribution.toString() : '')}
+                    value={d.hsaTaxpayer !== undefined && d.hsaTaxpayer !== null && d.hsaTaxpayer > 0 ? d.hsaTaxpayer.toString() : (d.hsaContribution ? d.hsaContribution.toString() : '')}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('hsaTaxpayer', val);
-                      updateField('hsaContribution', val + (data.hsaSpouse || 0));
+                      updateField('hsaContribution', val + (d.hsaSpouse || 0));
                     }}
                   />
                 </td>
@@ -656,11 +657,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.hsaSpouse !== undefined && data.hsaSpouse !== null && data.hsaSpouse > 0 ? data.hsaSpouse.toString() : ''}
+                    value={d.hsaSpouse !== undefined && d.hsaSpouse !== null && d.hsaSpouse > 0 ? d.hsaSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('hsaSpouse', val);
-                      updateField('hsaContribution', (data.hsaTaxpayer || 0) + val);
+                      updateField('hsaContribution', (d.hsaTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -675,11 +676,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.iraTaxpayer !== undefined && data.iraTaxpayer !== null && data.iraTaxpayer > 0 ? data.iraTaxpayer.toString() : (data.iraContribution ? data.iraContribution.toString() : '')}
+                    value={d.iraTaxpayer !== undefined && d.iraTaxpayer !== null && d.iraTaxpayer > 0 ? d.iraTaxpayer.toString() : (d.iraContribution ? d.iraContribution.toString() : '')}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('iraTaxpayer', val);
-                      updateField('iraContribution', val + (data.iraSpouse || 0));
+                      updateField('iraContribution', val + (d.iraSpouse || 0));
                     }}
                   />
                 </td>
@@ -688,11 +689,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.iraSpouse !== undefined && data.iraSpouse !== null && data.iraSpouse > 0 ? data.iraSpouse.toString() : ''}
+                    value={d.iraSpouse !== undefined && d.iraSpouse !== null && d.iraSpouse > 0 ? d.iraSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('iraSpouse', val);
-                      updateField('iraContribution', (data.iraTaxpayer || 0) + val);
+                      updateField('iraContribution', (d.iraTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -707,11 +708,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.educatorExpensesTaxpayer !== undefined && data.educatorExpensesTaxpayer !== null && data.educatorExpensesTaxpayer > 0 ? data.educatorExpensesTaxpayer.toString() : (data.educatorExpenses ? data.educatorExpenses.toString() : '')}
+                    value={d.educatorExpensesTaxpayer !== undefined && d.educatorExpensesTaxpayer !== null && d.educatorExpensesTaxpayer > 0 ? d.educatorExpensesTaxpayer.toString() : (d.educatorExpenses ? d.educatorExpenses.toString() : '')}
                     onChange={(e) => {
                       const val = Math.min(300, Math.max(0, parseFloat(e.target.value) || 0));
                       updateField('educatorExpensesTaxpayer', val);
-                      updateField('educatorExpenses', val + (data.educatorExpensesSpouse || 0));
+                      updateField('educatorExpenses', val + (d.educatorExpensesSpouse || 0));
                     }}
                   />
                 </td>
@@ -720,11 +721,11 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="0"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.educatorExpensesSpouse !== undefined && data.educatorExpensesSpouse !== null && data.educatorExpensesSpouse > 0 ? data.educatorExpensesSpouse.toString() : ''}
+                    value={d.educatorExpensesSpouse !== undefined && d.educatorExpensesSpouse !== null && d.educatorExpensesSpouse > 0 ? d.educatorExpensesSpouse.toString() : ''}
                     onChange={(e) => {
                       const val = Math.min(300, Math.max(0, parseFloat(e.target.value) || 0));
                       updateField('educatorExpensesSpouse', val);
-                      updateField('educatorExpenses', (data.educatorExpensesTaxpayer || 0) + val);
+                      updateField('educatorExpenses', (d.educatorExpensesTaxpayer || 0) + val);
                     }}
                   />
                 </td>
@@ -739,7 +740,7 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="text"
                     placeholder="Brief description of deduction..."
                     className="w-full mt-1 px-2.5 py-1 border border-slate-200 rounded text-[11px] font-normal text-slate-700"
-                    value={data.otherDeductionsDescription || ''}
+                    value={d.otherDeductionsDescription || ''}
                     onChange={(e) => updateField('otherDeductionsDescription', e.target.value)}
                   />
                 </td>
@@ -748,7 +749,7 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                     type="number"
                     placeholder="Total Amount ($)"
                     className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold"
-                    value={data.otherDeductionsAmount !== undefined && data.otherDeductionsAmount !== null && data.otherDeductionsAmount > 0 ? data.otherDeductionsAmount.toString() : ''}
+                    value={d.otherDeductionsAmount !== undefined && d.otherDeductionsAmount !== null && d.otherDeductionsAmount > 0 ? d.otherDeductionsAmount.toString() : ''}
                     onChange={(e) => {
                       const val = Math.max(0, parseFloat(e.target.value) || 0);
                       updateField('otherDeductionsAmount', val);

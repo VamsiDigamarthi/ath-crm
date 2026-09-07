@@ -279,9 +279,18 @@ export const getDocumenterColumns = ({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onOpenAssignModal(item)}
-              className="h-8 px-2.5 rounded-lg text-xs font-medium border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer"
-              title="Assign or Reassign Staff"
+              disabled={Boolean(item.assignedDocAgent)}
+              onClick={() => !item.assignedDocAgent && onOpenAssignModal(item)}
+              className={`h-8 px-2.5 rounded-lg text-xs font-medium border-slate-200 ${
+                item.assignedDocAgent
+                  ? 'opacity-30 cursor-not-allowed bg-slate-50 text-slate-400 pointer-events-none'
+                  : 'hover:bg-slate-100 text-slate-700 cursor-pointer'
+              }`}
+              title={
+                item.assignedDocAgent
+                  ? `Already assigned to ${item.assignedDocAgent.email?.split('@')[0] || 'staff'}`
+                  : 'Assign Staff'
+              }
             >
               <UserCheck className="w-3.5 h-3.5 text-slate-600" />
             </Button>

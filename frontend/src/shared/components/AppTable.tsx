@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Search, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AppPagination, type AppPaginationProps } from './AppPagination'
@@ -37,6 +37,7 @@ export interface AppTableProps<T extends Record<string, unknown>> {
   selectable?: boolean
   selectedRows?: T[]
   rowKey?: keyof T | ((item: T) => string | number)
+  isRowSelectable?: (item: T, index: number) => boolean
   onSelectionChange?: (selected: T[]) => void
   onRowClick?: (item: T, index: number) => void
   exportable?: boolean
@@ -73,6 +74,7 @@ export function AppTable<T extends Record<string, unknown>>({
   selectable = false,
   selectedRows,
   rowKey,
+  isRowSelectable,
   onSelectionChange,
   onRowClick,
   exportable = false,
@@ -104,22 +106,30 @@ export function AppTable<T extends Record<string, unknown>>({
     return (item.id as string | number) ?? idx
   }, [rowKey])
 
+  // Compute indices of only rows that are eligible for selection
+  const selectableIndices = useMemo(() => {
+    return displayData
+      .map((item, idx) => (!isRowSelectable || isRowSelectable(item, idx) ? idx : -1))
+      .filter((idx) => idx !== -1)
+  }, [displayData, isRowSelectable])
+
   // Sync selection when selectedRows prop changes from parent
   useEffect(() => {
     if (selectedRows !== undefined) {
       const selectedKeySet = new Set(selectedRows.map((r, i) => getItemKey(r, i)))
       const nextSelected = new Set<number>()
       displayData.forEach((item, idx) => {
-        if (selectedKeySet.has(getItemKey(item, idx))) {
+        const canSelect = !isRowSelectable || isRowSelectable(item, idx)
+        if (canSelect && selectedKeySet.has(getItemKey(item, idx))) {
           nextSelected.add(idx)
         }
       })
       setSelected(nextSelected)
     }
-  }, [selectedRows, displayData, getItemKey])
+  }, [selectedRows, displayData, getItemKey, isRowSelectable])
 
   // Selection helpers
-  const allSelected = displayData.length > 0 && selected.size === displayData.length
+  const allSelected = selectableIndices.length > 0 && selectableIndices.every((idx) => selected.has(idx))
   const someSelected = selected.size > 0 && !allSelected
 
   const toggleAll = () => {
@@ -127,19 +137,23 @@ export function AppTable<T extends Record<string, unknown>>({
       setSelected(new Set())
       onSelectionChange?.([])
     } else {
-      const next = new Set(displayData.map((_, i) => i))
+      const next = new Set(selectableIndices)
       setSelected(next)
-      onSelectionChange?.(displayData)
+      onSelectionChange?.(selectableIndices.map((idx) => displayData[idx]))
     }
   }
 
   const toggleRow = (i: number, e: React.MouseEvent) => {
     e.stopPropagation()
+    const canSelect = !isRowSelectable || isRowSelectable(displayData[i], i)
+    if (!canSelect) return
+
     const next = new Set(selected)
     if (next.has(i)) next.delete(i); else next.add(i)
     setSelected(next)
     onSelectionChange?.(Array.from(next).map((idx) => displayData[idx]))
   }
+
 
   // CSV export
   const exportCsv = () => {
@@ -231,10 +245,14 @@ export function AppTable<T extends Record<string, unknown>>({
                   <input
                     type="checkbox"
                     checked={allSelected}
+                    disabled={selectableIndices.length === 0}
                     ref={(el) => { if (el) el.indeterminate = someSelected }}
                     onChange={toggleAll}
-                    aria-label="Select all rows"
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    aria-label="Select all eligible rows"
+                    className={cn(
+                      "w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500",
+                      selectableIndices.length === 0 ? "opacity-30 cursor-not-allowed" : "cursor-pointer"
+                    )}
                   />
                 </th>
               )}
@@ -281,6 +299,7 @@ export function AppTable<T extends Record<string, unknown>>({
             ) : (
               displayData.map((item, rowIdx) => {
                 const isChecked = selected.has(rowIdx)
+                const isSelectable = !isRowSelectable || isRowSelectable(item, rowIdx)
                 return (
                   <tr
                     key={rowIdx}
@@ -295,18 +314,34 @@ export function AppTable<T extends Record<string, unknown>>({
                   >
                     {selectable && (
                       <td
-                        className={cn(DENSITY_CELL[density], 'w-10 text-center')}
-                        onClick={(e) => toggleRow(rowIdx, e)}
+                        className={cn(
+                          DENSITY_CELL[density],
+                          'w-10 text-center',
+                          !isSelectable && 'cursor-not-allowed'
+                        )}
+                        onClick={(e) => {
+                          if (isSelectable) {
+                            toggleRow(rowIdx, e)
+                          } else {
+                            e.stopPropagation()
+                          }
+                        }}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
+                          disabled={!isSelectable}
                           onChange={() => {}}
+                          title={!isSelectable ? 'Already assigned to staff' : `Select row ${rowIdx + 1}`}
                           aria-label={`Select row ${rowIdx + 1}`}
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                          className={cn(
+                            "w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500",
+                            isSelectable ? "cursor-pointer" : "opacity-30 cursor-not-allowed bg-gray-100 border-gray-200"
+                          )}
                         />
                       </td>
                     )}
+
 
                     {columns.map((col, colIdx) => (
                       <td

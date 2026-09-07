@@ -91,7 +91,37 @@ export function useFilingSpecialistDashboard() {
     return nonZero.length > 0 ? nonZero : [{ name: 'Empty', value: 1, color: '#E2E8F0', pct: 100 }];
   }, [allLeads]);
 
-  // 100% Real Hourly Activity (Chronological: Transmissions initiated at 16:00 -> Accepted by IRS at 18:00)
+  // Date & Time checking helpers
+  const isDateToday = (dateVal?: string | Date | null): boolean => {
+    if (!dateVal) return false;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  };
+
+  const getDayOfWeekIdx = (dateVal?: string | Date | null): number => {
+    if (!dateVal) return -1;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return -1;
+    
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+    // Check if within the past 7 days (rolling 7-day window including Saturday/Sunday)
+    if (diffMs >= 0 && diffMs <= sevenDaysMs) {
+      const day = d.getDay();
+      return day === 0 ? 6 : day - 1;
+    }
+    return -1;
+  };
+
+  // 100% Real Hourly Activity - Evaluates real events today
   const hourlyData = useMemo(() => {
     const hours = [8, 10, 12, 14, 16, 18, 20];
     const slots = hours.map((h) => ({
@@ -101,18 +131,41 @@ export function useFilingSpecialistDashboard() {
     }));
 
     allLeads.forEach((lead) => {
-      const isTransmitted = lead.currentStage === 'FILING_IN_PROGRESS' || lead.currentStage === 'FILING_SUCCESS' || lead.currentStage === 'FILING_FAILED';
-      const isAccepted = lead.currentStage === 'FILING_SUCCESS';
-
-      // 1. MeF Transmitted -> Plotted at 16:00 (when XML was sent to IRS Gateway)
-      if (isTransmitted) {
-        const slot = slots.find((s) => s.hour === '16:00');
+      // 1. MeF Transmitted Today
+      const transmittedAt = lead.transmissionInfo?.transmittedAt;
+      if (transmittedAt && isDateToday(transmittedAt)) {
+        const d = new Date(transmittedAt);
+        const hour = d.getHours();
+        let closestH = hours[0];
+        let minDiff = Math.abs(hour - closestH);
+        for (const h of hours) {
+          const diff = Math.abs(hour - h);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestH = h;
+          }
+        }
+        const slotKey = `${closestH.toString().padStart(2, '0')}:00`;
+        const slot = slots.find((s) => s.hour === slotKey);
         if (slot) slot.transmitted += 1;
       }
 
-      // 2. IRS Accepted (0000) -> Plotted at 18:00 (when ACK 0000 was confirmed)
-      if (isAccepted) {
-        const slot = slots.find((s) => s.hour === '18:00');
+      // 2. IRS Accepted (0000) Today
+      const acceptedAt = lead.transmissionInfo?.acceptedAt;
+      if (acceptedAt && isDateToday(acceptedAt)) {
+        const d = new Date(acceptedAt);
+        const hour = d.getHours();
+        let closestH = hours[0];
+        let minDiff = Math.abs(hour - closestH);
+        for (const h of hours) {
+          const diff = Math.abs(hour - h);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestH = h;
+          }
+        }
+        const slotKey = `${closestH.toString().padStart(2, '0')}:00`;
+        const slot = slots.find((s) => s.hour === slotKey);
         if (slot) slot.accepted += 1;
       }
     });
@@ -123,9 +176,6 @@ export function useFilingSpecialistDashboard() {
   // 100% Real Weekly Activity from actual database records (Mon - Sun of current week)
   const weeklyData = useMemo(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const currentDayIdx = new Date().getDay(); // 0 = Sun, 1 = Mon ...
-    const adjustedIdx = currentDayIdx === 0 ? 6 : currentDayIdx - 1; // Today's index
-
     const slots = days.map((day) => ({
       day,
       transmitted: 0,
@@ -136,9 +186,20 @@ export function useFilingSpecialistDashboard() {
       const isTransmitted = lead.currentStage === 'FILING_IN_PROGRESS' || lead.currentStage === 'FILING_SUCCESS' || lead.currentStage === 'FILING_FAILED';
       const isAccepted = lead.currentStage === 'FILING_SUCCESS';
 
-      if (adjustedIdx >= 0 && adjustedIdx < 7) {
-        if (isTransmitted) slots[adjustedIdx].transmitted += 1;
-        if (isAccepted) slots[adjustedIdx].accepted += 1;
+      const transDate = lead.transmissionInfo?.transmittedAt || (lead as any).updatedAt || (lead as any).createdAt;
+      if (isTransmitted && transDate) {
+        const idx = getDayOfWeekIdx(transDate);
+        if (idx >= 0 && idx < 7) {
+          slots[idx].transmitted += 1;
+        }
+      }
+
+      const accDate = lead.transmissionInfo?.acceptedAt || (lead as any).updatedAt || (lead as any).createdAt;
+      if (isAccepted && accDate) {
+        const idx = getDayOfWeekIdx(accDate);
+        if (idx >= 0 && idx < 7) {
+          slots[idx].accepted += 1;
+        }
       }
     });
 

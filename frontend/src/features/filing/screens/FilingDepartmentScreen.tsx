@@ -275,6 +275,7 @@ export const FilingDepartmentScreen: React.FC = () => {
         data={filteredLeads}
         columns={columns}
         selectable={!isAdmin}
+        isRowSelectable={(item) => !item.assignedFilingAgent}
         selectedRows={selectedRows}
         rowKey="id"
         onSelectionChange={(selected) => setSelectedRows(selected)}
@@ -285,6 +286,7 @@ export const FilingDepartmentScreen: React.FC = () => {
             : 'No filing returns match the selected filter criteria.'
         }
       />
+
 
       {/* 5. Floating Bottom Action Bar (Hidden for Admin) */}
       {!isAdmin && (

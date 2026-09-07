@@ -281,6 +281,7 @@ export const FilingManagerQueueScreen: React.FC = () => {
         data={filteredLeads}
         columns={columns}
         selectable
+        isRowSelectable={(item) => !item.assignedFilingAgent}
         selectedRows={selectedRows}
         rowKey="id"
         onSelectionChange={(selected) => setSelectedRows(selected)}
@@ -291,6 +292,7 @@ export const FilingManagerQueueScreen: React.FC = () => {
             : 'No filing returns match the selected filter criteria.'
         }
       />
+
 
       {/* 5. Floating Bottom Action Bar when rows are checked */}
       <FilingFloatingActionBar

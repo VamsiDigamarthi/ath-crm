@@ -71,11 +71,42 @@ export function useSalesAgentDashboard() {
     );
   };
 
-  // Top KPI Stats directly aggregated from live database leads
+  // Date & Time checking helpers
+  const isDateToday = (dateVal?: string | Date | null): boolean => {
+    if (!dateVal) return false;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  };
+
+  const getDayOfWeekIdx = (dateVal?: string | Date | null): number => {
+    if (!dateVal) return -1;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return -1;
+    
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+    // Check if within the past 7 days (rolling 7-day window including Saturday/Sunday)
+    if (diffMs >= 0 && diffMs <= sevenDaysMs) {
+      const day = d.getDay(); // 0 is Sun, 1 is Mon...
+      return day === 0 ? 6 : day - 1; // 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+    }
+    return -1;
+  };
+
+  // Top KPI Stats directly aggregated from live database leads with strict Date checks
   const stats: SalesAgentStats & { avgDealSize: number; totalPotentialValue: number } = useMemo(() => {
     let awaiting = 0;
     let quoted = 0;
-    let closed = 0;
+    let lifetimeClosed = 0;
+    let closedToday = 0;
     let revenueToday = 0;
     let reverted = 0;
     let totalPotentialValue = 0;
@@ -93,8 +124,17 @@ export function useSalesAgentDashboard() {
       if (isReverted) {
         reverted++;
       } else if (isPaidOrClosed(l)) {
-        closed++;
-        revenueToday += fee;
+        lifetimeClosed++;
+        // Check if deal was closed / paid TODAY
+        const isClosedToday =
+          isDateToday(l.paidAt) ||
+          isDateToday(l.esignCompletedAt) ||
+          Boolean(l.stageHistories?.some((h) => h.toStage === 'PAID_AND_AUTHORIZED' && isDateToday(h.createdAt)));
+
+        if (isClosedToday) {
+          closedToday++;
+          revenueToday += fee;
+        }
       } else if (isQuotedOrPaymentPending(l)) {
         quoted++;
       } else {
@@ -103,14 +143,16 @@ export function useSalesAgentDashboard() {
     });
 
     const total = allLeads.length;
-    const conversionRate = total > 0 ? Math.round((closed / total) * 100) : 0;
-    const avgDealSize = closed > 0 ? Math.round(revenueToday / closed) : (total > 0 ? Math.round(totalPotentialValue / total) : 0);
+    const conversionRate = total > 0 ? Math.round((lifetimeClosed / total) * 100) : 0;
+    const avgDealSize = lifetimeClosed > 0 
+      ? Math.round(totalPotentialValue / (lifetimeClosed || 1)) 
+      : (total > 0 ? Math.round(totalPotentialValue / total) : 0);
 
     return {
       assignedLeads: total,
       pitchInProgress: awaiting,
       paymentsPending: quoted,
-      dealsClosedToday: closed,
+      dealsClosedToday: closedToday,
       myRevenueToday: revenueToday,
       myConversionRate: conversionRate,
       revertedLeads: reverted,
@@ -122,6 +164,7 @@ export function useSalesAgentDashboard() {
   // Donut Funnel Stage Mix
   const stageMix = useMemo(() => {
     const total = stats.assignedLeads || 1;
+    const paidLeadsCount = allLeads.filter(isPaidOrClosed).length;
     return [
       {
         name: 'Awaiting Pitch Call',
@@ -137,14 +180,14 @@ export function useSalesAgentDashboard() {
       },
       {
         name: 'Paid & E-Signed',
-        value: stats.dealsClosedToday,
-        pct: Math.round((stats.dealsClosedToday / total) * 100),
+        value: paidLeadsCount,
+        pct: Math.round((paidLeadsCount / total) * 100),
         color: '#16A34A',
       },
     ];
-  }, [stats]);
+  }, [stats, allLeads]);
 
-  // 100% Real Hourly Activity (Chronological: Pitch Initiated at 16:00 -> Deals Closed & Paid at 18:00)
+  // 100% Real Hourly Activity - Only plots activity that actually happened TODAY
   const hourlyData = useMemo(() => {
     const hours = [8, 10, 12, 14, 16, 18, 20];
     const slots = hours.map((h) => ({
@@ -155,18 +198,73 @@ export function useSalesAgentDashboard() {
     }));
 
     allLeads.forEach((lead) => {
-      // 1. Pitches Initiated -> Plotted at 16:00 (4:00 PM when closer pitch discussion started)
-      const pitchSlot = slots.find((s) => s.hour === '16:00');
-      if (pitchSlot) {
-        pitchSlot.pitches += 1;
+      // 1. Pitches / Calls logged TODAY
+      const pitchTimestamps: Date[] = [];
+      if (lead.callLogs && lead.callLogs.length > 0) {
+        lead.callLogs.forEach((c) => {
+          if (c.createdAt && isDateToday(c.createdAt)) {
+            pitchTimestamps.push(new Date(c.createdAt));
+          }
+        });
+      }
+      if (lead.lastContactedAt && isDateToday(lead.lastContactedAt)) {
+        pitchTimestamps.push(new Date(lead.lastContactedAt));
+      }
+      if (lead.stageHistories && lead.stageHistories.length > 0) {
+        lead.stageHistories.forEach((h) => {
+          if (['SALES_PITCHING', 'QUOTATION_SENT', 'PAYMENT_PENDING'].includes(h.toStage) && isDateToday(h.createdAt)) {
+            pitchTimestamps.push(new Date(h.createdAt));
+          }
+        });
       }
 
-      // 2. Deals Closed & Paid -> Plotted at 18:00 (6:00 PM when fee payment was authorized & charged)
+      pitchTimestamps.forEach((d) => {
+        const hour = d.getHours();
+        let closestH = hours[0];
+        let minDiff = Math.abs(hour - closestH);
+        for (const h of hours) {
+          const diff = Math.abs(hour - h);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestH = h;
+          }
+        }
+        const slotKey = `${closestH.toString().padStart(2, '0')}:00`;
+        const slot = slots.find((s) => s.hour === slotKey);
+        if (slot) slot.pitches += 1;
+      });
+
+      // 2. Deals Closed & Paid TODAY
       if (isPaidOrClosed(lead)) {
-        const dealSlot = slots.find((s) => s.hour === '18:00');
-        if (dealSlot) {
-          dealSlot.deals += 1;
-          dealSlot.revenue += Number(lead.feeBreakdown?.totalServiceFee || 0);
+        let paidDate: Date | null = null;
+        if (lead.paidAt && isDateToday(lead.paidAt)) {
+          paidDate = new Date(lead.paidAt);
+        } else if (lead.esignCompletedAt && isDateToday(lead.esignCompletedAt)) {
+          paidDate = new Date(lead.esignCompletedAt);
+        } else {
+          const paidHistory = lead.stageHistories?.find(
+            (h) => h.toStage === 'PAID_AND_AUTHORIZED' && isDateToday(h.createdAt)
+          );
+          if (paidHistory) paidDate = new Date(paidHistory.createdAt);
+        }
+
+        if (paidDate) {
+          const hour = paidDate.getHours();
+          let closestH = hours[0];
+          let minDiff = Math.abs(hour - closestH);
+          for (const h of hours) {
+            const diff = Math.abs(hour - h);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closestH = h;
+            }
+          }
+          const slotKey = `${closestH.toString().padStart(2, '0')}:00`;
+          const slot = slots.find((s) => s.hour === slotKey);
+          if (slot) {
+            slot.deals += 1;
+            slot.revenue += Number(lead.feeBreakdown?.totalServiceFee || 0);
+          }
         }
       }
     });
@@ -174,12 +272,9 @@ export function useSalesAgentDashboard() {
     return slots;
   }, [allLeads]);
 
-  // 100% Real Weekly Activity from actual database records (Mon - Sun of current week)
+  // 100% Real Weekly Activity - Only plots activity within the current week (Mon-Sun)
   const weeklyData = useMemo(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const currentDayIdx = new Date().getDay(); // 0 = Sun, 1 = Mon ...
-    const adjustedIdx = currentDayIdx === 0 ? 6 : currentDayIdx - 1; // Today's index
-
     const slots = days.map((day) => ({
       day,
       pitches: 0,
@@ -188,11 +283,66 @@ export function useSalesAgentDashboard() {
     }));
 
     allLeads.forEach((lead) => {
-      if (adjustedIdx >= 0 && adjustedIdx < 7) {
-        slots[adjustedIdx].pitches += 1;
-        if (isPaidOrClosed(lead)) {
-          slots[adjustedIdx].deals += 1;
-          slots[adjustedIdx].revenue += Number(lead.feeBreakdown?.totalServiceFee || 0);
+      // Pitches this week
+      const weeklyPitchIdxs: number[] = [];
+      if (lead.callLogs && lead.callLogs.length > 0) {
+        lead.callLogs.forEach((c) => {
+          const idx = getDayOfWeekIdx(c.createdAt);
+          if (idx !== -1) weeklyPitchIdxs.push(idx);
+        });
+      }
+      if (lead.lastContactedAt) {
+        const idx = getDayOfWeekIdx(lead.lastContactedAt);
+        if (idx !== -1) weeklyPitchIdxs.push(idx);
+      }
+      if (lead.stageHistories && lead.stageHistories.length > 0) {
+        lead.stageHistories.forEach((h) => {
+          if (['SALES_PITCHING', 'QUOTATION_SENT', 'PAYMENT_PENDING'].includes(h.toStage)) {
+            const idx = getDayOfWeekIdx(h.createdAt);
+            if (idx !== -1) weeklyPitchIdxs.push(idx);
+          }
+        });
+      }
+
+      // If no specific call log or stage history date, use application timestamp
+      if (weeklyPitchIdxs.length === 0) {
+        const fallbackDate = (lead as any).updatedAt || lead.qaApprovedAt || (lead as any).createdAt;
+        if (fallbackDate) {
+          const idx = getDayOfWeekIdx(fallbackDate);
+          if (idx !== -1) weeklyPitchIdxs.push(idx);
+        }
+      }
+
+      weeklyPitchIdxs.forEach((dayIdx) => {
+        if (dayIdx >= 0 && dayIdx < 7) {
+          slots[dayIdx].pitches += 1;
+        }
+      });
+
+      // Deals Closed this week
+      if (isPaidOrClosed(lead)) {
+        let paidDayIdx = -1;
+        if (lead.paidAt) {
+          paidDayIdx = getDayOfWeekIdx(lead.paidAt);
+        } else if (lead.esignCompletedAt) {
+          paidDayIdx = getDayOfWeekIdx(lead.esignCompletedAt);
+        } else {
+          const paidHistory = lead.stageHistories?.find(
+            (h) => h.toStage === 'PAID_AND_AUTHORIZED'
+          );
+          if (paidHistory) {
+            paidDayIdx = getDayOfWeekIdx(paidHistory.createdAt);
+          } else {
+            const fallbackDate = (lead as any).updatedAt || (lead as any).createdAt;
+            if (fallbackDate) {
+              paidDayIdx = getDayOfWeekIdx(fallbackDate);
+            }
+          }
+        }
+
+        if (paidDayIdx >= 0 && paidDayIdx < 7) {
+          slots[paidDayIdx].deals += 1;
+          slots[paidDayIdx].revenue += Number(lead.feeBreakdown?.totalServiceFee || 0);
         }
       }
     });

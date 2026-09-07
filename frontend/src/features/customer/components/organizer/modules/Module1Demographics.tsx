@@ -21,6 +21,8 @@ export const Module1Demographics: React.FC<Module1Props> = ({
   errors = {},
   clearError,
 }) => {
+  const d = (data || {}) as Partial<OrganizerData['m1_demographics']>;
+
   const handleFieldChange = <K extends keyof OrganizerData['m1_demographics']>(
     field: K,
     value: OrganizerData['m1_demographics'][K]
@@ -32,8 +34,8 @@ export const Module1Demographics: React.FC<Module1Props> = ({
   };
 
   // Derive initial values smoothly if split fields are unset
-  const displayFirstName = data.firstName ?? (data.fullName ? data.fullName.split(' ')[0] : '');
-  const displayLastName = data.lastName ?? (data.fullName ? data.fullName.split(' ').slice(1).join(' ') : '');
+  const displayFirstName = d.firstName ?? (d.fullName ? d.fullName.split(' ')[0] : '');
+  const displayLastName = d.lastName ?? (d.fullName ? d.fullName.split(' ').slice(1).join(' ') : '');
 
   return (
     <div className="space-y-6">
@@ -58,7 +60,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             value={displayFirstName}
             onChange={(e) => {
               const first = e.target.value;
-              const middle = data.middleName || '';
+              const middle = d.middleName || '';
               const last = displayLastName;
               handleFieldChange('firstName', first);
               handleFieldChange('fullName', [first, middle, last].filter(Boolean).join(' '));
@@ -69,7 +71,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             label="Middle Name (as per SSN)"
             placeholder="e.g. Kumar (Optional)"
             error={errors.middleName}
-            value={data.middleName || ''}
+            value={d.middleName || ''}
             onChange={(e) => {
               const middle = e.target.value;
               const first = displayFirstName;
@@ -87,7 +89,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             onChange={(e) => {
               const last = e.target.value;
               const first = displayFirstName;
-              const middle = data.middleName || '';
+              const middle = d.middleName || '';
               handleFieldChange('lastName', last);
               handleFieldChange('fullName', [first, middle, last].filter(Boolean).join(' '));
             }}
@@ -103,8 +105,8 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             accentColor="#16A34A"
             maxDate={new Date()}
             error={errors.dob}
-            value={parseUsDate(data.dob)}
-            onChange={(d) => handleFieldChange('dob', formatUsDate(d))}
+            value={parseUsDate(d.dob)}
+            onChange={(dateVal) => handleFieldChange('dob', formatUsDate(dateVal))}
           />
 
           <AppInput
@@ -113,7 +115,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             placeholder="982-14-6789"
             leftIcon={<CreditCard className="w-4 h-4" />}
             error={errors.ssnMasked}
-            value={data.ssnMasked || ''}
+            value={d.ssnMasked || ''}
             onChange={(e) => handleFieldChange('ssnMasked', e.target.value)}
           />
 
@@ -126,7 +128,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
               { label: 'Parents (Dependent)', value: 'PARENT' },
             ]}
             error={errors.relationshipToPrimary}
-            value={data.relationshipToPrimary || 'SELF'}
+            value={d.relationshipToPrimary || 'SELF'}
             onChange={(val) => handleFieldChange('relationshipToPrimary', (val || 'SELF') as any)}
           />
         </div>
@@ -138,7 +140,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             placeholder="e.g. Smart Grid Engineer"
             leftIcon={<Briefcase className="w-4 h-4" />}
             error={errors.occupation}
-            value={data.occupation || ''}
+            value={d.occupation || ''}
             onChange={(e) => handleFieldChange('occupation', e.target.value)}
           />
 
@@ -147,7 +149,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             placeholder="+1 (713) 555-0138"
             leftIcon={<Phone className="w-4 h-4" />}
             error={errors.phone}
-            value={data.phone || ''}
+            value={d.phone || ''}
             onChange={(e) => handleFieldChange('phone', e.target.value)}
           />
 
@@ -156,7 +158,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             placeholder="+1 (713) 555-9821"
             leftIcon={<Phone className="w-4 h-4" />}
             error={errors.workPhone}
-            value={data.workPhone || ''}
+            value={d.workPhone || ''}
             onChange={(e) => handleFieldChange('workPhone', e.target.value)}
           />
 
@@ -165,7 +167,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             placeholder="taxpayer@domain.com"
             leftIcon={<Mail className="w-4 h-4" />}
             error={errors.email}
-            value={data.email || ''}
+            value={d.email || ''}
             onChange={(e) => handleFieldChange('email', e.target.value)}
           />
         </div>
@@ -192,7 +194,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
               { label: 'B-1 / B-2 / Other Visa', value: 'OTHER' },
             ]}
             error={errors.visaType}
-            value={data.visaType || 'H-1B'}
+            value={d.visaType || 'H-1B'}
             onChange={(val) => handleFieldChange('visaType', val || 'H-1B')}
             placeholder="Select Visa Type"
           />
@@ -204,7 +206,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
               { label: 'Yes - Visa Changed Status', value: 'YES' },
             ]}
             error={errors.visaStatusChanged2025}
-            value={data.visaStatusChanged2025 || 'NO'}
+            value={d.visaStatusChanged2025 || 'NO'}
             onChange={(val) => handleFieldChange('visaStatusChanged2025', (val || 'NO') as 'YES' | 'NO')}
           />
 
@@ -215,9 +217,9 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             accentColor="#16A34A"
             maxDate={new Date()}
             error={errors.visaChangeDate}
-            disabled={data.visaStatusChanged2025 !== 'YES'}
-            value={parseUsDate(data.visaChangeDate)}
-            onChange={(d) => handleFieldChange('visaChangeDate', formatUsDate(d))}
+            disabled={d.visaStatusChanged2025 !== 'YES'}
+            value={parseUsDate(d.visaChangeDate)}
+            onChange={(dateVal) => handleFieldChange('visaChangeDate', formatUsDate(dateVal))}
           />
 
           <AppDatePicker
@@ -227,8 +229,8 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             accentColor="#16A34A"
             maxDate={new Date()}
             error={errors.firstPortOfEntryDate}
-            value={parseUsDate(data.firstPortOfEntryDate)}
-            onChange={(d) => handleFieldChange('firstPortOfEntryDate', formatUsDate(d))}
+            value={parseUsDate(d.firstPortOfEntryDate)}
+            onChange={(dateVal) => handleFieldChange('firstPortOfEntryDate', formatUsDate(dateVal))}
           />
 
           <AppSelect
@@ -238,7 +240,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
               { label: 'No (Departing US / Short stay)', value: 'NO' },
             ]}
             error={errors.stayMoreThan6Months2026}
-            value={data.stayMoreThan6Months2026 || 'YES'}
+            value={d.stayMoreThan6Months2026 || 'YES'}
             onChange={(val) => handleFieldChange('stayMoreThan6Months2026', (val || 'YES') as 'YES' | 'NO')}
           />
 
@@ -247,7 +249,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             type="number"
             placeholder="12"
             error={errors.monthsStayedInUs2025}
-            value={data.monthsStayedInUs2025 !== undefined ? data.monthsStayedInUs2025.toString() : '12'}
+            value={d.monthsStayedInUs2025 !== undefined ? d.monthsStayedInUs2025.toString() : '12'}
             onChange={(e) => {
               const raw = parseInt(e.target.value, 10);
               const clamped = isNaN(raw) ? 0 : Math.min(12, Math.max(0, raw));
@@ -275,7 +277,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
               { label: 'Widowed / Qualifying Surviving Spouse', value: 'Widowed' },
             ]}
             error={errors.maritalStatus}
-            value={data.maritalStatus === 'Married' ? 'Married Filing Jointly' : (data.maritalStatus || '')}
+            value={d.maritalStatus === 'Married' ? 'Married Filing Jointly' : (d.maritalStatus || '')}
             onChange={(val) => {
               const selectedMarital = val || '';
               handleFieldChange('maritalStatus', selectedMarital);
@@ -289,14 +291,14 @@ export const Module1Demographics: React.FC<Module1Props> = ({
 
           <AppDatePicker
             label="Date of Marriage (MM/DD/YYYY)"
-            placeholder={data.maritalStatus?.includes('Married') ? 'MM/DD/YYYY' : 'N/A - Single / Not Married'}
+            placeholder={d.maritalStatus?.includes('Married') ? 'MM/DD/YYYY' : 'N/A - Single / Not Married'}
             format="MM/dd/yyyy"
             accentColor="#16A34A"
             maxDate={new Date()}
             error={errors.dateOfMarriage}
-            disabled={!data.maritalStatus?.includes('Married')}
-            value={parseUsDate(data.dateOfMarriage)}
-            onChange={(d) => handleFieldChange('dateOfMarriage', formatUsDate(d))}
+            disabled={!d.maritalStatus?.includes('Married')}
+            value={parseUsDate(d.dateOfMarriage)}
+            onChange={(dateVal) => handleFieldChange('dateOfMarriage', formatUsDate(dateVal))}
           />
         </div>
 
@@ -306,7 +308,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             placeholder="e.g. 1000 Louisiana St, Suite 4200"
             leftIcon={<Home className="w-4 h-4" />}
             error={errors.residentialAddress}
-            value={data.residentialAddress || ''}
+            value={d.residentialAddress || ''}
             onChange={(e) => handleFieldChange('residentialAddress', e.target.value)}
           />
         </div>
@@ -316,7 +318,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             label="City *"
             placeholder="e.g. Houston"
             error={errors.city}
-            value={data.city || ''}
+            value={d.city || ''}
             onChange={(e) => handleFieldChange('city', e.target.value)}
           />
 
@@ -324,7 +326,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             label="State (2-Letter Code) *"
             placeholder="e.g. TX"
             error={errors.state}
-            value={data.state || ''}
+            value={d.state || ''}
             onChange={(e) => handleFieldChange('state', e.target.value.toUpperCase().slice(0, 2))}
           />
 
@@ -332,7 +334,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             label="ZIP Code *"
             placeholder="e.g. 77002"
             error={errors.zipCode}
-            value={data.zipCode || ''}
+            value={d.zipCode || ''}
             onChange={(e) => handleFieldChange('zipCode', e.target.value.slice(0, 10))}
           />
         </div>
