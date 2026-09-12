@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   LogOut,
   Bell,
+  Mail,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -44,6 +45,7 @@ export const AdminLayout: React.FC = () => {
     { id: 'prospects', label: 'Bulk Lead Import', icon: FileSpreadsheet, section: 'Operations', path: '/admin/prospects' },
     { id: 'customers', label: 'Client Directory', icon: UserCheck, section: 'Management', path: '/admin/customers' },
     { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', path: '/admin/employees' },
+    { id: 'email-templates', label: 'Email Templates', icon: Mail, section: 'Management', path: '/admin/email-templates' },
     { id: 'documenter', label: 'Documenter Dept', icon: Users, section: 'Operations', path: '/admin/documenter' },
     { id: 'prep-review', label: 'Prep & Review Dept', icon: Calculator, section: 'Operations', path: '/admin/prep-review' },
     { id: 'sales', label: 'Sales Dept', icon: DollarSign, section: 'Operations', path: '/admin/sales' },
@@ -59,6 +61,7 @@ export const AdminLayout: React.FC = () => {
     if (currentPath.includes('/admin/prospects') || currentPath.includes('/admin/leads')) return 'prospects';
     if (currentPath.includes('/admin/customers')) return 'customers';
     if (currentPath.includes('/admin/employees')) return 'employees';
+    if (currentPath.includes('/admin/email-templates')) return 'email-templates';
     if (currentPath.includes('/admin/documenter')) return 'documenter';
     if (currentPath.includes('/admin/prep-review')) return 'prep-review';
     if (currentPath.includes('/admin/sales')) return 'sales';
@@ -77,6 +80,8 @@ export const AdminLayout: React.FC = () => {
         return 'Customer & Client Directory';
       case 'employees':
         return 'Staff & Team Directory';
+      case 'email-templates':
+        return 'Email Templates & Communications';
       case 'prospects':
         return 'Bulk Lead Import & Deduplication';
       case 'documenter':

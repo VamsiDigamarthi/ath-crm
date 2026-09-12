@@ -4,6 +4,7 @@ import { TokenManager } from "../../utils/token-manager.js";
 import { BadRequestError } from "../../errors/bad-request-error.js";
 import { SuccessHandler } from "../../utils/success-handler.js";
 import { EmailService } from "../../utils/email-service.js";
+import { otpEmailQueue } from "../queue/email-queue.js";
 
 export const requestOtp = async (req: Request, res: Response) => {
   const { email, mobile } = req.body;
@@ -36,9 +37,22 @@ export const requestOtp = async (req: Request, res: Response) => {
     },
   });
 
-  // Send OTP via Email if email is provided
-  if (cleanEmail) {
-    await EmailService.sendOTP(cleanEmail, otp);
+  // Send OTP via BullMQ queue (or fallback) if email is provided or associated with account
+  const targetEmail = cleanEmail || existingUser.email;
+  if (targetEmail) {
+    try {
+      const fullName = `${existingUser.firstName || ""} ${existingUser.lastName || ""}`.trim() || undefined;
+      await otpEmailQueue.add("send-otp", {
+        identifier: cleanEmail || cleanMobile || existingUser.id,
+        otp,
+        email: targetEmail,
+        fullName,
+      });
+      console.log(`[BULLMQ QUEUE] Enqueued OTP job for ${targetEmail}`);
+    } catch (queueErr) {
+      console.warn(`[BULLMQ QUEUE WARNING] Failed to queue, falling back to direct dispatch:`, queueErr);
+      await EmailService.sendOTP(targetEmail, otp);
+    }
   } else if (cleanMobile) {
     // In a real app, you would use an SMSService here
     console.log(`[SMS SIMULATION] OTP for ${cleanMobile}: ${otp}`);
@@ -95,6 +109,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
       mobile: true,
       role: true,
       isActive: true,
+      smtpEmail: true,
       customerProfile: {
         select: {
           id: true,
@@ -121,6 +136,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
     email: user.email,
     mobile: user.mobile,
     role: user.role,
+    smtpEmail: user.smtpEmail,
   });
 };
 
@@ -151,6 +167,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       mobile: true,
       role: true,
       isActive: true,
+      smtpEmail: true,
       customerProfile: {
         select: {
           id: true,

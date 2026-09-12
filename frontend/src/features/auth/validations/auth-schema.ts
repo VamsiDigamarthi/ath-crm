@@ -2,8 +2,10 @@ import { z } from 'zod';
 
 export const loginSchema = z.object({
   identifier: z.string().min(1, 'Email or Phone is required').refine((val) => {
-    const isEmail = z.string().email().safeParse(val).success;
-    const isPhone = /^\+?[1-9]\d{1,14}$/.test(val);
+    const trimmed = val.trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+    const cleanDigits = trimmed.replace(/\D/g, '');
+    const isPhone = cleanDigits.length >= 7 && cleanDigits.length <= 15;
     return isEmail || isPhone;
   }, 'Please enter a valid email or phone number'),
 });

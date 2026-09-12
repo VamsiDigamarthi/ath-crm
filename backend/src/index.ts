@@ -10,6 +10,11 @@ import { errorHandler } from "./middlewares/error-handler.js";
 import { NotFoundError } from "./errors/not-found-error.js";
 import { rootRouter } from "./routes/index.js";
 import { currentUser } from "./middlewares/current-user.js";
+import { getRedisClient } from "./config/redis.js";
+import "./features/queue/email-worker.js";
+
+// Initialize Redis connection
+getRedisClient();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

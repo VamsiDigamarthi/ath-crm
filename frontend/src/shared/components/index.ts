@@ -16,3 +16,5 @@ export * from './AppCopyButton'
 export * from './AppDrawer'
 export * from './AppEmptyState'
 export * from './AppImageUpload'
+export * from './SendEmailModal'
+

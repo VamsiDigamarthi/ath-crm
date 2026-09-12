@@ -28,6 +28,9 @@ export interface EmployeeItem extends Record<string, unknown> {
   roleLabel: string;
   isActive: boolean;
   avatar: string;
+  smtpEmail?: string | null;
+  smtpAppPassword?: string | null;
+  hasSmtpConfigured?: boolean;
   assignedCasesCount: number;
   completedCasesCount: number;
   createdAt: string;
@@ -52,4 +55,6 @@ export interface AddEmployeeFormData {
   department: 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
   role: EmployeeRole;
   isActive: boolean;
+  smtpEmail?: string;
+  smtpAppPassword?: string;
 }

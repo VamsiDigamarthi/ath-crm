@@ -7,7 +7,8 @@ import {
   ShieldCheck, 
   Calculator,
   Edit3, 
-  Power 
+  Power,
+  Mail
 } from 'lucide-react';
 import type { EmployeeItem } from '../types/employee.types';
 
@@ -124,6 +125,17 @@ export const getEmployeeColumns = (actions: ColumnActionsProps): ColumnDef<Emplo
           <span>{row.mobile}</span>
           <AppCopyButton text={row.mobile} size="sm" />
         </div>
+        {row.smtpEmail && (
+          <div className="flex items-center gap-1 pt-0.5">
+            <span 
+              className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/80" 
+              title={`SMTP Outbound Email: ${row.smtpEmail}`}
+            >
+              <Mail className="w-2.5 h-2.5 text-[#16A34A]" />
+              SMTP: {row.smtpEmail}
+            </span>
+          </div>
+        )}
       </div>
     ),
   },

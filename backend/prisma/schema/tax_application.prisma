@@ -45,6 +45,7 @@ model TaxApplication {
   quotes         SalesQuote[]
   auditLogs      AuditLog[]
   notifications  Notification[]
+  sentEmails     SentEmail[]
 
   @@unique([customerId, taxYear])
   @@index([currentStage])

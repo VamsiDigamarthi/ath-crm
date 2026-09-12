@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppModal } from '@/shared/components/AppModal';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
+import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { useTaxPreparerWorkspace } from '../hooks/useTaxPreparerWorkspace';
 import { ClientProfilePanel } from '../components/workspace/ClientProfilePanel';
 import { Tax1040FormEngine } from '../components/workspace/Tax1040FormEngine';
@@ -13,6 +14,7 @@ import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAudi
 export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const navigate = useNavigate();
   const [isSendBackOpen, setIsSendBackOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const {
     isLoading,
     isSaving,
@@ -134,6 +136,17 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEmailModalOpen(true)}
+            className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            title="Compose and send official email to client"
+          >
+            <Mail className="w-3.5 h-3.5 text-blue-600" />
+            <span>Email Client</span>
+          </Button>
+
           {(() => {
             const isFilingOrCompleted =
               currentStage.startsWith('FILING') || currentStage === 'QA_APPROVED' || currentStage === 'PAID_AND_AUTHORIZED';
@@ -578,6 +591,21 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
         onRevertSuccess={() => {
           navigate('/prep-review/preparer');
         }}
+      />
+
+      {/* 6. Send Email to Taxpayer Modal */}
+      <SendEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        applicationId={applicationId || ''}
+        recipientEmail={taxpayer?.email || undefined}
+        recipientName={taxpayerName}
+        taxYear={taxYear}
+        visaType={taxpayer?.visaType || undefined}
+        filingStatus={currentStage}
+        fedRefund={calculations.federalRefund}
+        stateRefund={calculations.stateRefund}
+        totalRefund={calculations.combinedRefund}
       />
     </div>
   );

@@ -1,0 +1,41 @@
+model EmailTemplate {
+  id          String      @id @default(uuid())
+  name        String
+  roles       Role[]
+  subject     String
+  body        String      @db.Text
+  isActive    Boolean     @default(true)
+  createdById String?
+  createdBy   User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  sentEmails  SentEmail[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([name])
+  @@index([createdAt])
+}
+
+model SentEmail {
+  id             String          @id @default(uuid())
+  applicationId  String?
+  application    TaxApplication? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  senderUserId   String
+  senderUser     User            @relation(fields: [senderUserId], references: [id])
+  recipientEmail String
+  subject        String
+  body           String          @db.Text
+  templateId     String?
+  template       EmailTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  status         String          @default("QUEUED")
+  jobId          String?
+  errorMessage   String?
+  sentAt         DateTime?
+  createdAt      DateTime        @default(now())
+
+  @@index([applicationId])
+  @@index([senderUserId])
+  @@index([recipientEmail])
+  @@index([status])
+  @@index([jobId])
+  @@index([createdAt])
+}

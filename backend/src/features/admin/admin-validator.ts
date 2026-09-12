@@ -119,6 +119,8 @@ export const createEmployeeSchema = z.object({
       message: "Valid department role is required",
     }),
     isActive: z.boolean().optional().default(true),
+    smtpEmail: z.string().trim().email("Valid SMTP email is required").optional().nullable().or(z.literal("")),
+    smtpAppPassword: z.string().trim().max(100).optional().nullable().or(z.literal("")),
   }),
 });
 
@@ -130,6 +132,8 @@ export const updateEmployeeSchema = z.object({
     mobile: z.string().trim().min(7).optional(),
     role: z.nativeEnum(Role).optional(),
     isActive: z.boolean().optional(),
+    smtpEmail: z.string().trim().email("Valid SMTP email is required").optional().nullable().or(z.literal("")),
+    smtpAppPassword: z.string().trim().max(100).optional().nullable().or(z.literal("")),
   }),
 });
 

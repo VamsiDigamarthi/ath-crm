@@ -6,7 +6,8 @@ import {
   FileText,
   Code2,
   Layers,
-  RotateCcw
+  RotateCcw,
+  Mail
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { FilingComplianceGate } from '../components/workspace/FilingComplianceGate';
@@ -15,6 +16,7 @@ import { MeFXMLViewer } from '../components/workspace/MeFXMLViewer';
 import { FilingTransmissionStatusCard } from '../components/workspace/FilingTransmissionStatusCard';
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
+import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { useFilingWorkspace } from '../hooks/useFilingWorkspace';
 
 export type WorkspaceViewMode = 'AUDIT_FILE' | 'XML_SCHEMA' | 'FULL_INSPECTION';
@@ -23,6 +25,8 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<WorkspaceViewMode>('FULL_INSPECTION');
   const [isSendBackOpen, setIsSendBackOpen] = useState<boolean>(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
+
 
   const {
     isLoading,
@@ -153,6 +157,18 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
               <span>IRS XML Schema</span>
             </button>
           </div>
+
+          {/* Email Client Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEmailModalOpen(true)}
+            className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs h-8 px-3 transition-all cursor-pointer"
+            title="Compose and send official email to client"
+          >
+            <Mail className="w-3.5 h-3.5 text-blue-600" />
+            <span>Email Client</span>
+          </Button>
 
           {/* Send Back Lead Button */}
           <Button
@@ -313,6 +329,22 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
         onRevertSuccess={() => {
           navigate(-1);
         }}
+      />
+
+      {/* 6. Send Email to Taxpayer Modal */}
+      <SendEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        applicationId={lead.id}
+        recipientEmail={lead.taxpayerEmail || (lead as any).taxpayerProfile?.email || ''}
+        recipientName={lead.taxpayerName || ''}
+        taxYear={lead.taxYear}
+        visaType={lead.visaType || (lead as any).taxpayerProfile?.visaType || 'Taxpayer'}
+        filingStatus={lead.currentStage}
+        fedRefund={lead.taxReturnSummary?.federalRefund ?? lead.federalRefund}
+        stateRefund={lead.taxReturnSummary?.stateRefund ?? lead.stateRefund}
+        totalRefund={lead.totalRefundOrDue}
+        onSuccess={fetchWorkspaceData}
       />
     </div>
   );

@@ -3,7 +3,7 @@ import { AppDrawer } from '@/shared/components/AppDrawer';
 import { AppInput } from '@/shared/components/AppInput';
 import { AppSelect } from '@/shared/components/AppSelect';
 import { Button } from '@/shared/components/Button';
-import { UserCheck, ShieldCheck } from 'lucide-react';
+import { UserCheck, ShieldCheck, Mail, Info } from 'lucide-react';
 import type { EmployeeItem, EmployeeRole, AddEmployeeFormData } from '../types/employee.types';
 
 interface AddEmployeeDrawerProps {
@@ -26,18 +26,22 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
   const [department, setDepartment] = useState<'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN'>('DOC');
   const [role, setRole] = useState<EmployeeRole>('DOC_AGENT');
   const [isActive, setIsActive] = useState<boolean>(true);
+  const [smtpEmail, setSmtpEmail] = useState('');
+  const [smtpAppPassword, setSmtpAppPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Reset or Populate form fields on open
   useEffect(() => {
     if (employee) {
-      setFirstName(employee.firstName);
-      setLastName(employee.lastName);
-      setEmail(employee.email);
-      setMobile(employee.mobile);
-      setDepartment(employee.department);
-      setRole(employee.role);
-      setIsActive(employee.isActive);
+      setFirstName(employee.firstName || '');
+      setLastName(employee.lastName || '');
+      setEmail(employee.email || '');
+      setMobile(employee.mobile || '');
+      setDepartment(employee.department || 'DOC');
+      setRole(employee.role || 'DOC_AGENT');
+      setIsActive(employee.isActive ?? true);
+      setSmtpEmail(employee.smtpEmail || '');
+      setSmtpAppPassword(employee.smtpAppPassword || '');
     } else {
       setFirstName('');
       setLastName('');
@@ -46,6 +50,8 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
       setDepartment('DOC');
       setRole('DOC_AGENT');
       setIsActive(true);
+      setSmtpEmail('');
+      setSmtpAppPassword('');
     }
     setErrors({});
   }, [employee, isOpen]);
@@ -108,6 +114,10 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
       newErrors.mobile = 'Valid contact number is required';
     }
 
+    if (smtpEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(smtpEmail.trim())) {
+      newErrors.smtpEmail = 'Valid SMTP email format required';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -121,6 +131,8 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
       department,
       role,
       isActive,
+      smtpEmail: smtpEmail.trim() || undefined,
+      smtpAppPassword: smtpAppPassword.trim() || undefined,
     });
   };
 
@@ -169,6 +181,11 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5 py-2">
+        {/* Basic Information Header */}
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          Personal &amp; Contact Details
+        </div>
+
         {/* Name Fields */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <AppInput
@@ -220,30 +237,89 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
           />
         </div>
 
-        {/* Department Selector */}
-        <div>
-          <AppSelect
-            label="Assign Department *"
-            value={department}
-            onChange={handleDepartmentChange}
-            options={[
-              { label: 'Documenter Dept (Outreach & Intake)', value: 'DOC' },
-              { label: 'Tax Prep & Review Dept (Computation & QA)', value: 'PREP_REVIEW' },
-              { label: 'Sales Dept (Quotations & Negotiation)', value: 'SALES' },
-              { label: 'File Operator Dept (CPA E-Filing)', value: 'FILE_OP' },
-              { label: 'System Administration (Admin)', value: 'ADMIN' },
-            ]}
-          />
+        {/* Department & Role Section */}
+        <div className="pt-2 border-t border-slate-200/80 space-y-4">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Department &amp; Permission Level
+          </div>
+
+          <div>
+            <AppSelect
+              label="Assign Department *"
+              value={department}
+              onChange={handleDepartmentChange}
+              options={[
+                { label: 'Documenter Dept (Outreach & Intake)', value: 'DOC' },
+                { label: 'Tax Prep & Review Dept (Computation & QA)', value: 'PREP_REVIEW' },
+                { label: 'Sales Dept (Quotations & Negotiation)', value: 'SALES' },
+                { label: 'File Operator Dept (CPA E-Filing)', value: 'FILE_OP' },
+                { label: 'System Administration (Admin)', value: 'ADMIN' },
+              ]}
+            />
+          </div>
+
+          <div>
+            <AppSelect
+              label="Department Role Level *"
+              value={role}
+              onChange={(val) => setRole(val as EmployeeRole)}
+              options={getRoleOptions()}
+            />
+          </div>
         </div>
 
-        {/* Role Selector */}
-        <div>
-          <AppSelect
-            label="Department Role Level *"
-            value={role}
-            onChange={(val) => setRole(val as EmployeeRole)}
-            options={getRoleOptions()}
-          />
+        {/* Outbound SMTP Email Configuration */}
+        <div className="pt-2 border-t border-slate-200/80 space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-200">
+                <Mail className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-800">SMTP Outbound Credentials</h4>
+                <p className="text-[11px] text-slate-500">Enable this staff member to send emails directly within the platform</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3.5">
+            <div>
+              <AppInput
+                label="SMTP Email Address"
+                placeholder="e.g. user@gmail.com or staff@taxcrm.com"
+                type="email"
+                value={smtpEmail}
+                onChange={(e) => {
+                  setSmtpEmail(e.target.value);
+                  if (errors.smtpEmail) setErrors((prev) => ({ ...prev, smtpEmail: '' }));
+                }}
+                error={errors.smtpEmail}
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Email account used to dispatch outbound client emails</p>
+            </div>
+
+            <div>
+              <AppInput
+                label="SMTP App Password"
+                placeholder="e.g. 16-character App Password (xxxx xxxx xxxx xxxx)"
+                type="password"
+                value={smtpAppPassword}
+                onChange={(e) => {
+                  setSmtpAppPassword(e.target.value);
+                  if (errors.smtpAppPassword) setErrors((prev) => ({ ...prev, smtpAppPassword: '' }));
+                }}
+                error={errors.smtpAppPassword}
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Generated App Password from Google / Outlook / Mail Provider</p>
+            </div>
+
+            <div className="flex items-start gap-2 text-[11px] text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200/70">
+              <Info className="w-3.5 h-3.5 text-[#16A34A] shrink-0 mt-0.5" />
+              <span>
+                These credentials allow the system to dispatch transactional emails, review notices, and tax communications directly via this user's email account.
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Active Status Switch */}

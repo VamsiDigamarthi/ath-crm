@@ -8,12 +8,14 @@ import { customerRouter } from "../features/customer/customer-routes.js";
 import { filingRouter } from "../features/filing/filing-routes.js";
 import { notificationRouter } from "../features/notifications/notification-routes.js";
 import { workflowRouter } from "../features/workflow/workflow-routes.js";
+import { emailTemplateRouter } from "../features/email-templates/email-template-routes.js";
 
 const router = Router();
 
 // Combine all feature routes here
 router.use("/auth", authRouter);
 router.use("/admin", adminRouter);
+router.use("/email-templates", emailTemplateRouter);
 router.use("/documenter", documenterRouter);
 router.use("/prep-review", prepReviewRouter);
 router.use("/sales", salesRouter);

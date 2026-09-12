@@ -8,7 +8,8 @@ import {
   MessageSquare, 
   CheckCircle2, 
   AlertCircle, 
-  Plus
+  Plus,
+  Mail
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { CallLogItem } from '../types/documenter.types';
@@ -17,12 +18,14 @@ interface TaxpayerCallHistoryTimelineProps {
   callLogs: CallLogItem[];
   taxpayerName: string;
   onOpenCallModal: () => void;
+  onOpenEmailModal?: () => void;
 }
 
 export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelineProps> = ({
   callLogs,
   taxpayerName,
   onOpenCallModal,
+  onOpenEmailModal,
 }) => {
   const [filterType, setFilterType] = useState<'ALL' | 'CONNECTED' | 'CALLBACKS'>('ALL');
   const [expandedCallIds, setExpandedCallIds] = useState<Record<string, boolean>>({});
@@ -163,6 +166,18 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
               Callbacks
             </button>
           </div>
+
+          {onOpenEmailModal && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenEmailModal}
+              className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Mail className="w-3.5 h-3.5 text-blue-600" />
+              <span>Email Client</span>
+            </Button>
+          )}
 
           <Button
             size="sm"

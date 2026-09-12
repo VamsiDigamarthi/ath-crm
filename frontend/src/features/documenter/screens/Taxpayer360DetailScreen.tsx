@@ -28,6 +28,7 @@ import { TaxPrepDocumentVault } from '../components/prep/TaxPrepDocumentVault';
 import { TaxPrepOrganizerReview } from '../components/prep/TaxPrepOrganizerReview';
 import { LeadAuditTrailSection } from '../components/LeadAuditTrailSection';
 import { CallOutreachModal } from '../components/CallOutreachModal';
+import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { documenterService } from '../services/documenter-service';
 import type { DocumenterLeadItem, CallLogItem } from '../types/documenter.types';
@@ -48,7 +49,9 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const [lead, setLead] = useState<DocumenterLeadItem | null>(null);
   const [isLoadingLead, setIsLoadingLead] = useState<boolean>(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState<boolean>(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
   const [isMoveToPrepModalOpen, setIsMoveToPrepModalOpen] = useState<boolean>(false);
+
   const [isMovingToPrep, setIsMovingToPrep] = useState<boolean>(false);
   const [prepTransferNotes, setPrepTransferNotes] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -256,6 +259,17 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               </span>
             </Button>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEmailModalOpen(true)}
+            className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            title="Compose and send official email to client"
+          >
+            <Mail className="w-3.5 h-3.5 text-blue-600" />
+            <span>Email Client</span>
+          </Button>
 
           {!isAdmin && (
             <Button
@@ -495,6 +509,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             callLogs={callLogs}
             taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
             onOpenCallModal={() => setIsCallModalOpen(true)}
+            onOpenEmailModal={() => setIsEmailModalOpen(true)}
           />
         )}
 
@@ -677,6 +692,23 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           </div>
         </AppModal>
       )}
+
+      {/* 6. Send Email to Client Modal */}
+      <SendEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        applicationId={currentLead.id}
+        recipientEmail={customer.email || undefined}
+        recipientName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+        taxYear={currentLead.taxYear}
+        visaType={customer.visaType || undefined}
+        filingStatus={currentLead.currentStage}
+        onSuccess={() => {
+          fetchLeadDetails();
+          refreshData();
+        }}
+      />
     </div>
   );
 };
+

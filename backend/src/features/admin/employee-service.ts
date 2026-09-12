@@ -10,6 +10,8 @@ export interface CreateEmployeeInput {
   mobile: string;
   role: Role;
   isActive?: boolean;
+  smtpEmail?: string | null;
+  smtpAppPassword?: string | null;
 }
 
 export interface UpdateEmployeeInput {
@@ -19,6 +21,8 @@ export interface UpdateEmployeeInput {
   mobile?: string;
   role?: Role;
   isActive?: boolean;
+  smtpEmail?: string | null;
+  smtpAppPassword?: string | null;
 }
 
 export interface ListEmployeesQuery {
@@ -281,6 +285,9 @@ export class EmployeeService {
         role: u.role,
         roleLabel: meta.roleLabel,
         isActive: u.isActive,
+        smtpEmail: u.smtpEmail || '',
+        smtpAppPassword: u.smtpAppPassword || '',
+        hasSmtpConfigured: Boolean(u.smtpEmail && u.smtpAppPassword),
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}${lastName}`,
         assignedCasesCount: assignedCases,
         completedCasesCount: completedCases,
@@ -309,7 +316,7 @@ export class EmployeeService {
    * IMPORTANT: Duplicate check is ONLY performed against currently ACTIVE users!
    */
   public static async createEmployee(input: CreateEmployeeInput) {
-    const { firstName, lastName, email, mobile, role, isActive = true } = input;
+    const { firstName, lastName, email, mobile, role, isActive = true, smtpEmail, smtpAppPassword } = input;
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedMobile = mobile.trim();
 
@@ -335,6 +342,8 @@ export class EmployeeService {
         mobile: normalizedMobile,
         role,
         isActive,
+        smtpEmail: smtpEmail?.trim() || null,
+        smtpAppPassword: smtpAppPassword?.trim() || null,
       },
     });
 
@@ -351,6 +360,9 @@ export class EmployeeService {
       role: user.role,
       roleLabel: meta.roleLabel,
       isActive: user.isActive,
+      smtpEmail: user.smtpEmail || '',
+      smtpAppPassword: user.smtpAppPassword || '',
+      hasSmtpConfigured: Boolean(user.smtpEmail && user.smtpAppPassword),
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.firstName}${user.lastName}`,
       assignedCasesCount: 0,
       completedCasesCount: 0,
@@ -404,6 +416,8 @@ export class EmployeeService {
         ...(input.mobile !== undefined && { mobile: input.mobile.trim() }),
         ...(input.role !== undefined && { role: input.role }),
         ...(input.isActive !== undefined && { isActive: input.isActive }),
+        ...(input.smtpEmail !== undefined && { smtpEmail: input.smtpEmail ? input.smtpEmail.trim() : null }),
+        ...(input.smtpAppPassword !== undefined && { smtpAppPassword: input.smtpAppPassword ? input.smtpAppPassword.trim() : null }),
       },
     });
 
@@ -420,6 +434,9 @@ export class EmployeeService {
       role: updated.role,
       roleLabel: meta.roleLabel,
       isActive: updated.isActive,
+      smtpEmail: updated.smtpEmail || '',
+      smtpAppPassword: updated.smtpAppPassword || '',
+      hasSmtpConfigured: Boolean(updated.smtpEmail && updated.smtpAppPassword),
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${updated.firstName}${updated.lastName}`,
     };
   }

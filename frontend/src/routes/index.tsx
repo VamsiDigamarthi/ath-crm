@@ -8,6 +8,7 @@ import { AdminOverviewScreen } from '@/features/admin/screens/AdminOverviewScree
 import { BulkLeadImportScreen } from '@/features/admin/screens/BulkLeadImportScreen';
 import { EmployeeManagementScreen } from '@/features/admin/screens/EmployeeManagementScreen';
 import { AdminCustomerDirectoryScreen } from '@/features/admin/screens/AdminCustomerDirectoryScreen';
+import { AdminEmailTemplatesScreen } from '@/features/admin/screens/AdminEmailTemplatesScreen';
 import { DocumenterDepartmentScreen } from '@/features/documenter/screens/DocumenterDepartmentScreen';
 import { DocumenterManagerDashboardScreen } from '@/features/documenter/screens/DocumenterManagerDashboardScreen';
 import { ManagerScorecardsScreen } from '@/features/documenter/screens/ManagerScorecardsScreen';
@@ -158,6 +159,10 @@ export const router = createBrowserRouter([
           {
             path: 'employees',
             element: <EmployeeManagementScreen />,
+          },
+          {
+            path: 'email-templates',
+            element: <AdminEmailTemplatesScreen />,
           },
           {
             path: 'documenter',
