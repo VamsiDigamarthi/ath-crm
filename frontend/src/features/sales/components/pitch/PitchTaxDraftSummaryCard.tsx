@@ -5,6 +5,7 @@ import {
   UserCheck, 
   Info 
 } from 'lucide-react';
+import { AppTabs } from '@/shared/components/AppTabs';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface PitchTaxDraftSummaryCardProps {
@@ -46,41 +47,16 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('SCHEDULES')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'SCHEDULES'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Form 1040 Federal
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('STATE')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'STATE'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            State Return ({lead.stateOfResidence?.split(',')[1]?.trim() || lead.stateOfResidence || 'State'})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('QA_AUDIT')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'QA_AUDIT'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Preparer &amp; QA Sign-Off
-          </button>
-        </div>
+        <AppTabs
+          tabs={[
+            { id: 'SCHEDULES', label: 'Form 1040 Federal' },
+            { id: 'STATE', label: `State Return (${lead.stateOfResidence?.split(',')[1]?.trim() || lead.stateOfResidence || 'State'})` },
+            { id: 'QA_AUDIT', label: 'Preparer & QA Sign-Off' },
+          ]}
+          activeTab={activeTab}
+          onChange={(tab) => setActiveTab(tab as any)}
+          size="sm"
+        />
       </div>
 
       {/* Tab 1: Form 1040 Federal Schedule Breakdown */}

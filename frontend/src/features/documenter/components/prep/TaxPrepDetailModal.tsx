@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { 
-  Calculator, 
-  FileText, 
-  CheckSquare, 
   User, 
   Globe, 
   PhoneOutgoing
@@ -131,46 +129,16 @@ export const TaxPrepDetailModal: React.FC<TaxPrepDetailModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-          <button
-            type="button"
-            onClick={() => setActiveTab('CALCULATOR')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 flex-1 justify-center ${
-              activeTab === 'CALCULATOR'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Calculator className="w-4 h-4 text-emerald-600" />
-            <span>Tax Draft Estimator</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('DOCUMENTS')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 flex-1 justify-center ${
-              activeTab === 'DOCUMENTS'
-                ? 'bg-white text-purple-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <FileText className="w-4 h-4 text-purple-600" />
-            <span>Client Documents Vault</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('ORGANIZER')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 flex-1 justify-center ${
-              activeTab === 'ORGANIZER'
-                ? 'bg-white text-blue-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <CheckSquare className="w-4 h-4 text-blue-600" />
-            <span>9-Module Organizer Checklist</span>
-          </button>
-        </div>
+        <AppTabs
+          tabs={[
+            { id: 'CALCULATOR', label: 'Tax Draft Estimator' },
+            { id: 'DOCUMENTS', label: 'Client Documents Vault' },
+            { id: 'ORGANIZER', label: '9-Module Intake Form' },
+          ]}
+          activeTab={activeTab}
+          onChange={(tab) => setActiveTab(tab as any)}
+          size="sm"
+        />
 
         {/* Tab Content */}
         {activeTab === 'CALCULATOR' && (

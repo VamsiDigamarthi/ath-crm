@@ -25,6 +25,7 @@ import { OrganizerModuleContent } from '@/features/customer/components/organizer
 import { Button } from '@/shared/components/Button';
 import toast from 'react-hot-toast';
 import apiClient from '@/lib/api-client';
+import { AppTabs } from '@/shared/components/AppTabs';
 
 // Modular Review Sub-Components
 import { ReviewModule1Demographics } from './review-modules/ReviewModule1Demographics';
@@ -138,15 +139,15 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const m9 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m9_directDeposit || {};
 
   const modulesList = [
-    { id: 'm1', number: 1, title: 'Personal Info, Visa & Marriage', icon: User, section: 'Demographics & Family' },
-    { id: 'm2', number: 2, title: 'Spouse, Dependents & Daycare', icon: Users, section: 'Demographics & Family' },
-    { id: 'm3', number: 3, title: 'Substantial Presence & Multi-State', icon: Globe, section: 'Residency & Visa' },
-    { id: 'm4', number: 4, title: 'W-2 Wages & Rental Properties', icon: FileSpreadsheet, section: 'Wages & Income' },
-    { id: 'm5', number: 5, title: '1099-INT / DIV / OID Interest', icon: Landmark, section: 'Wages & Income' },
-    { id: 'm6', number: 6, title: '1099-B Stocks, ESPP, RSU & Losses', icon: TrendingUp, section: 'Wages & Income' },
-    { id: 'm7', number: 7, title: 'FBAR / FATCA & Indian Income (INR)', icon: ShieldCheck, section: 'Foreign & FBAR' },
-    { id: 'm8', number: 8, title: 'Itemized Deductions & Solar Energy', icon: Receipt, section: 'Deductions & Credits' },
-    { id: 'm9', number: 9, title: 'Direct Deposit & $10 Referrals', icon: Building2, section: 'IRS Refund Payout' },
+    { id: 'm1', number: 1, title: 'Personal Info, Visa & Marriage', label: 'Personal Info & Visa', icon: User, section: 'Demographics & Family' },
+    { id: 'm2', number: 2, title: 'Spouse, Dependents & Daycare', label: 'Spouse & Dependents', icon: Users, section: 'Demographics & Family' },
+    { id: 'm3', number: 3, title: 'Substantial Presence & Multi-State', label: 'Substantial Presence', icon: Globe, section: 'Residency & Visa' },
+    { id: 'm4', number: 4, title: 'W-2 Wages & Rental Properties', label: 'W-2 Wages & Income', icon: FileSpreadsheet, section: 'Wages & Income' },
+    { id: 'm5', number: 5, title: '1099-INT / DIV / OID Interest', label: '1099 Interest & Dividends', icon: Landmark, section: 'Wages & Income' },
+    { id: 'm6', number: 6, title: '1099-B Stocks, ESPP, RSU & Losses', label: '1099-B Stocks & Gains', icon: TrendingUp, section: 'Wages & Income' },
+    { id: 'm7', number: 7, title: 'FBAR / FATCA & Indian Income (INR)', label: 'FBAR & FATCA', icon: ShieldCheck, section: 'Foreign & FBAR' },
+    { id: 'm8', number: 8, title: 'Itemized Deductions & Solar Energy', label: 'Itemized Deductions', icon: Receipt, section: 'Deductions & Credits' },
+    { id: 'm9', number: 9, title: 'Direct Deposit & $10 Referrals', label: 'Direct Deposit & Refund', icon: Building2, section: 'IRS Refund Payout' },
   ];
 
   const currentOrgData = viewMode === 'AGENT_EDIT' ? localOrganizer : organizer;
@@ -238,56 +239,19 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
         </div>
       </div>
 
-      {/* 2. Top Navigation Tabs Ribbon */}
-      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-200">
-          {modulesList.map((mod) => {
-            const Icon = mod.icon;
-            const isSelected = mod.id === selectedModId;
-            const isDone = isModuleCompleted(mod.id, currentOrgData);
-
-            return (
-              <button
-                key={mod.id}
-                type="button"
-                onClick={() => {
-                  setSelectedModId(mod.id);
-                  if (viewMode === 'GRID') setViewMode('INSPECTOR');
-                }}
-                className={`px-3 py-2 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2 shrink-0 border ${
-                  isSelected
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                    : isDone
-                    ? 'bg-emerald-50/70 hover:bg-emerald-50 text-slate-800 border-emerald-300'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                }`}
-              >
-                <div
-                  className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
-                    isSelected
-                      ? 'bg-emerald-500 text-white'
-                      : isDone
-                      ? 'bg-emerald-100 text-[#16A34A]'
-                      : 'bg-white text-slate-400 border border-slate-200'
-                  }`}
-                >
-                  <Icon className="w-3 h-3" />
-                </div>
-
-                <div className="truncate">
-                  <div className="text-xs font-bold leading-tight truncate">
-                    0{mod.number}. {mod.title.split('&')[0]}
-                  </div>
-                  <div className="text-[10px] opacity-75 font-medium flex items-center gap-1 mt-0.5">
-                    <span>{mod.section}</span>
-                    {isDone && <CheckCircle2 className="w-3 h-3 text-emerald-400 inline shrink-0" />}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* 2. Clean Minimal Tab Ribbon with Active Underline */}
+      <AppTabs
+        tabs={modulesList.map((m) => ({
+          id: m.id,
+          label: m.label,
+        }))}
+        activeTab={selectedModId}
+        onChange={(tabId) => {
+          setSelectedModId(tabId);
+          if (viewMode === 'GRID') setViewMode('INSPECTOR');
+        }}
+        size="sm"
+      />
 
       {/* 3A. AGENT EDIT MODE: Live Editable Module Form with 9-Column Wide Layout & Sticky 3-Column Ledger */}
       {viewMode === 'AGENT_EDIT' && (

@@ -8,10 +8,7 @@ import {
   MapPin, 
   Briefcase, 
   ShieldCheck, 
-  FileText, 
-  Calculator, 
   PhoneCall, 
-  CheckSquare, 
   RefreshCw,
   FileCheck2,
   CheckCircle2,
@@ -20,6 +17,7 @@ import {
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { renderVisaBadge, renderStageBadge } from '../columns/documenter-columns';
 import { TaxpayerCallHistoryTimeline } from '../components/TaxpayerCallHistoryTimeline';
 import { TaxPrepDraftCalculator } from '../components/prep/TaxPrepDraftCalculator';
@@ -442,65 +440,16 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       </div>
 
       {/* 3. Main Workspace Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-px">
-        <button
-          onClick={() => setActiveTab('TIMELINE')}
-          className={`px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'TIMELINE'
-              ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <PhoneCall className="w-4 h-4" />
-          <span>Call History & Outreach Timeline</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-            activeTab === 'TIMELINE' ? 'bg-[#16A34A] text-white' : 'bg-slate-100 text-slate-600'
-          }`}>
-            {callLogs.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('DOCUMENTS')}
-          className={`px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'DOCUMENTS'
-              ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          <span>Client Documents Vault</span>
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-            activeTab === 'DOCUMENTS' ? 'bg-[#16A34A] text-white' : 'bg-slate-100 text-slate-600'
-          }`}>
-            {(lead?.documents || currentLead.documents || []).length} files
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('CALCULATOR')}
-          className={`px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'CALCULATOR'
-              ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Calculator className="w-4 h-4" />
-          <span>Tax Draft Worksheet</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('ORGANIZER')}
-          className={`px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'ORGANIZER'
-              ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <CheckSquare className="w-4 h-4" />
-          <span>9-Module Organizer</span>
-        </button>
-      </div>
+      <AppTabs
+        tabs={[
+          { id: 'TIMELINE', label: 'Call History & Outreach Timeline', count: callLogs.length },
+          { id: 'DOCUMENTS', label: 'Client Documents Vault', count: (lead?.documents || currentLead.documents || []).length },
+          { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
+          { id: 'ORGANIZER', label: '9-Module Intake Form' },
+        ]}
+        activeTab={activeTab}
+        onChange={(tabId) => setActiveTab(tabId as any)}
+      />
 
       {/* 4. Tab Content Panels */}
       <div>
