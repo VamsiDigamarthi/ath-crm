@@ -6,6 +6,7 @@ export type DocumenterTab =
   | 'MY_LEADS'
   | 'CALLBACKS'
   | 'DROPPED'
+  | 'NOT_INTERESTED'
   | 'ALL';
 
 export type CallDisposition = 
@@ -123,6 +124,8 @@ export interface DocumenterStats {
   inPrep: number;
   myLeads: number;
   callbacks: number;
+  notInterested?: number;
+  dropped?: number;
   total: number;
   totalDepartment?: number;
   todayDials?: number;

@@ -228,6 +228,30 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     setIsAssignModalOpen(true);
   }, []);
 
+  // Return Not Interested Leads back to Admin / Unassigned Pool
+  const handleReturnToAdminPool = useCallback(async (reason?: string) => {
+    if (selectedRows.length === 0) {
+      toast.error('Please select at least 1 lead to return to Admin pool');
+      return;
+    }
+    setIsActionLoading(true);
+    try {
+      const targetIds = selectedRows.map((r) => r.id);
+      const res = await documenterService.returnLeadsToPool({
+        applicationIds: targetIds,
+        reason: reason || 'Not Interested - Released to Admin Unassigned Pool for Re-assignment',
+      });
+      toast.success(res?.message || `Successfully returned ${targetIds.length} lead(s) to Admin unassigned pool!`);
+      setSelectedRows([]);
+      fetchLeads();
+      fetchAgents();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to return leads to pool');
+    } finally {
+      setIsActionLoading(false);
+    }
+  }, [selectedRows, fetchLeads, fetchAgents]);
+
   const handleCloseModals = useCallback(() => {
     setIsAssignModalOpen(false);
     setIsCallModalOpen(false);
@@ -260,6 +284,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     setSelectedRows,
     handleAutoRoundRobin,
     handleDirectAssign,
+    handleReturnToAdminPool,
     isAssignModalOpen,
     isCallModalOpen,
     activeLeadForCall,

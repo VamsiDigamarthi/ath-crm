@@ -53,6 +53,30 @@ export const getDocumenterAgents = async (
   }
 };
 
+export const returnLeadsToPool = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { applicationIds, reason } = req.body;
+
+    const result = await DocumenterService.returnLeadsToPool({
+      applicationIds,
+      returnedByUserId: req.currentUser?.id || 'SYSTEM',
+      reason,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully returned ${result.returnedCount} lead${result.returnedCount > 1 ? 's' : ''} to Admin unassigned pool`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const assignLeadsBulk = async (
   req: Request,
   res: Response,

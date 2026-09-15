@@ -12,7 +12,9 @@ import {
   Globe,
   CheckCircle2,
   Clock,
-  FileCheck2
+  FileCheck2,
+  UserX,
+  RotateCcw
 } from 'lucide-react';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 import toast from 'react-hot-toast';
@@ -35,6 +37,9 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     totalItems,
     handlePageChange,
     handleLimitChange,
+    selectedRows,
+    setSelectedRows,
+    handleReturnToAdminPool,
     isCallModalOpen,
     activeLeadForCall,
     handleOpenCallModal,
@@ -260,10 +265,23 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
               <FileCheck2 className="w-3.5 h-3.5" />
               <span>Tax Prep Active ({stats.inPrep})</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('NOT_INTERESTED')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'NOT_INTERESTED' || activeTab === 'DROPPED'
+                  ? 'bg-white text-rose-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <UserX className="w-3.5 h-3.5 text-rose-500" />
+              <span>Not Interested ({stats.notInterested ?? stats.dropped ?? 0})</span>
+            </button>
           </div>
         </div>
 
-        {/* Right: Visa Filter */}
+        {/* Right: Visa Filter & Action Buttons */}
         <div className="flex items-center gap-3 w-full lg:w-auto shrink-0">
           <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
             <Globe className="w-3.5 h-3.5 text-indigo-500" />
@@ -282,6 +300,18 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
               <option value="US_CITIZEN">US Citizen</option>
             </select>
           </div>
+
+          {activeTab === 'NOT_INTERESTED' && selectedRows.length > 0 && (
+            <Button
+              size="sm"
+              onClick={() => handleReturnToAdminPool()}
+              disabled={isActionLoading}
+              className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer px-3.5 animate-in fade-in duration-150"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${isActionLoading ? 'animate-spin' : ''}`} />
+              <span>Return Selected ({selectedRows.length}) to Admin</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -289,7 +319,10 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
       <AppTable<DocumenterLeadItem>
         data={leads}
         columns={columns}
-        selectable={false}
+        selectable={activeTab === 'NOT_INTERESTED'}
+        selectedRows={selectedRows}
+        rowKey="id"
+        onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}
         emptyText="No assigned leads in your queue right now. Great job!"
         pagination={{
@@ -302,6 +335,36 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
           onPerPageChange: handleLimitChange,
         }}
       />
+
+      {/* Floating Action Bar when Not-Interested rows are checked */}
+      {activeTab === 'NOT_INTERESTED' && selectedRows.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
+            <span className="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 font-bold text-xs flex items-center justify-center border border-rose-500/30">
+              {selectedRows.length}
+            </span>
+            <span className="text-xs font-semibold text-slate-200">
+              {selectedRows.length} Not-Interested Lead{selectedRows.length > 1 ? 's' : ''} Selected
+            </span>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => handleReturnToAdminPool()}
+            disabled={isActionLoading}
+            className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
+          >
+            <RotateCcw className={`w-3.5 h-3.5 ${isActionLoading ? 'animate-spin' : ''}`} />
+            <span>Return to Admin / Unassigned Pool</span>
+          </Button>
+          <button
+            type="button"
+            onClick={() => setSelectedRows([])}
+            className="text-slate-400 hover:text-white text-xs font-medium cursor-pointer ml-1"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Call Outreach & Disposition Modal */}
       <CallOutreachModal

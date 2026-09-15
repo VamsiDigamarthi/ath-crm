@@ -20,7 +20,8 @@ import {
   RefreshCw, 
   Globe,
   TrendingUp,
-  LayoutGrid
+  LayoutGrid,
+  UserX
 } from 'lucide-react';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
 
@@ -86,6 +87,7 @@ export const DocumenterManagerScreen: React.FC = () => {
     { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
     { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
     { id: 'CALLBACKS' as DocumenterTab, label: 'Scheduled Callbacks', count: stats.callbacks, icon: Clock },
+    { id: 'NOT_INTERESTED' as DocumenterTab, label: 'Not Interested', count: stats.notInterested ?? stats.dropped ?? 0, icon: UserX },
     { id: 'ALL' as DocumenterTab, label: 'All Department Leads', count: stats.totalDepartment || totalItems, icon: ListFilter },
   ];
 

@@ -78,6 +78,16 @@ export const documenterService = {
   },
 
   /**
+   * Return Not Interested leads to Admin / Unassigned Pool
+   */
+  async returnLeadsToPool(payload: {
+    applicationIds: string[];
+    reason?: string;
+  }): Promise<any> {
+    return apiClient.post('/documenter/leads/return-to-pool', payload);
+  },
+
+  /**
    * Log outreach call disposition
    */
   async logCallDisposition(payload: {

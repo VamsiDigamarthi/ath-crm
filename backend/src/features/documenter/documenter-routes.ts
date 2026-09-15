@@ -4,6 +4,7 @@ import {
   getDocumenterAgents,
   assignLeadsBulk,
   autoRoundRobinAssign,
+  returnLeadsToPool,
   logCallDisposition,
   saveTaxDraft,
   sendToSales,
@@ -75,6 +76,14 @@ router.post(
   requireAuth,
   authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
   autoRoundRobinAssign
+);
+
+// 4b. Return Not-Interested leads to Admin / Unassigned Pool (Agents, Managers, Admin)
+router.post(
+  '/leads/return-to-pool',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  returnLeadsToPool
 );
 
 // 5. Log outreach call outcome / disposition (All Documenter staff)

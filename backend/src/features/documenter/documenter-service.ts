@@ -1,5 +1,12 @@
 import { prisma } from '../../config/db.js';
-import { ApplicationStage, Role, NotificationCategory, NotificationPriority } from '@prisma/client';
+import { 
+  ApplicationStage, 
+  Role, 
+  NotificationCategory, 
+  NotificationPriority,
+  AuditActorType,
+  AuditActionType
+} from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { StorageService } from '../../utils/storage-service.js';
 import { sanitizeObject } from '../customer/customer-validator.js';
@@ -7,7 +14,7 @@ import { sanitizeObject } from '../customer/customer-validator.js';
 export interface DocumenterLeadQuery {
   page?: number;
   limit?: number;
-  tab?: 'UNASSIGNED' | 'NOT_CALLED' | 'UNCONTACTED' | 'OUTREACH' | 'PREP' | 'MY_LEADS' | 'CALLBACKS' | 'DROPPED' | 'ALL';
+  tab?: 'UNASSIGNED' | 'NOT_CALLED' | 'UNCONTACTED' | 'OUTREACH' | 'PREP' | 'MY_LEADS' | 'CALLBACKS' | 'DROPPED' | 'NOT_INTERESTED' | 'ALL';
   search?: string;
   agentId?: string;
   visaType?: string;
@@ -212,13 +219,12 @@ export class DocumenterService {
         };
         break;
       case 'DROPPED':
+      case 'NOT_INTERESTED':
         where.currentStage = ApplicationStage.DROPPED_CANCELLED;
         break;
       case 'ALL':
       default:
-        where.currentStage = {
-          not: ApplicationStage.DROPPED_CANCELLED,
-        };
+        // All Leads includes all stages and statuses
         break;
     }
 
@@ -274,11 +280,12 @@ export class DocumenterService {
       leads, 
       totalItems, 
       unassignedCount, 
-      uncontactedCount,
+      uncontactedCount, 
       outreachCount, 
       prepCount, 
       myLeadsCount, 
       callbacksCount,
+      notInterestedCount,
       todayDialsCount,
       todayConnectedCount,
       upcomingCallback
@@ -347,7 +354,9 @@ export class DocumenterService {
       }),
       currentUserId
         ? prisma.taxApplication.count({
-            where: { assignedDocAgentId: currentUserId },
+            where: { 
+              assignedDocAgentId: currentUserId,
+            },
           })
         : 0,
       prisma.taxApplication.count({
@@ -358,6 +367,12 @@ export class DocumenterService {
               callbackScheduledAt: { not: null },
             },
           },
+        },
+      }),
+      prisma.taxApplication.count({
+        where: {
+          ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { assignedDocAgentId: currentUserId } : {}),
+          currentStage: ApplicationStage.DROPPED_CANCELLED,
         },
       }),
       prisma.callLog.count({
@@ -503,7 +518,9 @@ export class DocumenterService {
         inPrep: prepCount,
         callbacks: callbacksCount,
         myLeads: myLeadsCount,
-        totalDepartment: unassignedCount + outreachCount + prepCount,
+        notInterested: notInterestedCount,
+        dropped: notInterestedCount,
+        totalDepartment: unassignedCount + outreachCount + prepCount + notInterestedCount,
         todayDials: todayDialsCount,
         todayConnected: todayConnectedCount,
         contactRatePct,
@@ -611,6 +628,149 @@ export class DocumenterService {
   }
 
   /**
+   * Return Not Interested leads to Admin / Unassigned Pool with full assignment history tracking
+   */
+  public static async returnLeadsToPool(options: {
+    applicationIds: string[];
+    returnedByUserId: string;
+    reason?: string;
+  }) {
+    const { applicationIds, returnedByUserId, reason = 'Not Interested - Returned to Admin Pool for Redistribution' } = options;
+
+    if (!applicationIds || applicationIds.length === 0) {
+      throw new Error('No leads selected to return to pool');
+    }
+
+    const returnedByUser = await prisma.user.findUnique({
+      where: { id: returnedByUserId },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+    });
+    const returnerName = returnedByUser?.firstName 
+      ? `${returnedByUser.firstName} ${returnedByUser.lastName || ''}`.trim() 
+      : returnedByUser?.email || 'Calling Agent';
+
+    return await prisma.$transaction(async (tx) => {
+      // 1. Fetch current applications with their assigned agent and existing summary
+      const apps = await tx.taxApplication.findMany({
+        where: { id: { in: applicationIds } },
+        include: {
+          assignedDocAgent: {
+            select: { id: true, email: true, firstName: true, lastName: true, role: true },
+          },
+          customer: {
+            select: { firstName: true, lastName: true },
+          },
+        },
+      });
+
+      const nowIso = new Date().toISOString();
+
+      for (const app of apps) {
+        const prevSummary = (app.taxDraftSummary as Record<string, any>) || {};
+        const prevHistory: any[] = Array.isArray(prevSummary.assignmentHistory) ? prevSummary.assignmentHistory : [];
+
+        const prevAgent = app.assignedDocAgent;
+        const prevAgentName = prevAgent?.firstName
+          ? `${prevAgent.firstName} ${prevAgent.lastName || ''}`.trim()
+          : prevAgent?.email || 'Unassigned Agent';
+
+        const newHistoryEntry = {
+          agentId: prevAgent?.id || app.assignedDocAgentId || 'unknown',
+          agentName: prevAgentName,
+          agentEmail: prevAgent?.email || '',
+          role: prevAgent?.role || 'DOC_AGENT',
+          action: 'RETURNED_TO_POOL',
+          assignedAt: app.updatedAt?.toISOString() || app.createdAt.toISOString(),
+          returnedAt: nowIso,
+          returnedByUserId,
+          returnedByUserName: returnerName,
+          reason,
+        };
+
+        const updatedHistory = [...prevHistory, newHistoryEntry];
+        const updatedSummary = {
+          ...prevSummary,
+          assignmentHistory: updatedHistory,
+          isReturnedToPool: true,
+          returnedAt: nowIso,
+          returnedBy: returnerName,
+          returnedReason: reason,
+        };
+
+        // Update application: unassign doc agent and set stage back to RAW_PROSPECT (unassigned pool)
+        await tx.taxApplication.update({
+          where: { id: app.id },
+          data: {
+            assignedDocAgentId: null,
+            currentStage: ApplicationStage.RAW_PROSPECT,
+            taxDraftSummary: updatedSummary,
+          },
+        });
+
+        // Stage history audit
+        await tx.stageHistory.create({
+          data: {
+            applicationId: app.id,
+            fromStage: app.currentStage,
+            toStage: ApplicationStage.RAW_PROSPECT,
+            movedByUserId: returnedByUserId,
+            remarks: `Calling Agent ${returnerName} (${returnedByUser?.email || 'agent'}) released lead back to Admin Unassigned Pool. Reason: ${reason}. Previous Agent: ${prevAgentName}.`,
+          },
+        });
+
+        // Audit log
+        await tx.auditLog.create({
+          data: {
+            applicationId: app.id,
+            actorId: returnedByUserId,
+            actorType: AuditActorType.AGENT,
+            actorName: returnerName,
+            actorEmail: returnedByUser?.email || '',
+            actorRole: returnedByUser?.role || 'DOC_AGENT',
+            action: AuditActionType.STAGE_CHANGE,
+            moduleKey: 'OUTREACH',
+            details: {
+              previousAgentId: prevAgent?.id,
+              previousAgentEmail: prevAgent?.email,
+              previousAgentName: prevAgentName,
+              actionType: 'LEAD_RETURNED_TO_POOL',
+              reason,
+              timestamp: nowIso,
+            },
+          },
+        });
+      }
+
+      // Notify Managers that leads were returned to pool
+      const managers = await tx.user.findMany({
+        where: {
+          role: { in: [Role.ADMIN, Role.DOC_MANAGER] },
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      for (const mgr of managers) {
+        await tx.notification.create({
+          data: {
+            recipientUserId: mgr.id,
+            title: `${apps.length} Not-Interested Lead${apps.length > 1 ? 's' : ''} Returned to Unassigned Pool`,
+            message: `${returnerName} released ${apps.length} not-interested lead${apps.length > 1 ? 's' : ''} back to the Unassigned Pool for redistribution.`,
+            category: 'DOCUMENTER',
+            priority: 'NORMAL',
+            actionUrl: '/documenter/manager/distribution',
+            actionLabel: 'View Unassigned Pool',
+          },
+        });
+      }
+
+      return {
+        returnedCount: apps.length,
+      };
+    });
+  }
+
+  /**
    * Bulk assign leads to a specific agent/staff member
    */
   public static async assignLeadsBulk(options: {
@@ -626,7 +786,7 @@ export class DocumenterService {
 
     const targetAgent = await prisma.user.findUnique({
       where: { id: targetAgentId, isActive: true },
-      select: { id: true, email: true, role: true },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true },
     });
 
     if (!targetAgent) {
@@ -636,6 +796,10 @@ export class DocumenterService {
     if (targetAgent.role !== Role.DOC_AGENT) {
       throw new Error('Tax leads can only be assigned to Documenter Calling Agents (DOC_AGENT). Managers and Team Leads are excluded from lead assignment.');
     }
+
+    const targetAgentName = targetAgent.firstName
+      ? `${targetAgent.firstName} ${targetAgent.lastName || ''}`.trim()
+      : targetAgent.email;
 
     const assignedByUser = await prisma.user.findUnique({
       where: { id: assignedByUserId },
@@ -653,23 +817,44 @@ export class DocumenterService {
           id: true, 
           currentStage: true, 
           assignedDocAgentId: true,
+          taxDraftSummary: true,
           customer: {
             select: { firstName: true, lastName: true }
           }
         },
       });
 
-      // 2. Update all selected applications
-      await tx.taxApplication.updateMany({
-        where: { id: { in: applicationIds } },
-        data: {
-          assignedDocAgentId: targetAgentId,
-          currentStage: ApplicationStage.DOC_OUTREACH,
-        },
-      });
+      const nowIso = new Date().toISOString();
 
-      // 3. Write stage history only (prevents double logging in audit trail)
+      // 2. Update all selected applications and record assignment history
       for (const app of apps) {
+        const prevSummary = (app.taxDraftSummary as Record<string, any>) || {};
+        const prevHistory: any[] = Array.isArray(prevSummary.assignmentHistory) ? prevSummary.assignmentHistory : [];
+
+        const newHistoryEntry = {
+          agentId: targetAgent.id,
+          agentName: targetAgentName,
+          agentEmail: targetAgent.email,
+          role: targetAgent.role,
+          action: 'ASSIGNED',
+          assignedAt: nowIso,
+          assignedByUserId,
+          assignedByUserName: assignerName,
+        };
+
+        await tx.taxApplication.update({
+          where: { id: app.id },
+          data: {
+            assignedDocAgentId: targetAgentId,
+            currentStage: ApplicationStage.DOC_OUTREACH,
+            taxDraftSummary: {
+              ...prevSummary,
+              assignmentHistory: [...prevHistory, newHistoryEntry],
+              isReturnedToPool: false,
+            },
+          },
+        });
+
         await tx.stageHistory.create({
           data: {
             applicationId: app.id,
@@ -681,7 +866,7 @@ export class DocumenterService {
         });
       }
 
-      // 4. Create targeted notification ONLY for the assigned calling agent
+      // 3. Create targeted notification ONLY for the assigned calling agent
       await tx.notification.create({
         data: {
           recipientUserId: targetAgent.id,
