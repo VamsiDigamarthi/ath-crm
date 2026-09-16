@@ -12,9 +12,10 @@ export type DocumenterTab =
 export type CallDisposition = 
   | 'CONNECTED_INTERESTED'
   | 'CONNECTED_CALLBACK'
-  | 'CONNECTED_NOT_INTERESTED'
   | 'NO_ANSWER_VOICEMAIL'
-  | 'INVALID_DISCONNECTED';
+  | 'CONNECTED_NOT_INTERESTED'
+  | 'INVALID_DISCONNECTED'
+  | 'CLIENT_NOT_QUALIFIED';
 
 export interface CallLogItem {
   id: string;
@@ -25,8 +26,10 @@ export interface CallLogItem {
   agentEmail?: string;
   agentAvatar?: string;
   disposition: CallDisposition | string;
+  subDisposition?: string | null;
   callSummary?: string | null;
   callbackScheduledAt?: string | null;
+  callbackTimezone?: string | null;
   durationSeconds?: number;
   createdAt: string;
 }

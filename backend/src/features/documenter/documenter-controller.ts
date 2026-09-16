@@ -130,13 +130,15 @@ export const logCallDisposition = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { applicationIds, disposition, callSummary, callbackDate } = req.body;
+    const { applicationIds, disposition, subDisposition, callSummary, callbackDate, callbackTimezone } = req.body;
 
     const result = await DocumenterService.logCallDisposition({
       applicationIds,
       disposition,
+      subDisposition,
       callSummary,
       callbackDate,
+      callbackTimezone,
       agentUserId: req.currentUser?.id || 'SYSTEM',
     });
 
@@ -286,22 +288,73 @@ export const uploadLeadDocument = async (
 ): Promise<void> => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    if (!req.file) {
-      res.status(400).json({ success: false, message: 'Please attach a document file to upload' });
+    
+    // Extract all uploaded files (from req.files or req.file)
+    let files: Express.Multer.File[] = [];
+    if (Array.isArray(req.files)) {
+      files = req.files;
+    } else if (req.files && typeof req.files === 'object') {
+      files = Object.values(req.files).flat() as Express.Multer.File[];
+    } else if (req.file) {
+      files = [req.file];
+    }
+
+    if (!files || files.length === 0) {
+      res.status(400).json({ success: false, message: 'Please attach at least one document file to upload' });
       return;
     }
-    const documentCategory = req.body.documentCategory || 'W2_WAGES';
-    const result = await DocumenterService.uploadLeadDocument(
+
+    // Parse categories for each file
+    let parsedCategories: string[] = [];
+    let fileCategoryMap: Record<string, string> = {};
+
+    if (req.body.fileCategories) {
+      try {
+        if (typeof req.body.fileCategories === 'string') {
+          const parsed = JSON.parse(req.body.fileCategories);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item, index) => {
+              if (typeof item === 'string') {
+                parsedCategories[index] = item;
+              } else if (item && typeof item === 'object') {
+                if (item.fileName && item.category) {
+                  fileCategoryMap[item.fileName] = item.category;
+                }
+                if (item.category) {
+                  parsedCategories[index] = item.category;
+                }
+              }
+            });
+          }
+        } else if (Array.isArray(req.body.fileCategories)) {
+          parsedCategories = req.body.fileCategories;
+        }
+      } catch {
+        // Not JSON formatted, treat as fallback
+      }
+    }
+
+    const defaultCategory = req.body.documentCategory || 'W2_WAGES';
+
+    const fileItems = files.map((file, idx) => {
+      const category =
+        fileCategoryMap[file.originalname] ||
+        parsedCategories[idx] ||
+        defaultCategory;
+      return { file, category };
+    });
+
+    const result = await DocumenterService.uploadLeadDocuments(
       id,
       req.currentUser!.id,
-      req.file,
-      documentCategory
+      fileItems
     );
 
     res.status(201).json({
       success: true,
-      message: 'Document uploaded and verified in vault successfully by agent',
-      data: result,
+      message: `${result.length} document${result.length > 1 ? 's' : ''} uploaded and verified in vault successfully by agent`,
+      data: result.length === 1 ? result[0] : result,
+      documents: result,
     });
   } catch (error) {
     next(error);

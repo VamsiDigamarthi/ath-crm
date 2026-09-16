@@ -6,6 +6,7 @@ import { Button } from '@/shared/components/Button';
 import {
   LayoutDashboard,
   FileSpreadsheet,
+  RotateCcw,
   Users,
   Calculator,
   DollarSign,
@@ -43,6 +44,7 @@ export const AdminLayout: React.FC = () => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Main', path: '/admin/dashboard' },
     { id: 'prospects', label: 'Bulk Lead Import', icon: FileSpreadsheet, section: 'Operations', path: '/admin/prospects' },
+    { id: 'returned-leads', label: 'Returned Leads', icon: RotateCcw, section: 'Operations', path: '/admin/returned-leads' },
     { id: 'customers', label: 'Client Directory', icon: UserCheck, section: 'Management', path: '/admin/customers' },
     { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', path: '/admin/employees' },
     { id: 'email-templates', label: 'Email Templates', icon: Mail, section: 'Management', path: '/admin/email-templates' },
@@ -58,6 +60,7 @@ export const AdminLayout: React.FC = () => {
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/admin/notifications')) return 'notifications';
+    if (currentPath.includes('/admin/returned-leads')) return 'returned-leads';
     if (currentPath.includes('/admin/prospects') || currentPath.includes('/admin/leads')) return 'prospects';
     if (currentPath.includes('/admin/customers')) return 'customers';
     if (currentPath.includes('/admin/employees')) return 'employees';
@@ -76,6 +79,8 @@ export const AdminLayout: React.FC = () => {
     switch (activeId) {
       case 'notifications':
         return 'Department Notifications & Activity Hub';
+      case 'returned-leads':
+        return 'Returned & Unassigned Leads Pool';
       case 'customers':
         return 'Customer & Client Directory';
       case 'employees':

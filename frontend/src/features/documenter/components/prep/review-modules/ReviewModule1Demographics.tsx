@@ -82,6 +82,32 @@ export const ReviewModule1Demographics: React.FC<ReviewModule1DemographicsProps>
               <span className="text-slate-400 font-medium block text-[10px]">VISA Status Changed in 2025?</span>
               <span className="font-bold text-slate-900">{m1.visaStatusChanged2025 || 'NO'}</span>
             </div>
+            {m1.visaStatusChanged2025 === 'YES' && (
+              <>
+                <div>
+                  <span className="text-slate-400 font-medium block text-[10px]">Previous VISA Type</span>
+                  <span className="font-bold text-slate-900 px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 inline-block">
+                    {m1.previousVisaType || 'Not Provided'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-medium block text-[10px]">New VISA Type</span>
+                  <span className="font-bold text-slate-900 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 inline-block">
+                    {m1.newVisaType || 'Not Provided'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-medium block text-[10px]">Effective Date of Change</span>
+                  <span className="font-bold text-slate-900">{m1.visaChangeDate || 'Not Provided'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-medium block text-[10px]">VISA Change Reason</span>
+                  <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block">
+                    {m1.visaStatusChangeReason || 'Not Provided'}
+                  </span>
+                </div>
+              </>
+            )}
             <div>
               <span className="text-slate-400 font-medium block text-[10px]">First Port of Entry in U.S.</span>
               <span className="font-bold text-slate-900">{m1.firstPortOfEntryDate || '08/15/2018'}</span>

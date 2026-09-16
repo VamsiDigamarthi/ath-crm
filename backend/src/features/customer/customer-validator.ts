@@ -50,7 +50,10 @@ export const m1DemographicsSchema = z.object({
   email: z.string().trim().email('Please provide a valid email address').optional().or(z.literal('')).default(''),
   visaType: z.string().max(50).optional().default('H-1B'),
   visaStatusChanged2025: z.enum(['YES', 'NO']).optional().default('NO'),
+  previousVisaType: z.string().max(50).optional().default(''),
+  newVisaType: z.string().max(50).optional().default(''),
   visaChangeDate: z.string().max(30).optional().default(''),
+  visaStatusChangeReason: z.string().max(255).optional().default(''),
   firstPortOfEntryDate: z.string().max(30).optional().default(''),
   stayMoreThan6Months2026: z.enum(['YES', 'NO']).optional().default('YES'),
   monthsStayedInUs2025: z

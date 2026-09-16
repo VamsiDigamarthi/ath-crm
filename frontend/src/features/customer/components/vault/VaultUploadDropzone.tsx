@@ -107,7 +107,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
       <input
         ref={fileInputRef as any}
         type="file"
-        accept=".pdf,.png,.jpg,.jpeg,.docx,.doc,.xlsx,.xls,.csv"
+        accept=".pdf,.png,.jpg,.jpeg,.docx,.doc,.xlsx,.xls,.csv,.txt,.rtf,.zip,.7z,.rar"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -211,7 +211,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
               Click to Browse or Drag & Drop Tax Slip Here
             </p>
             <p className="text-[11px] text-slate-500">
-              Supported Formats: <strong>PDF, PNG, JPG, DOCX, XLSX</strong> (Max 10MB per file)
+              Supported Formats: <strong>PDF, PNG, JPG, Word, Text, Excel, ZIP</strong> (Max 25MB per file)
             </p>
           </div>
         </div>

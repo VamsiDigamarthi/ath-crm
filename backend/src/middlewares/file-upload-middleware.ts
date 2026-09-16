@@ -13,12 +13,20 @@ const ALLOWED_MIME_TYPES = [
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
   'application/vnd.ms-excel', // .xls
   'text/csv',
+  'application/csv',
+  'text/plain', // .txt
+  'application/rtf', // .rtf
+  'text/rtf', // .rtf
+  'application/zip', // .zip
+  'application/x-zip-compressed', // .zip on Windows
+  'application/x-zip',
+  'multipart/x-zip',
 ];
 
-const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.docx', '.doc', '.xlsx', '.xls', '.csv'];
+const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.docx', '.doc', '.xlsx', '.xls', '.csv', '.txt', '.rtf', '.zip', '.7z', '.rar'];
 
-// 10 MB Max File Size Limit
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+// 25 MB Max File Size Limit
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
 // Use memory storage so StorageService can process or stream directly
 const storage = multer.memoryStorage();
@@ -33,7 +41,7 @@ const fileFilter = (
   if (!ALLOWED_EXTENSIONS.includes(ext) || !ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     return cb(
       new BadRequestError(
-        `Invalid file type "${ext}". Allowed formats are PDF, PNG, JPG, JPEG, DOCX, XLSX, and CSV.`
+        `Invalid file type "${ext}". Allowed formats are PDF, PNG, JPG, JPEG, Word (.doc, .docx), Excel (.xlsx, .xls, .csv), Text (.txt, .rtf), and ZIP Archives (.zip).`
       )
     );
   }
@@ -45,7 +53,7 @@ export const uploadTaxDocument = multer({
   storage,
   limits: {
     fileSize: MAX_FILE_SIZE,
-    files: 5, // Maximum 5 files per upload request
+    files: 20, // Maximum 20 files per upload request
   },
   fileFilter,
 });

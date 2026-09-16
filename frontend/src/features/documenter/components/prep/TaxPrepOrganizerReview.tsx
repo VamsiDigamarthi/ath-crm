@@ -20,7 +20,18 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { isModuleCompleted } from '@/features/customer/components/organizer/utils/organizer-validation';
+import { 
+  isModuleCompleted,
+  validateModule1,
+  validateModule2,
+  validateModule3,
+  validateModule4,
+  validateModule5,
+  validateModule6,
+  validateModule7,
+  validateModule8,
+  validateModule9
+} from '@/features/customer/components/organizer/utils/organizer-validation';
 import { OrganizerModuleContent } from '@/features/customer/components/organizer/OrganizerModuleContent';
 import { Button } from '@/shared/components/Button';
 import toast from 'react-hot-toast';
@@ -98,9 +109,55 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     }));
   };
 
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  const clearError = (field: string) => {
+    setValidationErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const validateActiveModule = (): boolean => {
+    let errs: Record<string, string> = {};
+    if (selectedModId === 'm1') {
+      errs = validateModule1(localOrganizer.m1_demographics);
+    } else if (selectedModId === 'm2') {
+      errs = validateModule2(localOrganizer.m2_dependents, localOrganizer.m1_demographics?.maritalStatus);
+    } else if (selectedModId === 'm3') {
+      errs = validateModule3(localOrganizer.m3_presence, activeTaxYear);
+    } else if (selectedModId === 'm4') {
+      errs = validateModule4(localOrganizer.m4_wages, activeTaxYear);
+    } else if (selectedModId === 'm5') {
+      errs = validateModule5(localOrganizer.m5_interest, activeTaxYear);
+    } else if (selectedModId === 'm6') {
+      errs = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
+    } else if (selectedModId === 'm7') {
+      errs = validateModule7(localOrganizer.m7_foreign, activeTaxYear);
+    } else if (selectedModId === 'm8') {
+      errs = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
+    } else if (selectedModId === 'm9') {
+      errs = validateModule9(localOrganizer.m9_directDeposit, activeTaxYear);
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setValidationErrors(errs);
+      const firstError = Object.values(errs)[0];
+      toast.error(`Please complete required field: ${firstError}`);
+      return false;
+    }
+    setValidationErrors({});
+    return true;
+  };
+
   const handleSaveOrganizerOnCall = async () => {
     if (!leadId) {
       toast.error('Application Lead ID is missing');
+      return;
+    }
+    if (!validateActiveModule()) {
       return;
     }
     try {
@@ -119,6 +176,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
       });
 
       setLocalOrganizer(payload);
+      setValidationErrors({});
       toast.success(`Intake module saved & synced to database on call for ${customerName}! ✨`);
       if (onOrganizerSaved) onOrganizerSaved();
     } catch (err: any) {
@@ -297,7 +355,10 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               selectedTaxYear={activeTaxYear}
               organizerData={localOrganizer}
               updateModuleField={updateModuleField}
+              errors={validationErrors}
+              clearError={clearError}
               onNext={() => {
+                if (!validateActiveModule()) return;
                 if (currentModIndex < modulesList.length - 1) {
                   setSelectedModId(modulesList[currentModIndex + 1].id);
                 }

@@ -207,20 +207,93 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             ]}
             error={errors.visaStatusChanged2025}
             value={d.visaStatusChanged2025 || 'NO'}
-            onChange={(val) => handleFieldChange('visaStatusChanged2025', (val || 'NO') as 'YES' | 'NO')}
+            onChange={(val) => {
+              const newVal = (val || 'NO') as 'YES' | 'NO';
+              handleFieldChange('visaStatusChanged2025', newVal);
+              if (newVal === 'NO') {
+                handleFieldChange('previousVisaType', '');
+                handleFieldChange('newVisaType', '');
+                handleFieldChange('visaChangeDate', '');
+                handleFieldChange('visaStatusChangeReason', '');
+                if (clearError) {
+                  clearError('previousVisaType');
+                  clearError('newVisaType');
+                  clearError('visaChangeDate');
+                  clearError('visaStatusChangeReason');
+                }
+              }
+            }}
           />
 
-          <AppDatePicker
-            label="Date of VISA Status Change"
-            placeholder="MM/DD/YYYY"
-            format="MM/dd/yyyy"
-            accentColor="#16A34A"
-            maxDate={new Date()}
-            error={errors.visaChangeDate}
-            disabled={d.visaStatusChanged2025 !== 'YES'}
-            value={parseUsDate(d.visaChangeDate)}
-            onChange={(dateVal) => handleFieldChange('visaChangeDate', formatUsDate(dateVal))}
-          />
+          {d.visaStatusChanged2025 === 'YES' && (
+            <div className="sm:col-span-3 p-4 rounded-xl bg-amber-50/60 border border-amber-200 space-y-3 animate-in fade-in duration-150">
+              <div className="text-xs font-bold text-amber-900 border-b border-amber-200/80 pb-1.5 flex items-center gap-1.5">
+                <span>VISA Status Transition Details</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <AppSelect
+                  label="Previous VISA Type *"
+                  options={[
+                    { label: 'H-1B (Specialty Worker)', value: 'H-1B' },
+                    { label: 'F-1 OPT / CPT (Student)', value: 'F-1 OPT' },
+                    { label: 'L-1A / L-1B (Intracompany)', value: 'L-1' },
+                    { label: 'H-4 / H-4 EAD (Dependent)', value: 'H-4 EAD' },
+                    { label: 'O-1 (Extraordinary Ability)', value: 'O-1' },
+                    { label: 'Green Card (Permanent Resident)', value: 'GREEN_CARD' },
+                    { label: 'B-1 / B-2 / Other Visa', value: 'OTHER' },
+                  ]}
+                  error={errors.previousVisaType}
+                  value={d.previousVisaType || ''}
+                  onChange={(val) => handleFieldChange('previousVisaType', val || '')}
+                  placeholder="Select Previous Visa"
+                />
+
+                <AppSelect
+                  label="New VISA Type *"
+                  options={[
+                    { label: 'H-1B (Specialty Worker)', value: 'H-1B' },
+                    { label: 'F-1 OPT / CPT (Student)', value: 'F-1 OPT' },
+                    { label: 'L-1A / L-1B (Intracompany)', value: 'L-1' },
+                    { label: 'H-4 / H-4 EAD (Dependent)', value: 'H-4 EAD' },
+                    { label: 'O-1 (Extraordinary Ability)', value: 'O-1' },
+                    { label: 'Green Card (Permanent Resident)', value: 'GREEN_CARD' },
+                    { label: 'U.S. Citizen', value: 'US_CITIZEN' },
+                    { label: 'B-1 / B-2 / Other Visa', value: 'OTHER' },
+                  ]}
+                  error={errors.newVisaType}
+                  value={d.newVisaType || ''}
+                  onChange={(val) => handleFieldChange('newVisaType', val || '')}
+                  placeholder="Select New Visa"
+                />
+
+                <AppDatePicker
+                  label="Effective Date *"
+                  placeholder="MM/DD/YYYY"
+                  format="MM/dd/yyyy"
+                  accentColor="#16A34A"
+                  maxDate={new Date()}
+                  error={errors.visaChangeDate}
+                  value={parseUsDate(d.visaChangeDate)}
+                  onChange={(dateVal) => handleFieldChange('visaChangeDate', formatUsDate(dateVal))}
+                />
+              </div>
+
+              <div>
+                <AppInput
+                  label={`Reason for VISA Status Change during ${selectedTaxYear} *`}
+                  placeholder="e.g. F-1 OPT to H-1B Cap Approval, H-1B to Green Card (I-485), Change of Employer / Extension"
+                  error={errors.visaStatusChangeReason}
+                  value={d.visaStatusChangeReason || ''}
+                  onChange={(e) => {
+                    handleFieldChange('visaStatusChangeReason', e.target.value);
+                    if (clearError) clearError('visaStatusChangeReason');
+                  }}
+                  required
+                />
+              </div>
+            </div>
+          )}
 
           <AppDatePicker
             label="First Port of Entry in the U.S. *"

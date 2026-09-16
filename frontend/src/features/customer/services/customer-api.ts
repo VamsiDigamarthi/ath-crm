@@ -157,7 +157,10 @@ export interface OrganizerData {
     relationshipToPrimary?: string;
     visaType: string;
     visaStatusChanged2025?: 'YES' | 'NO';
+    previousVisaType?: string;
+    newVisaType?: string;
     visaChangeDate?: string;
+    visaStatusChangeReason?: string;
     maritalStatus: string;
     dateOfMarriage?: string;
     residentialAddress: string;

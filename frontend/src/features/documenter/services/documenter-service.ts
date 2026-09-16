@@ -93,8 +93,10 @@ export const documenterService = {
   async logCallDisposition(payload: {
     applicationIds: string[];
     disposition: CallDisposition;
+    subDisposition?: string;
     callSummary?: string;
     callbackDate?: string;
+    callbackTimezone?: string;
   }): Promise<any> {
     return apiClient.post('/documenter/dispositions', payload);
   },

@@ -97,7 +97,7 @@ export function AppModal({
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-5">{children}</div>
 
         {/* Footer area */}
         {hasFooterArea && (

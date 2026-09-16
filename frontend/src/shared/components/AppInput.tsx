@@ -15,6 +15,7 @@ export interface AppInputProps {
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
   readOnly?: boolean
+  required?: boolean
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   id?: string
@@ -47,6 +48,7 @@ export function AppInput({
   size = 'md',
   disabled = false,
   readOnly = false,
+  required = false,
   leftIcon,
   rightIcon,
   id,
@@ -85,6 +87,7 @@ export function AppInput({
           placeholder={placeholder}
           disabled={disabled}
           readOnly={readOnly}
+          required={required}
           className={cn(
             'w-full rounded-xl border-[1.5px] bg-white px-3.5 transition-all duration-200 outline-none',
             'placeholder:text-slate-300 placeholder:font-normal placeholder:italic text-slate-900 font-semibold',

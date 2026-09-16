@@ -173,15 +173,27 @@ export const validateModule1 = (data?: OrganizerData['m1_demographics']): Valida
     }
   }
 
-  // 15. Visa Status Change Date (if changed)
+  // 15. Visa Status Change Details (if changed)
   if (data.visaStatusChanged2025 === 'YES') {
+    if (!data.previousVisaType || !data.previousVisaType.trim()) {
+      errors.previousVisaType = 'Previous VISA type is required';
+    }
+
+    if (!data.newVisaType || !data.newVisaType.trim()) {
+      errors.newVisaType = 'New VISA type is required';
+    }
+
     if (!data.visaChangeDate || !data.visaChangeDate.trim()) {
-      errors.visaChangeDate = 'Date of VISA status change is required';
+      errors.visaChangeDate = 'Effective date of VISA status change is required';
     } else {
       const vDate = parseUsDate(data.visaChangeDate);
       if (vDate && vDate > today) {
-        errors.visaChangeDate = 'VISA status change date cannot be a future date!';
+        errors.visaChangeDate = 'VISA status change effective date cannot be a future date!';
       }
+    }
+
+    if (!data.visaStatusChangeReason || !data.visaStatusChangeReason.trim()) {
+      errors.visaStatusChangeReason = 'Reason for VISA status change is required';
     }
   }
 

@@ -9,7 +9,8 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Plus,
-  Mail
+  Mail,
+  UserX
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { CallLogItem } from '../types/documenter.types';
@@ -89,6 +90,13 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
             <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
             Invalid / Disconnected Number
+          </span>
+        );
+      case 'CLIENT_NOT_QUALIFIED':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-800 border border-purple-200">
+            <UserX className="w-3.5 h-3.5 text-purple-600" />
+            Client Not Qualified
           </span>
         );
       default:
@@ -217,6 +225,18 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
             const { fullDate, timeStr } = formatCallDate(log.createdAt);
             const isFirst = index === 0;
 
+            const displaySubDisposition = log.subDisposition || (
+              log.callSummary?.startsWith('[') && log.callSummary.includes(']')
+                ? log.callSummary.slice(1, log.callSummary.indexOf(']'))
+                : null
+            );
+
+            const displayNotes = log.callSummary
+              ? (log.callSummary.startsWith('[') && log.callSummary.includes(']')
+                  ? log.callSummary.replace(/^(\[[^\]]+\]\s*)+/, '').trim()
+                  : log.callSummary)
+              : null;
+
             return (
               <div key={log.id || index} className="relative group">
                 {/* Timeline node icon */}
@@ -233,14 +253,21 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
                 {/* Call Card */}
                 <div className="bg-slate-50 hover:bg-slate-50/80 border border-slate-200 rounded-xl p-4 transition-all shadow-2xs">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    {/* Caller Info & Disposition */}
+                    {/* Caller Info, Main Disposition Badge & Sub-Disposition Chip */}
                     <div className="flex flex-wrap items-center gap-2">
                       {renderDispositionBadge(log.disposition)}
+
+                      {displaySubDisposition && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                          {displaySubDisposition}
+                        </span>
+                      )}
 
                       <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
                         <span className="text-slate-400">•</span>
                         <span className="font-bold text-slate-800">
-                          {log.agentName || 'Kavya Reddy'}
+                          {log.agentName || 'Staff'}
                         </span>
                         <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200/70 text-slate-700">
                           {log.agentRole === 'SALES_AGENT' ? 'Sales Agent' : 'Documenter'}
@@ -256,8 +283,8 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
                     </div>
                   </div>
 
-                  {/* Call Summary Notes (Clamped to 2 lines with read more toggle) */}
-                  {log.callSummary && (
+                  {/* Pure Agent Call Summary Notes (Clean without text manipulation) */}
+                  {displayNotes && (
                     <div className="mt-3 p-3 rounded-lg bg-white border border-slate-200/80 text-xs text-slate-700 leading-relaxed flex items-start gap-2.5">
                       <MessageSquare className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div className="flex-1">
@@ -265,9 +292,9 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
                           Agent Call Summary:
                         </span>
                         <p className={`text-slate-600 font-normal italic leading-relaxed ${expandedCallIds[log.id] ? '' : 'line-clamp-2'}`}>
-                          "{log.callSummary}"
+                          "{displayNotes}"
                         </p>
-                        {log.callSummary.length > 130 && (
+                        {displayNotes.length > 130 && (
                           <button
                             type="button"
                             onClick={() => setExpandedCallIds((prev) => ({ ...prev, [log.id]: !prev[log.id] }))}
@@ -292,7 +319,7 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
                             hour: '2-digit',
                             minute: '2-digit',
                             hour12: true,
-                          })}
+                          })} {log.callbackTimezone ? `(${log.callbackTimezone} Time)` : ''}
                         </span>
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-200 text-purple-800">

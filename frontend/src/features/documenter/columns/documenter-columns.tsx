@@ -220,31 +220,48 @@ export const getDocumenterColumns = ({
               return { label: 'No Answer / Voicemail', color: 'text-amber-700 bg-amber-50 border-amber-200' };
             case 'INVALID_DISCONNECTED':
               return { label: 'Invalid / Wrong No', color: 'text-rose-700 bg-rose-50 border-rose-200' };
+            case 'CLIENT_NOT_QUALIFIED':
+              return { label: 'Client Not Qualified', color: 'text-purple-700 bg-purple-50 border-purple-200' };
             default:
               return { label: disp.replace(/_/g, ' '), color: 'text-slate-700 bg-slate-100 border-slate-200' };
           }
         };
 
         const { label, color } = formatDispLabel(log.disposition);
+        const subDisp = log.subDisposition || (
+          log.callSummary?.startsWith('[') && log.callSummary.includes(']')
+            ? log.callSummary.slice(1, log.callSummary.indexOf(']'))
+            : null
+        );
+        const cleanSummary = log.callSummary
+          ? (log.callSummary.startsWith('[') && log.callSummary.includes(']')
+              ? log.callSummary.replace(/^(\[[^\]]+\]\s*)+/, '').trim()
+              : log.callSummary)
+          : null;
 
         return (
           <div className="text-xs space-y-1">
-            <div>
+            <div className="flex flex-wrap items-center gap-1">
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${color}`}>
                 {label}
               </span>
+              {subDisp && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                  {subDisp}
+                </span>
+              )}
             </div>
             {log.callbackScheduledAt && (
               <div className="text-[10px] text-purple-700 font-bold flex items-center gap-1">
                 <Clock className="w-3 h-3 text-purple-500" />
                 <span>
-                  {new Date(log.callbackScheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({new Date(log.callbackScheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })})
+                  {new Date(log.callbackScheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({new Date(log.callbackScheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}){log.callbackTimezone ? ` • ${log.callbackTimezone}` : ''}
                 </span>
               </div>
             )}
-            {log.callSummary && (
-              <div className="text-[11px] text-slate-500 truncate max-w-[180px] font-medium" title={log.callSummary}>
-                "{log.callSummary}"
+            {cleanSummary && (
+              <div className="text-[11px] text-slate-500 truncate max-w-[180px] font-medium" title={cleanSummary}>
+                "{cleanSummary}"
               </div>
             )}
           </div>

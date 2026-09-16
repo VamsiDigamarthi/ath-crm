@@ -191,16 +191,20 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   const handleSaveCallDisposition = useCallback(async (payload: {
     applicationId: string;
     disposition: CallDisposition;
+    subDisposition?: string;
     callSummary?: string;
     callbackDate?: string;
+    callbackTimezone?: string;
   }) => {
     setIsActionLoading(true);
     try {
       const res = await documenterService.logCallDisposition({
         applicationIds: [payload.applicationId],
         disposition: payload.disposition,
+        subDisposition: payload.subDisposition,
         callSummary: payload.callSummary,
         callbackDate: payload.callbackDate,
+        callbackTimezone: payload.callbackTimezone,
       });
 
       toast.success(res?.message || 'Call outcome logged successfully!');

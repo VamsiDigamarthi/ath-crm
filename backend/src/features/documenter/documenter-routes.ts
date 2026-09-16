@@ -139,7 +139,7 @@ router.post(
   '/leads/:id/documents',
   requireAuth,
   authorize(...DOCUMENTER_ROLES),
-  uploadTaxDocument.single('file'),
+  uploadTaxDocument.any(),
   uploadLeadDocument
 );
 

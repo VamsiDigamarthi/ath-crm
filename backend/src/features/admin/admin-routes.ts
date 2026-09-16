@@ -11,6 +11,9 @@ import {
   getCustomerDetails,
   startNextYearApplication,
   getAdminDashboardStats,
+  getReturnedLeads,
+  assignReturnedLeadsBulk,
+  autoRoundRobinReturnedLeads,
 } from "./admin-controller.js";
 import { validateRequest } from "../../middlewares/validate-request.js";
 import {
@@ -107,6 +110,28 @@ router.get(
   requireAuth,
   authorize(Role.ADMIN),
   getAdminDashboardStats
+);
+
+// Admin Returned Leads Management & Direct Assignment
+router.get(
+  "/returned-leads",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getReturnedLeads
+);
+
+router.post(
+  "/returned-leads/assign-bulk",
+  requireAuth,
+  authorize(Role.ADMIN),
+  assignReturnedLeadsBulk
+);
+
+router.post(
+  "/returned-leads/assign-round-robin",
+  requireAuth,
+  authorize(Role.ADMIN),
+  autoRoundRobinReturnedLeads
 );
 
 export { router as adminRouter };
