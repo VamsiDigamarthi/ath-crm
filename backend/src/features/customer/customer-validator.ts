@@ -51,6 +51,7 @@ export const m1DemographicsSchema = z.object({
   visaType: z.string().max(50).optional().default('H-1B'),
   visaStatusChanged2025: z.enum(['YES', 'NO']).optional().default('NO'),
   visaChangeDate: z.string().max(30).optional().default(''),
+  visaStatusChangeReason: z.string().max(255).optional().default(''),
   firstPortOfEntryDate: z.string().max(30).optional().default(''),
   stayMoreThan6Months2026: z.enum(['YES', 'NO']).optional().default('YES'),
   monthsStayedInUs2025: z

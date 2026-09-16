@@ -358,7 +358,6 @@ export const startNextYearApplication = async (req: Request, res: Response) => {
   const adminUserId = (req as any).currentUser?.id || (req as any).user?.id || 'SYSTEM';
   const payload = req.body;
 
-
   const { CustomerDirectoryService } = await import("./customer-directory-service.js");
   const result = await CustomerDirectoryService.createNextYearApplication(customerId, payload, adminUserId);
 
@@ -369,5 +368,66 @@ export const startNextYearApplication = async (req: Request, res: Response) => {
     201
   );
 };
+
+export const getReturnedLeads = async (req: Request, res: Response) => {
+  const { search, visaType, taxYear, page, limit } = req.query;
+
+  const { ReturnedLeadsService } = await import("./returned-leads-service.js");
+  const result = await ReturnedLeadsService.getReturnedLeads({
+    search: typeof search === 'string' ? search : undefined,
+    visaType: typeof visaType === 'string' ? visaType : undefined,
+    taxYear: taxYear ? Number(taxYear) : undefined,
+    page: page ? Number(page) : undefined,
+    limit: limit ? Number(limit) : undefined,
+  });
+
+  return SuccessHandler.handle(res, "Returned leads fetched successfully", result, 200);
+};
+
+export const assignReturnedLeadsBulk = async (req: Request, res: Response) => {
+  const { applicationIds, targetAgentId } = req.body;
+  const adminUserId = req.currentUser?.id;
+
+  if (!adminUserId) {
+    throw new BadRequestError("Authenticated Admin User ID is required");
+  }
+
+  const { ReturnedLeadsService } = await import("./returned-leads-service.js");
+  const result = await ReturnedLeadsService.assignReturnedLeadsBulk({
+    applicationIds,
+    targetAgentId,
+    adminUserId,
+  });
+
+  return SuccessHandler.handle(
+    res,
+    `Successfully assigned ${result.assignedCount} lead(s) directly to Calling Agent ${result.targetAgent.email}`,
+    result,
+    200
+  );
+};
+
+export const autoRoundRobinReturnedLeads = async (req: Request, res: Response) => {
+  const { applicationIds } = req.body;
+  const adminUserId = req.currentUser?.id;
+
+  if (!adminUserId) {
+    throw new BadRequestError("Authenticated Admin User ID is required");
+  }
+
+  const { ReturnedLeadsService } = await import("./returned-leads-service.js");
+  const result = await ReturnedLeadsService.autoRoundRobinReturnedLeads({
+    applicationIds,
+    adminUserId,
+  });
+
+  return SuccessHandler.handle(
+    res,
+    `Successfully distributed ${result.totalDistributed} lead(s) evenly across ${result.agentsCount} Calling Agent(s) via Round-Robin`,
+    result,
+    200
+  );
+};
+
 
 

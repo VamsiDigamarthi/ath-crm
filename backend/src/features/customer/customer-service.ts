@@ -455,6 +455,7 @@ export class CustomerService {
         visaType: m1Saved.visaType || profile.visaType || 'H-1B',
         visaStatusChanged2025: m1Saved.visaStatusChanged2025 || 'NO',
         visaChangeDate: m1Saved.visaChangeDate || '',
+        visaStatusChangeReason: m1Saved.visaStatusChangeReason || '',
         firstPortOfEntryDate: m1Saved.firstPortOfEntryDate || '08/15/2018',
         stayMoreThan6Months2026: m1Saved.stayMoreThan6Months2026 || 'YES',
         monthsStayedInUs2025: m1Saved.monthsStayedInUs2025 !== undefined ? m1Saved.monthsStayedInUs2025 : 12,

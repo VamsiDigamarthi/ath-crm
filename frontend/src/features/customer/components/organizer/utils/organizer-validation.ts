@@ -173,7 +173,7 @@ export const validateModule1 = (data?: OrganizerData['m1_demographics']): Valida
     }
   }
 
-  // 15. Visa Status Change Date (if changed)
+  // 15. Visa Status Change Date & Reason (if changed)
   if (data.visaStatusChanged2025 === 'YES') {
     if (!data.visaChangeDate || !data.visaChangeDate.trim()) {
       errors.visaChangeDate = 'Date of VISA status change is required';
@@ -182,6 +182,10 @@ export const validateModule1 = (data?: OrganizerData['m1_demographics']): Valida
       if (vDate && vDate > today) {
         errors.visaChangeDate = 'VISA status change date cannot be a future date!';
       }
+    }
+
+    if (!data.visaStatusChangeReason || !data.visaStatusChangeReason.trim()) {
+      errors.visaStatusChangeReason = 'Reason for VISA status change is required';
     }
   }
 

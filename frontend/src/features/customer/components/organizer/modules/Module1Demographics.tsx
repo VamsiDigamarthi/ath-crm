@@ -207,11 +207,22 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             ]}
             error={errors.visaStatusChanged2025}
             value={d.visaStatusChanged2025 || 'NO'}
-            onChange={(val) => handleFieldChange('visaStatusChanged2025', (val || 'NO') as 'YES' | 'NO')}
+            onChange={(val) => {
+              const newVal = (val || 'NO') as 'YES' | 'NO';
+              handleFieldChange('visaStatusChanged2025', newVal);
+              if (newVal === 'NO') {
+                handleFieldChange('visaChangeDate', '');
+                handleFieldChange('visaStatusChangeReason', '');
+                if (clearError) {
+                  clearError('visaChangeDate');
+                  clearError('visaStatusChangeReason');
+                }
+              }
+            }}
           />
 
           <AppDatePicker
-            label="Date of VISA Status Change"
+            label={`Date of VISA Status Change${d.visaStatusChanged2025 === 'YES' ? ' *' : ''}`}
             placeholder="MM/DD/YYYY"
             format="MM/dd/yyyy"
             accentColor="#16A34A"
@@ -221,6 +232,22 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             value={parseUsDate(d.visaChangeDate)}
             onChange={(dateVal) => handleFieldChange('visaChangeDate', formatUsDate(dateVal))}
           />
+
+          {d.visaStatusChanged2025 === 'YES' && (
+            <div className="sm:col-span-3">
+              <AppInput
+                label={`Reason for VISA Status Change during ${selectedTaxYear} *`}
+                placeholder="e.g. F-1 OPT to H-1B Cap Approval, H-1B to Green Card (I-485), H-4 EAD to H-1B, Change of Employer / Extension"
+                error={errors.visaStatusChangeReason}
+                value={d.visaStatusChangeReason || ''}
+                onChange={(e) => {
+                  handleFieldChange('visaStatusChangeReason', e.target.value);
+                  if (clearError) clearError('visaStatusChangeReason');
+                }}
+                required
+              />
+            </div>
+          )}
 
           <AppDatePicker
             label="First Port of Entry in the U.S. *"

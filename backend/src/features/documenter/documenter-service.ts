@@ -115,8 +115,10 @@ export class DocumenterService {
       agentRole: c.agent?.role || 'DOC_AGENT',
       agentEmail: c.agent?.email || '',
       disposition: c.disposition,
+      subDisposition: c.subDisposition || null,
       callSummary: c.callSummary,
       callbackScheduledAt: c.callbackScheduledAt?.toISOString() || null,
+      callbackTimezone: c.callbackTimezone || null,
       createdAt: c.createdAt.toISOString(),
     }));
 
@@ -723,13 +725,13 @@ export class DocumenterService {
           data: {
             applicationId: app.id,
             actorId: returnedByUserId,
-            actorType: AuditActorType.AGENT,
+            actorType: returnedByUser?.role === Role.ADMIN ? AuditActorType.ADMIN : AuditActorType.AGENT,
             actorName: returnerName,
-            actorEmail: returnedByUser?.email || '',
             actorRole: returnedByUser?.role || 'DOC_AGENT',
             action: AuditActionType.STAGE_CHANGE,
             moduleKey: 'OUTREACH',
             details: {
+              actorEmail: returnedByUser?.email || '',
               previousAgentId: prevAgent?.id,
               previousAgentEmail: prevAgent?.email,
               previousAgentName: prevAgentName,
@@ -741,7 +743,7 @@ export class DocumenterService {
         });
       }
 
-      // Notify Managers that leads were returned to pool
+      // Notify Managers and Admins that leads were returned to pool
       const managers = await tx.user.findMany({
         where: {
           role: { in: [Role.ADMIN, Role.DOC_MANAGER] },
@@ -758,8 +760,8 @@ export class DocumenterService {
             message: `${returnerName} released ${apps.length} not-interested lead${apps.length > 1 ? 's' : ''} back to the Unassigned Pool for redistribution.`,
             category: 'DOCUMENTER',
             priority: 'NORMAL',
-            actionUrl: '/documenter/manager/distribution',
-            actionLabel: 'View Unassigned Pool',
+            actionUrl: '/admin/returned-leads',
+            actionLabel: 'View Returned Leads',
           },
         });
       }
@@ -803,11 +805,12 @@ export class DocumenterService {
 
     const assignedByUser = await prisma.user.findUnique({
       where: { id: assignedByUserId },
-      select: { email: true, firstName: true, lastName: true },
+      select: { email: true, firstName: true, lastName: true, role: true },
     });
+    const assignerRoleTitle = assignedByUser?.role === Role.ADMIN ? 'Super Admin' : 'Documenter Manager';
     const assignerName = assignedByUser?.firstName 
       ? `${assignedByUser.firstName} ${assignedByUser.lastName || ''}`.trim() 
-      : assignedByUser?.email || 'Documenter Manager';
+      : assignedByUser?.email || assignerRoleTitle;
 
     return await prisma.$transaction(async (tx) => {
       // 1. Fetch current applications
@@ -840,6 +843,7 @@ export class DocumenterService {
           assignedAt: nowIso,
           assignedByUserId,
           assignedByUserName: assignerName,
+          assignedByUserRole: assignedByUser?.role || 'ADMIN',
         };
 
         await tx.taxApplication.update({
@@ -861,7 +865,27 @@ export class DocumenterService {
             fromStage: app.currentStage,
             toStage: ApplicationStage.DOC_OUTREACH,
             movedByUserId: assignedByUserId,
-            remarks: `Documenter Manager ${assignerName} (${assignedByUser?.email || 'manager'}) directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}). Stage progressed from ${app.currentStage} → DOC_OUTREACH. Lead placed in agent calling queue.`,
+            remarks: `${assignerRoleTitle} ${assignerName} (${assignedByUser?.email || 'admin'}) directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}). Stage progressed from ${app.currentStage} → DOC_OUTREACH. Lead placed in agent calling queue.`,
+          },
+        });
+
+        // Audit log for direct assignment
+        await tx.auditLog.create({
+          data: {
+            applicationId: app.id,
+            actorId: assignedByUserId,
+            actorType: assignedByUser?.role === Role.ADMIN ? AuditActorType.ADMIN : AuditActorType.MANAGER,
+            actorName: assignerName,
+            actorRole: assignedByUser?.role || 'ADMIN',
+            action: AuditActionType.STAGE_CHANGE,
+            moduleKey: 'LEAD_ASSIGNMENT',
+            details: {
+              targetAgentId: targetAgent.id,
+              targetAgentName,
+              targetAgentEmail: targetAgent.email,
+              actionType: 'DIRECT_ASSIGNMENT',
+              timestamp: nowIso,
+            },
           },
         });
       }
@@ -1014,15 +1038,19 @@ export class DocumenterService {
   public static async logCallDisposition(options: {
     applicationIds: string[];
     disposition: string;
+    subDisposition?: string;
     callSummary?: string;
     callbackDate?: string;
+    callbackTimezone?: string;
     agentUserId: string;
   }) {
-    const { applicationIds, disposition, callSummary, callbackDate, agentUserId } = options;
+    const { applicationIds, disposition, subDisposition, callSummary, callbackDate, callbackTimezone, agentUserId } = options;
 
     if (!applicationIds || applicationIds.length === 0) {
       throw new Error('No applications provided');
     }
+
+    const cleanCallSummary = callSummary && callSummary.trim() ? callSummary.trim() : null;
 
     return await prisma.$transaction(async (tx) => {
       const results = [];
@@ -1036,12 +1064,16 @@ export class DocumenterService {
         if (!app) continue;
 
         let targetStage: ApplicationStage = app.currentStage;
-        let auditRemark = `Call outcome logged: ${disposition}`;
+        let auditRemark = subDisposition
+          ? `Call outcome logged: ${disposition} (${subDisposition})`
+          : `Call outcome logged: ${disposition}`;
 
         // 1. Handle disposition transitions (CONNECTED_INTERESTED keeps lead in DOC_OUTREACH until agent manually verifies & moves to prep)
         if (disposition === 'CONNECTED_INTERESTED') {
           targetStage = ApplicationStage.DOC_OUTREACH;
-          auditRemark = `Lead agreed & interested in filing. Provisioned Client Portal access for taxpayer (9-Module Organizer & Document Vault).`;
+          auditRemark = subDisposition
+            ? `Lead agreed & interested in filing (${subDisposition}). Provisioned Client Portal access for taxpayer.`
+            : `Lead agreed & interested in filing. Provisioned Client Portal access for taxpayer (9-Module Organizer & Document Vault).`;
 
           // Lazy Taxpayer User Provisioning
           if (!app.customer.userId && (app.customer.email || app.customer.phone)) {
@@ -1074,16 +1106,28 @@ export class DocumenterService {
           }
         } else if (disposition === 'CONNECTED_CALLBACK') {
           targetStage = ApplicationStage.DOC_OUTREACH;
-          auditRemark = `Callback scheduled for ${callbackDate ? new Date(callbackDate).toLocaleString() : 'later'}.`;
+          const tzStr = callbackTimezone ? ` (${callbackTimezone})` : '';
+          auditRemark = `Callback scheduled for ${callbackDate ? new Date(callbackDate).toLocaleString() : 'later'}${tzStr}${subDisposition ? ` [${subDisposition}]` : ''}.`;
         } else if (disposition === 'CONNECTED_NOT_INTERESTED') {
           targetStage = ApplicationStage.DROPPED_CANCELLED;
-          auditRemark = `Lead not interested. Stage marked as DROPPED_CANCELLED.`;
+          auditRemark = subDisposition
+            ? `Lead not interested (${subDisposition}). Stage marked as DROPPED_CANCELLED.`
+            : `Lead not interested. Stage marked as DROPPED_CANCELLED.`;
+        } else if (disposition === 'CLIENT_NOT_QUALIFIED') {
+          targetStage = ApplicationStage.DROPPED_CANCELLED;
+          auditRemark = subDisposition
+            ? `Client not qualified: ${subDisposition}. Stage marked as DROPPED_CANCELLED.`
+            : `Client not qualified. Stage marked as DROPPED_CANCELLED.`;
         } else if (disposition === 'INVALID_DISCONNECTED') {
           targetStage = ApplicationStage.CORRECTION_NEEDED;
-          auditRemark = `Invalid/disconnected contact number. Stage marked as CORRECTION_NEEDED.`;
+          auditRemark = subDisposition
+            ? `Invalid/unreachable contact (${subDisposition}). Stage marked as CORRECTION_NEEDED.`
+            : `Invalid/disconnected contact number. Stage marked as CORRECTION_NEEDED.`;
         } else if (disposition === 'NO_ANSWER_VOICEMAIL') {
           targetStage = ApplicationStage.DOC_OUTREACH;
-          auditRemark = `No answer / voicemail left. Retained in outreach.`;
+          auditRemark = subDisposition
+            ? `No answer / voicemail (${subDisposition}). Retained in outreach.`
+            : `No answer / voicemail left. Retained in outreach.`;
         }
 
         // 2. Create CallLog entry (Call History already tracks this cleanly)
@@ -1092,8 +1136,10 @@ export class DocumenterService {
             applicationId: app.id,
             agentId: agentUserId,
             disposition,
-            callSummary: callSummary || null,
+            subDisposition: subDisposition || null,
+            callSummary: cleanCallSummary,
             callbackScheduledAt: callbackDate ? new Date(callbackDate) : null,
+            callbackTimezone: callbackTimezone || null,
           },
         });
 
@@ -1431,13 +1477,13 @@ export class DocumenterService {
   }
 
   /**
-   * Upload tax document on behalf of customer by Documenter Agent
+  /**
+   * Upload multiple tax documents on behalf of customer by Documenter Agent
    */
-  public static async uploadLeadDocument(
+  public static async uploadLeadDocuments(
     applicationId: string,
     agentUserId: string,
-    file: Express.Multer.File,
-    documentCategory: string
+    fileItems: Array<{ file: Express.Multer.File; category: string }>
   ) {
     const app = await prisma.taxApplication.findUnique({
       where: { id: applicationId },
@@ -1453,64 +1499,97 @@ export class DocumenterService {
     });
     const actorName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent';
 
-    // Save file via Storage Service
-    const storageResult = await StorageService.saveFile(file, `taxpayer_${app.customerId}_ty${app.taxYear}`);
-
-    // Insert TaxDocument record
-    const newDoc = await prisma.taxDocument.create({
-      data: {
-        applicationId: app.id,
-        uploadedByUserId: agentUserId,
-        fileName: file.originalname,
-        filePath: storageResult.filePath,
-        documentCategory: documentCategory || 'W2_WAGES',
-        verificationStatus: 'VERIFIED', // Agent uploaded directly
-      },
-    });
-
     const categoryLabels: Record<string, string> = {
       W2_WAGES: 'W-2 Wages',
       FORM_1099: '1099 Interest/Div/Misc',
+      '1099_INT': '1099-INT Interest',
+      '1099_DIV': '1099-DIV Dividends',
+      '1099_B': '1099-B Stocks',
       FORM_1099_B: '1099-B Stock Trading',
+      '1098_MORTGAGE': '1098 Mortgage Interest',
+      MORTGAGE_1098: '1098 Mortgage Interest',
+      FBAR_FOREIGN: 'FBAR Indian Accounts',
+      ID_PASSPORT_VISA: 'ID / Passport / Visa',
       PASSPORT_VISA: 'Passport / Visa ID',
-      FORM_1098_MORTGAGE: '1098 Mortgage Interest',
+      PREVIOUS_1040: 'Prior Year 1040',
+      PRIOR_YEAR_RETURN: 'Prior Year 1040',
       FORM_1095_HEALTH: '1095 Health Coverage',
       OTHER_EXPENSES: 'Tax Deduction Receipts',
+      OTHER_DOCUMENT: 'Other Tax Document',
+      FORM_8879: 'IRS Form 8879 E-Sign',
     };
-    const catLabel = categoryLabels[newDoc.documentCategory] || newDoc.documentCategory;
 
-    // Record AuditLog for Agent Document Upload
-    await prisma.auditLog.create({
-      data: {
-        applicationId: app.id,
-        actorId: agentUserId,
-        actorType: 'AGENT',
-        actorName,
-        actorRole: agentUser?.role || 'DOC_AGENT',
-        action: 'DOCUMENT_UPLOAD',
-        moduleKey: 'DOCUMENT_VAULT',
-        details: {
-          documentId: newDoc.id,
+    const uploadedDocs = [];
+
+    for (const item of fileItems) {
+      const { file, category } = item;
+      // Save file via Storage Service
+      const storageResult = await StorageService.saveFile(file, `taxpayer_${app.customerId}_ty${app.taxYear}`);
+
+      // Insert TaxDocument record
+      const newDoc = await prisma.taxDocument.create({
+        data: {
+          applicationId: app.id,
+          uploadedByUserId: agentUserId,
           fileName: file.originalname,
-          documentCategory: newDoc.documentCategory,
-          categoryLabel: catLabel,
-          fileSize: storageResult.fileSize,
-          source: 'AGENT_CALLING_PORTAL',
-          remarks: `Documenter Agent ${actorName} uploaded document "${file.originalname}" (${catLabel}) on behalf of taxpayer.`,
-          timestamp: new Date().toISOString(),
+          filePath: storageResult.filePath,
+          documentCategory: category || 'W2_WAGES',
+          verificationStatus: 'VERIFIED', // Agent uploaded directly
         },
-      },
-    });
+      });
 
-    return {
-      id: newDoc.id,
-      fileName: newDoc.fileName,
-      documentCategory: newDoc.documentCategory,
-      verificationStatus: newDoc.verificationStatus,
-      createdAt: newDoc.createdAt,
-      fileSize: storageResult.fileSize,
-      mimeType: storageResult.mimeType,
-    };
+      const catLabel = categoryLabels[newDoc.documentCategory] || newDoc.documentCategory;
+
+      // Record AuditLog for Agent Document Upload
+      await prisma.auditLog.create({
+        data: {
+          applicationId: app.id,
+          actorId: agentUserId,
+          actorType: 'AGENT',
+          actorName,
+          actorRole: agentUser?.role || 'DOC_AGENT',
+          action: 'DOCUMENT_UPLOAD',
+          moduleKey: 'DOCUMENT_VAULT',
+          details: {
+            documentId: newDoc.id,
+            fileName: file.originalname,
+            documentCategory: newDoc.documentCategory,
+            categoryLabel: catLabel,
+            fileSize: storageResult.fileSize,
+            source: 'AGENT_CALLING_PORTAL',
+            remarks: `Documenter Agent ${actorName} uploaded document "${file.originalname}" (${catLabel}) on behalf of taxpayer.`,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+
+      uploadedDocs.push({
+        id: newDoc.id,
+        fileName: newDoc.fileName,
+        documentCategory: newDoc.documentCategory,
+        verificationStatus: newDoc.verificationStatus,
+        createdAt: newDoc.createdAt,
+        fileSize: storageResult.fileSize,
+        mimeType: storageResult.mimeType,
+      });
+    }
+
+    return uploadedDocs;
+  }
+
+  /**
+   * Upload single tax document on behalf of customer by Documenter Agent
+   */
+  public static async uploadLeadDocument(
+    applicationId: string,
+    agentUserId: string,
+    file: Express.Multer.File,
+    documentCategory: string
+  ) {
+    const results = await this.uploadLeadDocuments(applicationId, agentUserId, [
+      { file, category: documentCategory },
+    ]);
+    return results[0];
   }
 
   /**

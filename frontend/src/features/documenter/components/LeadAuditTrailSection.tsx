@@ -154,13 +154,32 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                                s.remarks?.includes('[Reverted to Documenter]') || 
                                s.remarks?.toLowerCase().includes('workflow revert');
 
+      const isLeadReturnToAdmin = s.remarks?.toLowerCase().includes('admin unassigned pool') ||
+                                  s.remarks?.toLowerCase().includes('released lead back to admin') ||
+                                  s.remarks?.toLowerCase().includes('released back to the unassigned pool') ||
+                                  s.remarks?.toLowerCase().includes('returned to pool') ||
+                                  s.remarks?.toLowerCase().includes('returned to admin');
+
+      const isAdminDirectAssignment = s.remarks?.toLowerCase().includes('super admin') && 
+                                      s.remarks?.toLowerCase().includes('directly assigned this lead to calling agent');
+
       let displayFromStage = s.fromStage;
       let displayToStage = s.toStage;
       let eventType: UnifiedTimelineEvent['type'] = 'STAGE_CHANGE';
       let eventTitle = `Stage Transition: ${s.fromStage} → ${s.toStage}`;
       let eventDescription = s.remarks || `Application stage transitioned from ${s.fromStage} to ${s.toStage}`;
 
-      if (isWorkflowRevert) {
+      if (isLeadReturnToAdmin) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Lead Released & Returned to Admin Unassigned Pool';
+        displayFromStage = s.fromStage || 'DOC_OUTREACH';
+        displayToStage = 'RAW_PROSPECT';
+      } else if (isAdminDirectAssignment) {
+        eventType = 'ASSIGNMENT';
+        eventTitle = 'Super Admin Direct Calling Agent Assignment';
+        displayFromStage = 'RAW_PROSPECT';
+        displayToStage = 'DOC_OUTREACH';
+      } else if (isWorkflowRevert) {
         eventType = 'STAGE_CHANGE';
         eventTitle = 'Return File Reverted to Preceding Department';
         if (s.remarks?.includes('PREPARATION → DOCUMENTER')) {
@@ -236,9 +255,9 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         description: eventDescription,
         fromStage: displayFromStage,
         toStage: displayToStage,
-        actorName: s.movedByName || s.movedByEmail?.split('@')[0] || (isIngestion ? 'Operations Admin' : isPrepAssignment ? 'Prep Manager' : (isSalesAssignment || isAutoRoundRobin) ? 'Sales Manager' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'Sales Closer' : 'Documenter Manager'),
+        actorName: s.movedByName || s.movedByEmail?.split('@')[0] || (isLeadReturnToAdmin ? 'Calling Agent' : isAdminDirectAssignment ? 'Super Admin' : isIngestion ? 'Operations Admin' : isPrepAssignment ? 'Prep Manager' : (isSalesAssignment || isAutoRoundRobin) ? 'Sales Manager' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'Sales Closer' : 'Documenter Manager'),
         actorEmail: s.movedByEmail || undefined,
-        actorRole: s.movedByRole || (isIngestion ? 'ADMIN' : isPrepAssignment ? 'PREP_MANAGER' : (isSalesAssignment || isAutoRoundRobin) ? 'SALES_MANAGER' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'SALES_AGENT' : 'DOC_MANAGER'),
+        actorRole: s.movedByRole || (isLeadReturnToAdmin ? 'DOC_AGENT' : isAdminDirectAssignment ? 'ADMIN' : isIngestion ? 'ADMIN' : isPrepAssignment ? 'PREP_MANAGER' : (isSalesAssignment || isAutoRoundRobin) ? 'SALES_MANAGER' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'SALES_AGENT' : 'DOC_MANAGER'),
         timestamp: s.createdAt,
       });
     });
@@ -474,13 +493,18 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
               const isAssignment = event.type === 'ASSIGNMENT';
               const isCall = event.type === 'CALL';
               const isAudit = event.type === 'AUDIT';
-              const isRevert = event.title.toLowerCase().includes('revert');
+              const isReturnedPool = event.title.toLowerCase().includes('returned to admin') || 
+                                     event.title.toLowerCase().includes('released & returned') ||
+                                     event.title.toLowerCase().includes('returned to pool');
+              const isRevert = event.title.toLowerCase().includes('revert') || isReturnedPool;
 
               return (
                 <div key={event.id || idx} className="relative group">
                   {/* Timeline Dot Marker */}
                   <div className={`absolute -left-6 top-1 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center shadow-xs ${
-                    isRevert
+                    isReturnedPool
+                      ? 'bg-amber-600 text-white'
+                      : isRevert
                       ? 'bg-amber-500 text-white'
                       : isIngestion
                       ? 'bg-blue-600 text-white'
@@ -492,7 +516,8 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                       ? 'bg-cyan-600 text-white'
                       : 'bg-purple-600 text-white'
                   }`}>
-                    {isRevert && <RotateCcw className="w-3 h-3" />}
+                    {isReturnedPool && <RotateCcw className="w-3 h-3" />}
+                    {!isReturnedPool && isRevert && <RotateCcw className="w-3 h-3" />}
                     {!isRevert && isIngestion && <UploadCloud className="w-3 h-3" />}
                     {!isRevert && isAssignment && <UserCheck className="w-3 h-3" />}
                     {!isRevert && isStage && <GitCommit className="w-3 h-3" />}
@@ -502,7 +527,9 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
 
                   {/* Card Container */}
                   <div className={`p-4 rounded-xl border transition-all ${
-                    isRevert 
+                    isReturnedPool
+                      ? 'bg-amber-50/60 border-amber-200 hover:bg-amber-50/90 hover:border-amber-300'
+                      : isRevert 
                       ? 'bg-amber-50/40 border-amber-200/80 hover:bg-amber-50/70 hover:border-amber-300' 
                       : 'bg-slate-50/70 border-slate-200/80 hover:bg-white hover:border-slate-300 hover:shadow-xs'
                   }`}>
@@ -513,7 +540,14 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                           {event.title}
                         </span>
 
-                        {isRevert && (
+                        {isReturnedPool && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                            <RotateCcw className="w-2.5 h-2.5 text-amber-700" />
+                            Returned to Admin Pool
+                          </span>
+                        )}
+
+                        {!isReturnedPool && isRevert && (
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
                             <RotateCcw className="w-2.5 h-2.5 text-amber-700" />
                             Return Dispatched

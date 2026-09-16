@@ -173,5 +173,55 @@ export const adminService = {
   }> => {
     return apiClient.get('/admin/dashboard-stats');
   },
+
+  /**
+   * Fetch all returned prospect / tax applications waiting in the Admin pool
+   */
+  getReturnedLeads: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    visaType?: string;
+    taxYear?: number;
+  }): Promise<{
+    success: boolean;
+    data: {
+      leads: any[];
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalItems: number;
+        itemsPerPage: number;
+      };
+      stats: {
+        totalReturned: number;
+        availableAgents: number;
+        todayReassigned: number;
+      };
+      agents: any[];
+    };
+  }> => {
+    return apiClient.get('/admin/returned-leads', { params });
+  },
+
+  /**
+   * Super Admin directly assigns returned leads to a Documenter Calling Agent
+   */
+  assignReturnedLeadsBulk: async (payload: {
+    applicationIds: string[];
+    targetAgentId: string;
+  }): Promise<any> => {
+    return apiClient.post('/admin/returned-leads/assign-bulk', payload);
+  },
+
+  /**
+   * Super Admin triggers 1-Click Auto Round-Robin distribution across Calling Agents
+   */
+  autoRoundRobinReturnedLeads: async (payload?: {
+    applicationIds?: string[];
+  }): Promise<any> => {
+    return apiClient.post('/admin/returned-leads/assign-round-robin', payload || {});
+  },
 };
+
 

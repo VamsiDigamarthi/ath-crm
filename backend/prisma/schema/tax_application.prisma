@@ -73,8 +73,10 @@ model CallLog {
   agentId             String
   agent               User           @relation(fields: [agentId], references: [id])
   disposition         String
+  subDisposition      String?
   callSummary         String?
   callbackScheduledAt DateTime?
+  callbackTimezone    String?
   createdAt           DateTime       @default(now())
 
   @@index([applicationId])
