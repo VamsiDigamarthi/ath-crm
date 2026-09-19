@@ -9,7 +9,7 @@ interface NotificationState {
   isLoading: boolean;
   
   // Actions
-  fetchNotifications: () => Promise<void>;
+  fetchNotifications: (scope?: string) => Promise<void>;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   deleteNotification: (id: string) => void;
@@ -29,10 +29,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   filterOnlyUnread: false,
   isLoading: false,
 
-  fetchNotifications: async () => {
+  fetchNotifications: async (scope?: string) => {
     set({ isLoading: true });
     try {
-      const res = await apiClient.get('/notifications');
+      const url = scope ? `/notifications?scope=${scope}` : '/notifications';
+      const res = await apiClient.get(url);
       const serverItems = (res as any)?.data || [];
       if (Array.isArray(serverItems)) {
         set({ notifications: serverItems, isLoading: false });

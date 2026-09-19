@@ -1,12 +1,15 @@
 import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Plus, Link2 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSelect } from '@/shared/components/AppSelect';
+import { AppTabs, type TabItem } from '@/shared/components/AppTabs';
 import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
 import { useCustomerDocuments } from '../hooks/useCustomerDocuments';
 import { VaultUploadDropzone } from './vault/VaultUploadDropzone';
 import { VaultDocumentsTable } from './vault/VaultDocumentsTable';
+import { CustomerDriveLinkModal } from './vault/CustomerDriveLinkModal';
+import { CustomerMultiUploadModal } from './vault/CustomerMultiUploadModal';
 
 interface CustomerDocumentVaultProps {
   isConvertedCustomer?: boolean;
@@ -26,8 +29,12 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
   const {
     documents,
     filteredDocs,
+    physicalFiles,
+    driveLinks,
     selectedYear,
     setSelectedYear,
+    activeVaultTab,
+    setActiveVaultTab,
     filterCategory,
     setFilterCategory,
     uploadCategory,
@@ -47,27 +54,67 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
     downloadDocument,
     formatFileSize,
     refetch,
+    // Multi-Upload Modal & Staging
+    isUploadModalOpen,
+    setIsUploadModalOpen,
+    stagedFiles,
+    setStagedFiles,
+    bulkCategory,
+    stageFiles,
+    handleUpdateStagedCategory,
+    handleRemoveStagedFile,
+    handleApplyBulkCategory,
+    handleUploadAllStaged,
+    // Drive Link Modal
+    isDriveLinkModalOpen,
+    setIsDriveLinkModalOpen,
+    isSubmittingLink,
+    handleUploadDriveLink,
   } = useCustomerDocuments(context.selectedTaxYear);
+
+  // Tabs for All Items, Files, and Drive Links
+  const vaultTabs: TabItem[] = [
+    {
+      id: 'ALL',
+      label: 'All Items',
+      count: documents.length,
+    },
+    {
+      id: 'FILES',
+      label: 'Uploaded Documents',
+      count: physicalFiles.length,
+    },
+    {
+      id: 'LINKS',
+      label: 'Drive & Cloud Links',
+      count: driveLinks.length,
+    },
+  ];
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
       {/* 1. Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {isConvertedCustomer ? 'Multi-Year Tax Document Vault' : 'TY 2025 Intake Document Vault'}
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              {documents.length} Files Uploaded
+              {documents.length} Items Total
             </span>
+            {driveLinks.length > 0 && (
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                {driveLinks.length} Drive Link(s)
+              </span>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Upload your official W-2, 1099, and FBAR statements for accurate CPA calculation.
+            Upload your official W-2, 1099, and FBAR statements or attach a Google Drive / OneDrive folder link for CPA review.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <Button
             size="sm"
             variant="outline"
@@ -77,6 +124,26 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
+          </Button>
+
+          {/* Quick Upload Action Buttons */}
+          <Button
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Upload Documents</span>
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsDriveLinkModalOpen(true)}
+            className="border-indigo-200 bg-indigo-50/60 hover:bg-indigo-50 text-indigo-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+          >
+            <Link2 className="w-3.5 h-3.5" />
+            <span>Upload Drive Link</span>
           </Button>
 
           {isConvertedCustomer ? (
@@ -121,9 +188,20 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         handleConfirmUpload={handleConfirmUpload}
         handleCancelStagedFile={handleCancelStagedFile}
         formatFileSize={formatFileSize}
+        onOpenDriveLinkModal={() => setIsDriveLinkModalOpen(true)}
       />
 
-      {/* 3. Uploaded Documents Table Sub-Component */}
+      {/* 3. Tab Switcher: All Items vs Uploaded Files vs Drive Links */}
+      <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+        <AppTabs
+          tabs={vaultTabs}
+          activeTab={activeVaultTab}
+          onChange={(tabId) => setActiveVaultTab(tabId as 'ALL' | 'FILES' | 'LINKS')}
+          size="sm"
+        />
+      </div>
+
+      {/* 4. Uploaded Documents Table Sub-Component */}
       <VaultDocumentsTable
         selectedYear={selectedYear}
         filteredDocs={filteredDocs}
@@ -131,8 +209,38 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         setFilterCategory={setFilterCategory}
         loading={loading}
         onOpenUpload={() => fileInputRef.current?.click()}
+        onOpenDriveLinkModal={() => setIsDriveLinkModalOpen(true)}
         onDownload={downloadDocument}
         onDelete={deleteDocument}
+      />
+
+      {/* 5. Drive Link Upload Modal */}
+      <CustomerDriveLinkModal
+        isOpen={isDriveLinkModalOpen}
+        onClose={() => setIsDriveLinkModalOpen(false)}
+        onSubmit={handleUploadDriveLink}
+        isSubmitting={isSubmittingLink}
+        selectedTaxYear={selectedYear}
+      />
+
+      {/* 6. Multi-Document Staging & Upload Modal */}
+      <CustomerMultiUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => {
+          setIsUploadModalOpen(false);
+          setStagedFiles([]);
+        }}
+        stagedFiles={stagedFiles}
+        bulkCategory={bulkCategory}
+        onBulkCategoryChange={handleApplyBulkCategory}
+        onUpdateCategory={handleUpdateStagedCategory}
+        onRemoveFile={handleRemoveStagedFile}
+        onAddMoreFiles={stageFiles}
+        onUploadAll={handleUploadAllStaged}
+        uploading={uploading}
+        uploadProgress={uploadProgress}
+        formatFileSize={formatFileSize}
+        selectedTaxYear={selectedYear}
       />
     </div>
   );

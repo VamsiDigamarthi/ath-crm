@@ -33,8 +33,14 @@ export class NotificationService {
    * targeted specifically for the authenticated user and their assigned role.
    * Admins can view all department notifications across the platform.
    */
-  public static async getNotificationsForUser(user: { id: string; role: string; email?: string }): Promise<ServerNotificationItem[]> {
-    const whereClause = user.role === 'ADMIN'
+  public static async getNotificationsForUser(
+    user: { id: string; role: string; email?: string },
+    options?: { scope?: string }
+  ): Promise<ServerNotificationItem[]> {
+    // Only if admin explicitly requests scope === 'all', show company-wide activity
+    const isGlobalScope = user.role === 'ADMIN' && options?.scope === 'all';
+
+    const whereClause = isGlobalScope
       ? {}
       : {
           OR: [
@@ -77,11 +83,15 @@ export class NotificationService {
   }
 
   /**
-   * Marks all unread notifications as read in the database.
-   * Admin marks all system notifications, whereas specific roles mark their assigned alerts.
+   * Marks unread notifications as read in the database for the user.
    */
-  public static async markAllAsRead(user: { id: string; role: string }) {
-    const whereClause = user.role === 'ADMIN'
+  public static async markAllAsRead(
+    user: { id: string; role: string },
+    options?: { scope?: string }
+  ) {
+    const isGlobalScope = user.role === 'ADMIN' && options?.scope === 'all';
+
+    const whereClause = isGlobalScope
       ? { isRead: false }
       : {
           isRead: false,

@@ -1,46 +1,8 @@
 import React from 'react';
-import { UploadCloud, FileText, X, RotateCcw, FileUp } from 'lucide-react';
+import { UploadCloud, FileText, X, RotateCcw, FileUp, Link2, Plus } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSelect } from '@/shared/components/AppSelect';
-
-export const UPLOAD_CATEGORIES = [
-  // 1. Primary Wage & Income Statements
-  { label: 'W-2 Wage Statement (Employer)', value: 'W2_WAGES' },
-  { label: '1099-INT Bank Interest Income Statement', value: '1099_INT' },
-  { label: '1099-DIV Dividends & Distributions Statement', value: '1099_DIV' },
-  { label: '1099-B Brokerage & Stocks (Robinhood, ESPP, RSU)', value: '1099_BROKERAGE' },
-  { label: '1099-MISC / 1099-NEC Miscellaneous / Freelance Income', value: '1099_MISC' },
-  { label: '1099-K Payment Card & Third-Party Network (PayPal, Venmo, Stripe)', value: '1099_K_PAYMENTS' },
-  { label: '1099-G State Refund / Unemployment Compensation', value: '1099_G_STATE_REFUND' },
-  { label: '1099-R Retirement, Annuity & 401(k) Distributions', value: '1099_R_RETIREMENT' },
-  { label: '1099-OID Original Issue Discount', value: '1099_OID' },
-  { label: '1099-C Cancellation of Debt', value: '1099_C_DEBT' },
-  { label: '1099-Q Payments from Qualified Education Programs (529 & 530)', value: '1099_Q_EDUCATION' },
-  { label: '1099-SA HSA / Archer MSA Distributions', value: '1099_SA_HSA' },
-  { label: '1099-HC Massachusetts Health Insurance Statement', value: '1099_HC_MA_HEALTH' },
-  { label: '1095-A / 1095-B / 1095-C Health Insurance Marketplace (ACA)', value: '1095_A_MARKETPLACE' },
-  { label: 'W-2G Certain Gambling Winnings', value: 'W2_G_GAMBLING' },
-  { label: 'Schedule K-1 (Partnership / S-Corp / Estate Form 1065/1120-S)', value: 'SCHEDULE_K1' },
-
-  // 2. 1098 Deductions & Educational Forms
-  { label: '1098 Mortgage Interest Statement (Home Loan)', value: 'MORTGAGE_1098' },
-  { label: '1098-T Tuition Fees Statement (University / College)', value: '1098_T_TUITION' },
-  { label: '1098-E Student Loan Interest Statement', value: '1098_E_STUDENT_LOAN' },
-
-  // 3. Employer Stocks, Foreign & Identity
-  { label: 'Form 3921 / 3922 Employer Stock (ESPP / ISO Exercise)', value: 'STOCK_3921_3922' },
-  { label: 'FBAR / Indian Bank Statements (SBI / HDFC / ICICI NRE/NRO)', value: 'FBAR_FOREIGN' },
-  { label: 'Prior Year Tax Returns (TY 2024 / 2023 / 2020)', value: 'PRIOR_YEAR_RETURN' },
-  { label: 'Visa Copy, Passport & I-797 Approval Notice', value: 'VISA_IDENTITY' },
-
-  // 4. Receipts & Expense Worksheets
-  { label: 'Daycare Provider Statements / Receipts (Child Care)', value: 'DAYCARE_RECEIPTS' },
-  { label: 'Clean Energy & Solar Invoices (Form 5695)', value: 'SOLAR_ENERGY_INVOICE' },
-  { label: 'Property Tax Receipts (US County & India Municipal)', value: 'PROPERTY_TAX_RECEIPTS' },
-  { label: 'Charitable Donation 501(c)(3) Receipts', value: 'CHARITY_DONATIONS' },
-  { label: 'Rental Property Expenses & Rent Slips', value: 'RENTAL_EXPENSES' },
-  { label: 'Other Deduction / Expense Receipts', value: 'OTHER' },
-];
+import { UPLOAD_CATEGORIES } from '../../constants/upload-categories';
 
 interface VaultUploadDropzoneProps {
   uploadCategory: string;
@@ -56,6 +18,7 @@ interface VaultUploadDropzoneProps {
   handleConfirmUpload: () => void;
   handleCancelStagedFile: () => void;
   formatFileSize: (bytes: number) => string;
+  onOpenDriveLinkModal?: () => void;
 }
 
 export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
@@ -72,25 +35,54 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
   handleConfirmUpload,
   handleCancelStagedFile,
   formatFileSize,
+  onOpenDriveLinkModal,
 }) => {
   return (
     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
-      {/* Category Selection Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+      {/* Category Selection Bar & Action Buttons */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div className="flex items-center gap-2">
           <UploadCloud className="w-5 h-5 text-[#16A34A]" />
           <h3 className="text-sm font-bold text-slate-900">Upload New Tax Slips &amp; Statements</h3>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-500">Document Type:</span>
-          <div className="w-80">
-            <AppSelect
-              options={UPLOAD_CATEGORIES}
-              value={uploadCategory}
-              onChange={(val) => setUploadCategory(val || 'W2_WAGES')}
-              placeholder="Select Category"
-            />
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-500">Default Type:</span>
+            <div className="w-64">
+              <AppSelect
+                options={UPLOAD_CATEGORIES}
+                value={uploadCategory}
+                onChange={(val) => setUploadCategory(val || 'W2_WAGES')}
+                placeholder="Select Category"
+              />
+            </div>
+          </div>
+
+          {/* Quick Action Buttons */}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Choose Files</span>
+            </Button>
+
+            {onOpenDriveLinkModal && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onOpenDriveLinkModal}
+                className="border-indigo-200 bg-indigo-50/60 hover:bg-indigo-50 text-indigo-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Link2 className="w-3.5 h-3.5" />
+                <span>Upload Drive Link</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -103,16 +95,17 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
         </div>
       </div>
 
-      {/* Hidden File Input */}
+      {/* Hidden File Input with multiple attribute */}
       <input
-        ref={fileInputRef as any}
+        ref={fileInputRef}
         type="file"
+        multiple
         accept=".pdf,.png,.jpg,.jpeg,.docx,.doc,.xlsx,.xls,.csv,.txt,.rtf,.zip,.7z,.rar"
         onChange={handleFileSelect}
         className="hidden"
       />
 
-      {/* Condition A: Staged File Preview Card */}
+      {/* Condition A: Single Staged File Preview Card */}
       {stagedFile ? (
         <div className="p-5 rounded-xl bg-slate-50 border-2 border-emerald-300 shadow-xs space-y-4 animate-in fade-in duration-150">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -187,7 +180,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
           )}
         </div>
       ) : (
-        /* Condition B: Dropzone */
+        /* Condition B: Multi-File Dropzone */
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -208,10 +201,10 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
 
           <div className="space-y-1">
             <p className="text-xs sm:text-sm font-bold text-slate-800">
-              Click to Browse or Drag & Drop Tax Slip Here
+              Click to Browse or Drag & Drop Multiple Tax Slips Here
             </p>
             <p className="text-[11px] text-slate-500">
-              Supported Formats: <strong>PDF, PNG, JPG, Word, Text, Excel, ZIP</strong> (Max 25MB per file)
+              Select multiple files at once: <strong>PDF, PNG, JPG, Word, Excel, ZIP</strong> (Max 15MB per file)
             </p>
           </div>
         </div>

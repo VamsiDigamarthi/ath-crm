@@ -22,6 +22,8 @@ router.get('/dashboard', CustomerController.getDashboard);
  */
 router.get('/documents', CustomerController.getDocuments);
 router.post('/documents/upload', uploadTaxDocument.single('file'), CustomerController.uploadDocument);
+router.post('/documents/upload-multiple', uploadTaxDocument.array('files', 20), CustomerController.uploadMultipleDocuments);
+router.post('/documents/drive-links', CustomerController.uploadDriveLink);
 router.delete('/documents/:id', CustomerController.deleteDocument);
 router.get('/documents/:id/download', CustomerController.downloadDocument);
 

@@ -60,6 +60,52 @@ export class CustomerController {
   }
 
   /**
+   * POST /api/v1/customer/documents/drive-links
+   * Attach an external Google Drive / Cloud Link
+   */
+  static async uploadDriveLink(req: Request, res: Response) {
+    if (!req.currentUser?.id) {
+      throw new NotAuthorizedError();
+    }
+
+    const { linkUrl, title, documentCategory, remarks, taxYear } = req.body;
+    const document = await CustomerService.uploadDriveLink(req.currentUser.id, {
+      linkUrl,
+      title,
+      documentCategory,
+      remarks,
+      taxYear,
+    });
+
+    return SuccessHandler.handle(res, 'Drive link attached successfully', document, 201);
+  }
+
+  /**
+   * POST /api/v1/customer/documents/upload-multiple
+   * Upload multiple tax documents simultaneously
+   */
+  static async uploadMultipleDocuments(req: Request, res: Response) {
+    if (!req.currentUser?.id) {
+      throw new NotAuthorizedError();
+    }
+
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No files were uploaded' });
+    }
+
+    const { categories, taxYear } = req.body;
+    const uploadedDocs = await CustomerService.uploadMultipleDocuments(
+      req.currentUser.id,
+      files,
+      categories,
+      taxYear
+    );
+
+    return SuccessHandler.handle(res, 'Documents uploaded successfully', uploadedDocs, 201);
+  }
+
+  /**
    * DELETE /api/v1/customer/documents/:id
    * Delete an uploaded document
    */
@@ -76,7 +122,7 @@ export class CustomerController {
 
   /**
    * GET /api/v1/customer/documents/:id/download
-   * Stream secure document download
+   * Stream secure document download or redirect to external drive link
    */
   static async downloadDocument(req: Request, res: Response) {
     if (!req.currentUser?.id) {
@@ -86,7 +132,11 @@ export class CustomerController {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const downloadInfo = await CustomerService.getDocumentDownloadInfo(req.currentUser.id, id);
 
-    return res.download(downloadInfo.absolutePath, downloadInfo.fileName);
+    if (downloadInfo.isExternalLink && (downloadInfo as any).url) {
+      return res.redirect((downloadInfo as any).url);
+    }
+
+    return res.download(downloadInfo.absolutePath!, downloadInfo.fileName);
   }
 
   /**

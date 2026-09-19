@@ -369,6 +369,253 @@ export class CustomerService {
   }
 
   /**
+   * Upload an external Drive / Cloud link by taxpayer client
+   */
+  static async uploadDriveLink(
+    userId: string,
+    payload: {
+      linkUrl: string;
+      title?: string;
+      documentCategory?: string;
+      remarks?: string;
+      taxYear?: string | number;
+    }
+  ) {
+    const { linkUrl, title, documentCategory, remarks, taxYear: taxYearQuery } = payload;
+    if (!linkUrl || !linkUrl.trim()) {
+      throw new BadRequestError('Drive link URL is required');
+    }
+
+    const trimmedUrl = linkUrl.trim();
+    if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+      throw new BadRequestError('Invalid URL. Drive link must begin with http:// or https://');
+    }
+
+    const profile = await prisma.customerProfile.findFirst({
+      where: { userId },
+      include: {
+        applications: {
+          orderBy: { taxYear: 'desc' },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Taxpayer customer profile not found');
+    }
+
+    const selectedYear = taxYearQuery ? parseInt(String(taxYearQuery), 10) : 2025;
+    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
+
+    if (!activeApp) {
+      activeApp = await prisma.taxApplication.create({
+        data: {
+          customerId: profile.id,
+          taxYear: selectedYear,
+          currentStage: 'DOC_OUTREACH',
+          filingType: 'INDIVIDUAL',
+        },
+      });
+    }
+
+    const categoryLabels: Record<string, string> = {
+      W2_WAGES: 'W-2 Wages',
+      FORM_1099: '1099 Interest/Div/Misc',
+      '1099_INT': '1099-INT Interest',
+      '1099_DIV': '1099-DIV Dividends',
+      '1099_B': '1099-B Stocks',
+      FORM_1099_B: '1099-B Stock Trading',
+      '1098_MORTGAGE': '1098 Mortgage Interest',
+      MORTGAGE_1098: '1098 Mortgage Interest',
+      FBAR_FOREIGN: 'FBAR Indian Accounts',
+      ID_PASSPORT_VISA: 'ID / Passport / Visa',
+      PASSPORT_VISA: 'Passport / Visa ID',
+      PREVIOUS_1040: 'Prior Year 1040',
+      PRIOR_YEAR_RETURN: 'Prior Year 1040',
+      FORM_1095_HEALTH: '1095 Health Coverage',
+      OTHER_EXPENSES: 'Tax Deduction Receipts',
+      GOOGLE_DRIVE_LINK: 'Google Drive / Cloud Folder',
+      OTHER_DOCUMENT: 'Other Tax Form / Drive Link',
+    };
+
+    const cat = documentCategory || 'GOOGLE_DRIVE_LINK';
+    const catLabel = categoryLabels[cat] || cat;
+    let docTitle = (title && title.trim()) ? title.trim() : '';
+    if (!docTitle) {
+      if (cat === 'GOOGLE_DRIVE_LINK') {
+        if (trimmedUrl.includes('onedrive') || trimmedUrl.includes('1drv.ms') || trimmedUrl.includes('sharepoint')) {
+          docTitle = 'OneDrive Cloud Folder';
+        } else if (trimmedUrl.includes('dropbox')) {
+          docTitle = 'Dropbox Cloud Folder';
+        } else if (trimmedUrl.includes('box.com')) {
+          docTitle = 'Box Cloud Folder';
+        } else {
+          docTitle = 'Google Drive Folder';
+        }
+      } else {
+        docTitle = `${catLabel} Link`;
+      }
+    }
+
+    // Insert TaxDocument record with PENDING verification for staff review
+    const newDoc = await prisma.taxDocument.create({
+      data: {
+        applicationId: activeApp.id,
+        uploadedByUserId: userId,
+        fileName: docTitle,
+        filePath: trimmedUrl,
+        documentCategory: cat,
+        verificationStatus: 'PENDING',
+      },
+    });
+
+    const clientName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client';
+
+    // Record AuditLog for Client Drive Link Upload
+    await prisma.auditLog.create({
+      data: {
+        applicationId: activeApp.id,
+        actorId: userId,
+        actorType: 'CLIENT',
+        actorName: clientName,
+        actorRole: 'TAXPAYER_USER',
+        action: 'DOCUMENT_UPLOAD',
+        moduleKey: 'DOCUMENT_VAULT',
+        details: {
+          documentId: newDoc.id,
+          fileName: newDoc.fileName,
+          documentCategory: newDoc.documentCategory,
+          categoryLabel: catLabel,
+          linkUrl: trimmedUrl,
+          isDriveLink: true,
+          source: 'TAXPAYER_CLIENT_PORTAL',
+          remarks: remarks?.trim() || `Taxpayer ${clientName} attached Drive Link "${newDoc.fileName}" to Document Vault.`,
+          clientEmail: profile.email,
+          clientName,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      id: newDoc.id,
+      fileName: newDoc.fileName,
+      filePath: newDoc.filePath,
+      documentCategory: newDoc.documentCategory,
+      verificationStatus: newDoc.verificationStatus,
+      createdAt: newDoc.createdAt.toISOString(),
+      isDriveLink: true,
+    };
+  }
+
+  /**
+   * Upload multiple tax documents simultaneously
+   */
+  static async uploadMultipleDocuments(
+    userId: string,
+    files: Express.Multer.File[],
+    categoriesMap: Record<string, string> | string,
+    taxYearQuery?: string
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestError('No files were uploaded');
+    }
+
+    const profile = await prisma.customerProfile.findFirst({
+      where: { userId },
+      include: {
+        applications: {
+          orderBy: { taxYear: 'desc' },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Taxpayer customer profile not found');
+    }
+
+    const selectedYear = taxYearQuery ? parseInt(String(taxYearQuery), 10) : 2025;
+    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
+
+    if (!activeApp) {
+      activeApp = await prisma.taxApplication.create({
+        data: {
+          customerId: profile.id,
+          taxYear: selectedYear,
+          currentStage: 'DOC_OUTREACH',
+          filingType: 'INDIVIDUAL',
+        },
+      });
+    }
+
+    let parsedCategories: Record<string, string> = {};
+    if (typeof categoriesMap === 'string') {
+      try {
+        parsedCategories = JSON.parse(categoriesMap);
+      } catch {
+        parsedCategories = {};
+      }
+    } else if (categoriesMap && typeof categoriesMap === 'object') {
+      parsedCategories = categoriesMap;
+    }
+
+    const clientName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client';
+    const uploadedDocs = [];
+
+    for (const file of files) {
+      const storageResult = await StorageService.saveFile(file, `taxpayer_${profile.id}_ty${selectedYear}`);
+      const category = parsedCategories[file.originalname] || 'W2_WAGES';
+
+      const newDoc = await prisma.taxDocument.create({
+        data: {
+          applicationId: activeApp.id,
+          uploadedByUserId: userId,
+          fileName: file.originalname,
+          filePath: storageResult.filePath,
+          documentCategory: category,
+          verificationStatus: 'PENDING',
+        },
+      });
+
+      await prisma.auditLog.create({
+        data: {
+          applicationId: activeApp.id,
+          actorId: userId,
+          actorType: 'CLIENT',
+          actorName: clientName,
+          actorRole: 'TAXPAYER_USER',
+          action: 'DOCUMENT_UPLOAD',
+          moduleKey: 'DOCUMENT_VAULT',
+          details: {
+            documentId: newDoc.id,
+            fileName: file.originalname,
+            documentCategory: category,
+            fileSize: storageResult.fileSize,
+            source: 'TAXPAYER_CLIENT_PORTAL',
+            remarks: `Taxpayer uploaded document "${file.originalname}" (${category}) via batch upload.`,
+            clientEmail: profile.email,
+            clientName,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+
+      uploadedDocs.push({
+        id: newDoc.id,
+        fileName: newDoc.fileName,
+        filePath: newDoc.filePath,
+        documentCategory: newDoc.documentCategory,
+        verificationStatus: newDoc.verificationStatus,
+        createdAt: newDoc.createdAt.toISOString(),
+        fileSize: storageResult.fileSize,
+        mimeType: storageResult.mimeType,
+      });
+    }
+
+    return uploadedDocs;
+  }
+
+  /**
    * Get document file path for download
    */
   static async getDocumentDownloadInfo(userId: string, documentId: string) {
@@ -389,12 +636,22 @@ export class CustomerService {
       throw new BadRequestError('Unauthorized document access');
     }
 
+    // Check if external cloud / drive link
+    if (doc.filePath?.startsWith('http://') || doc.filePath?.startsWith('https://')) {
+      return {
+        isExternalLink: true,
+        url: doc.filePath,
+        fileName: doc.fileName,
+      };
+    }
+
     const absolutePath = StorageService.getAbsoluteFilePath(doc.filePath);
     if (!StorageService.fileExists(doc.filePath)) {
       throw new NotFoundError('Physical file not found on storage server');
     }
 
     return {
+      isExternalLink: false,
       absolutePath,
       fileName: doc.fileName,
     };
