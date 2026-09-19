@@ -105,7 +105,23 @@ function normalizeHeaderKey(header: string): string {
   if (/^(zip|zipcode|postal|postalcode)$/.test(clean) || clean.includes('zip') || clean.includes('postal')) return 'zipCode';
   if (/^(income|estimatedincome|w2income|grossincome)$/.test(clean) || clean.includes('income')) return 'estimatedIncome';
   if (/^(source|campaign|channel|leadsource)$/.test(clean) || clean.includes('source') || clean.includes('campaign')) return 'source';
+  if (/^(priority|leadpriority|urgency)$/.test(clean) || clean.includes('priority')) return 'priority';
   return clean;
+}
+
+/**
+ * Normalizes priority text to standard ApplicationPriority enum
+ */
+export function normalizePriority(val?: string): 'URGENT' | 'IMPORTANT' | 'HIGH' | 'MEDIUM' | 'LOW' | 'NO_PRIORITY' {
+  if (!val) return 'NO_PRIORITY';
+  const clean = val.trim().toUpperCase().replace(/[\s_-]+/g, '_');
+  if (clean.includes('URGENT')) return 'URGENT';
+  if (clean.includes('IMPORTANT')) return 'IMPORTANT';
+  if (clean.includes('HIGH')) return 'HIGH';
+  if (clean.includes('MED')) return 'MEDIUM';
+  if (clean.includes('LOW')) return 'LOW';
+  if (clean.includes('NO') || clean.includes('NONE') || clean === 'NO_PRIORITY') return 'NO_PRIORITY';
+  return 'NO_PRIORITY';
 }
 
 /**
@@ -182,6 +198,7 @@ export function parseCSVToLeads(csvText: string, defaultTaxYear: number = new Da
       zipCode,
       estimatedIncome,
       source,
+      priority: normalizePriority(rawObj.priority),
       validationStatus: valResult.status,
       validationMessage: valResult.message,
     };
@@ -192,11 +209,11 @@ export function parseCSVToLeads(csvText: string, defaultTaxYear: number = new Da
  * Returns a template CSV string ready for download with distinct, clear headers
  */
 export function getSampleCSVTemplate(): string {
-  return `\uFEFF"First Name*","Middle Name","Last Name*","Email Address*","Phone Number*","SSN / ITIN","Date of Birth","Occupation","Visa Type","Marital Status","Tax Year","Filing Type","Street Address","City","State","Zip Code","Estimated Income","Lead Source"
-"Arjun","K.","Varma","arjun.varma@gmail.com","+1 (415) 555-0142","123-45-6789","05/14/1988","Software Engineer","H-1B","Married","2025","INDIVIDUAL","742 Evergreen Terrace","Springfield","IL","62704","$145,000","Client Referral"
-"Priya","","Sharma","priya.sharma@outlook.com","+1 (312) 555-0199","987-65-4321","09/22/1992","Data Scientist","F-1 OPT","Single","2025","INDIVIDUAL","1044 Michigan Ave","Chicago","IL","60611","$115,000","Google Search"
-"Vikram","S.","Singhania","vikram.s@apextech.io","+1 (206) 555-0187","12-3456789","11/04/1982","VP of Engineering","L-1","Married","2025","CORPORATE","400 Pine St Suite 900","Seattle","WA","98101","$320,000","CPA Referral Partner"
-"Sneha","","Patel","sneha.patel@yahoo.com","+1 (512) 555-0134","456-78-1234","03/18/1990","Financial Analyst","GREEN_CARD","Single","2025","INDIVIDUAL","1200 Congress Ave","Austin","TX","78701","$92,000","Tax Campaign 2025"
+  return `\uFEFF"First Name*","Middle Name","Last Name*","Email Address*","Phone Number*","SSN / ITIN","Date of Birth","Occupation","Visa Type","Marital Status","Tax Year","Filing Type","Street Address","City","State","Zip Code","Estimated Income","Lead Source","Priority"
+"Arjun","K.","Varma","arjun.varma@gmail.com","+1 (415) 555-0142","123-45-6789","05/14/1988","Software Engineer","H-1B","Married","2025","INDIVIDUAL","742 Evergreen Terrace","Springfield","IL","62704","$145,000","Client Referral","Urgent"
+"Priya","","Sharma","priya.sharma@outlook.com","+1 (312) 555-0199","987-65-4321","09/22/1992","Data Scientist","F-1 OPT","Single","2025","INDIVIDUAL","1044 Michigan Ave","Chicago","IL","60611","$115,000","Google Search","High"
+"Vikram","S.","Singhania","vikram.s@apextech.io","+1 (206) 555-0187","12-3456789","11/04/1982","VP of Engineering","L-1","Married","2025","CORPORATE","400 Pine St Suite 900","Seattle","WA","98101","$320,000","CPA Referral Partner","Important"
+"Sneha","","Patel","sneha.patel@yahoo.com","+1 (512) 555-0134","456-78-1234","03/18/1990","Financial Analyst","GREEN_CARD","Single","2025","INDIVIDUAL","1200 Congress Ave","Austin","TX","78701","$92,000","Tax Campaign 2025","Medium"
 `;
 }
 

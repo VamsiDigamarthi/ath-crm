@@ -97,6 +97,8 @@ export const ReviewModule4Wages: React.FC<ReviewModule4WagesProps> = ({
                   <th className="p-2.5">Property Location / Address</th>
                   <th className="p-2.5">Type</th>
                   <th className="p-2.5">Ownership</th>
+                  <th className="p-2.5">Purchase Date</th>
+                  <th className="p-2.5">Rented Date</th>
                   <th className="p-2.5">Months Rented</th>
                   <th className="p-2.5">Gross Income</th>
                   <th className="p-2.5">Expenses</th>
@@ -117,6 +119,8 @@ export const ReviewModule4Wages: React.FC<ReviewModule4WagesProps> = ({
                       </td>
                       <td className="p-2.5 font-medium text-slate-700">{val(prop.propertyType)}</td>
                       <td className="p-2.5 text-slate-600">{val(prop.ownership)}</td>
+                      <td className="p-2.5 text-slate-600 whitespace-nowrap">{val(prop.purchaseDate)}</td>
+                      <td className="p-2.5 text-slate-600 whitespace-nowrap">{val(prop.rentedDate)}</td>
                       <td className="p-2.5 font-mono text-slate-700">{prop.monthsRented2025 ?? 12} Mos</td>
                       <td className="p-2.5 font-bold text-emerald-700">{valCurrency(income)}</td>
                       <td className="p-2.5 font-bold text-rose-700">{valCurrency(expenses)}</td>

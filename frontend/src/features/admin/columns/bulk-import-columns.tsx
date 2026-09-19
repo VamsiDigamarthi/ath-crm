@@ -9,6 +9,7 @@ import {
   Globe
 } from 'lucide-react';
 import type { ParsedLeadRow, LeadValidationStatus } from '../types/bulk-import.types';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 
 /**
  * Renders circular status indicator icon for table rows
@@ -154,6 +155,13 @@ export const getBulkImportColumns = (): ColumnDef<ParsedLeadRow>[] => [
     accessorKey: 'visaType',
     sortable: true,
     render: (item) => renderVisaBadge(item.visaType, item.validationStatus),
+  },
+  {
+    header: 'Priority',
+    accessorKey: 'priority',
+    sortable: true,
+    width: '120px',
+    render: (item) => <PriorityBadge priority={item.priority} size="xs" />,
   },
   {
     header: 'SSN / TIN',

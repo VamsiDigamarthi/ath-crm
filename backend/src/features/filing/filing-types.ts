@@ -49,6 +49,7 @@ export interface FilingLeadItem {
   taxYear: number;
   filingType: string;
   currentStage: string;
+  priority?: string;
   customerId: string;
   taxpayerName: string;
   taxpayerEmail: string;

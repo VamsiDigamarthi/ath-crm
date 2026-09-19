@@ -20,6 +20,8 @@ export const TaxPreparerQueueScreen: React.FC = () => {
     setSearchQuery,
     complexityFilter,
     setComplexityFilter,
+    priorityFilter,
+    setPriorityFilter,
     refreshData,
     handleOpenNextReturn,
   } = useTaxPreparerQueue();
@@ -76,6 +78,8 @@ export const TaxPreparerQueueScreen: React.FC = () => {
         onSearchChange={setSearchQuery}
         complexityFilter={complexityFilter}
         onComplexityChange={setComplexityFilter}
+        priorityFilter={priorityFilter}
+        onPriorityChange={setPriorityFilter}
         counts={counts}
       />
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calculator, ShieldCheck, CheckCircle2, RotateCcw } from 'lucide-react';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import type { PreparerQueueTab } from '../../hooks/useTaxPreparerQueue';
 
 interface PreparerFilterBarProps {
@@ -10,6 +11,8 @@ interface PreparerFilterBarProps {
   onSearchChange: (q: string) => void;
   complexityFilter: string;
   onComplexityChange: (comp: string) => void;
+  priorityFilter?: string;
+  onPriorityChange?: (priority: string) => void;
   counts: {
     all: number;
     drafting: number;
@@ -27,6 +30,8 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
   onSearchChange,
   complexityFilter,
   onComplexityChange,
+  priorityFilter = 'ALL',
+  onPriorityChange,
   counts,
 }) => {
   return (
@@ -123,8 +128,14 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
         </div>
       </div>
 
-      {/* Right: Complexity Filter Dropdown */}
-      <div className="flex items-center gap-2">
+      {/* Right: Complexity & Priority Filter Dropdowns */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {onPriorityChange && (
+          <PriorityFilterSelect
+            value={priorityFilter}
+            onChange={onPriorityChange}
+          />
+        )}
         <select
           value={complexityFilter}
           onChange={(e) => onComplexityChange(e.target.value)}

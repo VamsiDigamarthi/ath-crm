@@ -38,6 +38,7 @@ export interface SalesLeadItem extends Record<string, unknown> {
   visaType: string;
   maritalStatus: string;
   stateOfResidence: string;
+  priority?: string;
   complexity: 'STANDARD' | 'INVESTMENTS_1099B' | 'FOREIGN_FBAR' | 'SCHEDULE_C';
   currentStage: SalesLeadStage;
   

@@ -26,6 +26,8 @@ export const BulkLeadImportScreen: React.FC = () => {
     setSearchQuery,
     statusFilter,
     setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
     stats,
     isDragOver,
     isParsing,
@@ -92,6 +94,8 @@ export const BulkLeadImportScreen: React.FC = () => {
             onSearchChange={setSearchQuery}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
+            priorityFilter={priorityFilter}
+            onPriorityFilterChange={setPriorityFilter}
             onDeleteSelected={handleDeleteSelected}
             onProceedIngestion={handleProceedIngestion}
             onConfirmIngestion={handleConfirmIngestion}

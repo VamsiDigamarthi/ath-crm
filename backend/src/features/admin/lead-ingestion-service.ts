@@ -18,6 +18,7 @@ export interface LeadImportItem {
   city?: string | null;
   state?: string | null;
   zipCode?: string | null;
+  priority?: string | null;
 }
 
 export interface BulkImportOptions {
@@ -348,6 +349,7 @@ export class LeadIngestionService {
                 taxYear,
                 filingType,
                 currentStage: ApplicationStage.RAW_PROSPECT,
+                priority: (lead.priority as any) || 'NO_PRIORITY',
               },
             });
 

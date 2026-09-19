@@ -23,6 +23,11 @@ export const ReviewerComplianceChecklist: React.FC<ReviewerComplianceChecklistPr
 }) => {
   const handleDirectOpenNewTab = async (e: React.MouseEvent, doc: WorkspaceDocument) => {
     e.stopPropagation();
+    const url = doc.fileUrl || (doc as any).filePath;
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      window.open(url, '_blank');
+      return;
+    }
     try {
       toast.loading(`Opening ${doc.fileName}...`, { id: 'audit-open' });
       const response: any = await apiClient.get(`/prep-review/documents/${doc.id}/download`, {

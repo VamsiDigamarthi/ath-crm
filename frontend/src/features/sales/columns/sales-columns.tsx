@@ -2,6 +2,7 @@ import type { ColumnDef } from '@/shared/components/AppTable';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../components/common/SalesStageBadge';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PhoneCall, UserCheck } from 'lucide-react';
 import type { SalesLeadItem } from '../types/sales.types';
 
@@ -93,6 +94,13 @@ export function getSalesColumns({
             TY {item.taxYear || 2025}
           </div>
         </div>
+      ),
+    },
+    {
+      header: 'Priority',
+      accessorKey: 'priority',
+      render: (item) => (
+        <PriorityBadge priority={item.priority || 'NO_PRIORITY'} size="sm" />
       ),
     },
     {

@@ -422,6 +422,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                 auditLogs={auditLogs}
                 callLogs={callLogs}
                 taxpayerName={taxpayerName}
+                taxpayerEmail={customer.email || (lead as any).email}
                 currentStage={lead.prepStage || lead.currentStage}
               />
             </div>

@@ -57,6 +57,7 @@ export interface FilingLeadItem extends Record<string, unknown> {
   stateOfResidence: string;
   filingStatus: string;
   visaType?: string;
+  priority?: string;
   balanceDue?: number;
   federalRefund: number;
   federalBalanceDue: number;

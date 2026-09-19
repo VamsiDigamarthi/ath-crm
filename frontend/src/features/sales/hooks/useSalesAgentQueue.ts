@@ -13,6 +13,7 @@ export function useSalesAgentQueue() {
 
   const [activeTab, setActiveTab] = useState<SalesAgentTab>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [allLeads, setAllLeads] = useState<SalesLeadItem[]>([]);
@@ -153,6 +154,9 @@ export function useSalesAgentQueue() {
       if (activeTab === 'PAID' && !isPaidOrClosed(lead)) return false;
       if (activeTab === 'REVERTED' && !isReturnReverted(lead)) return false;
 
+      // Priority Filter
+      if (priorityFilter !== 'ALL' && (lead.priority || 'NO_PRIORITY') !== priorityFilter) return false;
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
@@ -164,7 +168,7 @@ export function useSalesAgentQueue() {
       }
       return true;
     });
-  }, [allLeads, activeTab, searchQuery]);
+  }, [allLeads, activeTab, priorityFilter, searchQuery]);
 
   const handleOpenPitch = (leadId: string) => {
     navigate(`/sales/agent/pitch/${leadId}`);
@@ -189,6 +193,8 @@ export function useSalesAgentQueue() {
     setActiveTab,
     searchQuery,
     setSearchQuery,
+    priorityFilter,
+    setPriorityFilter,
     handleRefresh,
     handleOpenPitch,
     handleOpenNextPriority,

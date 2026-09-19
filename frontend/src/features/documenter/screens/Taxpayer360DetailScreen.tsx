@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   RotateCcw
 } from 'lucide-react';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
@@ -202,9 +203,14 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               <span>/</span>
               <span className="text-slate-900 font-bold">Taxpayer Profile</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
-              {customer.fullName || `${customer.firstName} ${customer.lastName}`}
-            </h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
+                {customer.fullName || `${customer.firstName} ${customer.lastName}`}
+              </h2>
+              {currentLead.priority && (
+                <PriorityBadge priority={currentLead.priority} size="sm" />
+              )}
+            </div>
           </div>
         </div>
 
@@ -507,6 +513,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           callLogs={callLogs}
           leadId={currentLead.id}
           taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+          taxpayerEmail={(customer.email || currentLead.customer?.email) ?? undefined}
           currentStage={currentLead.currentStage}
         />
       </div>

@@ -31,6 +31,8 @@ export const useBulkImport = () => {
     setSearchQuery,
     statusFilter,
     setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
     selectedRows,
     setSelectedRows,
     filterRows,
@@ -145,6 +147,7 @@ export const useBulkImport = () => {
         city: r.city || null,
         state: r.state || null,
         zipCode: r.zipCode || null,
+        priority: r.priority || 'NO_PRIORITY',
       }));
 
       const res = await adminService.bulkImportLeads({
@@ -211,6 +214,8 @@ export const useBulkImport = () => {
     setSearchQuery,            // Callback to update search text
     statusFilter,              // Active tab filter: 'ALL' | 'VALID' | 'INVALID'
     setStatusFilter,           // Callback to update tab filter
+    priorityFilter,            // Active priority filter: 'ALL' | 'URGENT' | etc.
+    setPriorityFilter,         // Callback to update priority filter
     selectedRows,              // Array of rows currently selected by user
     setSelectedRows,           // Callback to update selected rows
 

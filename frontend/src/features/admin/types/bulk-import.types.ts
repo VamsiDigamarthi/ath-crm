@@ -7,6 +7,14 @@ export type LeadValidationStatus =
   | 'INVALID_STATE'
   | 'MISSING_DATA';
 
+export type ApplicationPriority = 
+  | 'URGENT' 
+  | 'IMPORTANT' 
+  | 'HIGH' 
+  | 'MEDIUM' 
+  | 'LOW' 
+  | 'NO_PRIORITY';
+
 export interface ParsedLeadRow extends Record<string, unknown> {
   id: string;
   rowNumber: number;
@@ -29,6 +37,7 @@ export interface ParsedLeadRow extends Record<string, unknown> {
   zipCode: string;
   estimatedIncome?: string;
   source: string;
+  priority?: ApplicationPriority;
   validationStatus: LeadValidationStatus;
   validationMessage?: string;
 }

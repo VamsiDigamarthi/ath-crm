@@ -26,6 +26,8 @@ import { AppModal } from '@/shared/components/AppModal';
 import { StartNewTaxYearModal } from '../components/StartNewTaxYearModal';
 import { useCustomerDirectory } from '../hooks/useCustomerDirectory';
 import type { AdminCustomerItem } from '../types/customer-directory.types';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 
 export const AdminCustomerDirectoryScreen: React.FC = () => {
   const {
@@ -35,12 +37,14 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
     searchQuery,
     selectedTaxYear,
     selectedFilingStatus,
+    selectedPriority,
     selectedCustomer,
     taxYearOptions,
     setSelectedCustomer,
     handleSearchChange,
     handleYearChange,
     handleStatusChange,
+    handlePriorityChange,
     handlePageChange,
     fetchCustomers,
   } = useCustomerDirectory();
@@ -147,15 +151,25 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
             />
           </div>
 
-          {/* Reusable AppSelect Dropdown for Tax Year Filter */}
-          <div className="w-full md:w-56">
-            <AppSelect
-              options={taxYearOptions}
-              value={selectedTaxYear}
-              onChange={handleYearChange}
-              placeholder="Select Tax Year"
-              className="w-full text-xs font-medium"
-            />
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            {/* Priority Filter */}
+            <div className="w-full sm:w-48">
+              <PriorityFilterSelect
+                value={selectedPriority}
+                onChange={handlePriorityChange}
+              />
+            </div>
+
+            {/* Reusable AppSelect Dropdown for Tax Year Filter */}
+            <div className="w-full sm:w-48">
+              <AppSelect
+                options={taxYearOptions}
+                value={selectedTaxYear}
+                onChange={handleYearChange}
+                placeholder="Select Tax Year"
+                className="w-full text-xs font-medium"
+              />
+            </div>
           </div>
         </div>
 
@@ -320,11 +334,14 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                       <td className="py-4 px-4">
                         {app ? (
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-[11px] font-bold text-slate-900">TY{app.taxYear}</span>
                               <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
                                 {app.currentStage.replace(/_/g, ' ')}
                               </span>
+                              {app.priority && (
+                                <PriorityBadge priority={app.priority} size="sm" />
+                              )}
                             </div>
                             {hasDue ? (
                               <div className="text-[11px] font-bold text-rose-600">

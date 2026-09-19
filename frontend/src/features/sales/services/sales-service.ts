@@ -20,6 +20,7 @@ export const salesService = {
     search?: string;
     page?: number;
     limit?: number;
+    priority?: string;
     salesAgentId?: string;
   }): Promise<SalesPipelineResponse> {
     try {

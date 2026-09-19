@@ -523,6 +523,15 @@ export const validateModule4 = (
         errors[`rental_${idx}_purchaseDate`] = 'Property purchase date cannot be a future date!';
       }
     }
+
+    if (prop.rentedDate) {
+      const rDate = parseUsDate(prop.rentedDate);
+      if (!rDate || isNaN(rDate.getTime())) {
+        errors[`rental_${idx}_rentedDate`] = 'Enter valid rented date (MM/DD/YYYY)';
+      } else if (rDate > new Date()) {
+        errors[`rental_${idx}_rentedDate`] = 'Property rented date cannot be a future date!';
+      }
+    }
   });
 
   return errors;

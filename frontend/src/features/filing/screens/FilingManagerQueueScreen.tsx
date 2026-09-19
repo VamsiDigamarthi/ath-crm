@@ -20,6 +20,7 @@ import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics
 import { FilingFloatingActionBar } from '../components/manager/FilingFloatingActionBar';
 import { FilingLeadAssignmentModal } from '../components/manager/FilingLeadAssignmentModal';
 import { getFilingColumns } from '../columns/filing-columns';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { useFilingQueue } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
 
@@ -33,6 +34,8 @@ export const FilingManagerQueueScreen: React.FC = () => {
     setSearchQuery,
     stageFilter,
     setStageFilter,
+    priorityFilter,
+    setPriorityFilter,
     selectedRows,
     setSelectedRows,
     isAssignModalOpen,
@@ -259,6 +262,11 @@ export const FilingManagerQueueScreen: React.FC = () => {
                 <option value="US_CITIZEN">US Citizen</option>
               </select>
             </div>
+
+            <PriorityFilterSelect
+              value={priorityFilter}
+              onChange={setPriorityFilter}
+            />
 
             {selectedRows.length > 0 && (
               <Button

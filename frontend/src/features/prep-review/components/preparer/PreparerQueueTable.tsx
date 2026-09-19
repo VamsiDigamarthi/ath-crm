@@ -3,6 +3,7 @@ import { Calculator, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppEmptyState } from '@/shared/components/AppEmptyState';
 import { PrepStageBadge } from '../common/PrepStageBadge';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import type { PrepReviewLead } from '../../types/prep-review.types';
 
 interface PreparerQueueTableProps {
@@ -79,11 +80,14 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
                         {taxpayerInitial}
                       </div>
                       <div>
-                        <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+                        <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5 flex-wrap">
                           <span>{taxpayerName}</span>
                           <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
                             TY {item.taxYear || 2025}
                           </span>
+                          {item.priority && (
+                            <PriorityBadge priority={item.priority} size="sm" />
+                          )}
                         </div>
                         <div className="text-[11px] text-slate-500 font-medium mt-0.5">
                           {taxpayerEmail} {location !== '-' ? `• ${location}` : ''}

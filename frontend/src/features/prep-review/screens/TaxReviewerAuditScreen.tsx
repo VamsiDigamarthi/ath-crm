@@ -122,6 +122,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
       <LeadAuditTrailSection
         leadId={applicationId}
         taxpayerName={taxpayerName}
+        taxpayerEmail={taxpayer?.email}
         currentStage={currentStage}
         stageHistories={stageHistories}
         callLogs={callLogs}

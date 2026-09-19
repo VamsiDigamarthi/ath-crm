@@ -12,8 +12,10 @@ import {
   downloadDocument,
   verifyDocument,
   uploadLeadDocument,
+  uploadDriveLink,
   deleteLeadDocument,
   saveLeadOrganizer,
+  updateLeadPriority,
 } from './documenter-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
@@ -143,6 +145,14 @@ router.post(
   uploadLeadDocument
 );
 
+// 10b. Agent Attach Drive Link on Behalf of Client
+router.post(
+  '/leads/:id/drive-links',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  uploadDriveLink
+);
+
 // 11. Agent Delete Document from Vault
 router.delete(
   '/documents/:id',
@@ -157,6 +167,14 @@ router.put(
   requireAuth,
   authorize(...DOCUMENTER_ROLES),
   saveLeadOrganizer
+);
+
+// 13. Update Tax Application Priority
+router.patch(
+  '/leads/:id/priority',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  updateLeadPriority
 );
 
 export { router as documenterRouter };

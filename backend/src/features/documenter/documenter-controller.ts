@@ -7,7 +7,7 @@ export const getDocumenterLeads = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { page, limit, tab, search, agentId, visaType, taxYear, timeRange } = req.query;
+    const { page, limit, tab, search, agentId, visaType, taxYear, priority, timeRange } = req.query;
 
     const query: DocumenterLeadQuery = {
       page: page ? Number(page) : undefined,
@@ -17,6 +17,7 @@ export const getDocumenterLeads = async (
       agentId: (agentId as string) || undefined,
       visaType: (visaType as string) || undefined,
       taxYear: taxYear ? Number(taxYear) : undefined,
+      priority: (priority as string) || undefined,
       timeRange: (timeRange as any) || 'TODAY',
       currentUserId: req.currentUser?.id,
       currentUserRole: req.currentUser?.role,
@@ -235,7 +236,35 @@ export const downloadDocument = async (
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const downloadInfo = await DocumenterService.getDocumentDownloadInfo(id);
 
-    res.download(downloadInfo.absolutePath, downloadInfo.fileName);
+    if (downloadInfo.isExternalLink && downloadInfo.url) {
+      res.redirect(downloadInfo.url);
+      return;
+    }
+
+    res.download(downloadInfo.absolutePath!, downloadInfo.fileName);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadDriveLink = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const document = await DocumenterService.uploadDriveLink(
+      id,
+      req.currentUser!.id,
+      req.body
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Drive link attached to document vault successfully',
+      data: document,
+    });
   } catch (error) {
     next(error);
   }
@@ -403,4 +432,29 @@ export const saveLeadOrganizer = async (
     next(error);
   }
 };
+
+export const updateLeadPriority = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const { priority } = req.body;
+    const result = await DocumenterService.updateLeadPriority(
+      id,
+      priority,
+      req.currentUser!.id
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Lead priority updated to ${priority} successfully`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

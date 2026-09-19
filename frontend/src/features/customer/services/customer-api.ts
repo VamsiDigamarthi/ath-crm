@@ -260,6 +260,7 @@ export interface OrganizerData {
       personalMonths2025: number;
       ownership: 'TAXPAYER' | 'SPOUSE' | 'JOINT' | string;
       purchaseDate: string;
+      rentedDate?: string;
       costOfProperty: number;
       totalRentalIncome: number;
       rentalExpenses: number;

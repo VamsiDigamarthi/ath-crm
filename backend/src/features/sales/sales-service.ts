@@ -11,6 +11,7 @@ export class SalesService {
     page?: number;
     limit?: number;
     salesAgentId?: string;
+    priority?: string;
   }) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
@@ -46,6 +47,10 @@ export class SalesService {
         },
       ],
     };
+
+    if (query.priority && query.priority !== 'ALL') {
+      baseWhere.priority = query.priority as any;
+    }
 
     if (query.salesAgentId) {
       baseWhere.assignedSalesAgentId = query.salesAgentId;
@@ -210,6 +215,7 @@ export class SalesService {
         stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
         complexity: 'STANDARD',
         currentStage,
+        priority: app.priority,
         grossIncome,
         federalRefund: validFedRefund,
         stateRefund: validStateRefund,
@@ -871,19 +877,21 @@ export class SalesService {
       esignStatus,
       paidAt: draft.paidAt || (latestQuote?.status === 'PAID' ? latestQuote.createdAt.toISOString() : null),
       esignCompletedAt: draft.esignCompletedAt || null,
-      stageHistories: (app.stageHistories || []).map((s: any) => ({
-        id: s.id,
-        fromStage: s.fromStage,
-        toStage: s.toStage,
-        movedByUserId: s.movedByUserId,
-        movedByName: s.movedByUser
-          ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email
-          : 'System User',
-        movedByEmail: s.movedByUser?.email,
-        movedByRole: s.movedByUser?.role,
-        remarks: s.remarks,
-        createdAt: s.createdAt?.toISOString ? s.createdAt.toISOString() : s.createdAt,
-      })),
+      stageHistories: (app.stageHistories || []).map((s: any) => {
+        const isClient = s.movedByUser?.role === 'TAXPAYER_USER' || s.remarks?.toLowerCase().startsWith('taxpayer');
+        const clientName = `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || app.customer?.email || 'Taxpayer Client';
+        return {
+          id: s.id,
+          fromStage: s.fromStage,
+          toStage: s.toStage,
+          movedByUserId: s.movedByUserId,
+          movedByName: isClient ? clientName : (s.movedByUser ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email : 'System User'),
+          movedByEmail: isClient ? (app.customer?.email || s.movedByUser?.email) : s.movedByUser?.email,
+          movedByRole: isClient ? 'CLIENT' : s.movedByUser?.role,
+          remarks: s.remarks,
+          createdAt: s.createdAt?.toISOString ? s.createdAt.toISOString() : s.createdAt,
+        };
+      }),
       callLogs: (app.callLogs || []).map((c: any) => ({
         id: c.id,
         disposition: c.disposition,
@@ -896,23 +904,27 @@ export class SalesService {
         agentRole: c.agent?.role,
         createdAt: c.createdAt?.toISOString ? c.createdAt.toISOString() : c.createdAt,
       })),
-      auditLogs: (auditLogs || []).map((a: any) => ({
-        id: a.id,
-        action: a.action,
-        moduleKey: a.moduleKey,
-        actorType: a.actorType,
-        actorName:
-          a.actorName ||
-          (a.actorUser
-            ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email
-            : a.actorType === 'CLIENT'
-            ? 'Taxpayer Client'
-            : 'System User'),
-        actorEmail: a.actorUser?.email,
-        actorRole: a.actorRole || a.actorUser?.role,
-        details: a.details,
-        createdAt: a.createdAt?.toISOString ? a.createdAt.toISOString() : a.createdAt,
-      })),
+      auditLogs: (auditLogs || []).map((a: any) => {
+        const isClient = a.actorType === 'CLIENT' || 
+                         a.actorRole === 'TAXPAYER_USER' || 
+                         a.actorRole === 'CLIENT' || 
+                         (a.details as any)?.source === 'TAXPAYER_CLIENT_PORTAL' ||
+                         Boolean((a.details as any)?.clientEmail);
+        const clientName = (a.details as any)?.clientName || `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || app.customer?.email || 'Taxpayer Client';
+        const clientEmail = (a.details as any)?.clientEmail || app.customer?.email || a.actorUser?.email;
+
+        return {
+          id: a.id,
+          action: a.action,
+          moduleKey: a.moduleKey,
+          actorType: a.actorType,
+          actorName: isClient ? clientName : (a.actorName || (a.actorUser ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email : 'System User')),
+          actorEmail: isClient ? clientEmail : a.actorUser?.email,
+          actorRole: isClient ? 'CLIENT' : (a.actorRole || a.actorUser?.role),
+          details: a.details,
+          createdAt: a.createdAt?.toISOString ? a.createdAt.toISOString() : a.createdAt,
+        };
+      }),
       createdAt: app.createdAt.toISOString(),
       updatedAt: app.updatedAt.toISOString(),
     };

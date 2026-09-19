@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/shared/components/Button';
 import { AppModal } from '@/shared/components/AppModal';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { 
   FileText, 
   CheckCircle2, 
@@ -15,7 +16,11 @@ import {
   Plus, 
   ShieldCheck, 
   FileCode,
-  Archive
+  Archive,
+  Link2,
+  ExternalLink,
+  Copy,
+  Globe
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '@/lib/api-client';
@@ -31,6 +36,7 @@ export interface DocumentItem {
 
 interface TaxPrepDocumentVaultProps {
   leadId?: string;
+  applicationId?: string;
   customerName: string;
   documents?: DocumentItem[];
   onDocumentVerified?: (docId: string) => void;
@@ -42,6 +48,31 @@ interface StagedFileItem {
   file: File;
   category: string;
 }
+
+export const isDriveLinkDoc = (doc: DocumentItem): boolean => {
+  return Boolean(
+    doc.filePath?.startsWith('http://') ||
+    doc.filePath?.startsWith('https://') ||
+    doc.documentCategory === 'GOOGLE_DRIVE_LINK' ||
+    doc.documentCategory === 'DRIVE_LINK' ||
+    doc.fileName?.toLowerCase().includes('drive.google.com') ||
+    doc.fileName?.toLowerCase().includes('docs.google.com')
+  );
+};
+
+const DRIVE_LINK_CATEGORIES = [
+  { label: 'Google Drive / Cloud Folder (All Documents)', value: 'GOOGLE_DRIVE_LINK' },
+  { label: 'W-2 Wage Statement (Employer)', value: 'W2_WAGES' },
+  { label: '1099-INT Bank Interest Statement', value: '1099_INT' },
+  { label: '1099-DIV Dividend & Distribution', value: '1099_DIV' },
+  { label: '1099-B Brokerage & Stock Sales', value: '1099_B' },
+  { label: '1098 Mortgage Interest Statement', value: '1098_MORTGAGE' },
+  { label: 'FBAR / Foreign Indian Bank Summary', value: 'FBAR_FOREIGN' },
+  { label: 'Taxpayer ID / Passport / Visa Copy', value: 'ID_PASSPORT_VISA' },
+  { label: 'Prior Year 1040 Tax Return', value: 'PREVIOUS_1040' },
+  { label: 'Form 8879 E-Sign Signature Form', value: 'FORM_8879' },
+  { label: 'Other Tax Form / Drive Link', value: 'OTHER_DOCUMENT' },
+];
 
 const DOCUMENT_CATEGORIES = [
   { label: 'W-2 Wage Statement (Employer)', value: 'W2_WAGES' },
@@ -86,12 +117,23 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
   const [docList, setDocList] = useState<DocumentItem[]>(initialDocuments);
   const [previewDoc, setPreviewDoc] = useState<DocumentItem | null>(null);
   
+  // Vault Tab Switcher State: 'ALL' | 'FILES' | 'LINKS'
+  const [activeVaultTab, setActiveVaultTab] = useState<'ALL' | 'FILES' | 'LINKS'>('ALL');
+
   // Agent Multi-Upload Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [stagedFiles, setStagedFiles] = useState<StagedFileItem[]>([]);
   const [bulkCategory, setBulkCategory] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  // Agent Drive Link Modal State
+  const [isDriveLinkModalOpen, setIsDriveLinkModalOpen] = useState(false);
+  const [driveLinkUrl, setDriveLinkUrl] = useState('');
+  const [driveLinkTitle, setDriveLinkTitle] = useState('');
+  const [driveLinkCategory, setDriveLinkCategory] = useState('GOOGLE_DRIVE_LINK');
+  const [driveLinkRemarks, setDriveLinkRemarks] = useState('');
+  const [isSubmittingLink, setIsSubmittingLink] = useState(false);
 
   // AppConfirmDialog States
   const [docToVerify, setDocToVerify] = useState<DocumentItem | null>(null);
@@ -104,6 +146,16 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
   useEffect(() => {
     setDocList(initialDocuments || []);
   }, [initialDocuments]);
+
+  // Separate physical files from Drive / Cloud links
+  const fileDocs = useMemo(() => docList.filter((d) => !isDriveLinkDoc(d)), [docList]);
+  const linkDocs = useMemo(() => docList.filter((d) => isDriveLinkDoc(d)), [docList]);
+
+  const filteredDocs = useMemo(() => {
+    if (activeVaultTab === 'FILES') return fileDocs;
+    if (activeVaultTab === 'LINKS') return linkDocs;
+    return docList;
+  }, [activeVaultTab, fileDocs, linkDocs, docList]);
 
   const handleConfirmVerify = async () => {
     if (!docToVerify) return;
@@ -123,7 +175,11 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
     }
   };
 
-  const handleDownload = async (docId: string, fileName: string) => {
+  const handleDownload = async (docId: string, fileName: string, filePath?: string) => {
+    if (filePath && (filePath.startsWith('http://') || filePath.startsWith('https://'))) {
+      window.open(filePath, '_blank');
+      return;
+    }
     try {
       toast.loading(`Downloading ${fileName}...`, { id: 'doc-dl' });
       const response: any = await apiClient.get(`/documenter/documents/${docId}/download`, {
@@ -156,6 +212,68 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
       toast.error(err?.response?.data?.message || 'Failed to delete document');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDriveLinkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!driveLinkUrl || !driveLinkUrl.trim()) {
+      toast.error('Please enter a valid Google Drive or Cloud document URL');
+      return;
+    }
+    const trimmedUrl = driveLinkUrl.trim();
+    if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+      toast.error('URL must begin with http:// or https://');
+      return;
+    }
+    if (!leadId) {
+      toast.error('Application ID is missing');
+      return;
+    }
+
+    try {
+      setIsSubmittingLink(true);
+      const rawTitle = driveLinkTitle.trim();
+      let title = rawTitle;
+      if (!title) {
+        const selectedCatObj = DRIVE_LINK_CATEGORIES.find((c) => c.value === driveLinkCategory);
+        if (driveLinkCategory === 'GOOGLE_DRIVE_LINK') {
+          if (trimmedUrl.includes('onedrive') || trimmedUrl.includes('1drv.ms') || trimmedUrl.includes('sharepoint')) {
+            title = 'OneDrive Cloud Folder';
+          } else if (trimmedUrl.includes('dropbox')) {
+            title = 'Dropbox Cloud Folder';
+          } else if (trimmedUrl.includes('box.com')) {
+            title = 'Box Cloud Folder';
+          } else {
+            title = 'Google Drive Folder';
+          }
+        } else {
+          title = selectedCatObj ? `${selectedCatObj.label} Link` : 'Cloud Document Link';
+        }
+      }
+
+      const res: any = await apiClient.post(`/documenter/leads/${leadId}/drive-links`, {
+        linkUrl: trimmedUrl,
+        title,
+        documentCategory: driveLinkCategory,
+        remarks: driveLinkRemarks.trim() || undefined,
+      });
+
+      const newDoc = res?.data || res;
+      if (newDoc?.id) {
+        setDocList((prev) => [newDoc, ...prev]);
+        toast.success(`Google Drive link "${title}" added to vault! 🔗✨`);
+        setIsDriveLinkModalOpen(false);
+        setDriveLinkUrl('');
+        setDriveLinkTitle('');
+        setDriveLinkCategory('GOOGLE_DRIVE_LINK');
+        setDriveLinkRemarks('');
+        if (onDocumentUploaded) onDocumentUploaded();
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to attach Drive link');
+    } finally {
+      setIsSubmittingLink(false);
     }
   };
 
@@ -256,6 +374,9 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
 
   const getCategoryBadge = (cat: string) => {
     const upper = (cat || '').toUpperCase();
+    if (upper.includes('DRIVE') || upper.includes('GOOGLE') || upper.includes('CLOUD')) {
+      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Google Drive</span>;
+    }
     if (upper.includes('W2') || upper.includes('W-2')) {
       return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">W-2 Wages</span>;
     }
@@ -328,7 +449,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
 
   return (
     <div className="space-y-4 font-sans">
-      {/* Notice Banner with Upload Button */}
+      {/* Notice Banner with Upload Buttons */}
       <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200 text-xs text-purple-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <FileCheck className="w-4 h-4 text-purple-600 shrink-0" />
@@ -336,10 +457,19 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
             <strong>Client Tax Vault</strong> — Review and manage taxpayer statements for {customerName}.
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
-            {docList.length} Files in Vault
+            {fileDocs.length} Files • {linkDocs.length} Drive Links
           </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setIsDriveLinkModalOpen(true)}
+            className="bg-white hover:bg-blue-50 text-blue-700 border-blue-300 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer h-7.5 px-3 rounded-lg"
+          >
+            <Link2 className="w-3.5 h-3.5 text-blue-600" />
+            <span>Upload Drive Link</span>
+          </Button>
           <Button
             size="sm"
             onClick={() => {
@@ -354,109 +484,213 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
         </div>
       </div>
 
-      {/* Documents List */}
-      {docList.length === 0 ? (
+      {/* Tab Switcher: All Items, Uploaded Documents, Drive & Cloud Links */}
+      <div className="border-b border-slate-200 pb-1">
+        <AppTabs
+          tabs={[
+            { id: 'ALL', label: 'All Items', count: docList.length },
+            { id: 'FILES', label: 'Uploaded Documents', count: fileDocs.length },
+            { id: 'LINKS', label: 'Drive & Cloud Links', count: linkDocs.length },
+          ]}
+          activeTab={activeVaultTab}
+          onChange={(tabId) => setActiveVaultTab(tabId as 'ALL' | 'FILES' | 'LINKS')}
+          size="sm"
+        />
+      </div>
+
+      {/* Documents & Links List */}
+      {filteredDocs.length === 0 ? (
         <div className="p-8 text-center bg-white rounded-xl border border-slate-200 shadow-2xs space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto border border-purple-100 font-bold">
-            <FileText className="w-6 h-6" />
+            {activeVaultTab === 'LINKS' ? <Globe className="w-6 h-6 text-blue-600" /> : <FileText className="w-6 h-6" />}
           </div>
           <div>
-            <h4 className="text-xs font-bold text-slate-800">No Uploaded Documents Yet</h4>
+            <h4 className="text-xs font-bold text-slate-800">
+              {activeVaultTab === 'LINKS'
+                ? 'No Drive Links Added Yet'
+                : activeVaultTab === 'FILES'
+                ? 'No Uploaded Documents Yet'
+                : 'No Documents or Drive Links Yet'}
+            </h4>
             <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-0.5">
-              No files are uploaded yet for {customerName}. You can upload W-2s, 1099s, Word/Text documents, or ID proofs directly on behalf of the client using the button below.
+              {activeVaultTab === 'LINKS'
+                ? `No external Google Drive or Cloud links have been added for ${customerName}. You can paste and save drive links shared by the client using the button below.`
+                : activeVaultTab === 'FILES'
+                ? `No files are uploaded yet for ${customerName}. You can upload W-2s, 1099s, Word/Text documents, or ID proofs directly on behalf of the client.`
+                : `No files or drive links are recorded yet for ${customerName}. You can upload physical files or save shared Google Drive links using the buttons below.`}
             </p>
           </div>
-          <Button
-            size="sm"
-            onClick={() => {
-              setStagedFiles([]);
-              setIsUploadModalOpen(true);
-            }}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-xs cursor-pointer px-4 h-8"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Upload Documents on Behalf of Client</span>
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {(activeVaultTab === 'LINKS' || activeVaultTab === 'ALL') && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsDriveLinkModalOpen(true)}
+                className="bg-white hover:bg-blue-50 text-blue-700 border-blue-300 text-xs font-bold inline-flex items-center gap-1.5 shadow-xs cursor-pointer px-4 h-8"
+              >
+                <Link2 className="w-3.5 h-3.5 text-blue-600" />
+                <span>Upload Drive Link</span>
+              </Button>
+            )}
+            {(activeVaultTab === 'FILES' || activeVaultTab === 'ALL') && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  setStagedFiles([]);
+                  setIsUploadModalOpen(true);
+                }}
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-xs cursor-pointer px-4 h-8"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Upload Documents on Behalf of Client</span>
+              </Button>
+            )}
+          </div>
         </div>
       ) : (
         <div className="space-y-2.5">
-          {docList.map((doc) => (
-            <div
-              key={doc.id}
-              className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-300 transition-all"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-50 text-[#16A34A] border border-emerald-100 flex items-center justify-center font-bold shrink-0">
-                  {getFileIcon(doc.fileName)}
+          {filteredDocs.map((doc) => {
+            const isLink = isDriveLinkDoc(doc);
+            return (
+              <div
+                key={doc.id}
+                className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-300 transition-all"
+              >
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 ${
+                    isLink 
+                      ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                      : 'bg-emerald-50 text-[#16A34A] border border-emerald-100'
+                  }`}>
+                    {isLink ? <Globe className="w-4 h-4" /> : getFileIcon(doc.fileName)}
+                  </div>
+
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-slate-900 truncate" title={doc.fileName}>
+                        {doc.fileName}
+                      </span>
+                      {isLink && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                          <Link2 className="w-2.5 h-2.5" /> Drive Link
+                        </span>
+                      )}
+                      {getCategoryBadge(doc.documentCategory)}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 font-medium">
+                      <span>
+                        Uploaded: <strong>{new Date(doc.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
+                      </span>
+                      {isLink && doc.filePath && (
+                        <>
+                          <span>•</span>
+                          <a
+                            href={doc.filePath}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 truncate max-w-xs sm:max-w-md"
+                            title={doc.filePath}
+                          >
+                            <span className="truncate">{doc.filePath}</span>
+                            <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-0.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">{doc.fileName}</span>
-                    {getCategoryBadge(doc.documentCategory)}
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-medium">
-                    Uploaded: <strong>{new Date(doc.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
-                  </div>
-                </div>
-              </div>
+                {/* Status & Actions: Preview / Open, Download / Copy, Delete, Verify */}
+                <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                  {isLink ? (
+                    <>
+                      {/* Open Link Button */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(doc.filePath, '_blank')}
+                        className="border-slate-200 text-blue-700 hover:bg-blue-50 text-xs font-bold h-7 px-2.5 flex items-center gap-1 cursor-pointer"
+                        title="Open Google Drive Link in new tab"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Open Link</span>
+                      </Button>
 
-              {/* Status & Actions: Preview, Download, Delete, Verify */}
-              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                {/* 1. Preview Button */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setPreviewDoc(doc)}
-                  className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold h-7 px-2.5 flex items-center gap-1 cursor-pointer"
-                  title="Preview Document"
-                >
-                  <Eye className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Preview</span>
-                </Button>
+                      {/* Copy Link Button */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (doc.filePath) {
+                            navigator.clipboard.writeText(doc.filePath);
+                            toast.success('Drive link copied to clipboard! 📋');
+                          }
+                        }}
+                        className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold h-7 px-2 flex items-center gap-1 cursor-pointer"
+                        title="Copy Link URL"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-slate-500" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {/* 1. Preview Button */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPreviewDoc(doc)}
+                        className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold h-7 px-2.5 flex items-center gap-1 cursor-pointer"
+                        title="Preview Document"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Preview</span>
+                      </Button>
 
-                {/* 2. Download Button */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDownload(doc.id, doc.fileName)}
-                  className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold h-7 px-2.5 flex items-center gap-1 cursor-pointer"
-                  title="Download File"
-                >
-                  <Download className="w-3.5 h-3.5 text-slate-600" />
-                  <span>Download</span>
-                </Button>
+                      {/* 2. Download Button */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownload(doc.id, doc.fileName, doc.filePath)}
+                        className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold h-7 px-2.5 flex items-center gap-1 cursor-pointer"
+                        title="Download File"
+                      >
+                        <Download className="w-3.5 h-3.5 text-slate-600" />
+                        <span>Download</span>
+                      </Button>
+                    </>
+                  )}
 
-                {/* 3. Delete Button */}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setDocToDelete(doc)}
-                  className="border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-bold h-7 px-2 flex items-center gap-1 cursor-pointer"
-                  title="Delete File"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-
-                {/* 4. Verify Status */}
-                {doc.verificationStatus === 'VERIFIED' ? (
-                  <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
-                    Verified
-                  </span>
-                ) : (
+                  {/* Delete Button */}
                   <Button
                     size="sm"
-                    onClick={() => setDocToVerify(doc)}
-                    className="h-7 px-2.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
+                    variant="outline"
+                    onClick={() => setDocToDelete(doc)}
+                    className="border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-bold h-7 px-2 flex items-center gap-1 cursor-pointer"
+                    title={isLink ? 'Delete Drive Link' : 'Delete File'}
                   >
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>Verify &amp; Approve</span>
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
-                )}
+
+                  {/* Verify Status */}
+                  {doc.verificationStatus === 'VERIFIED' ? (
+                    <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
+                      Verified
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => setDocToVerify(doc)}
+                      className="h-7 px-2.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Verify &amp; Approve</span>
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -650,47 +884,223 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
         </form>
       </AppModal>
 
+      {/* Agent Drive Link Modal */}
+      <AppModal
+        isOpen={isDriveLinkModalOpen}
+        onClose={() => {
+          setIsDriveLinkModalOpen(false);
+          setDriveLinkUrl('');
+          setDriveLinkTitle('');
+          setDriveLinkCategory('GOOGLE_DRIVE_LINK');
+          setDriveLinkRemarks('');
+        }}
+        title={`Upload Google Drive / Cloud Link for ${customerName}`}
+        width="620px"
+      >
+        <form onSubmit={handleDriveLinkSubmit} className="space-y-4 font-sans py-1">
+          {/* Banner */}
+          <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-900 flex items-start gap-2">
+            <Globe className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <strong>Attach Cloud Document / Drive Link:</strong> Paste a Google Drive, OneDrive, Dropbox, or Box link shared by the client. The URL will be saved to the taxpayer's vault and accessible to the preparation &amp; audit teams.
+            </div>
+          </div>
+
+          {/* URL Input */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-800">
+              Drive / Cloud Storage URL <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="url"
+                required
+                value={driveLinkUrl}
+                onChange={(e) => setDriveLinkUrl(e.target.value)}
+                placeholder="https://drive.google.com/drive/folders/... or https://docs.google.com/..."
+                className="w-full text-xs font-medium border border-slate-300 rounded-lg pl-8 pr-3 py-2 bg-white text-slate-800 hover:border-blue-500 focus:outline-none focus:ring-1.5 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+              />
+              <Link2 className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Must begin with <strong>http://</strong> or <strong>https://</strong>
+            </p>
+          </div>
+
+          {/* Title / Name Input */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-800">
+              Document / Folder Title <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={driveLinkTitle}
+              onChange={(e) => setDriveLinkTitle(e.target.value)}
+              placeholder="Optional, e.g. 2024 W-2s & 1099s Google Drive Folder"
+              className="w-full text-xs font-medium border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-800 hover:border-blue-500 focus:outline-none focus:ring-1.5 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+            />
+          </div>
+
+          {/* Category Dropdown */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-800">
+              Document Category
+            </label>
+            <select
+              value={driveLinkCategory}
+              onChange={(e) => setDriveLinkCategory(e.target.value)}
+              className="w-full text-xs font-medium border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-800 hover:border-blue-500 focus:outline-none focus:ring-1.5 focus:ring-blue-500 transition-all cursor-pointer shadow-2xs"
+            >
+              {DRIVE_LINK_CATEGORIES.map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Optional Remarks */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-800">
+              Notes / Instructions <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              rows={2}
+              value={driveLinkRemarks}
+              onChange={(e) => setDriveLinkRemarks(e.target.value)}
+              placeholder="e.g. Client shared full Google Drive containing all 2024 W-2s and 1099-B statements..."
+              className="w-full text-xs font-medium border border-slate-300 rounded-lg p-2.5 bg-white text-slate-800 hover:border-blue-500 focus:outline-none focus:ring-1.5 focus:ring-blue-500 transition-all placeholder:text-slate-400 resize-none"
+            />
+          </div>
+
+          {/* Modal Footer */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsDriveLinkModalOpen(false);
+                setDriveLinkUrl('');
+                setDriveLinkTitle('');
+                setDriveLinkCategory('GOOGLE_DRIVE_LINK');
+                setDriveLinkRemarks('');
+              }}
+              className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              loading={isSubmittingLink}
+              disabled={!driveLinkUrl.trim() || isSubmittingLink}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 cursor-pointer flex items-center gap-1.5 shadow-2xs"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              <span>{isSubmittingLink ? 'Saving Link...' : 'Save Drive Link'}</span>
+            </Button>
+          </div>
+        </form>
+      </AppModal>
+
       {/* Document Preview Modal */}
       {previewDoc && (
         <AppModal
           isOpen={Boolean(previewDoc)}
           onClose={() => setPreviewDoc(null)}
-          title={`Document Preview: ${previewDoc.fileName}`}
+          title={isDriveLinkDoc(previewDoc) ? `Drive Link: ${previewDoc.fileName}` : `Document Preview: ${previewDoc.fileName}`}
           width="600px"
         >
           <div className="space-y-4 font-sans">
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-emerald-600" />
+                {isDriveLinkDoc(previewDoc) ? (
+                  <Globe className="w-4 h-4 text-blue-600" />
+                ) : (
+                  <FileText className="w-4 h-4 text-emerald-600" />
+                )}
                 <span className="font-bold">{previewDoc.fileName}</span>
+                {isDriveLinkDoc(previewDoc) && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                    <Link2 className="w-2.5 h-2.5" /> Drive Link
+                  </span>
+                )}
                 {getCategoryBadge(previewDoc.documentCategory)}
               </div>
 
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => handleDownload(previewDoc.id, previewDoc.fileName)}
-                  className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer h-7"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download File</span>
-                </Button>
+                {isDriveLinkDoc(previewDoc) ? (
+                  <Button
+                    size="sm"
+                    onClick={() => window.open(previewDoc.filePath, '_blank')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer h-7"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Open Drive Link</span>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => handleDownload(previewDoc.id, previewDoc.fileName, previewDoc.filePath)}
+                    className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer h-7"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download File</span>
+                  </Button>
+                )}
               </div>
             </div>
 
             {/* Preview Box */}
             <div className="p-8 rounded-xl bg-slate-100 border border-slate-200 text-center space-y-3 min-h-[260px] flex flex-col items-center justify-center">
-              <div className="w-16 h-16 rounded-2xl bg-white shadow-xs text-emerald-600 flex items-center justify-center mx-auto border border-slate-200">
-                {getFileIcon(previewDoc.fileName)}
+              <div className={`w-16 h-16 rounded-2xl bg-white shadow-xs flex items-center justify-center mx-auto border border-slate-200 ${
+                isDriveLinkDoc(previewDoc) ? 'text-blue-600' : 'text-emerald-600'
+              }`}>
+                {isDriveLinkDoc(previewDoc) ? <Globe className="w-8 h-8" /> : getFileIcon(previewDoc.fileName)}
               </div>
               <div>
                 <h4 className="text-sm font-bold text-slate-800">{previewDoc.fileName}</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  Taxpayer Uploaded Document • Category: <strong>{previewDoc.documentCategory}</strong>
+                  {isDriveLinkDoc(previewDoc) ? 'Client Shared Google Drive / Cloud Link' : 'Taxpayer Uploaded Document'} • Category: <strong>{previewDoc.documentCategory}</strong>
                 </p>
               </div>
+
+              {isDriveLinkDoc(previewDoc) && previewDoc.filePath && (
+                <div className="w-full max-w-md bg-white p-3 rounded-lg border border-slate-200 text-left space-y-1.5">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">Direct Destination URL:</div>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={previewDoc.filePath}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline font-mono truncate flex-1 block"
+                    >
+                      {previewDoc.filePath}
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (previewDoc.filePath) {
+                          navigator.clipboard.writeText(previewDoc.filePath);
+                          toast.success('Drive link copied to clipboard! 📋');
+                        }
+                      }}
+                      className="h-6 px-2 text-[10px] shrink-0"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>Copy</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <p className="text-[11px] text-slate-400 max-w-sm">
-                Document is stored securely in the ATH CRM encrypted storage engine. Click download above to open the raw physical copy.
+                {isDriveLinkDoc(previewDoc)
+                  ? 'Click "Open Drive Link" above to access the shared Google Drive folder in a new browser tab.'
+                  : 'Document is stored securely in the ATH CRM encrypted storage engine. Click download above to open the raw physical copy.'}
               </p>
             </div>
           </div>

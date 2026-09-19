@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import type { ParsedLeadRow } from '../types/bulk-import.types';
 import { validateLeadRow } from './lead-validator';
+import { normalizePriority } from './csv-helper';
 
 /**
  * Generates and downloads a native Excel (.xlsx) file with Emerald Green background (#16A34A) and Bold 700 font
@@ -34,6 +35,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = new Date().g
     { header: 'Zip Code', key: 'zipCode', width: 14 },
     { header: 'Estimated Income', key: 'estimatedIncome', width: 20 },
     { header: 'Lead Source', key: 'source', width: 24 },
+    { header: 'Priority (Urgent, Important, High, Medium, Low, No Priority)', key: 'priority', width: 26 },
   ];
 
   // Style Header Row (Row 1)
@@ -367,6 +369,7 @@ export async function parseExcelFileBuffer(
       zipCode,
       estimatedIncome,
       source,
+      priority: normalizePriority(rawObj.priority),
       validationStatus: valResult.status,
       validationMessage: valResult.message,
     };

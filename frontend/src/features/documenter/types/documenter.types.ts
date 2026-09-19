@@ -97,6 +97,7 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
   taxYear: number;
   filingType: string;
   currentStage: string;
+  priority?: string;
   customer: DocumenterLeadCustomer;
   assignedDocAgent?: {
     id: string;

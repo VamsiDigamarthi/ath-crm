@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
-import { CheckCircle2, FileText, Download, ExternalLink, RefreshCw } from 'lucide-react';
+import { CheckCircle2, FileText, Download, ExternalLink, RefreshCw, Globe, Copy } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import apiClient from '@/lib/api-client';
 import type { WorkspaceDocument } from '../../hooks/useTaxPreparerWorkspace';
@@ -27,6 +27,12 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
     const fetchDocumentBlob = async () => {
       if (!document?.id) return;
+      const externalUrl = document.fileUrl || (document as any).filePath;
+      if (externalUrl && (externalUrl.startsWith('http://') || externalUrl.startsWith('https://'))) {
+        setPreviewUrl(externalUrl);
+        setIsLoadingFile(false);
+        return;
+      }
       setIsLoadingFile(true);
       try {
         const response: any = await apiClient.get(`/prep-review/documents/${document.id}/download`, {
@@ -59,10 +65,12 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
   if (!document) return null;
 
+  const isExternalLink = Boolean(previewUrl && (previewUrl.startsWith('http://') || previewUrl.startsWith('https://')));
+
   const handleOpenInNewTab = () => {
     if (previewUrl) {
       window.open(previewUrl, '_blank');
-      toast.success('Document opened in new tab');
+      toast.success(isExternalLink ? 'Drive link opened in new tab' : 'Document opened in new tab');
     } else {
       toast.error('Preview is still loading');
     }
@@ -70,6 +78,10 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
   const handleDownloadFile = () => {
     if (!previewUrl) return;
+    if (isExternalLink) {
+      window.open(previewUrl, '_blank');
+      return;
+    }
     const link = window.document.createElement('a');
     link.href = previewUrl;
     link.setAttribute('download', fileName);
@@ -83,7 +95,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     <AppModal
       isOpen={Boolean(document)}
       onClose={onClose}
-      title={`Document Vault: ${fileName}`}
+      title={isExternalLink ? `Drive Link: ${fileName}` : `Document Vault: ${fileName}`}
       width="720px"
     >
       <div className="space-y-4 font-sans text-xs">
@@ -92,6 +104,11 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="font-bold text-slate-900 text-sm">{fileName}</span>
+              {isExternalLink && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  Drive Link
+                </span>
+              )}
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" />
                 <span>{document.verificationStatus || 'VERIFIED'}</span>
@@ -112,19 +129,21 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
               className="border-slate-200 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs h-8"
             >
               <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
-              <span>Open in New Tab</span>
+              <span>{isExternalLink ? 'Open Drive Link' : 'Open in New Tab'}</span>
             </Button>
 
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleDownloadFile}
-              disabled={!previewUrl || isLoadingFile}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer h-8"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download</span>
-            </Button>
+            {!isExternalLink && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleDownloadFile}
+                disabled={!previewUrl || isLoadingFile}
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer h-8"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -134,6 +153,51 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             <div className="flex flex-col items-center justify-center gap-2 text-slate-500 py-16">
               <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
               <span className="text-xs font-bold">Decrypting &amp; rendering document preview...</span>
+            </div>
+          ) : isExternalLink ? (
+            <div className="p-8 text-center space-y-3 w-full max-w-lg">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto border border-blue-100 shadow-xs">
+                <Globe className="w-8 h-8" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-800">{fileName}</h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  Google Drive / Cloud Storage Link • Category: <strong>{document.category}</strong>
+                </p>
+              </div>
+              <div className="w-full bg-white p-3 rounded-lg border border-slate-200 text-left space-y-1">
+                <div className="text-[10px] font-bold text-slate-400 uppercase">Destination URL:</div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={previewUrl!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-600 hover:underline font-mono truncate flex-1 block"
+                  >
+                    {previewUrl}
+                  </a>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(previewUrl!);
+                      toast.success('Drive link copied to clipboard!');
+                    }}
+                    className="h-6 px-2 text-[10px] shrink-0"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy</span>
+                  </Button>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => window.open(previewUrl!, '_blank')}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 px-4"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open in Google Drive / Cloud</span>
+              </Button>
             </div>
           ) : previewUrl && isImage ? (
             <div className="w-full flex items-center justify-center">

@@ -14,6 +14,7 @@ export function useFilingQueue(filterAssignedOnly = false) {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState<'ALL' | 'FILING_QUEUE' | 'FILING_IN_PROGRESS' | 'FILING_SUCCESS' | 'REVERTED'>('ALL');
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -28,6 +29,7 @@ export function useFilingQueue(filterAssignedOnly = false) {
     try {
       const response = await filingService.getQueue({
         search: searchQuery.trim() || undefined,
+        priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
         limit: 100,
       });
 
@@ -50,7 +52,7 @@ export function useFilingQueue(filterAssignedOnly = false) {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, filterAssignedOnly, user?.id, user?.email]);
+  }, [searchQuery, priorityFilter, filterAssignedOnly, user?.id, user?.email]);
 
   const fetchStaff = useCallback(async () => {
     try {
@@ -130,6 +132,8 @@ export function useFilingQueue(filterAssignedOnly = false) {
     setSearchQuery,
     stageFilter,
     setStageFilter,
+    priorityFilter,
+    setPriorityFilter,
     currentPage,
     setCurrentPage,
     itemsPerPage,

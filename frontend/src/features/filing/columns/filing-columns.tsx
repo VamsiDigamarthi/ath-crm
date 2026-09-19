@@ -2,6 +2,7 @@ import type { ColumnDef } from '@/shared/components/AppTable';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
 import { Send, CheckCircle2, Clock, UserCheck, ArrowRight, RotateCcw } from 'lucide-react';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import type { FilingLeadItem } from '../types/filing.types';
 
 export interface FilingColumnsOptions {
@@ -69,6 +70,13 @@ export function getFilingColumns({
           </div>
         );
       },
+    },
+    {
+      header: 'Priority',
+      accessorKey: 'priority',
+      render: (item) => (
+        <PriorityBadge priority={item.priority || 'NO_PRIORITY'} size="sm" />
+      ),
     },
     {
       header: 'Certified 1040 Refund',

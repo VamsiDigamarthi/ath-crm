@@ -100,6 +100,7 @@ export const leadItemSchema = z.object({
   city: z.string().trim().max(100).optional().nullable().or(z.literal("")),
   state: z.string().trim().max(50).optional().nullable().or(z.literal("")),
   zipCode: z.string().trim().max(20).optional().nullable().or(z.literal("")),
+  priority: z.enum(["URGENT", "IMPORTANT", "HIGH", "MEDIUM", "LOW", "NO_PRIORITY"]).optional().default("NO_PRIORITY"),
 });
 
 export const bulkImportLeadsSchema = z.object({

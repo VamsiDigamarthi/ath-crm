@@ -19,6 +19,7 @@ export interface DocumenterLeadQuery {
   agentId?: string;
   visaType?: string;
   taxYear?: number;
+  priority?: string;
   timeRange?: 'TODAY' | 'WEEK' | 'SEASON';
   currentUserId?: string;
   currentUserRole?: string;
@@ -79,6 +80,8 @@ export class DocumenterService {
             movedByUser: {
               select: {
                 id: true,
+                firstName: true,
+                lastName: true,
                 email: true,
                 role: true,
               },
@@ -91,6 +94,8 @@ export class DocumenterService {
             actorUser: {
               select: {
                 id: true,
+                firstName: true,
+                lastName: true,
                 email: true,
                 role: true,
               },
@@ -122,32 +127,56 @@ export class DocumenterService {
       createdAt: c.createdAt.toISOString(),
     }));
 
-    const formattedStageHistories = app.stageHistories.map((s) => ({
-      id: s.id,
-      applicationId: s.applicationId,
-      fromStage: s.fromStage,
-      toStage: s.toStage,
-      movedByUserId: s.movedByUserId,
-      movedByName: s.movedByUser?.email?.split('@')[0] || 'System',
-      movedByEmail: s.movedByUser?.email || 'System',
-      movedByRole: s.movedByUser?.role || 'SYSTEM',
-      remarks: s.remarks || `Stage transitioned from ${s.fromStage} to ${s.toStage}`,
-      createdAt: s.createdAt.toISOString(),
-    }));
+    const formattedStageHistories = app.stageHistories.map((s) => {
+      const isClient = s.movedByUser?.role === Role.TAXPAYER_USER;
+      const clientName = `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Taxpayer Client';
+      const staffName = s.movedByUser 
+        ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email?.split('@')[0] 
+        : 'System';
 
-    const formattedAuditLogs = app.auditLogs.map((a) => ({
-      id: a.id,
-      applicationId: a.applicationId,
-      actorId: a.actorId,
-      actorType: a.actorType,
-      actorName: a.actorName || a.actorUser?.email?.split('@')[0] || 'System Actor',
-      actorEmail: a.actorUser?.email || '',
-      actorRole: a.actorRole || a.actorUser?.role || 'SYSTEM',
-      action: a.action,
-      moduleKey: a.moduleKey,
-      details: a.details,
-      createdAt: a.createdAt.toISOString(),
-    }));
+      return {
+        id: s.id,
+        applicationId: s.applicationId,
+        fromStage: s.fromStage,
+        toStage: s.toStage,
+        movedByUserId: s.movedByUserId,
+        movedByName: isClient ? clientName : staffName,
+        movedByEmail: isClient ? (app.customer.email || s.movedByUser?.email || '') : (s.movedByUser?.email || 'System'),
+        movedByRole: isClient ? 'CLIENT' : (s.movedByUser?.role || 'SYSTEM'),
+        remarks: s.remarks || `Stage transitioned from ${s.fromStage} to ${s.toStage}`,
+        createdAt: s.createdAt.toISOString(),
+      };
+    });
+
+    const formattedAuditLogs = app.auditLogs.map((a) => {
+      const isClient = a.actorType === 'CLIENT' || 
+                       a.actorRole === 'TAXPAYER_USER' || 
+                       a.actorRole === 'CLIENT' ||
+                       (a.details as any)?.source === 'TAXPAYER_CLIENT_PORTAL' ||
+                       (a.details as any)?.source?.includes('CLIENT');
+
+      const clientName = `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Taxpayer Client';
+      const clientEmail = (a.details as any)?.clientEmail || app.customer.email || a.actorUser?.email || '';
+
+      const staffName = a.actorUser 
+        ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email?.split('@')[0]
+        : 'System Actor';
+      const staffEmail = a.actorUser?.email || '';
+
+      return {
+        id: a.id,
+        applicationId: a.applicationId,
+        actorId: a.actorId,
+        actorType: a.actorType,
+        actorName: isClient ? (a.actorName && !a.actorName.includes('@') ? a.actorName : clientName) : (a.actorName || staffName),
+        actorEmail: isClient ? clientEmail : staffEmail,
+        actorRole: isClient ? 'CLIENT' : (a.actorRole || a.actorUser?.role || 'SYSTEM'),
+        action: a.action,
+        moduleKey: a.moduleKey,
+        details: a.details,
+        createdAt: a.createdAt.toISOString(),
+      };
+    });
 
     return {
       ...app,
@@ -165,13 +194,17 @@ export class DocumenterService {
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
     const skip = (page - 1) * limit;
 
-    const { tab = 'ALL', search, agentId, visaType, taxYear, timeRange = 'TODAY', currentUserId, currentUserRole } = query;
+    const { tab = 'ALL', search, agentId, visaType, taxYear, priority, timeRange = 'TODAY', currentUserId, currentUserRole } = query;
 
     // 1. Build where clause
     const where: any = {};
 
     if (taxYear) {
       where.taxYear = Number(taxYear);
+    }
+
+    if (priority && priority !== 'ALL') {
+      where.priority = priority as any;
     }
 
     // Role-based restrictions: If regular DOC_AGENT, strictly scope to their assigned leads
@@ -1419,12 +1452,21 @@ export class DocumenterService {
       throw new NotFoundError('Tax document not found');
     }
 
+    if (doc.filePath.startsWith('http://') || doc.filePath.startsWith('https://')) {
+      return {
+        isExternalLink: true,
+        url: doc.filePath,
+        fileName: doc.fileName,
+      };
+    }
+
     const absolutePath = StorageService.getAbsoluteFilePath(doc.filePath);
     if (!StorageService.fileExists(doc.filePath)) {
       throw new NotFoundError('Physical document file not found on storage server');
     }
 
     return {
+      isExternalLink: false,
       absolutePath,
       fileName: doc.fileName,
     };
@@ -1590,6 +1632,128 @@ export class DocumenterService {
       { file, category: documentCategory },
     ]);
     return results[0];
+  }
+
+  /**
+   * Upload / attach Google Drive or Cloud document link on behalf of customer by Documenter Agent
+   */
+  public static async uploadDriveLink(
+    applicationId: string,
+    agentUserId: string,
+    payload: {
+      linkUrl: string;
+      title?: string;
+      documentCategory?: string;
+      remarks?: string;
+    }
+  ) {
+    const { linkUrl, title, documentCategory, remarks } = payload;
+    if (!linkUrl || !linkUrl.trim()) {
+      throw new Error('Drive link URL is required');
+    }
+
+    const trimmedUrl = linkUrl.trim();
+    if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+      throw new Error('Invalid URL. Drive link must begin with http:// or https://');
+    }
+
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const agentUser = await prisma.user.findUnique({
+      where: { id: agentUserId },
+    });
+    const actorName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Calling Agent';
+
+    const categoryLabels: Record<string, string> = {
+      W2_WAGES: 'W-2 Wages',
+      FORM_1099: '1099 Interest/Div/Misc',
+      '1099_INT': '1099-INT Interest',
+      '1099_DIV': '1099-DIV Dividends',
+      '1099_B': '1099-B Stocks',
+      FORM_1099_B: '1099-B Stock Trading',
+      '1098_MORTGAGE': '1098 Mortgage Interest',
+      MORTGAGE_1098: '1098 Mortgage Interest',
+      FBAR_FOREIGN: 'FBAR Indian Accounts',
+      ID_PASSPORT_VISA: 'ID / Passport / Visa',
+      PASSPORT_VISA: 'Passport / Visa ID',
+      PREVIOUS_1040: 'Prior Year 1040',
+      PRIOR_YEAR_RETURN: 'Prior Year 1040',
+      FORM_1095_HEALTH: '1095 Health Coverage',
+      OTHER_EXPENSES: 'Tax Deduction Receipts',
+      GOOGLE_DRIVE_LINK: 'Google Drive / Cloud Folder',
+      OTHER_DOCUMENT: 'Other Tax Form / Drive Link',
+    };
+
+    const cat = documentCategory || 'GOOGLE_DRIVE_LINK';
+    const catLabel = categoryLabels[cat] || cat;
+    let docTitle = (title && title.trim()) ? title.trim() : '';
+    if (!docTitle) {
+      if (cat === 'GOOGLE_DRIVE_LINK') {
+        if (trimmedUrl.includes('onedrive') || trimmedUrl.includes('1drv.ms') || trimmedUrl.includes('sharepoint')) {
+          docTitle = 'OneDrive Cloud Folder';
+        } else if (trimmedUrl.includes('dropbox')) {
+          docTitle = 'Dropbox Cloud Folder';
+        } else if (trimmedUrl.includes('box.com')) {
+          docTitle = 'Box Cloud Folder';
+        } else {
+          docTitle = 'Google Drive Folder';
+        }
+      } else {
+        docTitle = `${catLabel} Link`;
+      }
+    }
+
+    const newDoc = await prisma.taxDocument.create({
+      data: {
+        applicationId: app.id,
+        uploadedByUserId: agentUserId,
+        fileName: docTitle,
+        filePath: trimmedUrl,
+        documentCategory: cat,
+        verificationStatus: 'VERIFIED',
+      },
+    });
+
+    // Record AuditLog for Agent Drive Link Upload
+    await prisma.auditLog.create({
+      data: {
+        applicationId: app.id,
+        actorId: agentUserId,
+        actorType: 'AGENT',
+        actorName,
+        actorRole: agentUser?.role || 'DOC_AGENT',
+        action: 'DOCUMENT_UPLOAD',
+        moduleKey: 'DOCUMENT_VAULT',
+        details: {
+          documentId: newDoc.id,
+          fileName: newDoc.fileName,
+          documentCategory: newDoc.documentCategory,
+          categoryLabel: catLabel,
+          linkUrl: trimmedUrl,
+          isDriveLink: true,
+          source: 'AGENT_CALLING_PORTAL',
+          remarks: remarks?.trim() || `Documenter Agent ${actorName} attached Drive Link "${newDoc.fileName}" (${trimmedUrl}) to Document Vault.`,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      id: newDoc.id,
+      fileName: newDoc.fileName,
+      filePath: newDoc.filePath,
+      documentCategory: newDoc.documentCategory,
+      verificationStatus: newDoc.verificationStatus,
+      createdAt: newDoc.createdAt.toISOString(),
+      isDriveLink: true,
+    };
   }
 
   /**
@@ -1769,5 +1933,56 @@ export class DocumenterService {
       completedCount,
       message: 'Organizer saved successfully by agent on call',
     };
+  }
+
+  /**
+   * Update Tax Application Priority by staff
+   */
+  public static async updateLeadPriority(applicationId: string, priority: string, agentUserId: string) {
+    const validPriorities = ['URGENT', 'IMPORTANT', 'HIGH', 'MEDIUM', 'LOW', 'NO_PRIORITY'];
+    if (!validPriorities.includes(priority)) {
+      throw new Error(`Invalid priority value: ${priority}`);
+    }
+
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const updated = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: { priority: priority as any },
+    });
+
+    const agentUser = await prisma.user.findUnique({
+      where: { id: agentUserId },
+      select: { firstName: true, lastName: true, email: true, role: true },
+    });
+    const actorName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Staff';
+
+    await prisma.auditLog.create({
+      data: {
+        applicationId: app.id,
+        actorId: agentUserId,
+        actorType: 'AGENT',
+        actorName,
+        actorRole: agentUser?.role || 'DOC_AGENT',
+        action: 'STAGE_CHANGE',
+        moduleKey: 'LEAD_PRIORITY',
+        details: {
+          previousPriority: app.priority,
+          newPriority: priority,
+          source: 'STAFF_WORKSPACE',
+          remarks: `${actorName} updated tax application priority from ${app.priority} to ${priority}.`,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return updated;
   }
 }

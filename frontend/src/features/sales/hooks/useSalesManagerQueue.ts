@@ -32,6 +32,7 @@ export function useSalesManagerQueue() {
   const [paymentFilter, setPaymentFilter] = useState<'ALL' | 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID'>('ALL');
   const [liabilityFilter, setLiabilityFilter] = useState<'ALL' | 'REFUND' | 'TAX_DUE'>('ALL');
   const [visaFilter, setVisaFilter] = useState('ALL');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [selectedRows, setSelectedRows] = useState<SalesLeadItem[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [activeLeadForAssign, setActiveLeadForAssign] = useState<SalesLeadItem | null>(null);
@@ -112,6 +113,9 @@ export function useSalesManagerQueue() {
       // Visa Filtering
       if (visaFilter !== 'ALL' && lead.visaType !== visaFilter) return false;
 
+      // Priority Filtering
+      if (priorityFilter !== 'ALL' && (lead.priority || 'NO_PRIORITY') !== priorityFilter) return false;
+
       // Search Filtering
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -126,7 +130,7 @@ export function useSalesManagerQueue() {
       }
       return true;
     });
-  }, [leads, activeTab, paymentFilter, liabilityFilter, visaFilter, searchQuery]);
+  }, [leads, activeTab, paymentFilter, liabilityFilter, visaFilter, priorityFilter, searchQuery]);
 
   // Assign lead(s) to closer via real backend API
   const handleDirectAssign = async (agentId: string) => {
@@ -207,6 +211,8 @@ export function useSalesManagerQueue() {
     setLiabilityFilter,
     visaFilter,
     setVisaFilter,
+    priorityFilter,
+    setPriorityFilter,
     selectedRows,
     setSelectedRows,
     isAssignModalOpen,

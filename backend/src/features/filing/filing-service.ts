@@ -74,16 +74,27 @@ export class FilingService {
         : null,
     }));
 
-    const auditLogs = (app.auditLogs || []).map((al: any) => ({
-      id: al.id,
-      action: al.action,
-      actorType: al.actorType,
-      actorName: al.actorName,
-      actorRole: al.actorRole,
-      moduleKey: al.moduleKey || 'FILING',
-      details: al.details,
-      createdAt: al.createdAt.toISOString(),
-    }));
+    const auditLogs = (app.auditLogs || []).map((al: any) => {
+      const isClient = al.actorType === 'CLIENT' || 
+                       al.actorRole === 'TAXPAYER_USER' || 
+                       al.actorRole === 'CLIENT' || 
+                       (al.details as any)?.source === 'TAXPAYER_CLIENT_PORTAL' ||
+                       Boolean((al.details as any)?.clientEmail);
+      const clientName = (al.details as any)?.clientName || `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || app.customer?.email || 'Taxpayer Client';
+      const clientEmail = (al.details as any)?.clientEmail || app.customer?.email;
+
+      return {
+        id: al.id,
+        action: al.action,
+        actorType: al.actorType,
+        actorName: isClient ? clientName : al.actorName,
+        actorEmail: isClient ? clientEmail : undefined,
+        actorRole: isClient ? 'CLIENT' : al.actorRole,
+        moduleKey: al.moduleKey || 'FILING',
+        details: al.details,
+        createdAt: al.createdAt.toISOString(),
+      };
+    });
 
     const callLogs = (app.callLogs || []).map((cl: any) => ({
       id: cl.id,
@@ -100,6 +111,7 @@ export class FilingService {
       taxYear: app.taxYear || 2025,
       filingType: app.filingType || 'INDIVIDUAL',
       currentStage: app.currentStage,
+      priority: app.priority,
       customerId: app.customerId,
       taxpayerName,
       taxpayerEmail: customer.email || 'taxpayer@client.com',
@@ -214,6 +226,7 @@ export class FilingService {
     stage?: string;
     search?: string;
     filingAgentId?: string;
+    priority?: string;
     limit?: number;
     offset?: number;
   }) {
@@ -263,6 +276,10 @@ export class FilingService {
 
     if (filters?.filingAgentId) {
       where.assignedFileOpId = filters.filingAgentId;
+    }
+
+    if (filters?.priority && filters.priority !== 'ALL') {
+      where.priority = filters.priority as any;
     }
 
     if (filters?.search) {
