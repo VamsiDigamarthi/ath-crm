@@ -42,12 +42,13 @@ export function useSalesManagerQueue() {
     setIsLoading(true);
     try {
       const [leadsRes, staffRes, statsRes] = await Promise.all([
-        salesService.getPipelineLeads({ limit: 100 }),
+        salesService.getPipelineLeads({ limit: 100, isDualRole: false }),
         salesService.getSalesStaff(),
         salesService.getManagerStats(),
       ]);
 
-      setLeads(leadsRes.leads || []);
+      const regularLeads = (leadsRes.leads || []).filter((l) => !l.isDualDocSalesRole);
+      setLeads(regularLeads);
       setSalesReps(staffRes || []);
       setStats(statsRes);
     } catch {

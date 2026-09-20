@@ -912,6 +912,166 @@ export class PrepReviewService {
   }
 
   /**
+   * Upload Drake Tax Calculation / Form 1040 Prepared File for Tax Preparer Workspace
+   */
+  public static async uploadDrakeTaxFile(applicationId: string, userId: string, file: Express.Multer.File) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Tax Preparer';
+
+    // Store file in storage
+    const storageResult = await StorageService.saveFile(
+      file,
+      `taxpayer_${app.customerId}_ty${app.taxYear || 2025}`
+    );
+
+    // Save document to TaxDocument table
+    const document = await prisma.taxDocument.create({
+      data: {
+        applicationId,
+        uploadedByUserId: userId,
+        fileName: file.originalname,
+        filePath: storageResult.filePath,
+        documentCategory: 'DRAKE_TAX_CALCULATION',
+        verificationStatus: 'VERIFIED',
+      },
+    });
+
+    const fileUrl = storageResult.fileUrl;
+
+    // Update taxDraftSummary with drakeTaxFile metadata
+    const currentDraft: any = app.taxDraftSummary || {};
+    const drakeTaxFile = {
+      id: document.id,
+      fileName: file.originalname,
+      fileUrl,
+      filePath: storageResult.filePath,
+      fileSize: storageResult.fileSize || file.size,
+      uploadedAt: new Date().toISOString(),
+      uploadedByUserId: userId,
+      uploadedByName: actorName,
+    };
+
+    const updatedSummary = {
+      ...currentDraft,
+      drakeTaxFile,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    // Create Audit Log
+    await prisma.auditLog.create({
+      data: {
+        applicationId,
+        actorId: userId,
+        actorType: 'AGENT',
+        actorName,
+        actorRole: user?.role || 'TAX_PREPARER',
+        action: 'DOCUMENT_UPLOAD',
+        moduleKey: 'PREPARATION_WORKSPACE',
+        details: {
+          documentId: document.id,
+          fileName: file.originalname,
+          documentCategory: 'DRAKE_TAX_CALCULATION',
+          fileSize: storageResult.fileSize || file.size,
+          source: 'PREPARER_WORKSPACE',
+          remarks: `Tax Preparer ${actorName} uploaded Drake Tax Calculation File: "${file.originalname}" (${((storageResult.fileSize || file.size) / 1024).toFixed(1)} KB).`,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      document: {
+        id: document.id,
+        fileName: document.fileName,
+        fileUrl,
+        filePath: document.filePath,
+        category: document.documentCategory,
+        verificationStatus: document.verificationStatus,
+        uploadedAt: document.createdAt,
+      },
+      drakeTaxFile,
+      taxDraftSummary: updatedSummary,
+    };
+  }
+
+  /**
+   * Delete / Remove Drake Tax File from Preparer Workspace
+   */
+  public static async deleteDrakeTaxFile(applicationId: string, documentId: string, userId: string) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Tax Preparer';
+
+    if (documentId) {
+      const doc = await prisma.taxDocument.findUnique({ where: { id: documentId } });
+      if (doc) {
+        await prisma.taxDocument.delete({ where: { id: documentId } });
+        await StorageService.deleteFile(doc.filePath).catch(() => {});
+      }
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const updatedSummary = {
+      ...currentDraft,
+      drakeTaxFile: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        applicationId,
+        actorId: userId,
+        actorType: 'AGENT',
+        actorName,
+        actorRole: user?.role || 'TAX_PREPARER',
+        action: 'DOCUMENT_DELETE',
+        moduleKey: 'PREPARATION_WORKSPACE',
+        details: {
+          documentId,
+          source: 'PREPARER_WORKSPACE',
+          remarks: `Tax Preparer ${actorName} removed Drake Tax Calculation File.`,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      success: true,
+      taxDraftSummary: updatedSummary,
+    };
+  }
+
+  /**
    * Submit Form 1040 Calculation for Senior QA Compliance Review
    */
   public static async submitWorkspaceToQA(applicationId: string, payload: any, userId: string) {

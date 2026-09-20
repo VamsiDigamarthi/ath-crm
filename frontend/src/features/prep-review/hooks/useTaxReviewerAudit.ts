@@ -20,6 +20,7 @@ export function useTaxReviewerAudit() {
   const [assignedReviewer, setAssignedReviewer] = useState<WorkspaceAssignedReviewer | null>(null);
   const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<WorkspaceDocument | null>(null);
+  const [drakeTaxFile, setDrakeTaxFile] = useState<any | null>(null);
   const [prepNotes, setPrepNotes] = useState<string>('');
   const [taxDraftSummary, setTaxDraftSummary] = useState<any>(null);
   const [stageHistories, setStageHistories] = useState<any[]>([]);
@@ -77,6 +78,14 @@ export function useTaxReviewerAudit() {
       setDocuments(data.documents || []);
       setPrepNotes(data.prepNotes || '');
       setTaxDraftSummary(data.taxDraftSummary || {});
+
+      const drakeFile = data.taxDraftSummary?.drakeTaxFile || (data.documents || []).find((d: any) => d.category === 'DRAKE_TAX_CALCULATION' || d.category === 'DRAKE_TAX_FILE');
+      if (drakeFile) {
+        setDrakeTaxFile(drakeFile);
+      } else {
+        setDrakeTaxFile(null);
+      }
+
       if (data.stageHistories) setStageHistories(data.stageHistories);
       if (data.callLogs) setCallLogs(data.callLogs);
       if (data.auditLogs) setAuditLogs(data.auditLogs);
@@ -152,6 +161,7 @@ export function useTaxReviewerAudit() {
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
+    drakeTaxFile,
     prepNotes,
     taxDraftSummary,
     checks,

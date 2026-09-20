@@ -105,6 +105,14 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
     mobile: string;
     role: string;
   } | null;
+  assignedSalesAgentId?: string | null;
+  assignedSalesAgent?: {
+    id: string;
+    email: string;
+    mobile: string;
+    role: string;
+  } | null;
+  isDualDocSalesRole?: boolean;
   lastCallLog?: {
     disposition: string;
     callSummary?: string | null;

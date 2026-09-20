@@ -11,6 +11,7 @@ import {
   Users,
   LogOut,
   Bell,
+  Sparkles,
 } from 'lucide-react';
 import { salesService } from '../services/sales-service';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
@@ -35,14 +36,20 @@ export const SalesLayout: React.FC = () => {
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
 
   const [queueBadgeCount, setQueueBadgeCount] = React.useState<number | null>(null);
+  const [dualBadgeCount, setDualBadgeCount] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     async function loadBadge() {
       try {
-        const res = await salesService.getPipelineLeads({ limit: 100 });
+        const res = await salesService.getPipelineLeads({ limit: 150 });
         const all = res.leads || [];
+        const dualLeads = all.filter((l) => Boolean(l.isDualDocSalesRole || (l.taxDraftSummary as any)?.isDualDocSalesRole));
+        const regularLeads = all.filter((l) => !Boolean(l.isDualDocSalesRole || (l.taxDraftSummary as any)?.isDualDocSalesRole));
+
+        setDualBadgeCount(dualLeads.length);
+
         if (isManager) {
-          setQueueBadgeCount(all.length);
+          setQueueBadgeCount(regularLeads.length);
         } else {
           const myId = user?.id;
           const myEmail = user?.email?.toLowerCase().trim();
@@ -67,6 +74,7 @@ export const SalesLayout: React.FC = () => {
     ? [
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/sales/manager' },
         { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/manager/queue' },
+        { id: 'dual_role', label: 'Dual Doc + Sales', icon: Sparkles, section: 'Operations', badge: dualBadgeCount !== null ? String(dualBadgeCount) : undefined, path: '/sales/manager/dual-role' },
         { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/sales/manager/team' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
       ]
@@ -79,6 +87,7 @@ export const SalesLayout: React.FC = () => {
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/sales/notifications')) return 'notifications';
+    if (currentPath.includes('/sales/manager/dual-role')) return 'dual_role';
     if (currentPath.includes('/sales/manager/team')) return 'team';
     if (currentPath.includes('/sales/manager/queue')) return 'pipeline';
     if (currentPath.includes('/sales/manager')) return 'dashboard';

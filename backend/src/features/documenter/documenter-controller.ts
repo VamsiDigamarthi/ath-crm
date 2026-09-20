@@ -84,17 +84,20 @@ export const assignLeadsBulk = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { applicationIds, targetAgentId } = req.body;
+    const { applicationIds, targetAgentId, alsoAssignAsSales } = req.body;
 
     const result = await DocumenterService.assignLeadsBulk({
       applicationIds,
       targetAgentId,
       assignedByUserId: req.currentUser?.id || 'SYSTEM',
+      alsoAssignAsSales: Boolean(alsoAssignAsSales),
     });
 
     res.status(200).json({
       success: true,
-      message: `Successfully assigned ${result.assignedCount} leads to ${result.targetAgent.email}`,
+      message: result.isDualDocSalesRole
+        ? `Successfully assigned ${result.assignedCount} leads to ${result.targetAgent.email} with Dual-Role (Doc + Sales)`
+        : `Successfully assigned ${result.assignedCount} leads to ${result.targetAgent.email}`,
       data: result,
     });
   } catch (error) {

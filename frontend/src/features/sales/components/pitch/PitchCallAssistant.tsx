@@ -66,12 +66,18 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
     lead.currentStage === 'FILING_SUCCESS';
 
   const currentStageStr = (lead.currentStage as string);
+  const isQaApproved = Boolean(
+    (lead.taxDraftSummary as any)?.status === 'QA_APPROVED' ||
+    Boolean((lead.taxDraftSummary as any)?.qaApprovedAt) ||
+    ['QA_APPROVED', 'SALES_PITCH_QUEUE', 'SALES_PAYMENT_PENDING', 'SALES_ESIGN_PENDING', 'PAID_AND_AUTHORIZED', 'FILING_QUEUE', 'FILING_IN_PROGRESS', 'FILING_SUCCESS', 'COMPLETED'].includes(currentStageStr)
+  );
+
   const isRevertedToPrecedingDept =
     ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'QA_REVISION_REQUESTED'].includes(currentStageStr) ||
     (lead.taxDraftSummary as any)?.status === 'REVISION_REQUESTED' ||
     (lead.taxDraftSummary as any)?.status === 'REVERTED_TO_DOCUMENTER';
 
-  const isReadyForFiling = paymentStatus === 'PAID' && esignStatus === 'SIGNED' && !isAlreadyDispatched && !isRevertedToPrecedingDept;
+  const isReadyForFiling = isQaApproved && paymentStatus === 'PAID' && esignStatus === 'SIGNED' && !isAlreadyDispatched && !isRevertedToPrecedingDept;
 
   const targetDeptName = lead.currentStage === 'DOC_OUTREACH' || (lead.taxDraftSummary as any)?.status === 'REVERTED_TO_DOCUMENTER'
     ? 'Documenter Intake'
@@ -81,6 +87,8 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
     ? 'Already Dispatched: Form 1040 has been certified, fee-paid, authorized, and transferred to the IRS Modernized e-File (MeF) Queue.'
     : isRevertedToPrecedingDept
     ? `Cannot Dispatch: Return has been sent back for revision and is currently with ${targetDeptName}. It must be corrected and certified by QA before dispatching to IRS.`
+    : !isQaApproved
+    ? 'Cannot Dispatch: Return is awaiting 4-Eyes Compliance Certification from Senior QA Reviewer.'
     : !isReadyForFiling
     ? paymentStatus !== 'PAID' && esignStatus !== 'SIGNED'
       ? 'Cannot Dispatch: Both fee payment and Form 8879 taxpayer authorization are required before dispatching to IRS.'
@@ -246,7 +254,17 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
               </span>
             </div>
           </div>
-        ) : !isReadyForFiling && !isAlreadyDispatched && (
+        ) : !isQaApproved && !isAlreadyDispatched ? (
+          <div className="mb-3 p-2.5 rounded-lg bg-purple-50 border border-purple-200 text-[11px] text-purple-900 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+            <div>
+              <strong className="font-bold">Awaiting Senior QA Sign-Off:</strong>
+              <span className="ml-1">
+                Dispatching to IRS E-Filing will be enabled once Senior QA Reviewer certifies 4-Eyes Compliance Sign-Off on Form 1040.
+              </span>
+            </div>
+          </div>
+        ) : !isReadyForFiling && !isAlreadyDispatched ? (
           <div className="mb-3 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div>
@@ -260,7 +278,7 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
               </span>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Button with Floating Tooltip matching Reviewer Screen Reference */}
         <div className="relative group w-full" title={dispatchTooltip}>

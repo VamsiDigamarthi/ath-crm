@@ -142,5 +142,25 @@ export const prepReviewService = {
   }): Promise<any> {
     return apiClient.post(`/prep-review/reviewer/audit/${id}/request-revision`, payload);
   },
+
+  /**
+   * Upload Drake Tax Calculation / Prepared Return File
+   */
+  async uploadDrakeTaxFile(id: string, file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post(`/prep-review/workspace/${id}/upload-drake-file`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  /**
+   * Delete / Remove Drake Tax File from Workspace
+   */
+  async deleteDrakeTaxFile(id: string, docId?: string): Promise<any> {
+    return apiClient.delete(`/prep-review/workspace/${id}/drake-file/${docId || 'current'}`);
+  },
 };
 

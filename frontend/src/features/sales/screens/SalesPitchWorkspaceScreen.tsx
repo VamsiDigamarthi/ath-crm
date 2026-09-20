@@ -90,6 +90,30 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   const isDispatchedToFiling = ['FILING_QUEUE', 'FILING_IN_PROGRESS', 'FILING_SUCCESS'].includes(lead.currentStage as string);
   const isReverted = Boolean(lastRevert && !lastRevert.resolved && !isDispatchedToFiling);
 
+  const taxDraft = (lead.taxDraftSummary as any) || {};
+  const isQaApproved = Boolean(
+    taxDraft.status === 'QA_APPROVED' ||
+    Boolean(taxDraft.qaApprovedAt) ||
+    ['QA_APPROVED', 'SALES_PITCH_QUEUE', 'SALES_PAYMENT_PENDING', 'SALES_ESIGN_PENDING', 'PAID_AND_AUTHORIZED', 'FILING_QUEUE', 'FILING_IN_PROGRESS', 'FILING_SUCCESS', 'COMPLETED'].includes(lead.currentStage as string)
+  );
+
+  const isRevertedToPrecedingDept = Boolean(
+    lead.currentStage === 'CORRECTION_NEEDED' ||
+    lead.currentStage === 'QA_REVISION_REQUESTED' ||
+    taxDraft.status === 'REVISION_REQUESTED' ||
+    taxDraft.status === 'REVERTED_TO_DOCUMENTER' ||
+    (taxDraft.lastRevert && !taxDraft.lastRevert.resolved)
+  );
+
+  const isLocked = !isQaApproved || isRevertedToPrecedingDept;
+  const lockReason = !isQaApproved
+    ? 'Payment collection & Form 8879 authorization are locked until Senior QA Reviewer certifies 4-Eyes Sign-Off on Form 1040.'
+    : isRevertedToPrecedingDept
+    ? (lead.currentStage as string) === 'DOC_OUTREACH' || taxDraft.status === 'REVERTED_TO_DOCUMENTER'
+      ? 'Payment & E-Sign are locked while return is in Documenter outreach'
+      : 'Payment & E-Sign are locked while Form 1040 is in revision with Tax Preparer'
+    : undefined;
+
   const handleUpdateFeeBreakdown = (updated: SalesFeeBreakdown) => {
     setLead((prev) => (prev ? { ...prev, feeBreakdown: updated } : prev));
   };
@@ -273,15 +297,8 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
             onOpenEsignModal={() => setIsEsignModalOpen(true)}
             paymentStatus={lead.paymentStatus}
             esignStatus={lead.esignStatus}
-            isLocked={
-              ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'QA_REVISION_REQUESTED'].includes(lead.currentStage as string) ||
-              ['REVISION_REQUESTED', 'REVERTED_TO_DOCUMENTER'].includes((lead.taxDraftSummary as any)?.status)
-            }
-            lockReason={
-              (lead.currentStage as string) === 'DOC_OUTREACH' || (lead.taxDraftSummary as any)?.status === 'REVERTED_TO_DOCUMENTER'
-                ? 'Payment & E-Sign are locked while return is in Documenter outreach'
-                : 'Payment & E-Sign are locked while Form 1040 is in revision with Tax Preparer'
-            }
+            isLocked={isLocked}
+            lockReason={lockReason}
           />
         </div>
 

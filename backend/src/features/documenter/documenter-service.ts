@@ -812,8 +812,9 @@ export class DocumenterService {
     applicationIds: string[];
     targetAgentId: string;
     assignedByUserId: string;
+    alsoAssignAsSales?: boolean;
   }) {
-    const { applicationIds, targetAgentId, assignedByUserId } = options;
+    const { applicationIds, targetAgentId, assignedByUserId, alsoAssignAsSales = false } = options;
 
     if (!applicationIds || applicationIds.length === 0) {
       throw new Error('No leads selected for assignment');
@@ -853,6 +854,8 @@ export class DocumenterService {
           id: true, 
           currentStage: true, 
           assignedDocAgentId: true,
+          assignedSalesAgentId: true,
+          isDualDocSalesRole: true,
           taxDraftSummary: true,
           customer: {
             select: { firstName: true, lastName: true }
@@ -873,24 +876,36 @@ export class DocumenterService {
           agentEmail: targetAgent.email,
           role: targetAgent.role,
           action: 'ASSIGNED',
+          isDualDocSalesRole: Boolean(alsoAssignAsSales),
           assignedAt: nowIso,
           assignedByUserId,
           assignedByUserName: assignerName,
           assignedByUserRole: assignedByUser?.role || 'ADMIN',
         };
 
+        const updatedSummary = {
+          ...prevSummary,
+          assignmentHistory: [...prevHistory, newHistoryEntry],
+          isReturnedToPool: false,
+          isDualDocSalesRole: Boolean(alsoAssignAsSales),
+          dualRoleAssigned: Boolean(alsoAssignAsSales),
+          dualRoleAssignedAt: alsoAssignAsSales ? nowIso : undefined,
+        };
+
         await tx.taxApplication.update({
           where: { id: app.id },
           data: {
             assignedDocAgentId: targetAgentId,
+            ...(alsoAssignAsSales ? { assignedSalesAgentId: targetAgentId } : {}),
+            isDualDocSalesRole: Boolean(alsoAssignAsSales),
             currentStage: ApplicationStage.DOC_OUTREACH,
-            taxDraftSummary: {
-              ...prevSummary,
-              assignmentHistory: [...prevHistory, newHistoryEntry],
-              isReturnedToPool: false,
-            },
+            taxDraftSummary: updatedSummary,
           },
         });
+
+        const roleRemark = alsoAssignAsSales 
+          ? `directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}) as DUAL-ROLE (Documenter Intake + Sales Closer).`
+          : `directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}).`;
 
         await tx.stageHistory.create({
           data: {
@@ -898,7 +913,7 @@ export class DocumenterService {
             fromStage: app.currentStage,
             toStage: ApplicationStage.DOC_OUTREACH,
             movedByUserId: assignedByUserId,
-            remarks: `${assignerRoleTitle} ${assignerName} (${assignedByUser?.email || 'admin'}) directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}). Stage progressed from ${app.currentStage} → DOC_OUTREACH. Lead placed in agent calling queue.`,
+            remarks: `${assignerRoleTitle} ${assignerName} (${assignedByUser?.email || 'admin'}) ${roleRemark} Stage progressed from ${app.currentStage} → DOC_OUTREACH. Lead placed in agent calling queue.`,
           },
         });
 
@@ -917,6 +932,7 @@ export class DocumenterService {
               targetAgentName,
               targetAgentEmail: targetAgent.email,
               actionType: 'DIRECT_ASSIGNMENT',
+              isDualDocSalesRole: Boolean(alsoAssignAsSales),
               timestamp: nowIso,
             },
           },
@@ -928,9 +944,11 @@ export class DocumenterService {
         data: {
           recipientUserId: targetAgent.id,
           title: apps.length === 1 
-            ? `1 New Lead Assigned to Your Calling Queue` 
-            : `${apps.length} New Leads Assigned to Your Calling Queue`,
-          message: `${assignerName} directly assigned ${apps.length} tax intake lead${apps.length > 1 ? 's' : ''} to your queue. Ready for taxpayer outreach!`,
+            ? (alsoAssignAsSales ? `1 Dual-Role Lead Assigned (Doc + Sales)` : `1 New Lead Assigned to Your Calling Queue`)
+            : (alsoAssignAsSales ? `${apps.length} Dual-Role Leads Assigned (Doc + Sales)` : `${apps.length} New Leads Assigned to Your Calling Queue`),
+          message: alsoAssignAsSales
+            ? `${assignerName} assigned ${apps.length} lead${apps.length > 1 ? 's' : ''} to you with Dual-Role responsibility (Documenter Intake + Downstream Sales Closer).`
+            : `${assignerName} directly assigned ${apps.length} tax intake lead${apps.length > 1 ? 's' : ''} to your queue. Ready for taxpayer outreach!`,
           category: 'DOCUMENTER',
           priority: 'HIGH',
           actionUrl: '/documenter/agent/queue',
@@ -944,6 +962,7 @@ export class DocumenterService {
 
       return {
         assignedCount: apps.length,
+        isDualDocSalesRole: Boolean(alsoAssignAsSales),
         targetAgent: {
           id: targetAgent.id,
           email: targetAgent.email,

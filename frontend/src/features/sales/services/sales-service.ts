@@ -22,6 +22,7 @@ export const salesService = {
     limit?: number;
     priority?: string;
     salesAgentId?: string;
+    isDualRole?: boolean | string;
   }): Promise<SalesPipelineResponse> {
     try {
       const response: any = await apiClient.get('/sales/leads', { params });

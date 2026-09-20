@@ -65,6 +65,7 @@ export const documenterService = {
   async assignBulk(payload: {
     applicationIds: string[];
     targetAgentId: string;
+    alsoAssignAsSales?: boolean;
   }): Promise<any> {
     return apiClient.post('/documenter/assign-bulk', payload);
   },

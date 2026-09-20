@@ -52,6 +52,12 @@ export interface SalesLeadItem extends Record<string, unknown> {
   qaApprovedAt: string;
 
   // Assignment & Sales Info
+  isDualDocSalesRole?: boolean;
+  assignedDocAgent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   assignedPrepAgent?: {
     id: string;
     name: string;

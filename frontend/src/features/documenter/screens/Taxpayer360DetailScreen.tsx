@@ -12,7 +12,8 @@ import {
   RefreshCw,
   FileCheck2,
   CheckCircle2,
-  RotateCcw
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { AppModal } from '@/shared/components/AppModal';
@@ -25,6 +26,7 @@ import { TaxPrepDraftCalculator } from '../components/prep/TaxPrepDraftCalculato
 import type { TaxDraftComputation } from '../components/prep/TaxPrepDraftCalculator';
 import { TaxPrepDocumentVault } from '../components/prep/TaxPrepDocumentVault';
 import { TaxPrepOrganizerReview } from '../components/prep/TaxPrepOrganizerReview';
+import { DualRoleSalesPitchTab } from '../components/prep/DualRoleSalesPitchTab';
 import { LeadAuditTrailSection } from '../components/LeadAuditTrailSection';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
@@ -44,7 +46,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     handleSaveCallDisposition,
   } = useDocumenterWorkspace();
 
-  const [activeTab, setActiveTab] = useState<'TIMELINE' | 'DOCUMENTS' | 'CALCULATOR' | 'ORGANIZER'>('TIMELINE');
+  const [activeTab, setActiveTab] = useState<'TIMELINE' | 'DOCUMENTS' | 'CALCULATOR' | 'ORGANIZER' | 'SALES_PITCH'>('TIMELINE');
   const [lead, setLead] = useState<DocumenterLeadItem | null>(null);
   const [isLoadingLead, setIsLoadingLead] = useState<boolean>(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState<boolean>(false);
@@ -183,6 +185,13 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     ? `${assignedPrepAgent.firstName || ''} ${assignedPrepAgent.lastName || ''}`.trim() || assignedPrepAgent.email?.split('@')[0]
     : lastRevert?.revertedByName || 'Assigned Tax Preparer';
 
+  const isDualRole = Boolean(
+    lead?.isDualDocSalesRole ||
+    currentLead.isDualDocSalesRole ||
+    (lead?.taxDraftSummary as any)?.isDualDocSalesRole ||
+    (currentLead.taxDraftSummary as any)?.isDualDocSalesRole
+  );
+
   return (
     <div className="space-y-6 pb-16 font-sans animate-in fade-in duration-150">
       {/* 1. Back Navigation & Header */}
@@ -209,6 +218,12 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               </h2>
               {currentLead.priority && (
                 <PriorityBadge priority={currentLead.priority} size="sm" />
+              )}
+              {isDualRole && (
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1 shadow-2xs">
+                  <Sparkles className="w-3 h-3 text-indigo-600" />
+                  Dual-Role (Doc + Sales)
+                </span>
               )}
             </div>
           </div>
@@ -358,6 +373,12 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                   TY {currentLead.taxYear}
                 </span>
                 {renderStageBadge(currentLead.currentStage)}
+                {isDualRole && (
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-indigo-600" />
+                    Dual Doc + Sales
+                  </span>
+                )}
               </div>
               <p className="text-xs sm:text-sm text-slate-500 font-medium flex items-center gap-2">
                 <Briefcase className="w-3.5 h-3.5 text-slate-400" />
@@ -376,7 +397,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-right">
               <span className="text-[11px] font-semibold text-slate-400 block">
-                Assigned Calling Agent
+                {isDualRole ? 'Assigned Intake & Sales Agent' : 'Assigned Calling Agent'}
               </span>
               <span className="text-xs font-bold text-slate-800 flex items-center justify-end gap-1.5 mt-0.5">
                 <User className="w-3.5 h-3.5 text-emerald-600" />
@@ -452,6 +473,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           { id: 'DOCUMENTS', label: 'Client Documents Vault', count: (lead?.documents || currentLead.documents || []).length },
           { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
           { id: 'ORGANIZER', label: '9-Module Intake Form' },
+          ...(isDualRole ? [{ id: 'SALES_PITCH', label: 'Sales Pitch & Pricing' }] : []),
         ]}
         activeTab={activeTab}
         onChange={(tabId) => setActiveTab(tabId as any)}
@@ -502,6 +524,18 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               onOrganizerSaved={fetchLeadDetails}
             />
           </div>
+        )}
+
+        {activeTab === 'SALES_PITCH' && isDualRole && (
+          <DualRoleSalesPitchTab
+            lead={lead || currentLead}
+            customer={customer}
+            onRefresh={() => {
+              refreshData();
+              fetchLeadDetails();
+            }}
+            onSwitchToWorksheet={() => setActiveTab('CALCULATOR')}
+          />
         )}
       </div>
 

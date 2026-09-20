@@ -50,6 +50,9 @@ export function useTaxPreparerWorkspace() {
   const [assignedReviewer, setAssignedReviewer] = useState<WorkspaceAssignedReviewer | null>(null);
   const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<WorkspaceDocument | null>(null);
+  const [taxDraftSummary, setTaxDraftSummary] = useState<any>(null);
+  const [drakeTaxFile, setDrakeTaxFile] = useState<any | null>(null);
+  const [isUploadingDrakeFile, setIsUploadingDrakeFile] = useState(false);
 
   // Form 1040 Calculation Inputs (Default to 0 / Clean DB State)
   const [w2Wages, setW2Wages] = useState<number>(0);
@@ -93,6 +96,16 @@ export function useTaxPreparerWorkspace() {
       setTaxpayer(data.taxpayer || null);
       setAssignedReviewer(data.assignedReviewer || null);
       setDocuments(data.documents || []);
+      setTaxDraftSummary(data.taxDraftSummary || {});
+
+      // Extract Drake Tax file if available
+      const drakeFile = data.taxDraftSummary?.drakeTaxFile || (data.documents || []).find((d: any) => d.category === 'DRAKE_TAX_CALCULATION' || d.category === 'DRAKE_TAX_FILE');
+      if (drakeFile) {
+        setDrakeTaxFile(drakeFile);
+      } else {
+        setDrakeTaxFile(null);
+      }
+
       if (data.stageHistories) setStageHistories(data.stageHistories);
       if (data.callLogs) setCallLogs(data.callLogs);
       if (data.auditLogs) setAuditLogs(data.auditLogs);
@@ -252,6 +265,46 @@ export function useTaxPreparerWorkspace() {
     }
   };
 
+  const handleUploadDrakeFile = async (file: File) => {
+    if (!id) return;
+    setIsUploadingDrakeFile(true);
+    const toastId = toast.loading(`Uploading Drake Tax file "${file.name}"...`);
+    try {
+      const response: any = await prepReviewService.uploadDrakeTaxFile(id, file);
+      const resData = response?.data || response;
+      const uploadedFile = resData?.drakeTaxFile || resData?.document;
+      setDrakeTaxFile(uploadedFile);
+      if (resData?.taxDraftSummary) {
+        setTaxDraftSummary(resData.taxDraftSummary);
+      }
+      if (resData?.document) {
+        setDocuments((prev) => {
+          const filtered = prev.filter((d) => d.id !== resData.document.id);
+          return [resData.document, ...filtered];
+        });
+      }
+      toast.success(`Drake Tax file "${file.name}" uploaded successfully!`, { id: toastId });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to upload Drake Tax file', { id: toastId });
+    } finally {
+      setIsUploadingDrakeFile(false);
+    }
+  };
+
+  const handleDeleteDrakeFile = async (docId?: string) => {
+    if (!id) return;
+    const toastId = toast.loading('Removing Drake Tax file...');
+    try {
+      const targetId = docId || drakeTaxFile?.id || '';
+      await prepReviewService.deleteDrakeTaxFile(id, targetId);
+      setDrakeTaxFile(null);
+      setDocuments((prev) => prev.filter((d) => d.id !== targetId && d.category !== 'DRAKE_TAX_CALCULATION'));
+      toast.success('Drake Tax file removed', { id: toastId });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to delete Drake Tax file', { id: toastId });
+    }
+  };
+
   return {
     id,
     isLoading,
@@ -268,6 +321,10 @@ export function useTaxPreparerWorkspace() {
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
+    drakeTaxFile,
+    isUploadingDrakeFile,
+    handleUploadDrakeFile,
+    handleDeleteDrakeFile,
     w2Wages,
     setW2Wages,
     taxableInterest,
@@ -312,6 +369,7 @@ export function useTaxPreparerWorkspace() {
     documenterNotes,
     documenterNotesBy,
     documenterNotesAt,
+    taxDraftSummary,
     revisionCategory,
     revisionInstructions,
     calculations,

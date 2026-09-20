@@ -45,6 +45,8 @@ model TaxApplication {
   assignedFileOpId String?
   assignedFileOp   User?   @relation("FileOpApps", fields: [assignedFileOpId], references: [id])
 
+  isDualDocSalesRole Boolean @default(false)
+
   taxDraftSummary Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

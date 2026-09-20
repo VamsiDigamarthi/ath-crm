@@ -1,16 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Sparkles } from 'lucide-react';
+import { AppModal } from '@/shared/components/AppModal';
 import { useTaxReviewerAudit } from '../hooks/useTaxReviewerAudit';
 import { ReviewerAuditHeader } from '../components/reviewer/audit/ReviewerAuditHeader';
+import { ClientProfilePanel } from '../components/workspace/ClientProfilePanel';
+import { ReviewerDrakeTaxCard } from '../components/reviewer/audit/ReviewerDrakeTaxCard';
 import { ReviewerAuditCalculationsPanel } from '../components/reviewer/audit/ReviewerAuditCalculationsPanel';
 import { ReviewerComplianceChecklist } from '../components/reviewer/audit/ReviewerComplianceChecklist';
 import { DocumentPreviewModal } from '../components/workspace/DocumentPreviewModal';
 import { ReviewerSignOffModals } from '../components/reviewer/audit/ReviewerSignOffModals';
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
+import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
 
 export const TaxReviewerAuditScreen: React.FC = () => {
   const navigate = useNavigate();
+  const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
   const {
     isLoading,
     isSubmitting,
@@ -19,9 +24,11 @@ export const TaxReviewerAuditScreen: React.FC = () => {
     currentStage,
     taxpayer,
     assignedPreparer,
+    assignedReviewer,
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
+    drakeTaxFile,
     prepNotes,
     taxDraftSummary,
     checks,
@@ -58,6 +65,13 @@ export const TaxReviewerAuditScreen: React.FC = () => {
 
   const taxpayerName = taxpayer?.name || 'Taxpayer Client';
 
+  const standardDeductionAmount = (() => {
+    const status = (taxpayer?.maritalStatus || taxDraftSummary?.filingStatus || 'SINGLE').toUpperCase();
+    if (status.includes('MARRIED') || status.includes('JOINT')) return 29200;
+    if (status.includes('HEAD')) return 21900;
+    return 14600;
+  })();
+
   return (
     <div className="w-full space-y-6 pb-16 font-sans animate-in fade-in duration-200">
       {/* 1. Header with Actions */}
@@ -73,19 +87,38 @@ export const TaxReviewerAuditScreen: React.FC = () => {
         allChecksPassed={allChecksPassed}
       />
 
-      {/* 2. Split Audit Layout (Calculations & Checklist) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Live Computations drafted by Preparer (7 cols) */}
-        <div className="lg:col-span-7">
+      {/* 2. Split Audit Layout (Client Profile 9-Module Intake + Drake Tax + Computations + Checklist) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Client Profile & Complete 9-Module Intake Dossier with Drake Tax under Documents (1 col) */}
+        <div className="lg:col-span-1">
+          <ClientProfilePanel
+            taxpayer={taxpayer}
+            assignedReviewer={assignedReviewer}
+            documents={documents}
+            standardDeductionAmount={standardDeductionAmount}
+            taxDraftSummary={taxDraftSummary}
+            onPreviewDoc={setSelectedDocForPreview}
+            onOpenOrganizerModal={() => setIsOrganizerModalOpen(true)}
+            drakeTaxComponent={
+              <ReviewerDrakeTaxCard
+                drakeTaxFile={drakeTaxFile}
+                assignedPreparer={assignedPreparer}
+                onPreview={setSelectedDocForPreview}
+              />
+            }
+          />
+        </div>
+
+        {/* Right Column: Live Computations + Checklist (2 cols) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* 2.1 Live Computations drafted by Preparer */}
           <ReviewerAuditCalculationsPanel
             taxDraftSummary={taxDraftSummary}
             preparerNotes={prepNotes}
             assignedPreparer={assignedPreparer}
           />
-        </div>
 
-        {/* Right Column: 4-Eyes Compliance Checklist & Verified Vault (5 cols) */}
-        <div className="lg:col-span-5">
+          {/* 2.3 4-Eyes Compliance Checklist & Verified Vault */}
           <ReviewerComplianceChecklist
             documents={documents}
             checks={checks}
@@ -153,6 +186,31 @@ export const TaxReviewerAuditScreen: React.FC = () => {
         onConfirmRevision={handleConfirmRevision}
         isSubmitting={isSubmitting}
       />
+
+      {/* 6. Full 9-Module Intake Audit Dossier Modal for QA Reviewer */}
+      <AppModal
+        isOpen={isOrganizerModalOpen}
+        onClose={() => setIsOrganizerModalOpen(false)}
+        width="1100px"
+        title={
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            <span className="font-bold text-slate-900 text-sm">
+              Complete 9-Module Taxpayer Intake Audit Dossier (QA 4-Eyes Verification) — {taxpayerName}
+            </span>
+          </div>
+        }
+      >
+        <div className="py-2">
+          <TaxPrepOrganizerReview
+            leadId={applicationId}
+            customerName={taxpayerName}
+            taxDraftSummary={taxDraftSummary}
+            allowEdit={false}
+            readOnly={true}
+          />
+        </div>
+      </AppModal>
     </div>
   );
 };

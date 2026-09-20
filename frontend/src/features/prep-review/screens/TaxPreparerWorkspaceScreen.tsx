@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail } from 'lucide-react';
+import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail, Sparkles } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { AppModal } from '@/shared/components/AppModal';
@@ -9,13 +9,17 @@ import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { useTaxPreparerWorkspace } from '../hooks/useTaxPreparerWorkspace';
 import { ClientProfilePanel } from '../components/workspace/ClientProfilePanel';
 import { Tax1040FormEngine } from '../components/workspace/Tax1040FormEngine';
+import { DrakeTaxUploadCard } from '../components/workspace/DrakeTaxUploadCard';
 import { DocumentPreviewModal } from '../components/workspace/DocumentPreviewModal';
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
+import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
+import toast from 'react-hot-toast';
 
 export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const navigate = useNavigate();
   const [isSendBackOpen, setIsSendBackOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
   const {
     isLoading,
     isSaving,
@@ -31,6 +35,11 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
+    drakeTaxFile,
+    isUploadingDrakeFile,
+    handleUploadDrakeFile,
+    handleDeleteDrakeFile,
+    taxDraftSummary,
     w2Wages,
     setW2Wages,
     taxableInterest,
@@ -69,6 +78,20 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     handleSaveDraft,
     handleSubmitForQA,
   } = useTaxPreparerWorkspace();
+
+  const handleApplyFieldValue = (field: string, value: number) => {
+    if (field === 'w2Wages') setW2Wages(value);
+    else if (field === 'taxableInterest') setTaxableInterest(value);
+    else if (field === 'capitalGains') setCapitalGains(value);
+    else if (field === 'otherIncome') setOtherIncome(value);
+    else if (field === 'fedWithheld') setFedWithheld(value);
+    else if (field === 'stateWithheld') setStateWithheld(value);
+    else if (field === 'itemizedDeduction') {
+      setItemizedDeduction(value);
+      setDeductionType('ITEMIZED');
+    }
+    toast.success(`Applied $${value.toLocaleString()} directly to Form 1040! 📝✓`);
+  };
 
   if (isLoading) {
     return (
@@ -412,11 +435,24 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             assignedReviewer={assignedReviewer}
             documents={documents}
             standardDeductionAmount={standardDeductionAmount}
+            taxDraftSummary={taxDraftSummary}
             onPreviewDoc={setSelectedDocForPreview}
+            onOpenOrganizerModal={() => setIsOrganizerModalOpen(true)}
+            onApplyValue={handleApplyFieldValue}
+            drakeTaxComponent={
+              <DrakeTaxUploadCard
+                drakeTaxFile={drakeTaxFile}
+                isUploading={isUploadingDrakeFile}
+                isReadOnly={isSubmittedToQA || isRevertedToDocs}
+                onUpload={handleUploadDrakeFile}
+                onDelete={handleDeleteDrakeFile}
+                onPreview={setSelectedDocForPreview}
+              />
+            }
           />
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <Tax1040FormEngine
             w2Wages={w2Wages}
             setW2Wages={setW2Wages}
@@ -613,6 +649,31 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
         stateRefund={calculations.stateRefund}
         totalRefund={calculations.combinedRefund}
       />
+
+      {/* 7. Full 9-Module Intake Audit Dossier Modal */}
+      <AppModal
+        isOpen={isOrganizerModalOpen}
+        onClose={() => setIsOrganizerModalOpen(false)}
+        width="1100px"
+        title={
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-600" />
+            <span className="font-bold text-slate-900 text-sm">
+              Complete 9-Module Taxpayer Intake Audit Dossier — {taxpayerName}
+            </span>
+          </div>
+        }
+      >
+        <div className="py-2">
+          <TaxPrepOrganizerReview
+            leadId={applicationId}
+            customerName={taxpayerName}
+            taxDraftSummary={taxDraftSummary}
+            allowEdit={false}
+            readOnly={true}
+          />
+        </div>
+      </AppModal>
     </div>
   );
 };

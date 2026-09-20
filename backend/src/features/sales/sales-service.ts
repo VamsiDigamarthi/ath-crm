@@ -12,6 +12,7 @@ export class SalesService {
     limit?: number;
     salesAgentId?: string;
     priority?: string;
+    isDualRole?: string | boolean;
   }) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
@@ -47,6 +48,15 @@ export class SalesService {
         },
       ],
     };
+
+    if (query.isDualRole !== undefined) {
+      const isDual = String(query.isDualRole) === 'true';
+      if (isDual) {
+        baseWhere.isDualDocSalesRole = true;
+      } else {
+        baseWhere.isDualDocSalesRole = false;
+      }
+    }
 
     if (query.priority && query.priority !== 'ALL') {
       baseWhere.priority = query.priority as any;
@@ -223,6 +233,12 @@ export class SalesService {
         qaAuditorName: qaAuditor,
         qaAuditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
         qaApprovedAt: draft.qaApprovedAt || app.updatedAt.toISOString(),
+        isDualDocSalesRole: Boolean(app.isDualDocSalesRole || draft?.isDualDocSalesRole),
+        assignedDocAgent: app.assignedDocAgent ? {
+          id: app.assignedDocAgent.id,
+          name: `${app.assignedDocAgent.firstName || ''} ${app.assignedDocAgent.lastName || ''}`.trim() || app.assignedDocAgent.email || 'Calling Agent',
+          email: app.assignedDocAgent.email || '-',
+        } : null,
         assignedPrepAgent: app.assignedPrepAgent ? {
           id: app.assignedPrepAgent.id,
           name: `${app.assignedPrepAgent.firstName || ''} ${app.assignedPrepAgent.lastName || ''}`.trim() || app.assignedPrepAgent.email || 'Senior Preparer',

@@ -31,32 +31,34 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
       {/* Header with Explainer Banner */}
-      <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
+      <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100 shrink-0">
               <FileText className="w-4 h-4" />
             </div>
-            <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-              Certified Form 1040 Tax Calculation &amp; Deductions Breakdown
+            <h3 className="font-bold text-slate-900 text-sm truncate">
+              Form 1040 Tax Calculation &amp; Deductions
             </h3>
           </div>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Prepared by CPA Specialist and QA-Certified. Use these exact line numbers to explain deductions &amp; refund to client.
+          <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+            QA-Certified line-by-line deduction &amp; refund breakdown.
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <AppTabs
-          tabs={[
-            { id: 'SCHEDULES', label: 'Form 1040 Federal' },
-            { id: 'STATE', label: `State Return (${lead.stateOfResidence?.split(',')[1]?.trim() || lead.stateOfResidence || 'State'})` },
-            { id: 'QA_AUDIT', label: 'Preparer & QA Sign-Off' },
-          ]}
-          activeTab={activeTab}
-          onChange={(tab) => setActiveTab(tab as any)}
-          size="sm"
-        />
+        <div className="shrink-0 overflow-x-auto">
+          <AppTabs
+            tabs={[
+              { id: 'SCHEDULES', label: 'Federal 1040' },
+              { id: 'STATE', label: `State (${lead.stateOfResidence?.split(',')[1]?.trim() || lead.stateOfResidence || 'Return'})` },
+              { id: 'QA_AUDIT', label: 'QA Sign-Off' },
+            ]}
+            activeTab={activeTab}
+            onChange={(tab) => setActiveTab(tab as any)}
+            size="sm"
+          />
+        </div>
       </div>
 
       {/* Tab 1: Form 1040 Federal Schedule Breakdown */}

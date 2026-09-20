@@ -8,6 +8,8 @@ export class SalesController {
         stage: req.query.stage as string,
         search: req.query.search as string,
         salesAgentId: req.query.salesAgentId as string,
+        priority: req.query.priority as string,
+        isDualRole: req.query.isDualRole as string,
         page: Number(req.query.page) || 1,
         limit: Number(req.query.limit) || 100,
       });

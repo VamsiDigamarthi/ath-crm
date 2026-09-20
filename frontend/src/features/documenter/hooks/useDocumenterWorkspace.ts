@@ -155,7 +155,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   }, [selectedRows, activeLeadForAssign, fetchLeads, fetchAgents]);
 
   // Direct Staff Assignment
-  const handleDirectAssign = useCallback(async (agentId: string) => {
+  const handleDirectAssign = useCallback(async (agentId: string, options?: { alsoAssignAsSales?: boolean }) => {
     setIsActionLoading(true);
     try {
       const targetIds = selectedRows.length > 0
@@ -170,6 +170,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
       const res = await documenterService.assignBulk({
         applicationIds: targetIds,
         targetAgentId: agentId,
+        alsoAssignAsSales: options?.alsoAssignAsSales,
       });
 
       toast.success(

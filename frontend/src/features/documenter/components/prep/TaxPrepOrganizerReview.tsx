@@ -54,6 +54,8 @@ interface TaxPrepOrganizerReviewProps {
   customerName: string;
   taxDraftSummary?: any;
   onOrganizerSaved?: () => void;
+  allowEdit?: boolean;
+  readOnly?: boolean;
 }
 
 export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
@@ -61,7 +63,10 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   customerName,
   taxDraftSummary,
   onOrganizerSaved,
+  allowEdit = true,
+  readOnly = false,
 }) => {
+  const canEdit = allowEdit && !readOnly;
   const organizer = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
   const activeTaxYear = taxDraftSummary?.taxYear || organizer.taxYear || 2025;
 
@@ -266,19 +271,21 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               <span>Review Audit</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setViewMode('AGENT_EDIT')}
-              className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'AGENT_EDIT'
-                  ? 'bg-[#16A34A] text-white shadow-xs'
-                  : 'text-emerald-400 hover:text-emerald-300'
-              }`}
-              title="Fill / edit fields on call"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>Fill on Call</span>
-            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setViewMode('AGENT_EDIT')}
+                className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'AGENT_EDIT'
+                    ? 'bg-[#16A34A] text-white shadow-xs'
+                    : 'text-emerald-400 hover:text-emerald-300'
+                }`}
+                title="Fill / edit fields on call"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Fill on Call</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -448,15 +455,17 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                 Viewing Module 0{currentModIndex + 1}: {modulesList[currentModIndex]?.title}
               </span>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setViewMode('AGENT_EDIT')}
-              className="border-emerald-300 text-[#16A34A] hover:bg-emerald-50 text-xs font-bold flex items-center gap-1.5 h-7.5 px-3 cursor-pointer"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>Edit this Module on Call</span>
-            </Button>
+            {canEdit && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setViewMode('AGENT_EDIT')}
+                className="border-emerald-300 text-[#16A34A] hover:bg-emerald-50 text-xs font-bold flex items-center gap-1.5 h-7.5 px-3 cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit this Module on Call</span>
+              </Button>
+            )}
           </div>
 
           {selectedModId === 'm1' && (

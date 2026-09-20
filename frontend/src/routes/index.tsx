@@ -34,6 +34,7 @@ import { SalesLayout } from '@/features/sales/layouts/SalesLayout';
 import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { SalesManagerDashboardScreen } from '@/features/sales/screens/SalesManagerDashboardScreen';
 import { SalesManagerQueueScreen } from '@/features/sales/screens/SalesManagerQueueScreen';
+import { SalesManagerDualRoleScreen } from '@/features/sales/screens/SalesManagerDualRoleScreen';
 import { SalesTeamScorecardsScreen } from '@/features/sales/screens/SalesTeamScorecardsScreen';
 import { SalesAgentDashboardScreen } from '@/features/sales/screens/SalesAgentDashboardScreen';
 import { SalesAgentQueueScreen } from '@/features/sales/screens/SalesAgentQueueScreen';
@@ -380,6 +381,10 @@ export const router = createBrowserRouter([
           {
             path: 'manager/queue',
             element: <SalesManagerQueueScreen />,
+          },
+          {
+            path: 'manager/dual-role',
+            element: <SalesManagerDualRoleScreen />,
           },
           {
             path: 'manager/team',

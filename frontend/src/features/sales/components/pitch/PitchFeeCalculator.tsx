@@ -6,7 +6,8 @@ import {
   Globe, 
   Tag, 
   CreditCard, 
-  FileCheck
+  FileCheck,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { SalesFeeBreakdown } from '../../types/sales.types';
@@ -312,8 +313,7 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
                 onChange={(e) => setCouponCode(e.target.value)}
                 placeholder="Enter promo code"
                 className="w-36 text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 uppercase font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-              </input>
+              />
               <Button
                 size="sm"
                 onClick={handleApplyCoupon}
@@ -338,51 +338,60 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {paymentStatus !== 'PAID' ? (
-            <Button
-              size="sm"
-              disabled={isLocked}
-              title={isLocked ? lockReason || 'Payment collection locked while return is in revision' : undefined}
-              onClick={onOpenPaymentModal}
-              className={`text-xs font-bold flex items-center gap-1.5 shadow-md ${
-                isLocked
-                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600 opacity-60'
-                  : 'bg-[#16A34A] hover:bg-[#15803D] text-white cursor-pointer'
-              }`}
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>Collect Payment ($ {feeBreakdown.totalServiceFee})</span>
-            </Button>
-          ) : (
-            <div className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400 text-emerald-300 px-3 py-1.5 rounded-lg text-xs font-bold">
-              <Check className="w-4 h-4 text-emerald-400" />
-              <span>Payment Verified ($ {feeBreakdown.totalServiceFee})</span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
+          {isLocked && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[11px] font-semibold">
+              <Lock className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+              <span>{lockReason || 'Payment &amp; E-Sign locked while return is in revision'}</span>
             </div>
           )}
 
-          {esignStatus !== 'SIGNED' ? (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isLocked}
-              title={isLocked ? lockReason || 'E-Sign authorization locked while return is in revision' : undefined}
-              onClick={onOpenEsignModal}
-              className={`border-white/20 text-xs font-bold flex items-center gap-1.5 ${
-                isLocked
-                  ? 'bg-white/5 text-slate-400 cursor-not-allowed opacity-60'
-                  : 'bg-white/10 hover:bg-white/20 text-white cursor-pointer'
-              }`}
-            >
-              <FileCheck className="w-4 h-4" />
-              <span>Authorize Form 8879</span>
-            </Button>
-          ) : (
-            <div className="flex items-center gap-1.5 bg-blue-500/20 border border-blue-400 text-blue-200 px-3 py-1.5 rounded-lg text-xs font-bold">
-              <Check className="w-4 h-4 text-blue-300" />
-              <span>Form 8879 E-Signed</span>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {paymentStatus !== 'PAID' ? (
+              <Button
+                size="sm"
+                disabled={isLocked}
+                title={isLocked ? lockReason || 'Payment collection locked while return is in revision' : undefined}
+                onClick={() => !isLocked && onOpenPaymentModal()}
+                className={`text-xs font-bold flex items-center gap-1.5 shadow-md ${
+                  isLocked
+                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600 opacity-60'
+                    : 'bg-[#16A34A] hover:bg-[#15803D] text-white cursor-pointer'
+                }`}
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Collect Payment ($ {feeBreakdown.totalServiceFee})</span>
+              </Button>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400 text-emerald-300 px-3 py-1.5 rounded-lg text-xs font-bold">
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span>Payment Verified ($ {feeBreakdown.totalServiceFee})</span>
+              </div>
+            )}
+
+            {esignStatus !== 'SIGNED' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isLocked}
+                title={isLocked ? lockReason || 'E-Sign authorization locked while return is in revision' : undefined}
+                onClick={() => !isLocked && onOpenEsignModal()}
+                className={`border-white/20 text-xs font-bold flex items-center gap-1.5 ${
+                  isLocked
+                    ? 'bg-white/5 text-slate-400 cursor-not-allowed opacity-60'
+                    : 'bg-white/10 hover:bg-white/20 text-white cursor-pointer'
+                }`}
+              >
+                <FileCheck className="w-4 h-4" />
+                <span>Authorize Form 8879</span>
+              </Button>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-blue-500/20 border border-blue-400 text-blue-200 px-3 py-1.5 rounded-lg text-xs font-bold">
+                <Check className="w-4 h-4 text-blue-300" />
+                <span>Form 8879 E-Signed</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
