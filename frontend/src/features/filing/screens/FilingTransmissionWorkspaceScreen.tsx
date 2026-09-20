@@ -290,6 +290,7 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
       <LeadAuditTrailSection
         leadId={lead.id}
         taxpayerName={lead.taxpayerName}
+        taxpayerEmail={lead.taxpayerEmail || (lead as any).taxpayerProfile?.email}
         currentStage={lead.currentStage}
         stageHistories={(lead.stageHistories as any) || []}
         callLogs={(lead.callLogs as any) || []}

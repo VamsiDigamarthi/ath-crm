@@ -45,6 +45,7 @@ export function useTaxPreparerWorkspace() {
   const [applicationId, setApplicationId] = useState<string>('');
   const [taxYear, setTaxYear] = useState<number>(2025);
   const [currentStage, setCurrentStage] = useState<string>('PREP_IN_PROGRESS');
+  const [priority, setPriority] = useState<string>('NO_PRIORITY');
   const [taxpayer, setTaxpayer] = useState<WorkspaceTaxpayer | null>(null);
   const [assignedReviewer, setAssignedReviewer] = useState<WorkspaceAssignedReviewer | null>(null);
   const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
@@ -88,6 +89,7 @@ export function useTaxPreparerWorkspace() {
       setApplicationId(data.applicationId || id);
       setTaxYear(data.taxYear || 2025);
       setCurrentStage(data.currentStage || 'PREP_IN_PROGRESS');
+      if (data.priority) setPriority(data.priority);
       setTaxpayer(data.taxpayer || null);
       setAssignedReviewer(data.assignedReviewer || null);
       setDocuments(data.documents || []);
@@ -260,6 +262,7 @@ export function useTaxPreparerWorkspace() {
     applicationId,
     taxYear,
     currentStage,
+    priority,
     taxpayer,
     assignedReviewer,
     documents,

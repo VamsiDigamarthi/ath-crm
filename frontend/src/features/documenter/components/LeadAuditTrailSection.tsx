@@ -20,6 +20,7 @@ export interface LeadAuditTrailSectionProps {
   callLogs?: CallLogItem[];
   leadId?: string;
   taxpayerName: string;
+  taxpayerEmail?: string;
   currentStage?: string;
 }
 
@@ -73,11 +74,51 @@ function formatFullDateTime(dateStr: string): string {
   }
 }
 
+function getRoleBadgeClasses(role?: string): string {
+  switch (role) {
+    case 'CLIENT':
+    case 'TAXPAYER_USER':
+    case 'TAXPAYER':
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'DOC_AGENT':
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    case 'DOC_MANAGER':
+      return 'bg-purple-50 text-purple-700 border-purple-200';
+    case 'TAX_PREPARER':
+    case 'PREPARER':
+      return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'TAX_REVIEWER':
+    case 'REVIEWER':
+    case 'QA_REVIEWER':
+      return 'bg-teal-50 text-teal-700 border-teal-200';
+    case 'SALES_AGENT':
+    case 'SALES_CLOSER':
+      return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    case 'SALES_MANAGER':
+      return 'bg-violet-50 text-violet-700 border-violet-200';
+    case 'FILE_OP_AGENT':
+    case 'FILING_AGENT':
+      return 'bg-cyan-50 text-cyan-700 border-cyan-200';
+    case 'ADMIN':
+    case 'SUPER_ADMIN':
+      return 'bg-red-50 text-red-700 border-red-200';
+    default:
+      return 'bg-slate-100 text-slate-600 border-slate-200';
+  }
+}
+
+function getRoleDisplayLabel(role?: string): string {
+  if (role === 'TAXPAYER_USER' || role === 'TAXPAYER') return 'CLIENT';
+  if (role === 'SUPER_ADMIN') return 'ADMIN';
+  return role || 'SYSTEM';
+}
+
 export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
   stageHistories = [],
   auditLogs = [],
   callLogs = [],
   taxpayerName,
+  taxpayerEmail,
   currentStage,
 }) => {
   const [filter, setFilter] = useState<TimelineFilter>('ALL');
@@ -162,6 +203,10 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
 
       const isAdminDirectAssignment = s.remarks?.toLowerCase().includes('super admin') && 
                                       s.remarks?.toLowerCase().includes('directly assigned this lead to calling agent');
+
+      const isClientStage = s.movedByRole === 'TAXPAYER_USER' || 
+                            s.movedByRole === 'CLIENT' ||
+                            s.remarks?.toLowerCase().startsWith('taxpayer');
 
       let displayFromStage = s.fromStage;
       let displayToStage = s.toStage;
@@ -255,9 +300,15 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         description: eventDescription,
         fromStage: displayFromStage,
         toStage: displayToStage,
-        actorName: s.movedByName || s.movedByEmail?.split('@')[0] || (isLeadReturnToAdmin ? 'Calling Agent' : isAdminDirectAssignment ? 'Super Admin' : isIngestion ? 'Operations Admin' : isPrepAssignment ? 'Prep Manager' : (isSalesAssignment || isAutoRoundRobin) ? 'Sales Manager' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'Sales Closer' : 'Documenter Manager'),
-        actorEmail: s.movedByEmail || undefined,
-        actorRole: s.movedByRole || (isLeadReturnToAdmin ? 'DOC_AGENT' : isAdminDirectAssignment ? 'ADMIN' : isIngestion ? 'ADMIN' : isPrepAssignment ? 'PREP_MANAGER' : (isSalesAssignment || isAutoRoundRobin) ? 'SALES_MANAGER' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'SALES_AGENT' : 'DOC_MANAGER'),
+        actorName: isClientStage
+          ? (taxpayerName || s.movedByName || 'Taxpayer Client')
+          : (s.movedByName || s.movedByEmail?.split('@')[0] || (isLeadReturnToAdmin ? 'Calling Agent' : isAdminDirectAssignment ? 'Super Admin' : isIngestion ? 'Operations Admin' : isPrepAssignment ? 'Prep Manager' : (isSalesAssignment || isAutoRoundRobin) ? 'Sales Manager' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'Sales Closer' : 'Documenter Manager')),
+        actorEmail: isClientStage
+          ? (taxpayerEmail || s.movedByEmail || undefined)
+          : (s.movedByEmail || undefined),
+        actorRole: isClientStage
+          ? 'CLIENT'
+          : (s.movedByRole || (isLeadReturnToAdmin ? 'DOC_AGENT' : isAdminDirectAssignment ? 'ADMIN' : isIngestion ? 'ADMIN' : isPrepAssignment ? 'PREP_MANAGER' : (isSalesAssignment || isAutoRoundRobin) ? 'SALES_MANAGER' : (isPaymentCollected || isForm8879Signed || isFilingDispatch) ? 'SALES_AGENT' : 'DOC_MANAGER')),
         timestamp: s.createdAt,
       });
     });
@@ -289,35 +340,47 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         return;
       }
 
+      const details = (a.details as any) || {};
+      const isClientAction = 
+        a.actorType === 'CLIENT' || 
+        a.actorRole === 'TAXPAYER_USER' || 
+        a.actorRole === 'CLIENT' || 
+        details.source === 'TAXPAYER_CLIENT_PORTAL' ||
+        Boolean(details.clientEmail) ||
+        Boolean(details.clientName);
+
       const isOrganizer = a.action === 'ORGANIZER_UPDATE';
       const isDocUpload = a.action === 'DOCUMENT_UPLOAD';
       const isDocDelete = a.action === 'DOCUMENT_DELETE';
       const isDocVerify = a.action === 'DOCUMENT_VERIFY';
-      const isSalesEsignUpload = a.moduleKey === 'SALES' && (isDocUpload || (a.details as any)?.fileName?.includes('8879') || (a.details as any)?.fileName?.includes('8878'));
+      const isSalesEsignUpload = a.moduleKey === 'SALES' && (isDocUpload || details?.fileName?.includes('8879') || details?.fileName?.includes('8878'));
 
       let eventTitle = `Audit Action: ${a.action.replace(/_/g, ' ')}`;
       if (isSalesEsignUpload) {
-        eventTitle = `IRS Form 8879 E-Sign Authorized & Attached (PIN: ${(a.details as any)?.taxpayerPin || 'Authorized'})`;
+        eventTitle = `IRS Form 8879 E-Sign Authorized & Attached (PIN: ${details?.taxpayerPin || 'Authorized'})`;
       } else if (isOrganizer) {
         eventTitle = `9-Module Tax Organizer Saved`;
       } else if (isDocUpload) {
-        eventTitle = `Document Uploaded: ${(a.details as any)?.fileName || (a.details as any)?.categoryLabel || 'Tax Document'}`;
+        eventTitle = `Document Uploaded: ${details?.fileName || details?.categoryLabel || 'Tax Document'}`;
       } else if (isDocDelete) {
-        eventTitle = `Document Removed: ${(a.details as any)?.deletedFileName || 'Tax Document'}`;
+        eventTitle = `Document Removed: ${details?.deletedFileName || 'Tax Document'}`;
       } else if (isDocVerify) {
-        eventTitle = `Document Verified: ${(a.details as any)?.fileName || 'Tax Document'}`;
+        eventTitle = `Document Verified: ${details?.fileName || 'Tax Document'}`;
       }
+
+      const clientDisplayName = details.clientName || (a.actorName && !a.actorName.includes('@') ? a.actorName : taxpayerName) || 'Taxpayer Client';
+      const clientDisplayEmail = details.clientEmail || taxpayerEmail || a.actorEmail || undefined;
 
       events.push({
         id: `audit-${a.id}`,
         type: 'AUDIT',
         title: eventTitle,
-        description: (a.details as any)?.remarks || (a.moduleKey ? `Updated module ${a.moduleKey}` : `System audit record logged for ${a.action}`),
-        actorName: a.actorName || a.actorEmail?.split('@')[0] || (a.actorType === 'CLIENT' ? 'Taxpayer Client' : 'System User'),
-        actorEmail: a.actorEmail || undefined,
-        actorRole: a.actorRole || (a.actorType === 'CLIENT' ? 'TAXPAYER' : 'SYSTEM'),
+        description: details?.remarks || (a.moduleKey ? `Updated module ${a.moduleKey}` : `System audit record logged for ${a.action}`),
+        actorName: isClientAction ? clientDisplayName : (a.actorName || a.actorEmail?.split('@')[0] || 'System User'),
+        actorEmail: isClientAction ? clientDisplayEmail : (a.actorEmail || undefined),
+        actorRole: isClientAction ? 'CLIENT' : (a.actorRole || (a.actorType === 'CLIENT' ? 'CLIENT' : 'SYSTEM')),
         timestamp: a.createdAt,
-        meta: a.details as any,
+        meta: details,
       });
     });
 
@@ -643,7 +706,17 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                     {/* Bottom Row: Actor attribution badge */}
                     <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center">
+                        <div className={`w-5 h-5 rounded-full font-bold text-[10px] flex items-center justify-center ${
+                          event.actorRole === 'CLIENT' || event.actorRole === 'TAXPAYER_USER' || event.actorRole === 'TAXPAYER'
+                            ? 'bg-blue-100 text-blue-700'
+                            : event.actorRole === 'DOC_AGENT'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : event.actorRole === 'DOC_MANAGER'
+                            ? 'bg-purple-100 text-purple-700'
+                            : event.actorRole === 'ADMIN' || event.actorRole === 'SUPER_ADMIN'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}>
                           {(event.actorName || 'U').charAt(0).toUpperCase()}
                         </div>
                         <span className="font-semibold text-slate-700 text-[11px]">
@@ -656,16 +729,8 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                         )}
                       </div>
 
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                        event.actorRole === 'ADMIN'
-                          ? 'bg-red-50 text-red-700 border-red-200'
-                          : event.actorRole === 'DOC_MANAGER'
-                          ? 'bg-purple-50 text-purple-700 border-purple-200'
-                          : event.actorRole === 'DOC_AGENT'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-slate-100 text-slate-600 border-slate-200'
-                      }`}>
-                        {event.actorRole}
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${getRoleBadgeClasses(event.actorRole)}`}>
+                        {getRoleDisplayLabel(event.actorRole)}
                       </span>
                     </div>
                   </div>

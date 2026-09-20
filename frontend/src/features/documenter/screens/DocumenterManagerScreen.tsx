@@ -7,6 +7,7 @@ import { FloatingActionBar } from '../components/FloatingActionBar';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { getDocumenterColumns } from '../columns/documenter-columns';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { Button } from '@/shared/components/Button';
@@ -33,6 +34,8 @@ export const DocumenterManagerScreen: React.FC = () => {
     setSearchQuery,
     visaFilter,
     setVisaFilter,
+    priorityFilter,
+    handlePriorityChange,
     leads,
     agents,
     stats,
@@ -345,6 +348,11 @@ export const DocumenterManagerScreen: React.FC = () => {
                     <option value="US_CITIZEN">US Citizen</option>
                   </select>
                 </div>
+
+                <PriorityFilterSelect
+                  value={priorityFilter}
+                  onChange={handlePriorityChange}
+                />
 
                 {selectedRows.length > 0 && (
                   <Button

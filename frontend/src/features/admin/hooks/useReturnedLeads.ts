@@ -8,6 +8,7 @@ export interface ReturnedLeadItem extends Record<string, unknown> {
   taxYear: number;
   filingType: string;
   currentStage: string;
+  priority?: string;
   assignedDocAgentId?: string | null;
   assignedDocAgent?: any;
   taxDraftSummary?: any;
@@ -67,6 +68,7 @@ export const useReturnedLeads = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [visaFilter, setVisaFilter] = useState<string>('ALL');
   const [taxYearFilter, setTaxYearFilter] = useState<number | undefined>(undefined);
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -90,6 +92,7 @@ export const useReturnedLeads = () => {
         search: searchQuery.trim() || undefined,
         visaType: visaFilter !== 'ALL' ? visaFilter : undefined,
         taxYear: taxYearFilter,
+        priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
       });
 
       if (res?.data) {
@@ -111,7 +114,7 @@ export const useReturnedLeads = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, searchQuery, visaFilter, taxYearFilter]);
+  }, [page, limit, searchQuery, visaFilter, taxYearFilter, priorityFilter]);
 
   // Initial and reactive load
   useEffect(() => {
@@ -131,6 +134,11 @@ export const useReturnedLeads = () => {
 
   const handleTaxYearChange = useCallback((year?: number) => {
     setTaxYearFilter(year);
+    setPage(1);
+  }, []);
+
+  const handlePriorityChange = useCallback((priority: string) => {
+    setPriorityFilter(priority);
     setPage(1);
   }, []);
 
@@ -225,6 +233,7 @@ export const useReturnedLeads = () => {
     searchQuery,
     visaFilter,
     taxYearFilter,
+    priorityFilter,
     page,
     limit,
     totalPages,
@@ -237,6 +246,7 @@ export const useReturnedLeads = () => {
     handleSearchChange,
     handleVisaChange,
     handleTaxYearChange,
+    handlePriorityChange,
     handlePageChange,
     handleLimitChange,
     handleOpenAssignModal,

@@ -28,6 +28,7 @@ export const NotificationCenterScreen: React.FC = () => {
   const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN';
 
+  const [adminScope, setAdminScope] = useState<'my' | 'all'>('my');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<NotificationPriority | 'ALL'>('ALL');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -44,10 +45,10 @@ export const NotificationCenterScreen: React.FC = () => {
     setOnlyUnreadFilter,
   } = useNotificationStore();
 
-  // Automatically fetch live notifications from database when screen opens
+  // Automatically fetch live notifications from database when screen opens or scope changes
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    fetchNotifications(isAdmin && adminScope === 'all' ? 'all' : undefined);
+  }, [fetchNotifications, isAdmin, adminScope]);
 
   // Reset pagination when any filter or search changes
   useEffect(() => {
@@ -183,8 +184,35 @@ export const NotificationCenterScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Global Bulk Actions */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        {/* Global Bulk Actions & Admin Scope Switcher */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          {isAdmin && (
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => setAdminScope('my')}
+                className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  adminScope === 'my'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                My Notifications
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdminScope('all')}
+                className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  adminScope === 'all'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                All Department Activity
+              </button>
+            </div>
+          )}
+
           {unreadCount > 0 && (
             <button
               type="button"

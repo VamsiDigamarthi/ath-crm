@@ -17,6 +17,7 @@ import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { Button } from '@/shared/components/Button';
 import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
 import { getFilingColumns } from '../columns/filing-columns';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { useFilingQueue } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
 
@@ -32,6 +33,8 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
     setSearchQuery,
     stageFilter,
     setStageFilter,
+    priorityFilter,
+    setPriorityFilter,
     fetchQueue,
     handleOpenWorkspace,
   } = useFilingQueue(true);
@@ -245,6 +248,11 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
                 <option value="US_CITIZEN">US Citizen</option>
               </select>
             </div>
+
+            <PriorityFilterSelect
+              value={priorityFilter}
+              onChange={setPriorityFilter}
+            />
           </div>
         </div>
       </div>

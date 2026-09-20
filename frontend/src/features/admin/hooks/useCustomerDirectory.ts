@@ -10,6 +10,7 @@ export function useCustomerDirectory() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedTaxYear, setSelectedTaxYear] = useState<string>('ALL');
   const [selectedFilingStatus, setSelectedFilingStatus] = useState<'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS'>('ALL');
+  const [selectedPriority, setSelectedPriority] = useState<string>('ALL');
   const [page, setPage] = useState<number>(1);
   const [selectedCustomer, setSelectedCustomer] = useState<AdminCustomerItem | null>(null);
 
@@ -20,6 +21,7 @@ export function useCustomerDirectory() {
         search: searchQuery || undefined,
         taxYear: selectedTaxYear !== 'ALL' ? Number(selectedTaxYear) : undefined,
         filingStatus: selectedFilingStatus !== 'ALL' ? selectedFilingStatus : undefined,
+        priority: selectedPriority !== 'ALL' ? selectedPriority : undefined,
         page,
         limit: 10,
       });
@@ -32,7 +34,7 @@ export function useCustomerDirectory() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedTaxYear, selectedFilingStatus, page]);
+  }, [searchQuery, selectedTaxYear, selectedFilingStatus, selectedPriority, page]);
 
   useEffect(() => {
     fetchCustomers();
@@ -50,6 +52,11 @@ export function useCustomerDirectory() {
 
   const handleStatusChange = useCallback((status: 'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS') => {
     setSelectedFilingStatus(status);
+    setPage(1);
+  }, []);
+
+  const handlePriorityChange = useCallback((priority: string) => {
+    setSelectedPriority(priority);
     setPage(1);
   }, []);
 
@@ -91,6 +98,7 @@ export function useCustomerDirectory() {
     searchQuery,
     selectedTaxYear,
     selectedFilingStatus,
+    selectedPriority,
     page,
     selectedCustomer,
     taxYearOptions,
@@ -98,6 +106,7 @@ export function useCustomerDirectory() {
     handleSearchChange,
     handleYearChange,
     handleStatusChange,
+    handlePriorityChange,
     handlePageChange,
     fetchCustomers,
   };

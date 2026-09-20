@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import type { ParsedLeadRow } from '../types/bulk-import.types';
 import { validateLeadRow } from './lead-validator';
+import { normalizePriority, normalizeHeaderKey } from './csv-helper';
 
 /**
  * Generates and downloads a native Excel (.xlsx) file with Emerald Green background (#16A34A) and Bold 700 font
@@ -34,6 +35,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = new Date().g
     { header: 'Zip Code', key: 'zipCode', width: 14 },
     { header: 'Estimated Income', key: 'estimatedIncome', width: 20 },
     { header: 'Lead Source', key: 'source', width: 24 },
+    { header: 'Priority (Urgent, Important, High, Medium, Low, No Priority)', key: 'priority', width: 26 },
   ];
 
   // Style Header Row (Row 1)
@@ -90,6 +92,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = new Date().g
       zipCode: '62704',
       estimatedIncome: '$145,000',
       source: 'Client Referral',
+      priority: 'Urgent',
     },
     {
       firstName: 'Priya',
@@ -110,6 +113,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = new Date().g
       zipCode: '60611',
       estimatedIncome: '$115,000',
       source: 'Google Search Ads',
+      priority: 'High',
     },
     {
       firstName: 'Vikram',
@@ -130,6 +134,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = new Date().g
       zipCode: '98101',
       estimatedIncome: '$320,000',
       source: 'CPA Referral Partner',
+      priority: 'Important',
     },
     {
       firstName: 'Sneha',
@@ -150,6 +155,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = new Date().g
       zipCode: '78701',
       estimatedIncome: '$92,000',
       source: 'Tax Campaign 2025',
+      priority: 'Medium',
     },
   ];
 
@@ -207,32 +213,7 @@ export async function downloadStyledExcelTemplate(taxYear: number = new Date().g
   }, 150);
 }
 
-/**
- * Normalizes header keys to standard property names
- */
-function normalizeHeaderKey(header: string): string {
-  const clean = header.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (/^(firstname|first|fname)$/.test(clean) || clean.includes('firstname')) return 'firstName';
-  if (/^(middlename|middle|mname)$/.test(clean) || clean.includes('middlename') || clean.includes('middle')) return 'middleName';
-  if (/^(lastname|last|lname)$/.test(clean) || clean.includes('lastname')) return 'lastName';
-  if (/^(name|fullname|clientname|taxpayername)$/.test(clean) || clean.includes('taxpayer')) return 'fullName';
-  if (/^(email|emailaddress|mail)$/.test(clean) || clean.includes('email')) return 'email';
-  if (/^(phone|phonenumber|mobile|contact|cell)$/.test(clean) || clean.includes('phone') || clean.includes('mobile')) return 'phone';
-  if (/^(ssn|tin|ssntin|taxid|ssnnumber|ssnortin)$/.test(clean) || clean.includes('ssn') || clean.includes('tin')) return 'ssnTin';
-  if (/^(dob|dateofbirth|birthdate)$/.test(clean) || clean.includes('birth')) return 'dob';
-  if (/^(occupation|job|profession|role)$/.test(clean) || clean.includes('occupation')) return 'occupation';
-  if (/^(visatype|visa|status|visastatus)$/.test(clean) || clean.includes('visa')) return 'visaType';
-  if (/^(maritalstatus|marital|married)$/.test(clean) || clean.includes('marital')) return 'maritalStatus';
-  if (/^(taxyear|year|filingyear)$/.test(clean) || clean.includes('year')) return 'taxYear';
-  if (/^(filingtype|type|category)$/.test(clean) || clean.includes('filingtype')) return 'filingType';
-  if (/^(address|addressline1|street|streetaddress|addressline)$/.test(clean) || clean.includes('address') || clean.includes('street')) return 'addressLine1';
-  if (/^(city|town)$/.test(clean) || clean.includes('city')) return 'city';
-  if (/^(state|province)$/.test(clean) || clean.includes('state')) return 'state';
-  if (/^(zip|zipcode|postal|postalcode)$/.test(clean) || clean.includes('zip') || clean.includes('postal')) return 'zipCode';
-  if (/^(income|estimatedincome|w2income|grossincome)$/.test(clean) || clean.includes('income')) return 'estimatedIncome';
-  if (/^(source|campaign|channel|leadsource)$/.test(clean) || clean.includes('source') || clean.includes('campaign')) return 'source';
-  return clean;
-}
+
 
 function extractCleanCellValue(cellValue: unknown): string {
   if (cellValue === null || cellValue === undefined) return '';
@@ -367,6 +348,7 @@ export async function parseExcelFileBuffer(
       zipCode,
       estimatedIncome,
       source,
+      priority: normalizePriority(rawObj.priority),
       validationStatus: valResult.status,
       validationMessage: valResult.message,
     };

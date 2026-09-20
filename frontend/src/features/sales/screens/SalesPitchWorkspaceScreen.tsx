@@ -300,6 +300,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
       <LeadAuditTrailSection
         leadId={lead.id || lead.applicationId}
         taxpayerName={lead.taxpayerName}
+        taxpayerEmail={lead.taxpayerEmail}
         currentStage={lead.currentStage}
         stageHistories={(lead.stageHistories as any) || []}
         callLogs={(lead.callLogs as any) || []}

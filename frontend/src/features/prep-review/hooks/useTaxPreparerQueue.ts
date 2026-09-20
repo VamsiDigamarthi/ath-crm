@@ -14,6 +14,7 @@ export function useTaxPreparerQueue() {
   const [activeTab, setActiveTab] = useState<PreparerQueueTab>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [complexityFilter, setComplexityFilter] = useState('ALL');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [allLeads, setAllLeads] = useState<PrepReviewLead[]>([]);
 
@@ -153,6 +154,7 @@ export function useTaxPreparerQueue() {
       if (activeTab === 'QA_APPROVED' && !approved) return false;
       if (activeTab === 'REVISIONS' && !revision) return false;
       if (complexityFilter !== 'ALL' && item.complexity !== complexityFilter) return false;
+      if (priorityFilter !== 'ALL' && (item.priority || 'NO_PRIORITY') !== priorityFilter) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -165,7 +167,7 @@ export function useTaxPreparerQueue() {
       }
       return true;
     });
-  }, [allLeads, activeTab, complexityFilter, searchQuery]);
+  }, [allLeads, activeTab, complexityFilter, priorityFilter, searchQuery]);
 
   const handleOpenNextReturn = () => {
     if (filteredReturns.length > 0) {
@@ -187,6 +189,8 @@ export function useTaxPreparerQueue() {
     setSearchQuery,
     complexityFilter,
     setComplexityFilter,
+    priorityFilter,
+    setPriorityFilter,
     fetchPreparerLeads,
     refreshData: fetchPreparerLeads,
     handleOpenNextReturn,

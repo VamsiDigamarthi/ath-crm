@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { getDocumenterColumns } from '../columns/documenter-columns';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { Button } from '@/shared/components/Button';
@@ -27,6 +28,8 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     setSearchQuery,
     visaFilter,
     setVisaFilter,
+    priorityFilter,
+    handlePriorityChange,
     leads,
     stats,
     isLoading,
@@ -300,6 +303,11 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
               <option value="US_CITIZEN">US Citizen</option>
             </select>
           </div>
+
+          <PriorityFilterSelect
+            value={priorityFilter}
+            onChange={handlePriorityChange}
+          />
 
           {activeTab === 'NOT_INTERESTED' && selectedRows.length > 0 && (
             <Button

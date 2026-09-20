@@ -4,6 +4,8 @@ import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { SalesStageBadge } from '../common/SalesStageBadge';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface SalesAgentQueueTableProps {
@@ -15,6 +17,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'ALL' | 'AWAITING' | 'QUOTED' | 'PAID' | 'REVERTED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
 
   const isReturnReverted = (lead: SalesLeadItem) => {
     const draftStatus = (lead.taxDraftSummary as any)?.status;
@@ -84,6 +87,9 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
       if (activeTab === 'PAID' && !isPaidOrClosed(lead)) return false;
       if (activeTab === 'REVERTED' && !isReturnReverted(lead)) return false;
 
+      // Priority Filter
+      if (priorityFilter !== 'ALL' && (lead.priority || 'NO_PRIORITY') !== priorityFilter) return false;
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
@@ -95,7 +101,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
       }
       return true;
     });
-  }, [leads, activeTab, searchQuery]);
+  }, [leads, activeTab, priorityFilter, searchQuery]);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
@@ -120,6 +126,11 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
               placeholder="Search taxpayer, phone, email..."
             />
           </div>
+
+          <PriorityFilterSelect
+            value={priorityFilter}
+            onChange={setPriorityFilter}
+          />
 
           {filteredLeads.length > 0 && (
             <Button
@@ -251,11 +262,14 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
                   <tr key={lead.id || lead.applicationId} className={`hover:bg-slate-50/70 transition-colors ${isReverted ? 'bg-amber-50/30' : ''}`}>
                     {/* Taxpayer Client */}
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                      <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5 flex-wrap">
                         <span>{lead.taxpayerName}</span>
                         <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
                           TY {lead.taxYear || 2025}
                         </span>
+                        {lead.priority && (
+                          <PriorityBadge priority={lead.priority} size="sm" />
+                        )}
                       </div>
                       <div className="text-[11px] text-slate-500 font-medium">{lead.taxpayerEmail}</div>
                       <div className="text-[10px] text-slate-400">{lead.taxpayerPhone}</div>

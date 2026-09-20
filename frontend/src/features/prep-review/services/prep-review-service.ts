@@ -46,6 +46,7 @@ export const prepReviewService = {
     staffId?: string;
     preparerId?: string;
     reviewerId?: string;
+    priority?: string;
     page?: number;
     limit?: number;
   }): Promise<PipelineLeadsResponse> {

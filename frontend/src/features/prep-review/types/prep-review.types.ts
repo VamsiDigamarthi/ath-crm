@@ -24,6 +24,7 @@ export interface PrepReviewLead {
   complexity: ReturnComplexity;
   currentStage: string;
   prepStage?: PrepReviewStage;
+  priority?: string;
 
   // Assigned Staff Across Entire Lifecycle
   assignedDocAgent?: {

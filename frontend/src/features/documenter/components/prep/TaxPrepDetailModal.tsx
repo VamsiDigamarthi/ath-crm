@@ -155,6 +155,8 @@ export const TaxPrepDetailModal: React.FC<TaxPrepDetailModalProps> = ({
 
         {activeTab === 'DOCUMENTS' && (
           <TaxPrepDocumentVault
+            leadId={lead.id}
+            applicationId={lead.id}
             customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
             documents={(lead as any).documents || []}
           />

@@ -4,9 +4,10 @@ import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { Button } from '@/shared/components/Button';
 import { Send, Trash2 } from 'lucide-react';
-import type { ParsedLeadRow, BulkImportStatsData } from '../types/bulk-import.types';
+import type { ParsedLeadRow, BulkImportStatsData, ApplicationPriority } from '../types/bulk-import.types';
 import type { StatusFilterType } from '../hooks/useLeadTableFilters';
 import { getBulkImportColumns } from '../columns/bulk-import-columns';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 
 interface BulkImportTableProps {
   rows: ParsedLeadRow[];
@@ -18,6 +19,8 @@ interface BulkImportTableProps {
   onSearchChange: (q: string) => void;
   statusFilter: StatusFilterType;
   onStatusFilterChange: (status: StatusFilterType) => void;
+  priorityFilter: ApplicationPriority | 'ALL';
+  onPriorityFilterChange: (priority: ApplicationPriority | 'ALL') => void;
   onDeleteSelected: () => void;
   onProceedIngestion: () => void;
   onConfirmIngestion: () => void;
@@ -36,6 +39,8 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
   onSearchChange,
   statusFilter,
   onStatusFilterChange,
+  priorityFilter,
+  onPriorityFilterChange,
   onDeleteSelected,
   onProceedIngestion,
   onConfirmIngestion,
@@ -52,7 +57,7 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
       {/* Top Filter & Action Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         {/* Left Side: Search & Filter Tabs */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 flex-wrap">
           <div className="w-full sm:w-72">
             <AppSearchInput
               value={searchQuery}
@@ -60,6 +65,11 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
               placeholder="Search by name, email, phone, city..."
             />
           </div>
+
+          <PriorityFilterSelect
+            value={priorityFilter}
+            onChange={onPriorityFilterChange}
+          />
 
           {/* Status Filter Pills */}
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">

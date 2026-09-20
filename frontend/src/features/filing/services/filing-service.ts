@@ -14,6 +14,7 @@ export const filingService = {
     stage?: string;
     search?: string;
     filingAgentId?: string;
+    priority?: string;
     limit?: number;
     offset?: number;
   }): Promise<FilingQueueResponse> {

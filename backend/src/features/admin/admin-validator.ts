@@ -100,6 +100,17 @@ export const leadItemSchema = z.object({
   city: z.string().trim().max(100).optional().nullable().or(z.literal("")),
   state: z.string().trim().max(50).optional().nullable().or(z.literal("")),
   zipCode: z.string().trim().max(20).optional().nullable().or(z.literal("")),
+  priority: z.string().optional().nullable().transform((val) => {
+    if (!val) return "NO_PRIORITY";
+    const clean = val.trim().toUpperCase().replace(/[\s_-]+/g, '_');
+    if (clean.includes('NO') || clean.includes('NONE') || clean === 'NO_PRIORITY' || clean === 'NA' || clean === 'N_A') return 'NO_PRIORITY';
+    if (clean.includes('URG') || clean.includes('CRIT') || /^(URGENT|URGNET|UGENT|CRITICAL)$/.test(clean)) return 'URGENT';
+    if (clean.includes('IMP') || /^(IMPORTANT|IMPORTENT|IMPORANT)$/.test(clean)) return 'IMPORTANT';
+    if (clean.includes('HIGH') || /^(HI|HIGHEST|HIG)$/.test(clean)) return 'HIGH';
+    if (clean.includes('MED') || clean.includes('MID') || clean.includes('MOD') || /^(MEDIUM|MEDUIM|MEDIAM|MODERATE)$/.test(clean)) return 'MEDIUM';
+    if (clean.includes('LOW') || /^(LOWEST|LO)$/.test(clean)) return 'LOW';
+    return 'NO_PRIORITY';
+  }).default("NO_PRIORITY"),
 });
 
 export const bulkImportLeadsSchema = z.object({

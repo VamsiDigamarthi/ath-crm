@@ -213,6 +213,7 @@ export const m4WagesSchema = z.object({
         personalMonths2025: z.number().int().min(0).max(12).optional().default(0),
         ownership: z.string().trim().max(50).optional().default('TAXPAYER'),
         purchaseDate: z.string().trim().max(30).optional().default(''),
+        rentedDate: z.string().trim().max(30).optional().default(''),
         costOfProperty: z.number().min(0).optional().default(0),
         totalRentalIncome: z.number().min(0).optional().default(0),
         rentalExpenses: z.number().min(0).optional().default(0),

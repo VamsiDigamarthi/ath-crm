@@ -89,6 +89,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                   personalMonths2025: 0,
                   ownership: 'TAXPAYER',
                   purchaseDate: '',
+                  rentedDate: '',
                   costOfProperty: 0,
                   totalRentalIncome: 0,
                   rentalExpenses: 0,
@@ -119,6 +120,7 @@ export const Module4Wages: React.FC<Module4Props> = ({
                     personalMonths2025: 0,
                     ownership: 'TAXPAYER',
                     purchaseDate: '',
+                    rentedDate: '',
                     costOfProperty: 0,
                     totalRentalIncome: 0,
                     rentalExpenses: 0,
@@ -233,6 +235,21 @@ export const Module4Wages: React.FC<Module4Props> = ({
                       list[idx].purchaseDate = formatUsDate(dateVal);
                       updateField('rentalProperties', list);
                       if (clearError) clearError(`rental_${idx}_purchaseDate`);
+                    }}
+                  />
+
+                  <AppDatePicker
+                    label="Property Rented Date (MM/DD/YYYY)"
+                    placeholder="MM/DD/YYYY"
+                    format="MM/dd/yyyy"
+                    accentColor="#16A34A"
+                    error={errors[`rental_${idx}_rentedDate`]}
+                    value={parseUsDate(prop.rentedDate)}
+                    onChange={(dateVal) => {
+                      const list = [...(d.rentalProperties || [])];
+                      list[idx].rentedDate = formatUsDate(dateVal);
+                      updateField('rentalProperties', list);
+                      if (clearError) clearError(`rental_${idx}_rentedDate`);
                     }}
                   />
 

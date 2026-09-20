@@ -26,6 +26,7 @@ export interface BulkImportPayload {
     city?: string | null;
     state?: string | null;
     zipCode?: string | null;
+    priority?: string | null;
   }[];
 }
 
@@ -126,6 +127,7 @@ export const adminService = {
     search?: string;
     taxYear?: number;
     filingStatus?: 'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS';
+    priority?: string;
     page?: number;
     limit?: number;
   }): Promise<any> => {
@@ -183,6 +185,7 @@ export const adminService = {
     search?: string;
     visaType?: string;
     taxYear?: number;
+    priority?: string;
   }): Promise<{
     success: boolean;
     data: {

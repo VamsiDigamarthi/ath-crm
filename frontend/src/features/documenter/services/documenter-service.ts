@@ -39,6 +39,7 @@ export const documenterService = {
     search?: string;
     visaType?: string;
     taxYear?: number;
+    priority?: string;
     timeRange?: 'TODAY' | 'WEEK' | 'SEASON';
   }): Promise<DocumenterLeadsResponse> {
     return apiClient.get('/documenter/leads', { params });
@@ -127,5 +128,12 @@ export const documenterService = {
    */
   async moveToTaxPrep(applicationId: string, remarks?: string): Promise<any> {
     return apiClient.post(`/documenter/leads/${applicationId}/move-to-prep`, { remarks });
+  },
+
+  /**
+   * Update priority for a tax application
+   */
+  async updatePriority(applicationId: string, priority: string): Promise<any> {
+    return apiClient.patch(`/documenter/leads/${applicationId}/priority`, { priority });
   },
 };

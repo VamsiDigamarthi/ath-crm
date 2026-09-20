@@ -120,6 +120,7 @@ export class PrepReviewService {
     staffId?: string;
     preparerId?: string;
     reviewerId?: string;
+    priority?: string;
   }) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
@@ -152,6 +153,9 @@ export class PrepReviewService {
     }
 
     const where: any = { ...baseWhere };
+    if (query.priority && query.priority !== 'ALL') {
+      where.priority = query.priority as any;
+    }
     if (query.search && query.search.trim()) {
       const q = query.search.trim();
       where.customer = {
@@ -298,6 +302,7 @@ export class PrepReviewService {
         complexity,
         currentStage: app.currentStage,
         prepStage: stage,
+        priority: app.priority,
         assignedDocAgent: app.assignedDocAgent ? {
           id: app.assignedDocAgent.id,
           name: `${app.assignedDocAgent.firstName || ''} ${app.assignedDocAgent.lastName || ''}`.trim() || app.assignedDocAgent.email || 'Doc Agent',
@@ -825,17 +830,21 @@ export class PrepReviewService {
         verificationStatus: doc.verificationStatus,
         uploadedAt: doc.createdAt,
       })),
-      stageHistories: (app.stageHistories || []).map((s: any) => ({
-        id: s.id,
-        fromStage: s.fromStage,
-        toStage: s.toStage,
-        movedByUserId: s.movedByUserId,
-        movedByName: s.movedByUser ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email : 'System User',
-        movedByEmail: s.movedByUser?.email,
-        movedByRole: s.movedByUser?.role,
-        remarks: s.remarks,
-        createdAt: s.createdAt,
-      })),
+      stageHistories: (app.stageHistories || []).map((s: any) => {
+        const isClient = s.movedByUser?.role === 'TAXPAYER_USER' || s.remarks?.toLowerCase().startsWith('taxpayer');
+        const clientName = `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || app.customer?.email || 'Taxpayer Client';
+        return {
+          id: s.id,
+          fromStage: s.fromStage,
+          toStage: s.toStage,
+          movedByUserId: s.movedByUserId,
+          movedByName: isClient ? clientName : (s.movedByUser ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email : 'System User'),
+          movedByEmail: isClient ? (app.customer?.email || s.movedByUser?.email) : s.movedByUser?.email,
+          movedByRole: isClient ? 'CLIENT' : s.movedByUser?.role,
+          remarks: s.remarks,
+          createdAt: s.createdAt,
+        };
+      }),
       callLogs: (app.callLogs || []).map((c: any) => ({
         id: c.id,
         disposition: c.disposition,
@@ -846,17 +855,27 @@ export class PrepReviewService {
         agentRole: c.agent?.role,
         createdAt: c.createdAt,
       })),
-      auditLogs: (auditLogs || []).map((a: any) => ({
-        id: a.id,
-        action: a.action,
-        moduleKey: a.moduleKey,
-        actorType: a.actorType,
-        actorName: a.actorUser ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email : (a.actorType === 'CLIENT' ? 'Taxpayer Client' : 'System User'),
-        actorEmail: a.actorUser?.email,
-        actorRole: a.actorUser?.role,
-        details: a.details,
-        createdAt: a.createdAt,
-      })),
+      auditLogs: (auditLogs || []).map((a: any) => {
+        const isClient = a.actorType === 'CLIENT' || 
+                         a.actorRole === 'TAXPAYER_USER' || 
+                         a.actorRole === 'CLIENT' || 
+                         (a.details as any)?.source === 'TAXPAYER_CLIENT_PORTAL' ||
+                         Boolean((a.details as any)?.clientEmail);
+        const clientName = (a.details as any)?.clientName || `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || app.customer?.email || 'Taxpayer Client';
+        const clientEmail = (a.details as any)?.clientEmail || app.customer?.email || a.actorUser?.email;
+
+        return {
+          id: a.id,
+          action: a.action,
+          moduleKey: a.moduleKey,
+          actorType: a.actorType,
+          actorName: isClient ? clientName : (a.actorUser ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email : 'System User'),
+          actorEmail: isClient ? clientEmail : a.actorUser?.email,
+          actorRole: isClient ? 'CLIENT' : (a.actorRole || a.actorUser?.role),
+          details: a.details,
+          createdAt: a.createdAt,
+        };
+      }),
     };
   }
 

@@ -84,7 +84,7 @@ export function parseCSVText(csvText: string): string[][] {
 /**
  * Normalizes header keys to standard property names regardless of formatting or casing
  */
-function normalizeHeaderKey(header: string): string {
+export function normalizeHeaderKey(header: string): string {
   const clean = header.toLowerCase().replace(/[^a-z0-9]/g, '');
   if (/^(firstname|first|fname)$/.test(clean) || clean.includes('firstname')) return 'firstName';
   if (/^(middlename|middle|mname)$/.test(clean) || clean.includes('middlename') || clean.includes('middle')) return 'middleName';
@@ -95,7 +95,7 @@ function normalizeHeaderKey(header: string): string {
   if (/^(ssn|tin|ssntin|taxid|ssnnumber|ssnortin)$/.test(clean) || clean.includes('ssn') || clean.includes('tin')) return 'ssnTin';
   if (/^(dob|dateofbirth|birthdate)$/.test(clean) || clean.includes('birth')) return 'dob';
   if (/^(occupation|job|profession|role)$/.test(clean) || clean.includes('occupation')) return 'occupation';
-  if (/^(visatype|visa|status|visastatus)$/.test(clean) || clean.includes('visa')) return 'visaType';
+  if (/^(visatype|visa|visastatus)$/.test(clean) || clean.includes('visa')) return 'visaType';
   if (/^(maritalstatus|marital|married)$/.test(clean) || clean.includes('marital')) return 'maritalStatus';
   if (/^(taxyear|year|filingyear)$/.test(clean) || clean.includes('year')) return 'taxYear';
   if (/^(filingtype|type|category)$/.test(clean) || clean.includes('filingtype')) return 'filingType';
@@ -105,7 +105,29 @@ function normalizeHeaderKey(header: string): string {
   if (/^(zip|zipcode|postal|postalcode)$/.test(clean) || clean.includes('zip') || clean.includes('postal')) return 'zipCode';
   if (/^(income|estimatedincome|w2income|grossincome)$/.test(clean) || clean.includes('income')) return 'estimatedIncome';
   if (/^(source|campaign|channel|leadsource)$/.test(clean) || clean.includes('source') || clean.includes('campaign')) return 'source';
+  if (
+    /^(priority|leadpriority|urgency|urgent|prioritystatus|urgencystatus|leadstatus|status)$/.test(clean) ||
+    clean.includes('priority') ||
+    clean.includes('urgenc') ||
+    clean.includes('urgent')
+  ) return 'priority';
   return clean;
+}
+
+/**
+ * Normalizes priority text to standard ApplicationPriority enum.
+ * Handles any casing (lowercase, UPPERCASE, MixedCase), whitespace, abbreviations, and common typos.
+ */
+export function normalizePriority(val?: unknown): 'URGENT' | 'IMPORTANT' | 'HIGH' | 'MEDIUM' | 'LOW' | 'NO_PRIORITY' {
+  if (!val) return 'NO_PRIORITY';
+  const clean = String(val).trim().toUpperCase().replace(/[\s_-]+/g, '_');
+  if (clean.includes('NO') || clean.includes('NONE') || clean === 'NO_PRIORITY' || clean === 'NA' || clean === 'N_A') return 'NO_PRIORITY';
+  if (clean.includes('URG') || clean.includes('CRIT') || /^(URGENT|URGNET|UGENT|CRITICAL)$/.test(clean)) return 'URGENT';
+  if (clean.includes('IMP') || /^(IMPORTANT|IMPORTENT|IMPORANT)$/.test(clean)) return 'IMPORTANT';
+  if (clean.includes('HIGH') || /^(HI|HIGHEST|HIG)$/.test(clean)) return 'HIGH';
+  if (clean.includes('MED') || clean.includes('MID') || clean.includes('MOD') || /^(MEDIUM|MEDUIM|MEDIAM|MODERATE)$/.test(clean)) return 'MEDIUM';
+  if (clean.includes('LOW') || /^(LOWEST|LO)$/.test(clean)) return 'LOW';
+  return 'NO_PRIORITY';
 }
 
 /**
@@ -182,6 +204,7 @@ export function parseCSVToLeads(csvText: string, defaultTaxYear: number = new Da
       zipCode,
       estimatedIncome,
       source,
+      priority: normalizePriority(rawObj.priority),
       validationStatus: valResult.status,
       validationMessage: valResult.message,
     };
@@ -192,11 +215,11 @@ export function parseCSVToLeads(csvText: string, defaultTaxYear: number = new Da
  * Returns a template CSV string ready for download with distinct, clear headers
  */
 export function getSampleCSVTemplate(): string {
-  return `\uFEFF"First Name*","Middle Name","Last Name*","Email Address*","Phone Number*","SSN / ITIN","Date of Birth","Occupation","Visa Type","Marital Status","Tax Year","Filing Type","Street Address","City","State","Zip Code","Estimated Income","Lead Source"
-"Arjun","K.","Varma","arjun.varma@gmail.com","+1 (415) 555-0142","123-45-6789","05/14/1988","Software Engineer","H-1B","Married","2025","INDIVIDUAL","742 Evergreen Terrace","Springfield","IL","62704","$145,000","Client Referral"
-"Priya","","Sharma","priya.sharma@outlook.com","+1 (312) 555-0199","987-65-4321","09/22/1992","Data Scientist","F-1 OPT","Single","2025","INDIVIDUAL","1044 Michigan Ave","Chicago","IL","60611","$115,000","Google Search"
-"Vikram","S.","Singhania","vikram.s@apextech.io","+1 (206) 555-0187","12-3456789","11/04/1982","VP of Engineering","L-1","Married","2025","CORPORATE","400 Pine St Suite 900","Seattle","WA","98101","$320,000","CPA Referral Partner"
-"Sneha","","Patel","sneha.patel@yahoo.com","+1 (512) 555-0134","456-78-1234","03/18/1990","Financial Analyst","GREEN_CARD","Single","2025","INDIVIDUAL","1200 Congress Ave","Austin","TX","78701","$92,000","Tax Campaign 2025"
+  return `\uFEFF"First Name*","Middle Name","Last Name*","Email Address*","Phone Number*","SSN / ITIN","Date of Birth","Occupation","Visa Type","Marital Status","Tax Year","Filing Type","Street Address","City","State","Zip Code","Estimated Income","Lead Source","Priority"
+"Arjun","K.","Varma","arjun.varma@gmail.com","+1 (415) 555-0142","123-45-6789","05/14/1988","Software Engineer","H-1B","Married","2025","INDIVIDUAL","742 Evergreen Terrace","Springfield","IL","62704","$145,000","Client Referral","Urgent"
+"Priya","","Sharma","priya.sharma@outlook.com","+1 (312) 555-0199","987-65-4321","09/22/1992","Data Scientist","F-1 OPT","Single","2025","INDIVIDUAL","1044 Michigan Ave","Chicago","IL","60611","$115,000","Google Search","High"
+"Vikram","S.","Singhania","vikram.s@apextech.io","+1 (206) 555-0187","12-3456789","11/04/1982","VP of Engineering","L-1","Married","2025","CORPORATE","400 Pine St Suite 900","Seattle","WA","98101","$320,000","CPA Referral Partner","Important"
+"Sneha","","Patel","sneha.patel@yahoo.com","+1 (512) 555-0134","456-78-1234","03/18/1990","Financial Analyst","GREEN_CARD","Single","2025","INDIVIDUAL","1200 Congress Ave","Austin","TX","78701","$92,000","Tax Campaign 2025","Medium"
 `;
 }
 
@@ -227,6 +250,7 @@ export function getDemoLeadRows(taxYear: number = new Date().getFullYear()): Par
       zipCode: '62704',
       estimatedIncome: '$165,000',
       source: 'Direct Client Referral',
+      priority: 'URGENT',
       validationStatus: 'VALID',
       validationMessage: 'Valid & ready for server ingest',
     },
@@ -252,6 +276,7 @@ export function getDemoLeadRows(taxYear: number = new Date().getFullYear()): Par
       zipCode: '60611',
       estimatedIncome: '$115,000',
       source: 'Google Search Ads',
+      priority: 'HIGH',
       validationStatus: 'VALID',
       validationMessage: 'Valid & ready for server ingest',
     },
@@ -277,6 +302,7 @@ export function getDemoLeadRows(taxYear: number = new Date().getFullYear()): Par
       zipCode: '98101',
       estimatedIncome: '$320,000',
       source: 'CPA Referral Network',
+      priority: 'IMPORTANT',
       validationStatus: 'VALID',
       validationMessage: 'Valid & ready for server ingest',
     },
@@ -302,6 +328,7 @@ export function getDemoLeadRows(taxYear: number = new Date().getFullYear()): Par
       zipCode: '78701',
       estimatedIncome: '$98,000',
       source: 'Tax Season Outreach',
+      priority: 'MEDIUM',
       validationStatus: 'VALID',
       validationMessage: 'Valid & ready for server ingest',
     },
@@ -327,6 +354,7 @@ export function getDemoLeadRows(taxYear: number = new Date().getFullYear()): Par
       zipCode: '95112',
       estimatedIncome: '$180,000',
       source: 'Referral',
+      priority: 'LOW',
       validationStatus: 'INVALID_NAME',
       validationMessage: 'First name must be at least 2 characters',
     },
@@ -352,6 +380,7 @@ export function getDemoLeadRows(taxYear: number = new Date().getFullYear()): Par
       zipCode: '02108',
       estimatedIncome: '$145,000',
       source: 'Direct Mailer List',
+      priority: 'NO_PRIORITY',
       validationStatus: 'INVALID_VISA',
       validationMessage: "Unknown Visa Type: 'INVALID_XYZ_VISA'. Allowed: H-1B, H-4, L-1, L-2, F-1 OPT, Green Card, US Citizen, etc.",
     },

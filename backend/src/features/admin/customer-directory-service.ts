@@ -7,6 +7,7 @@ export interface AdminCustomerQueryOptions {
   search?: string;
   taxYear?: number;
   filingStatus?: 'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS';
+  priority?: string;
   page?: number;
   limit?: number;
 }
@@ -55,6 +56,11 @@ export class CustomerDirectoryService {
       ? { applications: { some: { taxYear: Number(options.taxYear) } } }
       : null;
 
+    // Filter by Priority if selected
+    const priorityFilter = options.priority && options.priority !== 'ALL'
+      ? { applications: { some: { priority: options.priority as any } } }
+      : null;
+
     // Filter by IRS Filing Status (Accepted / Rejected / In Progress)
     let filingStatusFilter: any = null;
     if (options.filingStatus === 'ACCEPTED') {
@@ -89,6 +95,7 @@ export class CustomerDirectoryService {
     const andConditions = [
       convertedFilter,
       ...(taxYearFilter ? [taxYearFilter] : []),
+      ...(priorityFilter ? [priorityFilter] : []),
       ...(filingStatusFilter ? [filingStatusFilter] : []),
       ...(searchFilter ? [searchFilter] : []),
     ];
@@ -214,6 +221,7 @@ export class CustomerDirectoryService {
           taxYear: app.taxYear,
           currentStage: app.currentStage,
           filingType: app.filingType,
+          priority: app.priority,
           irsStatus: appIrsStatus,
           irsStatusLabel: appIrsLabel,
         };
@@ -233,6 +241,7 @@ export class CustomerDirectoryService {
         state: p.state || draft.stateOfResidence || '-',
         visaType: p.visaType || draft.visaType || 'H-1B',
         filingStatus: p.maritalStatus || draft.filingStatus || 'Single',
+        priority: activeApp?.priority || 'NO_PRIORITY',
         isConvertedCustomer: true,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
@@ -243,6 +252,7 @@ export class CustomerDirectoryService {
               taxYear: activeApp.taxYear,
               currentStage: activeApp.currentStage,
               filingType: activeApp.filingType,
+              priority: activeApp.priority,
               fedRefund,
               fedDue,
               stateRefund,

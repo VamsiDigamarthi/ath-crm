@@ -12,13 +12,23 @@ enum ApplicationStage {
   DROPPED_CANCELLED
 }
 
+enum ApplicationPriority {
+  URGENT
+  IMPORTANT
+  HIGH
+  MEDIUM
+  LOW
+  NO_PRIORITY
+}
+
 model TaxApplication {
-  id           String           @id @default(uuid())
+  id           String              @id @default(uuid())
   customerId   String
-  customer     CustomerProfile  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer     CustomerProfile     @relation(fields: [customerId], references: [id], onDelete: Cascade)
   taxYear      Int
-  filingType   String           @default("INDIVIDUAL")
-  currentStage ApplicationStage @default(RAW_PROSPECT)
+  filingType   String              @default("INDIVIDUAL")
+  currentStage ApplicationStage    @default(RAW_PROSPECT)
+  priority     ApplicationPriority @default(NO_PRIORITY)
 
   assignedDocAgentId String?
   assignedDocAgent   User?   @relation("DocAgentApps", fields: [assignedDocAgentId], references: [id])
@@ -49,6 +59,7 @@ model TaxApplication {
 
   @@unique([customerId, taxYear])
   @@index([currentStage])
+  @@index([priority])
   @@index([taxYear])
 }
 

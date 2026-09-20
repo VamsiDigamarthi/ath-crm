@@ -5,6 +5,7 @@ import { SalesManagerMetrics } from '../components/manager/SalesManagerMetrics';
 import { SalesFloatingActionBar } from '../components/manager/SalesFloatingActionBar';
 import { SalesLeadAssignmentModal } from '../components/manager/SalesLeadAssignmentModal';
 import { getSalesColumns } from '../columns/sales-columns';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { Button } from '@/shared/components/Button';
@@ -43,6 +44,8 @@ export const SalesManagerQueueScreen: React.FC = () => {
     setLiabilityFilter,
     visaFilter,
     setVisaFilter,
+    priorityFilter,
+    setPriorityFilter,
     selectedRows,
     setSelectedRows,
     isAssignModalOpen,
@@ -227,6 +230,11 @@ export const SalesManagerQueueScreen: React.FC = () => {
                 <option value="US_CITIZEN">US Citizen</option>
               </select>
             </div>
+
+            <PriorityFilterSelect
+              value={priorityFilter}
+              onChange={setPriorityFilter}
+            />
 
             {selectedRows.length > 0 && (
               <Button

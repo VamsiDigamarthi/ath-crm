@@ -23,6 +23,8 @@ import {
   AlertCircle,
   FileSpreadsheet,
 } from 'lucide-react';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 
 export const AdminReturnedLeadsScreen: React.FC = () => {
   const {
@@ -34,6 +36,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
     searchQuery,
     visaFilter,
     taxYearFilter,
+    priorityFilter,
     page,
     limit,
     totalPages,
@@ -46,6 +49,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
     handleSearchChange,
     handleVisaChange,
     handleTaxYearChange,
+    handlePriorityChange,
     handlePageChange,
     handleLimitChange,
     handleOpenAssignModal,
@@ -114,6 +118,12 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
               TY {lead.taxYear} • {lead.filingType || 'INDIVIDUAL'}
             </div>
           </div>
+        ),
+      },
+      {
+        header: 'Priority',
+        render: (lead: ReturnedLeadItem) => (
+          <PriorityBadge priority={lead.priority || 'NO_PRIORITY'} size="sm" />
         ),
       },
       {
@@ -332,6 +342,11 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
               <option value="2023">TY 2023</option>
             </select>
           </div>
+
+          <PriorityFilterSelect
+            value={priorityFilter}
+            onChange={handlePriorityChange}
+          />
         </div>
 
         {selectedRows.length > 0 && (
@@ -467,6 +482,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
             {/* Audit Trail Section */}
             <LeadAuditTrailSection
               taxpayerName={`${activeLeadForAudit.customer?.firstName} ${activeLeadForAudit.customer?.lastName}`}
+              taxpayerEmail={activeLeadForAudit.customer?.email}
               currentStage={activeLeadForAudit.currentStage}
               stageHistories={activeLeadForAudit.stageHistories || []}
               callLogs={activeLeadForAudit.callLogs || []}

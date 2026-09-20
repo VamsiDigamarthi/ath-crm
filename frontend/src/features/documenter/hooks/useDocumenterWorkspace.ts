@@ -23,6 +23,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [visaFilter, setVisaFilter] = useState<string>('ALL');
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
 
@@ -68,6 +69,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
         tab: activeTab,
         search: debouncedSearch || undefined,
         visaType: visaFilter !== 'ALL' ? visaFilter : undefined,
+        priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
         timeRange,
       });
 
@@ -84,7 +86,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, activeTab, debouncedSearch, visaFilter, timeRange]);
+  }, [page, limit, activeTab, debouncedSearch, visaFilter, priorityFilter, timeRange]);
 
   // Fetch agents list for assignment
   const fetchAgents = useCallback(async () => {
@@ -256,6 +258,21 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     }
   }, [selectedRows, fetchLeads, fetchAgents]);
 
+  const handlePriorityChange = useCallback((priority: string) => {
+    setPriorityFilter(priority);
+    setPage(1);
+  }, []);
+
+  const handleUpdatePriority = useCallback(async (applicationId: string, priority: string) => {
+    try {
+      await documenterService.updatePriority(applicationId, priority);
+      toast.success('Priority updated');
+      fetchLeads();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to update priority');
+    }
+  }, [fetchLeads]);
+
   const handleCloseModals = useCallback(() => {
     setIsAssignModalOpen(false);
     setIsCallModalOpen(false);
@@ -273,6 +290,9 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     setSearchQuery,
     visaFilter,
     setVisaFilter,
+    priorityFilter,
+    handlePriorityChange,
+    handleUpdatePriority,
     leads,
     agents,
     stats,

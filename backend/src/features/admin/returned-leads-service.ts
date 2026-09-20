@@ -9,6 +9,7 @@ export interface ReturnedLeadsQueryOptions {
   search?: string;
   visaType?: string;
   taxYear?: number;
+  priority?: string;
 }
 
 export class ReturnedLeadsService {
@@ -20,7 +21,7 @@ export class ReturnedLeadsService {
     const limit = Math.min(100, Math.max(1, Number(options.limit) || 10));
     const skip = (page - 1) * limit;
 
-    const { search, visaType, taxYear } = options;
+    const { search, visaType, taxYear, priority } = options;
 
     // A lead is returned to Admin if unassigned and marked as returned to pool or has return history
     const returnedCondition: any = {
@@ -49,6 +50,10 @@ export class ReturnedLeadsService {
 
     if (taxYear) {
       andConditions.push({ taxYear: Number(taxYear) });
+    }
+
+    if (priority && priority !== 'ALL') {
+      andConditions.push({ priority: priority as any });
     }
 
     if (visaType && visaType !== 'ALL') {
@@ -227,6 +232,7 @@ export class ReturnedLeadsService {
         taxYear: app.taxYear,
         filingType: app.filingType,
         currentStage: app.currentStage,
+        priority: app.priority,
         assignedDocAgentId: app.assignedDocAgentId,
         assignedDocAgent: app.assignedDocAgent,
         taxDraftSummary: summary,

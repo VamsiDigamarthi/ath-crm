@@ -3,6 +3,7 @@ export interface CustomerApplicationSummary {
   taxYear: number;
   currentStage: string;
   filingType: string;
+  priority?: string;
   irsStatus: 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS' | 'QUEUED' | 'PENDING';
   irsStatusLabel: string;
 }
@@ -30,6 +31,7 @@ export interface AdminCustomerItem {
     taxYear: number;
     currentStage: string;
     filingType: string;
+    priority?: string;
     fedRefund: number;
     fedDue: number;
     stateRefund: number;

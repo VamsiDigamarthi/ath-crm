@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Eye
 } from 'lucide-react';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 
 export const renderVisaBadge = (visaType?: string | null) => {
@@ -144,6 +145,13 @@ export const getDocumenterColumns = ({
             TY {item.taxYear} • {item.filingType || 'INDIVIDUAL'}
           </div>
         </div>
+      ),
+    },
+    {
+      header: 'Priority',
+      accessorKey: 'priority',
+      render: (item) => (
+        <PriorityBadge priority={item.priority || 'NO_PRIORITY'} size="sm" />
       ),
     },
   ];

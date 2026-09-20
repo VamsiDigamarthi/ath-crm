@@ -3,7 +3,6 @@ import type { ParsedLeadRow, BulkImportStatsData, BulkImportServerResult } from 
 import { useCSVFileUpload } from './useCSVFileUpload';
 import { useLeadTableFilters, type StatusFilterType } from './useLeadTableFilters';
 import { adminService } from '../services/admin-service';
-import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
 export type { StatusFilterType };
@@ -31,6 +30,8 @@ export const useBulkImport = () => {
     setSearchQuery,
     statusFilter,
     setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
     selectedRows,
     setSelectedRows,
     filterRows,
@@ -145,6 +146,7 @@ export const useBulkImport = () => {
         city: r.city || null,
         state: r.state || null,
         zipCode: r.zipCode || null,
+        priority: r.priority || 'NO_PRIORITY',
       }));
 
       const res = await adminService.bulkImportLeads({
@@ -159,18 +161,6 @@ export const useBulkImport = () => {
 
       setImportResult(metrics);
       setShowResultModal(true);
-
-      // Dispatch real notification for Document Manager & Documenter Dept
-      if (validCount > 0) {
-        useNotificationStore.getState().addNotification({
-          title: `New Batch of ${validCount} Leads Uploaded by Admin`,
-          message: `Admin successfully ingested ${validCount} new tax leads for TY${taxYear} (${newProfiles} new profiles). Intake queue ready.`,
-          category: 'DOCUMENTER',
-          priority: 'HIGH',
-          actionUrl: '/documenter/manager/queue',
-          actionLabel: 'View Documenter Queue',
-        });
-      }
 
       if (skippedCount > 0) {
         toast.error(
@@ -211,6 +201,8 @@ export const useBulkImport = () => {
     setSearchQuery,            // Callback to update search text
     statusFilter,              // Active tab filter: 'ALL' | 'VALID' | 'INVALID'
     setStatusFilter,           // Callback to update tab filter
+    priorityFilter,            // Active priority filter: 'ALL' | 'URGENT' | etc.
+    setPriorityFilter,         // Callback to update priority filter
     selectedRows,              // Array of rows currently selected by user
     setSelectedRows,           // Callback to update selected rows
 

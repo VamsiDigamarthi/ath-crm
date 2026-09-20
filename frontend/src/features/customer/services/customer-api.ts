@@ -61,6 +61,7 @@ export interface CustomerDocumentItem {
   verificationStatus: string;
   createdAt: string;
   isUnlocked?: boolean;
+  isDriveLink?: boolean;
 }
 
 export interface CustomerDocumentsResponse {
@@ -106,6 +107,42 @@ export const customerApi = {
         }
       },
     });
+    return res;
+  },
+
+  uploadMultipleDocuments: async (
+    files: File[],
+    categories: Record<string, string>,
+    taxYear?: string,
+    onProgress?: (pct: number) => void
+  ): Promise<{ success: boolean; data: CustomerDocumentItem[] }> => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    formData.append('categories', JSON.stringify(categories));
+    if (taxYear) formData.append('taxYear', taxYear);
+
+    const res: any = await apiClient.post('/customer/documents/upload-multiple', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total && onProgress) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percent);
+        }
+      },
+    });
+    return res;
+  },
+
+  uploadDriveLink: async (payload: {
+    linkUrl: string;
+    title?: string;
+    documentCategory?: string;
+    remarks?: string;
+    taxYear?: string | number;
+  }): Promise<{ success: boolean; data: CustomerDocumentItem }> => {
+    const res: any = await apiClient.post('/customer/documents/drive-links', payload);
     return res;
   },
 
@@ -260,6 +297,7 @@ export interface OrganizerData {
       personalMonths2025: number;
       ownership: 'TAXPAYER' | 'SPOUSE' | 'JOINT' | string;
       purchaseDate: string;
+      rentedDate?: string;
       costOfProperty: number;
       totalRentalIncome: number;
       rentalExpenses: number;
