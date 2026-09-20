@@ -5,16 +5,23 @@ import { filingService } from '../services/filing-service';
 import type { FilingLeadItem } from '../types/filing.types';
 import type { FilingChartMode } from '../components/dashboard/FilingSpecialistVelocityCharts';
 import type { FilingActivityEvent } from '../components/dashboard/FilingSpecialistActivityFeed';
+import {
+  type DateFilterPreset,
+  isDateInRange,
+  getPeriodSuffix,
+} from '@/shared/utils/date-filters';
 import toast from 'react-hot-toast';
 
-export type FilingTimeRange = 'TODAY' | 'WEEK' | 'MTD';
+export type FilingTimeRange = DateFilterPreset;
 
 export function useFilingSpecialistDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [allLeads, setAllLeads] = useState<FilingLeadItem[]>([]);
-  const [timeRange, setTimeRange] = useState<FilingTimeRange>('TODAY');
+  const [timeRange, setTimeRange] = useState<DateFilterPreset>('TODAY');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   const [chartMode, setChartMode] = useState<FilingChartMode>('HOURLY');
 
   const fetchDashboardData = useCallback(async () => {
@@ -47,24 +54,65 @@ export function useFilingSpecialistDashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  // Actual Calendar Week Index: Monday (0) to Sunday (6)
+  const getDayOfWeekIdx = (dateVal?: string | Date | null): number => {
+    if (!dateVal) return -1;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return -1;
+
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMonday = day === 0 ? 6 : day - 1;
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0, 0);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 23, 59, 59, 999);
+
+    if (d.getTime() >= monday.getTime() && d.getTime() <= sunday.getTime()) {
+      const targetDay = d.getDay();
+      return targetDay === 0 ? 6 : targetDay - 1; // 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+    }
+    return -1;
+  };
+
   const stats = useMemo(() => {
     const total = allLeads.length;
     const ready = allLeads.filter((l) => l.currentStage === 'FILING_QUEUE').length;
     const inProg = allLeads.filter((l) => l.currentStage === 'FILING_IN_PROGRESS').length;
-    const accepted = allLeads.filter((l) => l.currentStage === 'FILING_SUCCESS').length;
-    const rejected = allLeads.filter((l) => l.currentStage === 'FILING_FAILED').length;
-    const totalFinished = accepted + rejected;
-    const acceptanceRate = totalFinished > 0 ? Math.round((accepted / totalFinished) * 100) : 0;
+
+    let acceptedInPeriod = 0;
+    let rejectedInPeriod = 0;
+
+    allLeads.forEach((l) => {
+      const isAccepted = l.currentStage === 'FILING_SUCCESS';
+      const isRejected = l.currentStage === 'FILING_FAILED';
+
+      const transDate =
+        l.transmissionInfo?.acceptedAt ||
+        l.transmissionInfo?.transmittedAt ||
+        (l as any).updatedAt ||
+        (l as any).createdAt;
+
+      if (isAccepted && isDateInRange(transDate, timeRange, customStartDate, customEndDate)) {
+        acceptedInPeriod++;
+      }
+      if (isRejected && isDateInRange(transDate, timeRange, customStartDate, customEndDate)) {
+        rejectedInPeriod++;
+      }
+    });
+
+    const totalFinished = acceptedInPeriod + rejectedInPeriod;
+    const acceptanceRate = totalFinished > 0 ? Math.round((acceptedInPeriod / totalFinished) * 100) : (acceptedInPeriod > 0 ? 100 : 0);
+    const periodSuffix = getPeriodSuffix(timeRange, customStartDate, customEndDate);
 
     return {
       assignedReturns: total,
       readyToTransmit: ready,
       inProgressCount: inProg,
-      acceptedCount: accepted,
-      rejectedCount: rejected,
+      acceptedCount: acceptedInPeriod,
+      rejectedCount: rejectedInPeriod,
       acceptanceRate: `${acceptanceRate}%`,
+      periodSuffix,
     };
-  }, [allLeads]);
+  }, [allLeads, timeRange, customStartDate, customEndDate]);
 
   // Stage Mix for Donut Chart
   const stageMix = useMemo(() => {
@@ -77,8 +125,8 @@ export function useFilingSpecialistDashboard() {
 
     const ready = allLeads.filter((l) => l.currentStage === 'FILING_QUEUE').length;
     const inProg = allLeads.filter((l) => l.currentStage === 'FILING_IN_PROGRESS').length;
-    const accepted = allLeads.filter((l) => l.currentStage === 'FILING_SUCCESS').length;
-    const rejected = allLeads.filter((l) => l.currentStage === 'FILING_FAILED').length;
+    const accepted = stats.acceptedCount;
+    const rejected = stats.rejectedCount;
 
     const items = [
       { name: 'Ready to Transmit', value: ready, color: '#3B82F6', pct: Math.round((ready / total) * 100) },
@@ -89,39 +137,9 @@ export function useFilingSpecialistDashboard() {
 
     const nonZero = items.filter((item) => item.value > 0);
     return nonZero.length > 0 ? nonZero : [{ name: 'Empty', value: 1, color: '#E2E8F0', pct: 100 }];
-  }, [allLeads]);
+  }, [allLeads, stats]);
 
-  // Date & Time checking helpers
-  const isDateToday = (dateVal?: string | Date | null): boolean => {
-    if (!dateVal) return false;
-    const d = new Date(dateVal);
-    if (isNaN(d.getTime())) return false;
-    const now = new Date();
-    return (
-      d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth() &&
-      d.getDate() === now.getDate()
-    );
-  };
-
-  const getDayOfWeekIdx = (dateVal?: string | Date | null): number => {
-    if (!dateVal) return -1;
-    const d = new Date(dateVal);
-    if (isNaN(d.getTime())) return -1;
-    
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-
-    // Check if within the past 7 days (rolling 7-day window including Saturday/Sunday)
-    if (diffMs >= 0 && diffMs <= sevenDaysMs) {
-      const day = d.getDay();
-      return day === 0 ? 6 : day - 1;
-    }
-    return -1;
-  };
-
-  // 100% Real Hourly Activity - Evaluates real events today
+  // 100% Real Hourly Activity
   const hourlyData = useMemo(() => {
     const hours = [8, 10, 12, 14, 16, 18, 20];
     const slots = hours.map((h) => ({
@@ -131,9 +149,9 @@ export function useFilingSpecialistDashboard() {
     }));
 
     allLeads.forEach((lead) => {
-      // 1. MeF Transmitted Today
+      // 1. MeF Transmitted
       const transmittedAt = lead.transmissionInfo?.transmittedAt;
-      if (transmittedAt && isDateToday(transmittedAt)) {
+      if (transmittedAt && isDateInRange(transmittedAt, timeRange, customStartDate, customEndDate)) {
         const d = new Date(transmittedAt);
         const hour = d.getHours();
         let closestH = hours[0];
@@ -150,9 +168,9 @@ export function useFilingSpecialistDashboard() {
         if (slot) slot.transmitted += 1;
       }
 
-      // 2. IRS Accepted (0000) Today
+      // 2. IRS Accepted
       const acceptedAt = lead.transmissionInfo?.acceptedAt;
-      if (acceptedAt && isDateToday(acceptedAt)) {
+      if (acceptedAt && isDateInRange(acceptedAt, timeRange, customStartDate, customEndDate)) {
         const d = new Date(acceptedAt);
         const hour = d.getHours();
         let closestH = hours[0];
@@ -171,9 +189,9 @@ export function useFilingSpecialistDashboard() {
     });
 
     return slots;
-  }, [allLeads]);
+  }, [allLeads, timeRange, customStartDate, customEndDate]);
 
-  // 100% Real Weekly Activity from actual database records (Mon - Sun of current week)
+  // 100% Real Weekly Activity - Plots Monday to Sunday of the current calendar week
   const weeklyData = useMemo(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const slots = days.map((day) => ({
@@ -222,7 +240,7 @@ export function useFilingSpecialistDashboard() {
           type: 'ACCEPTED',
           title: `IRS Accepted: ${lead.taxpayerName}`,
           description: `Submission ID ${lead.transmissionInfo?.submissionId || '582910202605900001'} verified with Code 0000.`,
-          timestamp: 'Just now',
+          timestamp: stats.periodSuffix,
           badge: '0000_ACCEPTED',
         });
       } else if (lead.currentStage === 'FILING_IN_PROGRESS') {
@@ -256,10 +274,15 @@ export function useFilingSpecialistDashboard() {
     });
 
     return events;
-  }, [allLeads]);
+  }, [allLeads, stats.periodSuffix]);
 
   const handleOpenWorkspace = (lead: FilingLeadItem) => {
     navigate(`/filing/workspace/${lead.id}`);
+  };
+
+  const handleCustomDateChange = (start: string, end: string) => {
+    setCustomStartDate(start);
+    setCustomEndDate(end);
   };
 
   return {
@@ -271,6 +294,9 @@ export function useFilingSpecialistDashboard() {
     setChartMode,
     timeRange,
     setTimeRange,
+    customStartDate,
+    customEndDate,
+    handleCustomDateChange,
     hourlyData,
     weeklyData,
     priorityTargets,

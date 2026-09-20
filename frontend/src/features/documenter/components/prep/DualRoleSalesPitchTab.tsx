@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Sparkles, 
-  DollarSign, 
-  Send, 
   CheckCircle2, 
-  CreditCard, 
-  FileCheck2, 
-  AlertCircle,
-  Clock,
-  Briefcase,
+  Clock, 
   RotateCcw
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
@@ -16,6 +10,7 @@ import { PitchTaxDraftSummaryCard } from '@/features/sales/components/pitch/Pitc
 import { PitchFeeCalculator } from '@/features/sales/components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '@/features/sales/components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '@/features/sales/components/pitch/PitchPaymentAndEsignModals';
+import { PitchNegotiationBar } from '@/features/sales/components/pitch/PitchNegotiationBar';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
 import { salesService } from '@/features/sales/services/sales-service';
@@ -60,6 +55,7 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isEsignModalOpen, setIsEsignModalOpen] = useState(false);
   const [isDispatchConfirmOpen, setIsDispatchConfirmOpen] = useState(false);
+  const [pendingDispatchNotes, setPendingDispatchNotes] = useState('');
   const [isDispatching, setIsDispatching] = useState(false);
   const [isSendBackOpen, setIsSendBackOpen] = useState(false);
 
@@ -138,6 +134,11 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
       ? (lead as any).paymentHistory
       : [],
     esignStatus: (taxDraft.esignStatus as any) || 'NOT_SENT',
+    closerCallNotes: taxDraft.closerCallNotes || (lead as any).closerCallNotes || '',
+    notes: (lead as any).notes || '',
+    auditLogs: (lead as any).auditLogs || [],
+    stageHistories: (lead as any).stageHistories || [],
+    callLogs: (lead as any).callLogs || [],
   };
 
   const isQaApproved = Boolean(
@@ -234,7 +235,7 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
   const handleDispatchToFiling = async () => {
     setIsDispatching(true);
     try {
-      await salesService.dispatchToFiling(lead.id);
+      await salesService.dispatchToFiling(lead.id, pendingDispatchNotes || undefined);
       toast.success(`Form 1040 for ${customer.fullName || customer.firstName} successfully dispatched to IRS E-Filing Queue! 🚀🏛️`);
       setIsDispatchConfirmOpen(false);
       onRefresh();
@@ -349,6 +350,14 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
         </div>
       </div>
 
+      {/* 1.1 Closer Pitch Status & Fee Negotiation Toolbar */}
+      <PitchNegotiationBar
+        lead={salesLeadAdapter}
+        onUpdateSuccess={() => {
+          onRefresh();
+        }}
+      />
+
       {/* 2. Main 2-Column Pitching Workspace (Matching Sales Agent Screen) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left 7 Cols: Tax Calculations & Interactive Fee Engine */}
@@ -378,7 +387,11 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
             lead={salesLeadAdapter}
             paymentStatus={salesLeadAdapter.paymentStatus || 'UNPAID'}
             esignStatus={salesLeadAdapter.esignStatus || 'NOT_SENT'}
-            onDispatchToFiling={() => setIsDispatchConfirmOpen(true)}
+            onNotesSaved={onRefresh}
+            onDispatchToFiling={(notes) => {
+              setPendingDispatchNotes(notes || '');
+              setIsDispatchConfirmOpen(true);
+            }}
           />
         </div>
       </div>
@@ -392,6 +405,7 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
         isEsignModalOpen={isEsignModalOpen}
         onCloseEsignModal={() => setIsEsignModalOpen(false)}
         onEsignSuccess={handleEsignSuccess}
+        onPaymentLinkSent={onRefresh}
       />
 
       {/* 4. Dispatch to Filing Confirmation Dialog */}

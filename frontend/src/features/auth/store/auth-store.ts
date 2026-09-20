@@ -8,6 +8,7 @@ interface AuthState {
   isLoading: boolean;
   login: (identifier: string) => Promise<void>;
   verify: (identifier: string, otp: string) => Promise<void>;
+  setUser: (user: any) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -16,6 +17,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+
+  setUser: (user: any) => {
+    set({ user, isAuthenticated: !!user });
+  },
 
   refreshUser: async () => {
     try {

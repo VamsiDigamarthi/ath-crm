@@ -7,10 +7,13 @@ export interface FilingSpecialistStatsCardsProps {
     readyToTransmit: number;
     acceptedCount: number;
     acceptanceRate: string;
+    periodSuffix?: string;
   };
 }
 
 export const FilingSpecialistStatsCards: React.FC<FilingSpecialistStatsCardsProps> = ({ stats }) => {
+  const periodLabel = stats.periodSuffix || 'Today';
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. Assigned Returns */}
@@ -53,11 +56,11 @@ export const FilingSpecialistStatsCards: React.FC<FilingSpecialistStatsCardsProp
         </div>
       </div>
 
-      {/* 3. Accepted by IRS Today */}
+      {/* 3. Accepted by IRS in Period */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            Accepted by IRS Today
+            Accepted by IRS ({periodLabel})
           </span>
           <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center">
             <CheckCircle2 className="w-4 h-4" />

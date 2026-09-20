@@ -5,14 +5,25 @@ export type SalesLeadStage =
   | 'SALES_PITCHING'        // Agent actively calling/pitching client
   | 'QUOTATION_SENT'        // Fee quote generated & sent to client
   | 'PAYMENT_PENDING'       // Client agreed, awaiting card swipe/link payment
+  | 'SALES_PAYMENT_PENDING'
+  | 'SALES_ESIGN_PENDING'
   | 'PAID_AND_AUTHORIZED'   // Payment verified & Form 8879 E-Signed
   | 'FILING_QUEUE'          // Transferred to Filing Operations
   | 'FILING_IN_PROGRESS'    // Filing currently active
   | 'FILING_SUCCESS'        // Successfully accepted by IRS
   | 'CORRECTION_NEEDED'     // Reverted to Tax Preparer for calculations revision
+  | 'QA_REVISION_REQUESTED'
+  | 'QA_APPROVED'
   | 'DOC_OUTREACH'          // Reverted to Documenter for missing paperwork
   | 'DOC_PREP'              // Resumed Tax Preparation
-  | 'PITCH_REJECTED';       // Client declined / dropped
+  | 'COMPLETED'
+  | (string & {});
+export type PitchNegotiationStatus = 
+  | 'NEED_TIME'           // Need time (Client needs time to think/review before closing)
+  | 'PRICING_ISSUE'        // Pricing issue (Client feels the price is high / asking for discount)
+  | 'FILING_WITH_OTHERS'   // Filing with others (Client decided to file with local CPA or other software)
+  | 'NEED_CALL_WITH_CPA'   // Need call with CPA (Client requires technical tax consultation before paying)
+  | 'OTHER_COMMENT';       // Other comment (Custom note entry)
 
 export interface SalesFeeBreakdown {
   fed1040PrepFee: number;
@@ -47,6 +58,18 @@ export interface PaymentHistoryItem {
     role?: string;
   };
   notes?: string;
+}
+
+export interface CloserNoteItem {
+  id: string;
+  note: string;
+  authorId?: string;
+  authorName: string;
+  authorEmail?: string;
+  authorRole?: string;
+  disposition?: string;
+  callDuration?: number;
+  createdAt: string;
 }
 
 export interface SalesLeadItem extends Record<string, unknown> {
@@ -148,6 +171,20 @@ export interface SalesLeadItem extends Record<string, unknown> {
   transactionRef?: string;
   esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';
   esignCompletedAt?: string;
+
+  // Negotiation & Closer Outreach Status
+  salesPitch?: {
+    pitchStatus?: PitchNegotiationStatus | string;
+    originalFee?: number;
+    negotiatedAmount?: number | null;
+    comment?: string;
+    updatedAt?: string;
+  };
+  pitchStatus?: PitchNegotiationStatus | string;
+  negotiatedAmount?: number | null;
+  originalFee?: number;
+  closerCallNotes?: string;
+  closerNotesHistory?: CloserNoteItem[];
 
   lastContactedAt?: string;
   callDisposition?: string;

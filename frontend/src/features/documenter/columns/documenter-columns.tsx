@@ -120,17 +120,19 @@ export interface GetDocumenterColumnsProps {
   onRevertLead?: (lead: DocumenterLeadItem) => void;
   hideAssignedStaff?: boolean;
   isManagerView?: boolean;
+  isAdmin?: boolean;
 }
 
 export const getDocumenterColumns = ({
   onOpenCallModal,
   onOpenAssignModal,
-  onReassignLead,
-  onRevertLead,
+  onReassignLead: _onReassignLead,
+  onRevertLead: _onRevertLead,
   hideAssignedStaff = false,
   isManagerView = false,
+  isAdmin: isAdminProp = false,
 }: GetDocumenterColumnsProps): ColumnDef<DocumenterLeadItem>[] => {
-  const isAdmin = isManagerView;
+  const isAdmin = isManagerView || isAdminProp;
   const baseColumns: ColumnDef<DocumenterLeadItem>[] = [
     {
       header: 'Taxpayer Client',

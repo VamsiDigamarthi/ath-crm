@@ -1,6 +1,7 @@
 import React from 'react';
 import { RefreshCw, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
+import { DashboardDateFilter } from '@/shared/components/DashboardDateFilter';
 import { useTaxSpecialistDashboard } from '../hooks/useTaxSpecialistDashboard';
 import { SpecialistKpiCards } from '../components/dashboard/SpecialistKpiCards';
 import { SpecialistVelocityCharts } from '../components/dashboard/SpecialistVelocityCharts';
@@ -13,6 +14,11 @@ export const TaxSpecialistDashboardScreen: React.FC = () => {
     dualRoleMix,
     chartMode,
     setChartMode,
+    timeRange,
+    setTimeRange,
+    customStartDate,
+    customEndDate,
+    handleCustomDateChange,
     hourlyData,
     weeklyData,
     priorityPrepTask,
@@ -32,8 +38,8 @@ export const TaxSpecialistDashboardScreen: React.FC = () => {
 
   return (
     <div className="w-full space-y-6 pb-12 font-sans animate-in fade-in duration-200">
-      {/* 1. Header with Title & Refresh */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Header with Title, Date Filter & Refresh */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
@@ -49,7 +55,15 @@ export const TaxSpecialistDashboardScreen: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <DashboardDateFilter
+            preset={timeRange}
+            onPresetChange={setTimeRange}
+            startDate={customStartDate}
+            endDate={customEndDate}
+            onCustomDateChange={handleCustomDateChange}
+          />
+
           <Button
             variant="outline"
             size="sm"
@@ -58,7 +72,7 @@ export const TaxSpecialistDashboardScreen: React.FC = () => {
             className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh Dashboard</span>
+            <span>Refresh</span>
           </Button>
         </div>
       </div>

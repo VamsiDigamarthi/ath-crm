@@ -1,5 +1,5 @@
 import apiClient from '@/lib/api-client';
-import type { SalesLeadItem, SalesRepItem, SalesManagerStats, SalesAgentStats } from '../types/sales.types';
+import type { SalesLeadItem, SalesRepItem, SalesManagerStats, SalesAgentStats, SalesFeeBreakdown } from '../types/sales.types';
 
 export interface SalesPipelineResponse {
   leads: SalesLeadItem[];
@@ -137,10 +137,36 @@ export const salesService = {
   },
 
   /**
-   * Dispatch paid & e-signed return to IRS Filing Queue
+   * Dispatch paid & e-signed return to IRS Filing Queue with optional notes
    */
-  async dispatchToFiling(id: string) {
-    return apiClient.post(`/sales/leads/${id}/dispatch-filing`);
+  async dispatchToFiling(id: string, payloadOrNotes?: string | { notes?: string }) {
+    const payload = typeof payloadOrNotes === 'string'
+      ? { notes: payloadOrNotes }
+      : (payloadOrNotes || {});
+    return apiClient.post(`/sales/leads/${id}/dispatch-filing`, payload);
+  },
+
+  /**
+   * Update and persist Pitch Negotiation Status, Original Fee & Negotiated Amount
+   */
+  async updatePitchNegotiation(id: string, payload: {
+    pitchStatus?: string;
+    originalFee?: number;
+    negotiatedAmount?: number | null;
+    comment?: string;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/pitch-negotiation`, payload);
+  },
+
+  /**
+   * Save closer call notes directly into database & CallLog
+   */
+  async saveCloserNotes(id: string, payload: {
+    notes: string;
+    disposition?: string;
+    callDuration?: number;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/notes`, payload);
   },
 
   /**
@@ -176,5 +202,39 @@ export const salesService = {
     notes?: string;
   }) {
     return apiClient.post(`/sales/leads/${id}/record-esign`, payload);
+  },
+
+  /**
+   * Complete E-Sign alias
+   */
+  async completeEsign(payload: {
+    applicationId: string;
+    method?: string;
+    pin?: string;
+    taxpayerPin?: string;
+    fileName?: string;
+    notes?: string;
+  }) {
+    return this.recordEsign(payload.applicationId, {
+      esignMethod: payload.method,
+      taxpayerPin: payload.taxpayerPin || payload.pin,
+      fileName: payload.fileName,
+      notes: payload.notes,
+    });
+  },
+
+  /**
+   * Dispatch Stripe Self-Checkout Payment Link to Primary & optional Secondary Email
+   */
+  async sendPaymentLink(id: string, payload: {
+    amount: number;
+    primaryEmail?: string;
+    secondaryEmail?: string;
+    sendToPrimary?: boolean;
+    sendToSecondary?: boolean;
+    phone?: string;
+    notes?: string;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/send-payment-link`, payload);
   },
 };
