@@ -1,3 +1,20 @@
 1) docuemnt login http://localhost:5173/documenter/agent/queue cal button
 2) Client signup needed -> later
 3) 
+
+
+
+4. Sub-Header Deal Tracking Bar: 
+
+
+7. Add an option to change email, as sometimes clients will ask to share the payment link to their 2nd email as well
+
+8. Change send-back name/options:
+
+9. Update revenue option as per payments (even after collecting payment, th
+e revenue isn’t updating automatically its showing 0)  
+
+There's no option to submit the caller notes after dialing
+
+
+14. Discount Coupon / Promo Code:
