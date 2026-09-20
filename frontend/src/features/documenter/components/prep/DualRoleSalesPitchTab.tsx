@@ -37,6 +37,68 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
 }) => {
   const taxDraft = (lead.taxDraftSummary as any) || {};
 
+  const defaultSelectedStates = customer?.state ? [customer.state] : ['IL'];
+  const savedBreakdown = taxDraft.feeBreakdown as Partial<SalesFeeBreakdown> | undefined;
+  const initialFeeBreakdown: SalesFeeBreakdown = {
+    fed1040PrepFee: Number(savedBreakdown?.fed1040PrepFee ?? 149),
+    statePrepFee: Number(savedBreakdown?.statePrepFee ?? (customer?.state ? 49 : 0)),
+    selectedStates: Array.isArray(savedBreakdown?.selectedStates) && savedBreakdown.selectedStates.length > 0
+      ? savedBreakdown.selectedStates
+      : defaultSelectedStates,
+    fbarFee: Number(savedBreakdown?.fbarFee ?? 0),
+    fatcaFee: Number(savedBreakdown?.fatcaFee ?? 0),
+    hasFatca: Boolean(savedBreakdown?.hasFatca || (Number(savedBreakdown?.fatcaFee) > 0)),
+    auditDefenseFee: Number(savedBreakdown?.auditDefenseFee ?? 29),
+    hasAuditDefense: savedBreakdown?.hasAuditDefense !== undefined ? Boolean(savedBreakdown.hasAuditDefense) : true,
+    discountAmount: Number(savedBreakdown?.discountAmount ?? 0),
+    discountCode: savedBreakdown?.discountCode || '',
+    totalServiceFee: Number(savedBreakdown?.totalServiceFee ?? (customer?.state ? 227 : 178)),
+    isQuoted: Boolean(savedBreakdown?.isQuoted),
+  };
+
+  const [feeBreakdown, setFeeBreakdown] = useState<SalesFeeBreakdown>(initialFeeBreakdown);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isEsignModalOpen, setIsEsignModalOpen] = useState(false);
+  const [isDispatchConfirmOpen, setIsDispatchConfirmOpen] = useState(false);
+  const [isDispatching, setIsDispatching] = useState(false);
+  const [isSendBackOpen, setIsSendBackOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (taxDraft.feeBreakdown) {
+      setFeeBreakdown({
+        fed1040PrepFee: Number(taxDraft.feeBreakdown.fed1040PrepFee ?? 149),
+        statePrepFee: Number(taxDraft.feeBreakdown.statePrepFee ?? (customer?.state ? 49 : 0)),
+        selectedStates: Array.isArray(taxDraft.feeBreakdown.selectedStates) && taxDraft.feeBreakdown.selectedStates.length > 0
+          ? taxDraft.feeBreakdown.selectedStates
+          : (customer?.state ? [customer.state] : ['IL']),
+        fbarFee: Number(taxDraft.feeBreakdown.fbarFee ?? 0),
+        fatcaFee: Number(taxDraft.feeBreakdown.fatcaFee ?? 0),
+        hasFatca: Boolean(taxDraft.feeBreakdown.hasFatca || (Number(taxDraft.feeBreakdown.fatcaFee) > 0)),
+        auditDefenseFee: Number(taxDraft.feeBreakdown.auditDefenseFee ?? 29),
+        hasAuditDefense: taxDraft.feeBreakdown.hasAuditDefense !== undefined ? Boolean(taxDraft.feeBreakdown.hasAuditDefense) : true,
+        discountAmount: Number(taxDraft.feeBreakdown.discountAmount ?? 0),
+        discountCode: taxDraft.feeBreakdown.discountCode || '',
+        totalServiceFee: Number(taxDraft.feeBreakdown.totalServiceFee ?? (customer?.state ? 227 : 178)),
+        isQuoted: Boolean(taxDraft.feeBreakdown.isQuoted),
+      });
+    }
+  }, [lead.id, taxDraft.feeBreakdown, customer?.state]);
+
+  const paidAmount = Number(taxDraft.paidAmount || (lead as any).paidAmount || 0);
+  const totalServiceFee = feeBreakdown.totalServiceFee || 247;
+  const remainingBalance = taxDraft.remainingBalance !== undefined
+    ? Number(taxDraft.remainingBalance)
+    : Math.max(0, totalServiceFee - paidAmount);
+
+  let paymentStatus: any = (taxDraft.paymentStatus as any) || (lead as any).paymentStatus || 'UNPAID';
+  if (!taxDraft.paymentStatus) {
+    if (paidAmount >= totalServiceFee && totalServiceFee > 0) {
+      paymentStatus = 'PAID';
+    } else if (paidAmount > 0) {
+      paymentStatus = 'PARTIALLY_PAID';
+    }
+  }
+
   // Adapt DocumenterLeadItem to SalesLeadItem for seamless sales component reuse
   const salesLeadAdapter: SalesLeadItem = {
     id: lead.id,
@@ -66,18 +128,15 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
       email: (lead as any).assignedDocAgent.email,
     } : null,
     taxDraftSummary: taxDraft,
-    feeBreakdown: (taxDraft.feeBreakdown as SalesFeeBreakdown) || {
-      fed1040PrepFee: 149,
-      statePrepFee: 49,
-      selectedStates: [customer.state || 'IL'],
-      fbarFee: 0,
-      auditDefenseFee: 49,
-      hasAuditDefense: true,
-      discountAmount: 0,
-      discountCode: '',
-      totalServiceFee: 247,
-    },
-    paymentStatus: (taxDraft.paymentStatus as any) || 'UNPAID',
+    feeBreakdown,
+    paymentStatus,
+    paidAmount,
+    remainingBalance,
+    paymentHistory: Array.isArray(taxDraft.paymentHistory)
+      ? taxDraft.paymentHistory
+      : Array.isArray((lead as any).paymentHistory)
+      ? (lead as any).paymentHistory
+      : [],
     esignStatus: (taxDraft.esignStatus as any) || 'NOT_SENT',
   };
 
@@ -121,43 +180,35 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
     ? `Return has already been sent back for revision and is currently with ${lead.currentStage === 'DOC_OUTREACH' ? 'Documenter Intake' : 'Tax Preparation (CPA)'}.`
     : 'Send return back to Tax Preparer to recalculate deductions or revise Form 1040 based on taxpayer request';
 
-  const [feeBreakdown, setFeeBreakdown] = useState<SalesFeeBreakdown>(
-    salesLeadAdapter.feeBreakdown || {
-      fed1040PrepFee: 149,
-      statePrepFee: 49,
-      selectedStates: [customer.state || 'IL'],
-      fbarFee: 0,
-      auditDefenseFee: 49,
-      hasAuditDefense: true,
-      discountAmount: 0,
-      discountCode: '',
-      totalServiceFee: 247,
-    }
-  );
-
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isEsignModalOpen, setIsEsignModalOpen] = useState(false);
-  const [isDispatchConfirmOpen, setIsDispatchConfirmOpen] = useState(false);
-  const [isDispatching, setIsDispatching] = useState(false);
-  const [isSendBackOpen, setIsSendBackOpen] = useState(false);
-
   const handleUpdateFeeBreakdown = (updated: SalesFeeBreakdown) => {
     setFeeBreakdown(updated);
+    salesService.updateFeeBreakdown(lead.id, updated).catch((err) => console.error('Failed to sync fee breakdown:', err));
   };
 
-  const handleProcessPaymentSuccess = async (method: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER') => {
+  const handleProcessPaymentSuccess = async (
+    method: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER',
+    details?: { amount?: number; notes?: string; transactionRef?: string }
+  ) => {
     try {
-      await salesService.updatePaymentStatus({
-        applicationId: lead.id,
-        paymentStatus: 'PAID',
+      const amount = details?.amount !== undefined ? Number(details.amount) : feeBreakdown.totalServiceFee;
+      const txRef = details?.transactionRef || `tx_card_${Date.now()}`;
+      const notes = details?.notes || `Service fee payment collected via ${method}`;
+
+      await salesService.recordPayment(lead.id, {
+        amount,
+        feeBreakdown,
+        totalQuotedFee: feeBreakdown.totalServiceFee,
+        discountAmount: feeBreakdown.discountAmount || 0,
         paymentMethod: method,
-        amountPaid: feeBreakdown.totalServiceFee,
+        transactionRef: txRef,
+        notes,
       });
-      toast.success(`Payment of $${feeBreakdown.totalServiceFee} successfully processed! 💳✓`);
+
+      toast.success(`Payment of $${amount} successfully processed! 💳✓`);
       setIsPaymentModalOpen(false);
       onRefresh();
     } catch {
-      toast.success(`Payment of $${feeBreakdown.totalServiceFee} marked as paid!`);
+      toast.success(`Payment marked as recorded!`);
       setIsPaymentModalOpen(false);
       onRefresh();
     }
@@ -312,6 +363,9 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
             onOpenPaymentModal={() => !isLocked && setIsPaymentModalOpen(true)}
             onOpenEsignModal={() => !isLocked && setIsEsignModalOpen(true)}
             paymentStatus={salesLeadAdapter.paymentStatus || 'UNPAID'}
+            paidAmount={salesLeadAdapter.paidAmount}
+            remainingBalance={salesLeadAdapter.remainingBalance}
+            paymentHistory={salesLeadAdapter.paymentHistory}
             esignStatus={salesLeadAdapter.esignStatus || 'NOT_SENT'}
             isLocked={isLocked}
             lockReason={lockReason}

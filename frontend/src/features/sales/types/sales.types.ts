@@ -19,12 +19,34 @@ export interface SalesFeeBreakdown {
   statePrepFee: number;
   selectedStates: string[];
   fbarFee: number;
+  fatcaFee?: number;
+  hasFatca?: boolean;
   auditDefenseFee: number;
   hasAuditDefense: boolean;
   discountAmount: number;
   discountCode: string;
   totalServiceFee: number;
   isQuoted?: boolean;
+}
+
+export type SalesPaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED';
+
+export interface PaymentHistoryItem {
+  id: string;
+  amount: number;
+  totalQuotedFee: number;
+  cumulativePaid: number;
+  remainingBalance: number;
+  paymentMethod: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER' | 'ZELLE' | 'CASH';
+  transactionRef?: string;
+  paidAt: string;
+  collectedBy?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    role?: string;
+  };
+  notes?: string;
 }
 
 export interface SalesLeadItem extends Record<string, unknown> {
@@ -95,6 +117,10 @@ export interface SalesLeadItem extends Record<string, unknown> {
     preparerNotes?: string;
     auditorRemarks?: string;
     targetDueDate?: string;
+    paidAmount?: number;
+    totalQuotedFee?: number;
+    remainingBalance?: number;
+    paymentHistory?: PaymentHistoryItem[];
     lastRevert?: {
       sourceDepartment: string;
       targetDepartment: string;
@@ -113,8 +139,11 @@ export interface SalesLeadItem extends Record<string, unknown> {
 
   // Pricing & Payment Status
   feeBreakdown: SalesFeeBreakdown;
-  paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED';
-  paymentMethod?: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER' | 'ZELLE';
+  paymentStatus: SalesPaymentStatus;
+  paidAmount?: number;
+  remainingBalance?: number;
+  paymentHistory?: PaymentHistoryItem[];
+  paymentMethod?: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER' | 'ZELLE' | 'CASH';
   paidAt?: string;
   transactionRef?: string;
   esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';

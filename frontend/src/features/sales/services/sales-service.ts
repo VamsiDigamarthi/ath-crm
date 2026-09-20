@@ -144,10 +144,19 @@ export const salesService = {
   },
 
   /**
+   * Update and persist Fee Quotation Breakdown in database
+   */
+  async updateFeeBreakdown(id: string, feeBreakdown: SalesFeeBreakdown) {
+    return apiClient.post(`/sales/leads/${id}/fee-breakdown`, { feeBreakdown });
+  },
+
+  /**
    * Record Service Fee Payment in Database
    */
   async recordPayment(id: string, payload: {
     amount: number;
+    feeBreakdown?: SalesFeeBreakdown;
+    totalQuotedFee?: number;
     discountAmount?: number;
     paymentMethod?: string;
     transactionRef?: string;

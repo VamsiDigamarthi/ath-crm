@@ -7,10 +7,12 @@ import {
   Tag, 
   CreditCard, 
   FileCheck,
-  Lock
+  Lock,
+  History,
+  Coins
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import type { SalesFeeBreakdown } from '../../types/sales.types';
+import type { SalesFeeBreakdown, SalesPaymentStatus, PaymentHistoryItem } from '../../types/sales.types';
 import toast from 'react-hot-toast';
 
 const AVAILABLE_STATES = [
@@ -28,10 +30,14 @@ interface PitchFeeCalculatorProps {
   onUpdateFeeBreakdown: (updated: SalesFeeBreakdown) => void;
   onOpenPaymentModal: () => void;
   onOpenEsignModal: () => void;
-  paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED';
+  paymentStatus: SalesPaymentStatus;
   esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';
   isLocked?: boolean;
   lockReason?: string;
+  paidAmount?: number;
+  remainingBalance?: number;
+  paymentHistory?: PaymentHistoryItem[];
+  onOpenPaymentHistoryModal?: () => void;
 }
 
 export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
@@ -43,21 +49,44 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   esignStatus,
   isLocked = false,
   lockReason,
+  paidAmount = 0,
+  remainingBalance,
+  paymentHistory = [],
+  onOpenPaymentHistoryModal,
 }) => {
   const [couponCode, setCouponCode] = useState('');
 
-  const handleToggleState = (stateName: string) => {
-    const isSelected = feeBreakdown.selectedStates.includes(stateName);
+  const currentFatcaFee = feeBreakdown.fatcaFee || 0;
+  const currentFbarFee = feeBreakdown.fbarFee || 0;
+  const currentAuditDefenseFee = feeBreakdown.hasAuditDefense ? (feeBreakdown.auditDefenseFee || 29) : 0;
+  const effectiveRemainingBalance = remainingBalance !== undefined 
+    ? remainingBalance 
+    : Math.max(0, feeBreakdown.totalServiceFee - paidAmount);
+
+  const handleToggleState = (stateIdentifier: string) => {
+    const targetState = AVAILABLE_STATES.find((s) => s.name === stateIdentifier || s.code === stateIdentifier);
+    const standardName = targetState ? targetState.name : stateIdentifier;
+    const isSelected = feeBreakdown.selectedStates.some((s) => 
+      s === standardName || 
+      s === targetState?.code ||
+      (targetState && (s.startsWith(targetState.code) || targetState.name.includes(s)))
+    );
+
     const newStates = isSelected
-      ? feeBreakdown.selectedStates.filter((s) => s !== stateName)
-      : [...feeBreakdown.selectedStates, stateName];
+      ? feeBreakdown.selectedStates.filter((s) => !(
+          s === standardName || 
+          s === targetState?.code ||
+          (targetState && (s.startsWith(targetState.code) || targetState.name.includes(s)))
+        ))
+      : [...feeBreakdown.selectedStates, standardName];
 
     const stateFeeTotal = newStates.length * 49;
     const total = 
       feeBreakdown.fed1040PrepFee + 
       stateFeeTotal + 
-      (feeBreakdown.hasAuditDefense ? feeBreakdown.auditDefenseFee : 0) + 
-      feeBreakdown.fbarFee - 
+      currentAuditDefenseFee + 
+      currentFbarFee + 
+      currentFatcaFee - 
       feeBreakdown.discountAmount;
 
     onUpdateFeeBreakdown({
@@ -75,7 +104,8 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
       feeBreakdown.fed1040PrepFee + 
       feeBreakdown.statePrepFee + 
       defenseAmount + 
-      feeBreakdown.fbarFee - 
+      currentFbarFee + 
+      currentFatcaFee - 
       feeBreakdown.discountAmount;
 
     onUpdateFeeBreakdown({
@@ -87,17 +117,36 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   };
 
   const handleToggleFbar = () => {
-    const nextFbarFee = feeBreakdown.fbarFee > 0 ? 0 : 99;
+    const nextFbarFee = currentFbarFee > 0 ? 0 : 99;
     const total = 
       feeBreakdown.fed1040PrepFee + 
       feeBreakdown.statePrepFee + 
-      (feeBreakdown.hasAuditDefense ? feeBreakdown.auditDefenseFee : 0) + 
-      nextFbarFee - 
+      currentAuditDefenseFee + 
+      nextFbarFee + 
+      currentFatcaFee - 
       feeBreakdown.discountAmount;
 
     onUpdateFeeBreakdown({
       ...feeBreakdown,
       fbarFee: nextFbarFee,
+      totalServiceFee: Math.max(0, total),
+    });
+  };
+
+  const handleToggleFatca = () => {
+    const nextFatcaFee = currentFatcaFee > 0 ? 0 : 99;
+    const total = 
+      feeBreakdown.fed1040PrepFee + 
+      feeBreakdown.statePrepFee + 
+      currentAuditDefenseFee + 
+      currentFbarFee + 
+      nextFatcaFee - 
+      feeBreakdown.discountAmount;
+
+    onUpdateFeeBreakdown({
+      ...feeBreakdown,
+      fatcaFee: nextFatcaFee,
+      hasFatca: nextFatcaFee > 0,
       totalServiceFee: Math.max(0, total),
     });
   };
@@ -121,8 +170,9 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
     const total = 
       feeBreakdown.fed1040PrepFee + 
       feeBreakdown.statePrepFee + 
-      (feeBreakdown.hasAuditDefense ? feeBreakdown.auditDefenseFee : 0) + 
-      feeBreakdown.fbarFee - 
+      currentAuditDefenseFee + 
+      currentFbarFee + 
+      currentFatcaFee - 
       discount;
 
     onUpdateFeeBreakdown({
@@ -140,8 +190,9 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
     const total = 
       feeBreakdown.fed1040PrepFee + 
       feeBreakdown.statePrepFee + 
-      (feeBreakdown.hasAuditDefense ? feeBreakdown.auditDefenseFee : 0) + 
-      feeBreakdown.fbarFee;
+      currentAuditDefenseFee + 
+      currentFbarFee + 
+      currentFatcaFee;
 
     onUpdateFeeBreakdown({
       ...feeBreakdown,
@@ -162,9 +213,21 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
             Interactive Fee Quotation &amp; Pricing Engine
           </h3>
         </div>
-        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-          Standard 1040 Rate
-        </span>
+        <div className="flex items-center gap-2">
+          {paymentHistory.length > 0 && (
+            <button
+              type="button"
+              onClick={onOpenPaymentHistoryModal || onOpenPaymentModal}
+              className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <History className="w-3.5 h-3.5 text-slate-500" />
+              <span>Payment Ledger ({paymentHistory.length})</span>
+            </button>
+          )}
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+            Standard 1040 Rate
+          </span>
+        </div>
       </div>
 
       {/* 2. Interactive Fee Options */}
@@ -198,7 +261,12 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-100">
             {AVAILABLE_STATES.map((state) => {
-              const isChecked = feeBreakdown.selectedStates.includes(state.name);
+              const isChecked = feeBreakdown.selectedStates.some((s) => 
+                s === state.name || 
+                s === state.code || 
+                s.startsWith(state.code) || 
+                state.name.includes(s)
+              );
               return (
                 <label
                   key={state.code}
@@ -273,12 +341,39 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
             type="button"
             onClick={handleToggleFbar}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              feeBreakdown.fbarFee > 0
+              currentFbarFee > 0
                 ? 'bg-purple-600 text-white'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
             }`}
           >
-            {feeBreakdown.fbarFee > 0 ? 'Added (+$99)' : '+ Add FBAR'}
+            {currentFbarFee > 0 ? 'Added (+$99)' : '+ Add FBAR'}
+          </button>
+        </div>
+
+        {/* Item 4b: FATCA Option (Foreign Account Tax Compliance Act Form 8938) */}
+        <div className="p-4 rounded-xl border border-slate-200 bg-white flex items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
+              <Globe className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900">Foreign Account Tax Compliance Act FATCA (Form 8938)</div>
+              <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                Required for taxpayers with foreign financial assets &gt; $50,000 (+$99).
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleToggleFatca}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              currentFatcaFee > 0
+                ? 'bg-indigo-600 text-white'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+          >
+            {currentFatcaFee > 0 ? 'Added (+$99)' : '+ Add FATCA'}
           </button>
         </div>
 
@@ -328,21 +423,39 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
 
       {/* 3. Final Summary & 1-Click Action Buttons */}
       <div className="pt-4 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-xl">
-        <div>
-          <div className="text-xs text-slate-300 font-medium">Total Quoted Service Fee</div>
+        <div className="space-y-1">
+          <div className="text-xs text-slate-300 font-medium flex items-center gap-2">
+            <span>Total Quoted Service Fee</span>
+            {paidAmount > 0 && paymentStatus !== 'PAID' && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                Partially Paid (${paidAmount} Paid)
+              </span>
+            )}
+          </div>
           <div className="text-3xl font-black text-white tracking-tight flex items-baseline gap-2">
             <span>${feeBreakdown.totalServiceFee}</span>
             <span className="text-xs font-semibold text-emerald-400">
               (All-Inclusive 1040 Filing)
             </span>
           </div>
+          {paidAmount > 0 && (
+            <div className="flex items-center gap-3 text-xs pt-1">
+              <div className="flex items-center gap-1 text-emerald-300">
+                <Coins className="w-3.5 h-3.5" />
+                <span>Paid: <strong>${paidAmount}</strong></span>
+              </div>
+              <div className="flex items-center gap-1 text-amber-300">
+                <span>Remaining Due: <strong>${effectiveRemainingBalance}</strong></span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
           {isLocked && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[11px] font-semibold">
               <Lock className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-              <span>{lockReason || 'Payment &amp; E-Sign locked while return is in revision'}</span>
+              <span>{lockReason || 'Payment & E-Sign locked while return is in revision'}</span>
             </div>
           )}
 
@@ -360,7 +473,11 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
                 }`}
               >
                 <CreditCard className="w-4 h-4" />
-                <span>Collect Payment ($ {feeBreakdown.totalServiceFee})</span>
+                <span>
+                  {paidAmount > 0
+                    ? `Collect Balance ($${effectiveRemainingBalance})`
+                    : `Collect Payment ($${feeBreakdown.totalServiceFee})`}
+                </span>
               </Button>
             ) : (
               <div className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400 text-emerald-300 px-3 py-1.5 rounded-lg text-xs font-bold">

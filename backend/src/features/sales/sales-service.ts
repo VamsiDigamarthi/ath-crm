@@ -143,26 +143,43 @@ export class SalesService {
       const validTax = Number(draft.taxLiability) || 0;
       const validWithholding = Number(draft.fedWithheld) || (validFedRefund > 0 ? (validTax + validFedRefund) : Math.max(0, validTax - balanceDue));
 
-      // Fee Breakdown from real quotes or dynamic baseline based on taxpayer state
+      // Fee Breakdown from saved draft, real quotes or dynamic baseline based on taxpayer state
       const hasQuote = Boolean(latestQuote);
-      const quoteAmount = hasQuote ? Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount || 0) : 0;
-      const baseFee = 149;
-      const stateFee = customer?.state ? 49 : 0;
-      const auditDefenseAmount = 29;
+      const savedFeeBreakdown = draft.feeBreakdown;
+      const baseFee = savedFeeBreakdown?.fed1040PrepFee !== undefined ? Number(savedFeeBreakdown.fed1040PrepFee) : 149;
+      const selectedStates = Array.isArray(savedFeeBreakdown?.selectedStates) && savedFeeBreakdown.selectedStates.length > 0
+        ? savedFeeBreakdown.selectedStates
+        : (customer?.state ? [customer.state] : ['IL']);
+      const stateFee = savedFeeBreakdown?.statePrepFee !== undefined
+        ? Number(savedFeeBreakdown.statePrepFee)
+        : (selectedStates.length * 49);
+      const auditDefenseAmount = savedFeeBreakdown?.auditDefenseFee !== undefined ? Number(savedFeeBreakdown.auditDefenseFee) : 29;
+      const hasAuditDefense = savedFeeBreakdown?.hasAuditDefense !== undefined ? Boolean(savedFeeBreakdown.hasAuditDefense) : true;
+      const fatcaFee = Number(savedFeeBreakdown?.fatcaFee || 0);
+      const fbarFee = Number(savedFeeBreakdown?.fbarFee || 0);
+      const discountAmount = savedFeeBreakdown?.discountAmount !== undefined ? Number(savedFeeBreakdown.discountAmount) : (hasQuote ? Number(latestQuote.discountAmount || 0) : 0);
+      const discountCode = savedFeeBreakdown?.discountCode || latestQuote?.discountCode || '';
 
-      const totalServiceFee = hasQuote ? quoteAmount : (baseFee + stateFee + auditDefenseAmount);
+      const calculatedTotal = baseFee + stateFee + (hasAuditDefense ? auditDefenseAmount : 0) + fbarFee + fatcaFee - discountAmount;
+      const totalServiceFee = Number(
+        draft.totalQuotedFee ||
+        savedFeeBreakdown?.totalServiceFee ||
+        calculatedTotal
+      );
 
       const feeBreakdown = {
         fed1040PrepFee: baseFee,
         statePrepFee: stateFee,
-        selectedStates: customer?.state ? [customer.state] : [],
-        fbarFee: 0,
+        selectedStates,
+        fbarFee,
+        fatcaFee,
+        hasFatca: fatcaFee > 0 || Boolean(savedFeeBreakdown?.hasFatca),
         auditDefenseFee: auditDefenseAmount,
-        hasAuditDefense: true,
-        discountAmount: hasQuote ? Number(latestQuote.discountAmount || 0) : 0,
-        discountCode: latestQuote?.discountCode || '',
+        hasAuditDefense,
+        discountAmount,
+        discountCode,
         totalServiceFee,
-        isQuoted: hasQuote,
+        isQuoted: Boolean(savedFeeBreakdown?.isQuoted || hasQuote),
       };
 
       // Reviewer Name
@@ -170,12 +187,21 @@ export class SalesService {
         ? `${app.assignedReviewAgent.firstName || ''} ${app.assignedReviewAgent.lastName || ''}`.trim() || app.assignedReviewAgent.email || '-'
         : '-';
 
-      // Payment Status
-      let paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED' = 'UNPAID';
-      if (app.currentStage === ApplicationStage.FILING_QUEUE || app.currentStage === ApplicationStage.FILING_IN_PROGRESS || app.currentStage === ApplicationStage.FILING_SUCCESS) {
+      // Payment Status & History
+      const paidAmount = Number(draft.paidAmount || (latestQuote?.status === 'PAID' ? (Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount || 0)) : 0));
+      const remainingBalance = draft.remainingBalance !== undefined
+        ? Number(draft.remainingBalance)
+        : Math.max(0, totalServiceFee - paidAmount);
+
+      let paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED' = 'UNPAID';
+      if (draft.paymentStatus) {
+        paymentStatus = draft.paymentStatus;
+      } else if (app.currentStage === ApplicationStage.FILING_QUEUE || app.currentStage === ApplicationStage.FILING_IN_PROGRESS || app.currentStage === ApplicationStage.FILING_SUCCESS) {
         paymentStatus = 'PAID';
-      } else if (latestQuote?.status === 'PAID') {
+      } else if (latestQuote?.status === 'PAID' || (paidAmount >= totalServiceFee && totalServiceFee > 0)) {
         paymentStatus = 'PAID';
+      } else if (paidAmount > 0) {
+        paymentStatus = 'PARTIALLY_PAID';
       } else if (latestQuote?.status === 'SENT') {
         paymentStatus = 'PAYMENT_LINK_SENT';
       }
@@ -193,23 +219,10 @@ export class SalesService {
       // Map Sales Stage (Preserve reverted stages CORRECTION_NEEDED, DOC_OUTREACH, DOC_PREP)
       let currentStage: string = app.currentStage;
       if (
-        app.currentStage === ApplicationStage.CORRECTION_NEEDED ||
-        app.currentStage === ApplicationStage.DOC_OUTREACH ||
-        app.currentStage === ApplicationStage.DOC_PREP
+        app.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
+        app.currentStage === ApplicationStage.SALES_PITCHING
       ) {
         currentStage = app.currentStage;
-      } else if (
-        draft?.status === 'REVERTED_TO_SALES' ||
-        (draft?.lastRevert && !draft?.lastRevert?.resolved && draft?.lastRevert?.targetDepartment === 'SALES') ||
-        app.currentStage === ApplicationStage.SALES_PITCH_QUEUE
-      ) {
-        currentStage = app.assignedSalesAgentId ? 'SALES_PITCHING' : 'SALES_PITCH_QUEUE';
-      } else if (app.currentStage === ApplicationStage.SALES_PITCHING) {
-        currentStage = 'SALES_PITCHING';
-      } else if (paymentStatus === 'PAID' && esignStatus === 'SIGNED') {
-        currentStage = app.currentStage === ApplicationStage.FILING_QUEUE ? 'FILING_QUEUE' : 'PAID_AND_AUTHORIZED';
-      } else if (paymentStatus === 'PAYMENT_LINK_SENT') {
-        currentStage = 'QUOTATION_SENT';
       }
 
       return {
@@ -276,9 +289,16 @@ export class SalesService {
           preparerNotes: draft.preparerNotes || draft.prepNotes || '',
           auditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
           targetDueDate: draft.targetDueDate || '',
+          paidAmount,
+          totalQuotedFee: totalServiceFee,
+          remainingBalance,
+          paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
         },
         feeBreakdown,
         paymentStatus,
+        paidAmount,
+        remainingBalance,
+        paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
         esignStatus,
         createdAt: app.createdAt.toISOString(),
         updatedAt: app.updatedAt.toISOString(),
@@ -778,26 +798,43 @@ export class SalesService {
     const validTax = Number(draft.taxLiability) || 0;
     const validWithholding = Number(draft.fedWithheld) || (validFedRefund > 0 ? (validTax + validFedRefund) : Math.max(0, validTax - balanceDue));
 
-    // Fee Breakdown from real quotes or dynamic baseline based on taxpayer state
+    // Fee Breakdown from saved draft, real quotes or dynamic baseline based on taxpayer state
     const hasQuote = Boolean(latestQuote);
-    const quoteAmount = hasQuote ? Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount || 0) : 0;
-    const baseFee = 149;
-    const stateFee = customer?.state ? 49 : 0;
-    const auditDefenseAmount = 29;
+    const savedFeeBreakdown = draft.feeBreakdown;
+    const baseFee = savedFeeBreakdown?.fed1040PrepFee !== undefined ? Number(savedFeeBreakdown.fed1040PrepFee) : 149;
+    const selectedStates = Array.isArray(savedFeeBreakdown?.selectedStates) && savedFeeBreakdown.selectedStates.length > 0
+      ? savedFeeBreakdown.selectedStates
+      : (customer?.state ? [customer.state] : ['IL']);
+    const stateFee = savedFeeBreakdown?.statePrepFee !== undefined
+      ? Number(savedFeeBreakdown.statePrepFee)
+      : (selectedStates.length * 49);
+    const auditDefenseAmount = savedFeeBreakdown?.auditDefenseFee !== undefined ? Number(savedFeeBreakdown.auditDefenseFee) : 29;
+    const hasAuditDefense = savedFeeBreakdown?.hasAuditDefense !== undefined ? Boolean(savedFeeBreakdown.hasAuditDefense) : true;
+    const fatcaFee = Number(savedFeeBreakdown?.fatcaFee || 0);
+    const fbarFee = Number(savedFeeBreakdown?.fbarFee || 0);
+    const discountAmount = savedFeeBreakdown?.discountAmount !== undefined ? Number(savedFeeBreakdown.discountAmount) : (hasQuote ? Number(latestQuote.discountAmount || 0) : 0);
+    const discountCode = savedFeeBreakdown?.discountCode || (latestQuote as any)?.discountCode || '';
 
-    const totalServiceFee = hasQuote ? quoteAmount : (baseFee + stateFee + auditDefenseAmount);
+    const calculatedTotal = baseFee + stateFee + (hasAuditDefense ? auditDefenseAmount : 0) + fbarFee + fatcaFee - discountAmount;
+    const totalServiceFee = Number(
+      draft.totalQuotedFee ||
+      savedFeeBreakdown?.totalServiceFee ||
+      calculatedTotal
+    );
 
     const feeBreakdown = {
       fed1040PrepFee: baseFee,
       statePrepFee: stateFee,
-      selectedStates: customer?.state ? [customer.state] : [],
-      fbarFee: 0,
+      selectedStates,
+      fbarFee,
+      fatcaFee,
+      hasFatca: fatcaFee > 0 || Boolean(savedFeeBreakdown?.hasFatca),
       auditDefenseFee: auditDefenseAmount,
-      hasAuditDefense: true,
-      discountAmount: hasQuote ? Number(latestQuote.discountAmount || 0) : 0,
-      discountCode: (latestQuote as any)?.discountCode || '',
+      hasAuditDefense,
+      discountAmount,
+      discountCode,
       totalServiceFee,
-      isQuoted: hasQuote,
+      isQuoted: Boolean(savedFeeBreakdown?.isQuoted || hasQuote),
     };
 
     // Reviewer Name
@@ -810,14 +847,24 @@ export class SalesService {
       (d: any) => d.documentCategory === 'FORM_8879' || d.fileName?.toLowerCase().includes('8879')
     );
 
-    // Payment Status (Strictly checks payment records, NOT e-sign)
-    let paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED' = 'UNPAID';
-    if (draft.paymentStatus === 'PAID' || latestQuote?.status === 'PAID') {
-      paymentStatus = 'PAID';
-    } else if (draft.paymentStatus === 'PAYMENT_LINK_SENT' || latestQuote?.status === 'SENT') {
-      paymentStatus = 'PAYMENT_LINK_SENT';
+    // Payment Status & History (Supports Partial Payments)
+    const paidAmount = Number(draft.paidAmount || (latestQuote?.status === 'PAID' ? (Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount || 0)) : 0));
+    const totalFeeResolved = draft.totalQuotedFee || draft.feeBreakdown?.totalServiceFee || totalServiceFee;
+    const remainingBalance = draft.remainingBalance !== undefined
+      ? Number(draft.remainingBalance)
+      : Math.max(0, totalFeeResolved - paidAmount);
+
+    let paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED' = 'UNPAID';
+    if (draft.paymentStatus) {
+      paymentStatus = draft.paymentStatus;
     } else if (app.currentStage === ApplicationStage.FILING_QUEUE || app.currentStage === ApplicationStage.FILING_IN_PROGRESS || app.currentStage === ApplicationStage.FILING_SUCCESS) {
       paymentStatus = 'PAID';
+    } else if (latestQuote?.status === 'PAID' || (paidAmount >= totalFeeResolved && totalFeeResolved > 0)) {
+      paymentStatus = 'PAID';
+    } else if (paidAmount > 0) {
+      paymentStatus = 'PARTIALLY_PAID';
+    } else if (latestQuote?.status === 'SENT') {
+      paymentStatus = 'PAYMENT_LINK_SENT';
     }
 
     // E-Sign Status (Strictly Form 8879, independent from payment quote!)
@@ -887,9 +934,16 @@ export class SalesService {
         preparerNotes: draft.preparerNotes || draft.prepNotes || '',
         auditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
         targetDueDate: draft.targetDueDate || '',
+        paidAmount,
+        totalQuotedFee: totalFeeResolved,
+        remainingBalance,
+        paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
       },
       feeBreakdown,
       paymentStatus,
+      paidAmount,
+      remainingBalance,
+      paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
       esignStatus,
       paidAt: draft.paidAt || (latestQuote?.status === 'PAID' ? latestQuote.createdAt.toISOString() : null),
       esignCompletedAt: draft.esignCompletedAt || null,
@@ -1178,12 +1232,62 @@ export class SalesService {
   }
 
   /**
+   * Update fee quote & breakdown directly in database
+   */
+  public static async updateFeeBreakdown(
+    applicationId: string,
+    feeBreakdown: any,
+    _userId?: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true, quotes: { orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+    if (!app) {
+      throw new Error('Tax Application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const paidAmount = Number(currentDraft.paidAmount || 0);
+    const totalServiceFee = Number(feeBreakdown?.totalServiceFee || currentDraft.totalQuotedFee || 247);
+    const remainingBalance = Math.max(0, totalServiceFee - paidAmount);
+
+    let paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' = currentDraft.paymentStatus || 'UNPAID';
+    if (paidAmount >= totalServiceFee && totalServiceFee > 0) {
+      paymentStatus = 'PAID';
+    } else if (paidAmount > 0) {
+      paymentStatus = 'PARTIALLY_PAID';
+    }
+
+    const updatedDraft = {
+      ...currentDraft,
+      feeBreakdown,
+      totalQuotedFee: totalServiceFee,
+      paidAmount,
+      remainingBalance,
+      paymentStatus,
+    };
+
+    const updated = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedDraft,
+      },
+    });
+
+    return { success: true, feeBreakdown, application: updated };
+  }
+
+  /**
    * Record customer service fee payment into database (SalesQuote & TaxApplication)
+   * Supports Full & Partial Installment Payments with Complete History Ledger
    */
   public static async recordPayment(
     applicationId: string,
     data: {
       amount: number;
+      feeBreakdown?: any;
+      totalQuotedFee?: number;
       discountAmount?: number;
       paymentMethod?: string;
       transactionRef?: string;
@@ -1193,20 +1297,41 @@ export class SalesService {
   ) {
     const app = await prisma.taxApplication.findUnique({
       where: { id: applicationId },
+      include: {
+        customer: true,
+        assignedSalesAgent: true,
+        quotes: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
     });
     if (!app) {
       throw new Error('Application not found');
     }
 
     const currentDraft: any = app.taxDraftSummary || {};
-    const updatedDraft = {
-      ...currentDraft,
-      paymentStatus: 'PAID',
-      paidAt: new Date().toISOString(),
-      paymentMethod: data.paymentMethod || 'STRIPE_CARD',
-      transactionRef: data.transactionRef || `tx_card_${Date.now()}`,
-      paidAmount: Number(data.amount) || 0,
-    };
+    const installmentAmount = Math.max(0, Number(data.amount) || 0);
+    const prevPaidAmount = Number(currentDraft.paidAmount || 0);
+    const newCumulativePaid = prevPaidAmount + installmentAmount;
+
+    // Merge provided feeBreakdown or fallback to existing draft feeBreakdown
+    const mergedFeeBreakdown = data.feeBreakdown || currentDraft.feeBreakdown || null;
+
+    // Determine total fee
+    const totalFee = Number(
+      data.totalQuotedFee ||
+      mergedFeeBreakdown?.totalServiceFee ||
+      currentDraft.totalQuotedFee ||
+      app.quotes?.[0]?.quoteAmount ||
+      247
+    );
+    const remainingBalance = Math.max(0, totalFee - newCumulativePaid);
+
+    // Determine payment status
+    let paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' = 'UNPAID';
+    if (newCumulativePaid >= totalFee && totalFee > 0) {
+      paymentStatus = 'PAID';
+    } else if (newCumulativePaid > 0) {
+      paymentStatus = 'PARTIALLY_PAID';
+    }
 
     // Safely resolve valid agentId for SalesQuote User foreign key
     let validAgentId = app.assignedSalesAgentId || userId;
@@ -1215,9 +1340,49 @@ export class SalesService {
       : null;
 
     if (!agentExists) {
-      const fallbackUser = await prisma.user.findFirst({ select: { id: true } });
+      const fallbackUser = await prisma.user.findFirst({ select: { id: true, firstName: true, lastName: true, email: true, role: true } });
       validAgentId = fallbackUser?.id || '';
     }
+
+    const agentName = agentExists
+      ? `${agentExists.firstName || ''} ${agentExists.lastName || ''}`.trim() || agentExists.email || 'Sales Closer'
+      : 'Sales Closer';
+    const agentRole = agentExists?.role || 'SALES_AGENT';
+
+    // New Payment History Ledger Item
+    const historyItem = {
+      id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      amount: installmentAmount,
+      totalQuotedFee: totalFee,
+      cumulativePaid: newCumulativePaid,
+      remainingBalance,
+      paymentMethod: data.paymentMethod || 'STRIPE_CARD',
+      transactionRef: data.transactionRef || `tx_card_${Date.now()}`,
+      paidAt: new Date().toISOString(),
+      collectedBy: {
+        id: agentExists?.id || validAgentId,
+        name: agentName,
+        email: agentExists?.email,
+        role: agentRole,
+      },
+      notes: data.notes || (paymentStatus === 'PAID' ? 'Full fee payment cleared' : `Partial installment payment ($${installmentAmount})`),
+    };
+
+    const existingHistory = Array.isArray(currentDraft.paymentHistory) ? currentDraft.paymentHistory : [];
+    const paymentHistory = [historyItem, ...existingHistory];
+
+    const updatedDraft = {
+      ...currentDraft,
+      feeBreakdown: mergedFeeBreakdown || currentDraft.feeBreakdown,
+      paymentStatus,
+      paidAt: new Date().toISOString(),
+      paymentMethod: data.paymentMethod || 'STRIPE_CARD',
+      transactionRef: data.transactionRef || historyItem.transactionRef,
+      paidAmount: newCumulativePaid,
+      totalQuotedFee: totalFee,
+      remainingBalance,
+      paymentHistory,
+    };
 
     let quote = null;
     if (validAgentId) {
@@ -1226,10 +1391,10 @@ export class SalesService {
           data: {
             applicationId,
             salesAgentId: validAgentId,
-            quoteAmount: Number(data.amount) || 0,
-            discountAmount: Number(data.discountAmount || 0),
-            status: 'PAID',
-            userFeedback: data.notes || `Paid via ${data.paymentMethod || 'Card'} (${data.transactionRef || 'Direct'})`,
+            quoteAmount: totalFee,
+            discountAmount: Number(data.discountAmount || mergedFeeBreakdown?.discountAmount || 0),
+            status: paymentStatus === 'PAID' ? 'PAID' : 'PARTIALLY_PAID',
+            userFeedback: `${historyItem.notes} (Total Paid: $${newCumulativePaid}/$${totalFee}, Balance: $${remainingBalance})`,
           },
         });
       } catch (err) {
@@ -1244,12 +1409,8 @@ export class SalesService {
       },
     });
 
-    const agentName = agentExists
-      ? `${agentExists.firstName || ''} ${agentExists.lastName || ''}`.trim() || agentExists.email || 'Sales Closer'
-      : 'Sales Closer';
-    const agentRole = agentExists?.role || 'SALES_AGENT';
-
-    const formattedAmount = Number(data.amount || 0).toLocaleString();
+    const formattedAmount = installmentAmount.toLocaleString();
+    const formattedBalance = remainingBalance.toLocaleString();
 
     if (validAgentId) {
       try {
@@ -1259,7 +1420,9 @@ export class SalesService {
             fromStage: app.currentStage,
             toStage: app.currentStage,
             movedByUserId: validAgentId,
-            remarks: `Service fee payment of $${formattedAmount} collected via ${data.paymentMethod || 'Card'} (Ref: ${data.transactionRef || 'Direct'})`,
+            remarks: paymentStatus === 'PAID'
+              ? `Full service fee payment of $${formattedAmount} completed via ${data.paymentMethod || 'Card'} (Ref: ${historyItem.transactionRef})`
+              : `Partial payment installment of $${formattedAmount} collected via ${data.paymentMethod || 'Card'}. Remaining balance: $${formattedBalance}`,
           },
         });
       } catch {

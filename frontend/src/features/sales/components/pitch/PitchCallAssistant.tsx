@@ -8,12 +8,12 @@ import {
   Lock
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import type { SalesLeadItem } from '../../types/sales.types';
+import type { SalesLeadItem, SalesPaymentStatus } from '../../types/sales.types';
 import toast from 'react-hot-toast';
 
 interface PitchCallAssistantProps {
   lead: SalesLeadItem;
-  paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED';
+  paymentStatus: SalesPaymentStatus;
   esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';
   onDispatchToFiling: () => void;
 }
@@ -230,8 +230,12 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
         <div className="space-y-1.5 text-xs text-slate-600 mb-3">
           <div className="flex items-center justify-between">
             <span>1. Service Fee Paid:</span>
-            <span className={`font-bold ${paymentStatus === 'PAID' ? 'text-[#16A34A]' : 'text-amber-600'}`}>
-              {paymentStatus === 'PAID' ? '✓ Paid ($' + lead.feeBreakdown.totalServiceFee + ')' : '⏳ Pending Payment'}
+            <span className={`font-bold ${paymentStatus === 'PAID' ? 'text-[#16A34A]' : paymentStatus === 'PARTIALLY_PAID' ? 'text-amber-600' : 'text-slate-500'}`}>
+              {paymentStatus === 'PAID'
+                ? `✓ Paid in Full ($${lead.feeBreakdown?.totalServiceFee || 247})`
+                : paymentStatus === 'PARTIALLY_PAID'
+                ? `⏳ Partial ($${lead.paidAmount || 0} Paid • $${lead.remainingBalance || 0} Due)`
+                : '⏳ Pending Payment'}
             </span>
           </div>
 

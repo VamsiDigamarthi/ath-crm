@@ -103,6 +103,17 @@ export class SalesController {
     }
   }
 
+  public static async updateFeeBreakdown(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.updateFeeBreakdown(id, req.body.feeBreakdown, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to update fee breakdown' });
+    }
+  }
+
   public static async recordPayment(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
