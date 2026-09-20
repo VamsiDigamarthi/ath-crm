@@ -40,7 +40,7 @@ export const documenterService = {
     visaType?: string;
     taxYear?: number;
     priority?: string;
-    timeRange?: 'TODAY' | 'WEEK' | 'SEASON';
+    timeRange?: string;
   }): Promise<DocumenterLeadsResponse> {
     return apiClient.get('/documenter/leads', { params });
   },
@@ -55,7 +55,7 @@ export const documenterService = {
   /**
    * Fetch active documenter agents with live workload stats
    */
-  async getAgents(params?: { timeRange?: 'TODAY' | 'WEEK' | 'SEASON' }): Promise<DocumenterAgentsResponse> {
+  async getAgents(params?: { timeRange?: string }): Promise<DocumenterAgentsResponse> {
     return apiClient.get('/documenter/agents', { params });
   },
 

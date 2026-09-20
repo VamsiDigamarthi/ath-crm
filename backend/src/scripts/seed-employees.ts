@@ -1,12 +1,12 @@
 import "dotenv/config";
 import { prisma } from "../config/db.js";
-import { Role, ApplicationStage } from "@prisma/client";
+import { Role, ApplicationStage, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType } from "@prisma/client";
 
 async function main() {
-  console.log("--- Starting Comprehensive Real Database Clean & Seed ---");
+  console.log("--- Starting Clean & Seed for Johnny Sins & Staff ---");
 
   // 1. Unlink references and clear previous test applications
-  console.log("Cleaning old test applications and dependencies...");
+  console.log("Cleaning old test applications, quotes, call logs, and documents...");
   await prisma.taxApplication.updateMany({
     data: {
       assignedDocAgentId: null,
@@ -233,340 +233,226 @@ async function main() {
   const kabirId = staffByEmail["kabir@taxcrm.com"];
   const siddharthId = staffByEmail["siddharth@taxcrm.com"];
 
-  // 4. Seed Rich Real Taxpayer Clients across all stages
-  console.log("Seeding real taxpayer clients with applications, documents, quotes, and call logs...");
+  // 4. Create Single Target Client: Johnny Sins
+  console.log("Creating Client: Johnny Sins with all formalities completed up to QA Approval...");
 
-  const clients = [
-    {
-      firstName: "Suresh",
-      lastName: "Narayanan",
-      email: "suresh@taxcrm.com",
-      mobile: "9876543215",
-      ssnTin: "4819",
-      dob: "1988-04-12",
-      occupation: "Lead Software Architect",
-      visaType: "H1B",
-      maritalStatus: "MARRIED_JOINT",
-      addressLine1: "742 Evergreen Terrace",
-      city: "San Jose",
-      state: "CA",
-      zipCode: "95112",
-      isConvertedCustomer: true,
-      applications: [
-        {
-          taxYear: 2025,
-          filingType: "MARRIED_JOINT",
-          currentStage: ApplicationStage.DOC_PREP,
-          assignedDocAgentId: arjunId,
-          assignedPrepAgentId: ananyaId,
-          assignedReviewAgentId: vikramId,
-          assignedSalesAgentId: kabirId,
-          assignedFileOpId: siddharthId,
-          taxDraftSummary: {
-            w2Income: 165000,
-            wages: 165000,
-            federalWithholding: 26500,
-            stateWithholding: 9200,
-            federalRefund: 4250,
-            stateRefund: 1350,
-            balanceDue: 0,
-            stateBalanceDue: 0,
-            paidAmount: 227,
-            status: "DOC_PREP",
-          },
-          callLog: {
-            agentId: arjunId,
-            disposition: "CONNECTED",
-            callSummary: "Taxpayer provided Form W-2 and confirmed married filing jointly with 1 dependent.",
-          },
-        },
-      ],
+  const user = await prisma.user.create({
+    data: {
+      firstName: "Johnny",
+      lastName: "Sins",
+      email: "johnnysins@taxcrm.com",
+      mobile: "9876543299",
+      role: Role.TAXPAYER_USER,
+      isActive: true,
     },
-    {
-      firstName: "Deepika",
-      lastName: "Choudhury",
-      email: "deepika@taxcrm.com",
-      mobile: "9876543216",
-      ssnTin: "9321",
-      dob: "1993-08-25",
-      occupation: "Principal Data Scientist",
-      visaType: "L1",
-      maritalStatus: "SINGLE",
-      addressLine1: "1200 West Lake Ave Apt 4B",
-      city: "Seattle",
-      state: "WA",
-      zipCode: "98109",
-      isConvertedCustomer: true,
-      applications: [
-        {
-          taxYear: 2025,
-          filingType: "INDIVIDUAL",
-          currentStage: ApplicationStage.DOC_PREP,
-          assignedDocAgentId: arjunId,
-          assignedPrepAgentId: ananyaId,
-          assignedReviewAgentId: vikramId,
-          assignedSalesAgentId: kabirId,
-          assignedFileOpId: siddharthId,
-          taxDraftSummary: {
-            w2Income: 148000,
-            wages: 148000,
-            federalWithholding: 22800,
-            stateWithholding: 0,
-            federalRefund: 3820,
-            stateRefund: 0,
-            balanceDue: 0,
-            stateBalanceDue: 0,
-            paidAmount: 227,
-            status: "PREP_IN_PROGRESS",
-          },
-          callLog: {
-            agentId: arjunId,
-            disposition: "INTERESTED",
-            callSummary: "Intake completed. Single filer with stock ESPP sales and W-2.",
-          },
-        },
-      ],
-    },
-    {
-      firstName: "Manish",
-      lastName: "Bhatt",
-      email: "manish@taxcrm.com",
-      mobile: "9876543217",
-      ssnTin: "1205",
-      dob: "1982-11-03",
-      occupation: "Director of Product",
-      visaType: "GREEN_CARD",
-      maritalStatus: "MARRIED_JOINT",
-      addressLine1: "350 5th Ave",
-      city: "New York",
-      state: "NY",
-      zipCode: "10118",
-      isConvertedCustomer: true,
-      applications: [
-        {
-          taxYear: 2025,
-          filingType: "MARRIED_JOINT",
-          currentStage: ApplicationStage.FILING_QUEUE,
-          assignedDocAgentId: arjunId,
-          assignedPrepAgentId: ananyaId,
-          assignedReviewAgentId: vikramId,
-          assignedSalesAgentId: kabirId,
-          assignedFileOpId: siddharthId,
-          taxDraftSummary: {
-            w2Income: 195000,
-            wages: 195000,
-            federalWithholding: 34200,
-            stateWithholding: 13800,
-            federalRefund: 5800,
-            stateRefund: 2100,
-            balanceDue: 0,
-            stateBalanceDue: 0,
-            paidAmount: 227,
-            paymentStatus: "PAID",
-            esignStatus: "SIGNED",
-            esignCompletedAt: new Date().toISOString(),
-            status: "FILING_READY",
-          },
-          callLog: {
-            agentId: arjunId,
-            disposition: "CALL_COMPLETED",
-            callSummary: "Client verified 8879 signature and paid filing service invoice.",
-          },
-        },
-      ],
-    },
-    {
-      firstName: "Ravi",
-      lastName: "Teja",
-      email: "ravi@taxcrm.com",
-      mobile: "9876543218",
-      ssnTin: "7721",
-      dob: "1990-06-18",
-      occupation: "DevOps Engineer",
-      visaType: "H1B",
-      maritalStatus: "SINGLE",
-      addressLine1: "100 North Austin Blvd",
-      city: "Austin",
-      state: "TX",
-      zipCode: "78701",
-      isConvertedCustomer: true,
-      applications: [
-        {
-          taxYear: 2025,
-          filingType: "INDIVIDUAL",
-          currentStage: ApplicationStage.DOC_OUTREACH,
-          assignedDocAgentId: arjunId,
-          assignedPrepAgentId: ananyaId,
-          assignedReviewAgentId: vikramId,
-          assignedSalesAgentId: kabirId,
-          assignedFileOpId: siddharthId,
-          taxDraftSummary: {
-            w2Income: 125000,
-            wages: 125000,
-            federalWithholding: 19000,
-            federalRefund: 2900,
-            status: "DOC_OUTREACH",
-          },
-          callLog: {
-            agentId: arjunId,
-            disposition: "CALLBACK_REQUESTED",
-            callSummary: "Left message. Callback scheduled for tomorrow morning.",
-          },
-        },
-      ],
-    },
-    {
-      firstName: "Anjali",
-      lastName: "Menon",
-      email: "anjali@taxcrm.com",
-      mobile: "9876543219",
-      ssnTin: "3312",
-      dob: "1991-02-14",
-      occupation: "UX Designer",
-      visaType: "F1_OPT",
-      maritalStatus: "SINGLE",
-      addressLine1: "500 Michigan Ave",
-      city: "Chicago",
-      state: "IL",
-      zipCode: "60611",
-      isConvertedCustomer: true,
-      applications: [
-        {
-          taxYear: 2025,
-          filingType: "INDIVIDUAL",
-          currentStage: ApplicationStage.FILING_SUCCESS,
-          assignedDocAgentId: arjunId,
-          assignedPrepAgentId: ananyaId,
-          assignedReviewAgentId: vikramId,
-          assignedSalesAgentId: kabirId,
-          assignedFileOpId: siddharthId,
-          taxDraftSummary: {
-            w2Income: 110000,
-            wages: 110000,
-            federalWithholding: 16500,
-            stateWithholding: 4800,
-            federalRefund: 3100,
-            stateRefund: 850,
-            balanceDue: 0,
-            stateBalanceDue: 0,
-            paidAmount: 227,
-            paymentStatus: "PAID",
-            esignStatus: "SIGNED",
-            status: "ACCEPTED",
-            transmissionInfo: {
-              status: "ACCEPTED",
-              irsAckCode: "0000_ACCEPTED",
-              irsMessage: "Electronic return accepted by IRS Modernized e-File Gateway.",
-              acceptedAt: new Date().toISOString(),
-            },
-          },
-          callLog: {
-            agentId: arjunId,
-            disposition: "FILING_CONFIRMED",
-            callSummary: "IRS acknowledgment received and shared with client.",
-          },
-        },
-      ],
-    },
-  ];
+  });
 
-  for (const c of clients) {
-    const user = await prisma.user.create({
-      data: {
-        firstName: c.firstName,
-        lastName: c.lastName,
-        email: c.email,
-        mobile: c.mobile,
-        role: Role.TAXPAYER_USER,
-        isActive: true,
+  const profile = await prisma.customerProfile.create({
+    data: {
+      userId: user.id,
+      firstName: "Johnny",
+      lastName: "Sins",
+      email: "johnnysins@taxcrm.com",
+      phone: "+1 (702) 555-6969",
+      ssnTin: "6969",
+      dob: "1978-12-31",
+      occupation: "Senior Astronaut & Physician",
+      visaType: "US_CITIZEN",
+      maritalStatus: "Single",
+      addressLine1: "100 Hustle Boulevard",
+      city: "Las Vegas",
+      state: "NV",
+      zipCode: "89109",
+      isConvertedCustomer: true,
+    },
+  });
+
+  // Comprehensive taxDraftSummary with 9 modules, Form 1040 figures, and QA Approval
+  const taxDraftSummary = {
+    w2Income: 185000,
+    wages: 185000,
+    interestIncome: 2400,
+    dividendIncome: 1800,
+    totalGrossIncome: 189200,
+    agi: 189200,
+    standardDeduction: 15000,
+    taxableIncome: 174200,
+    federalTax: 24250,
+    federalWithholding: 29500,
+    federalRefund: 5250,
+    balanceDue: 0,
+    stateWithholding: 4800,
+    stateTax: 3600,
+    stateRefund: 1200,
+    stateBalanceDue: 0,
+    totalRefund: 6450,
+    status: "QA_APPROVED",
+    qaApprovedAt: new Date().toISOString(),
+    qaApprovedByUserId: vikramId,
+    qaRemarks: "All Form 1040 calculations, W-2 wages, and interest 1099 statements 100% verified against uploaded source documents. Return is compliant, optimized, and ready for fee pitch by Sales Agent Kabir Das.",
+    drakeTaxSummary: {
+      calcSource: "Drake Tax Software 2025 v24.1",
+      form1040Line1: 185000,
+      form1040Line11_AGI: 189200,
+      form1040Line24_TotalTax: 24250,
+      form1040Line25d_Withholding: 29500,
+      form1040Line34_Overpayment: 5250,
+      stateCode: "CA",
+      stateOverpayment: 1200,
+    },
+    organizer: {
+      submittedModules: ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9"],
+      m1_demographics: {
+        firstName: "Johnny",
+        lastName: "Sins",
+        fullName: "Johnny Sins",
+        ssnMasked: "•••-••-6969",
+        dob: "12/31/1978",
+        occupation: "Senior Astronaut & Physician",
+        phone: "+1 (702) 555-6969",
+        email: "johnnysins@taxcrm.com",
+        visaType: "US_CITIZEN",
+        visaStatusChanged2025: "NO",
+        previousVisaType: "",
+        newVisaType: "",
+        visaChangeDate: "",
+        visaStatusChangeReason: "",
+        maritalStatus: "Single",
+        residentialAddress: "100 Hustle Boulevard",
+        city: "Las Vegas",
+        state: "NV",
+        zipCode: "89109",
+        firstPortOfEntryDate: "01/01/1978",
+        stayMoreThan6Months2026: "YES",
+        monthsStayedInUs2025: 12,
       },
-    });
-
-    const profile = await prisma.customerProfile.create({
-      data: {
-        userId: user.id,
-        firstName: c.firstName,
-        lastName: c.lastName,
-        email: c.email,
-        phone: c.mobile,
-        ssnTin: c.ssnTin,
-        dob: c.dob,
-        occupation: c.occupation,
-        visaType: c.visaType,
-        maritalStatus: c.maritalStatus,
-        addressLine1: c.addressLine1,
-        city: c.city,
-        state: c.state,
-        zipCode: c.zipCode,
-        isConvertedCustomer: c.isConvertedCustomer,
-      },
-    });
-
-    for (const appData of c.applications) {
-      const app = await prisma.taxApplication.create({
-        data: {
-          customerId: profile.id,
-          taxYear: appData.taxYear,
-          filingType: appData.filingType,
-          currentStage: appData.currentStage,
-          assignedDocAgentId: appData.assignedDocAgentId,
-          assignedPrepAgentId: appData.assignedPrepAgentId,
-          assignedReviewAgentId: appData.assignedReviewAgentId,
-          assignedSalesAgentId: appData.assignedSalesAgentId,
-          assignedFileOpId: appData.assignedFileOpId,
-          taxDraftSummary: appData.taxDraftSummary,
-        },
-      });
-
-      // Sample verified tax documents
-      await prisma.taxDocument.createMany({
-        data: [
+      m2_dependents: { hasDependents: false, childCount: 0, hasSpouse: false },
+      m3_presence: { days2025: 365, days2024: 366, days2023: 365, visaType: "US_CITIZEN" },
+      m4_wages: {
+        hasW2: true,
+        employerName: "Sins Global Enterprises LLC",
+        estimatedWages: 185000,
+        federalTaxWithheld: 29500,
+        w2List: [
           {
-            applicationId: app.id,
-            uploadedByUserId: user.id,
-            fileName: `W2_${c.lastName}_2025.pdf`,
-            filePath: "/uploads/w2_sample.pdf",
-            documentCategory: "W2",
-            verificationStatus: "VERIFIED",
-          },
-          {
-            applicationId: app.id,
-            uploadedByUserId: user.id,
-            fileName: `Passport_Copy_${c.lastName}.pdf`,
-            filePath: "/uploads/passport_sample.pdf",
-            documentCategory: "IDENTITY",
-            verificationStatus: "VERIFIED",
+            employerName: "Sins Global Enterprises LLC",
+            ein: "88-9912345",
+            box1Wages: 185000,
+            box2FederalTax: 29500,
+            state: "CA",
+            stateTaxWithheld: 4800,
           },
         ],
-      });
+      },
+      m5_interest: {
+        hasInterestDividends: true,
+        bankName: "Chase Private Client",
+        interestAmount: 2400,
+        dividendAmount: 1800,
+      },
+      m6_stocks: { tradedStocks: false, totalCapitalGain: 0 },
+      m7_foreign: { hasFbar: false },
+      m8_deductions: { hsaContribution: 4150, charitableDonations: 2500 },
+      m9_directDeposit: {
+        bankName: "Chase Bank N.A.",
+        accountType: "CHECKING",
+        routingNumber: "122000496",
+        accountNumber: "987654321098",
+        accountOwnerName: "Johnny Sins",
+        notesToPreparer: "Please optimize federal refund and ensure direct deposit to Chase checking account.",
+      },
+    },
+  };
 
-      // Call log
-      if (appData.callLog) {
-        await prisma.callLog.create({
-          data: {
-            applicationId: app.id,
-            agentId: appData.callLog.agentId,
-            disposition: appData.callLog.disposition,
-            callSummary: appData.callLog.callSummary,
-          },
-        });
-      }
+  const app = await prisma.taxApplication.create({
+    data: {
+      customerId: profile.id,
+      taxYear: 2025,
+      filingType: "INDIVIDUAL",
+      currentStage: ApplicationStage.SALES_PITCH_QUEUE,
+      assignedDocAgentId: arjunId,
+      assignedPrepAgentId: ananyaId,
+      assignedReviewAgentId: vikramId,
+      assignedSalesAgentId: kabirId,
+      assignedFileOpId: siddharthId,
+      taxDraftSummary,
+    },
+  });
 
-      // Sales quote
-      await prisma.salesQuote.create({
-        data: {
-          applicationId: app.id,
-          salesAgentId: kabirId,
-          quoteAmount: 227.0,
-          discountAmount: 0.0,
-          status: "ACCEPTED",
-          userFeedback: "Standard tax filing service selected.",
-        },
-      });
+  // Sample verified tax documents
+  await prisma.taxDocument.createMany({
+    data: [
+      {
+        applicationId: app.id,
+        uploadedByUserId: user.id,
+        fileName: "Form_W2_Johnny_Sins_2025.pdf",
+        filePath: "/uploads/w2_johnny_sins.pdf",
+        documentCategory: "W2_WAGES",
+        verificationStatus: "VERIFIED",
+      },
+      {
+        applicationId: app.id,
+        uploadedByUserId: user.id,
+        fileName: "Passport_Copy_Johnny_Sins.pdf",
+        filePath: "/uploads/passport_johnny_sins.pdf",
+        documentCategory: "PASSPORT_VISA",
+        verificationStatus: "VERIFIED",
+      },
+      {
+        applicationId: app.id,
+        uploadedByUserId: user.id,
+        fileName: "1099_DIV_Chase_Johnny_Sins.pdf",
+        filePath: "/uploads/1099_chase_johnny_sins.pdf",
+        documentCategory: "FORM_1099",
+        verificationStatus: "VERIFIED",
+      },
+    ],
+  });
 
-      console.log(`+ Seeded Lead: [${app.currentStage}] ${c.firstName} ${c.lastName} -> App ID: ${app.id}`);
-    }
-  }
+  // Stage History Records showing progression through Documenter -> Preparer -> QA Review -> Sales Queue
+  await prisma.stageHistory.createMany({
+    data: [
+      {
+        applicationId: app.id,
+        fromStage: ApplicationStage.DOC_OUTREACH,
+        toStage: ApplicationStage.DOC_PREP,
+        movedByUserId: arjunId,
+        remarks: "Document intake completed and verified by Document Agent Arjun Varma.",
+        createdAt: new Date(Date.now() - 4 * 3600 * 1000),
+      },
+      {
+        applicationId: app.id,
+        fromStage: ApplicationStage.DOC_PREP,
+        toStage: ApplicationStage.DOC_PREP,
+        movedByUserId: ananyaId,
+        remarks: "Form 1040 calculation completed with $5,250 Federal Refund + $1,200 State Refund by Tax Preparer Ananya Iyer. Submitted to QA.",
+        createdAt: new Date(Date.now() - 2 * 3600 * 1000),
+      },
+      {
+        applicationId: app.id,
+        fromStage: ApplicationStage.DOC_PREP,
+        toStage: ApplicationStage.SALES_PITCH_QUEUE,
+        movedByUserId: vikramId,
+        remarks: "QA Compliance 4-Eyes audit approved by Senior Reviewer Vikram Malhotra. Transferred to Sales Pitch Queue for Kabir Das.",
+        createdAt: new Date(Date.now() - 30 * 60 * 1000),
+      },
+    ],
+  });
+
+  // In-App Notification for Kabir Das
+  await prisma.notification.create({
+    data: {
+      recipientUserId: kabirId,
+      applicationId: app.id,
+      category: NotificationCategory.SALES,
+      priority: NotificationPriority.HIGH,
+      title: "New QA-Approved Lead: Johnny Sins",
+      message: "Johnny Sins return (TY 2025, +$6,450 Total Refund) is QA Approved & ready for Fee Quotation & Pitch.",
+      actionUrl: `/sales/pitch/${app.id}`,
+      actionLabel: "Start Sales Pitch",
+      relatedLeadName: "Johnny Sins",
+    },
+  });
 
   // 5. Seed Email Templates configured for specific roles
   console.log("Seeding configured role-based email templates...");
@@ -577,15 +463,7 @@ async function main() {
       name: "Document Request & Intake Checklist",
       roles: [Role.DOC_AGENT, Role.DOC_TEAM_LEAD, Role.DOC_MANAGER, Role.ADMIN],
       subject: "Action Required: Tax Year 2025 Documents Needed for Filing",
-      body: `<p>Dear {{taxpayer_name}},</p><p>Thank you for choosing TaxCRM for your upcoming tax filing season. To ensure we calculate the maximum refund and prepare your tax draft accurately, please review and upload the following required documentation to your secure portal:</p><ul><li>Form W-2 from all employers for TY2025</li><li>1099-INT / 1099-DIV statements from your financial institutions</li><li>Form 1098 (Mortgage Interest Statement), if applicable</li><li>Valid government-issued Photo ID or Passport copy</li></ul><p>Please log in to your portal and upload these documents at your earliest convenience. If you have any questions, feel free to reply to this email or call our document intake desk directly.</p><p>Warm regards,<br/><strong>Tax Operations Team</strong><br/>TaxCRM Engine</p>`,
-      isActive: true,
-      createdById: adminUser?.id || null,
-    },
-    {
-      name: "Missing W-2 / 1099 Follow Up",
-      roles: [Role.DOC_AGENT, Role.DOC_TEAM_LEAD, Role.DOC_MANAGER, Role.ADMIN],
-      subject: "Follow Up: Missing Income Documents for Tax Draft",
-      body: `<p>Hello {{taxpayer_name}},</p><p>Our documentation team noticed that we are still awaiting your Form W-2 / 1099 statements to finalize your initial document intake. We cannot proceed with drafting your Form 1040 until these files are verified.</p><p>Please upload the missing documents today so we can keep your filing on track without IRS deadline delays.</p><p>Best regards,<br/><strong>Document Verification Specialist</strong><br/>TaxCRM</p>`,
+      body: `<p>Dear {{taxpayer_name}},</p><p>Thank you for choosing TaxCRM for your upcoming tax filing season. To ensure we calculate the maximum refund and prepare your tax draft accurately, please review and upload the following required documentation to your secure portal:</p><ul><li>Form W-2 from all employers for TY2025</li><li>1099-INT / 1099-DIV statements from your financial institutions</li><li>Form 1098 (Mortgage Interest Statement), if applicable</li><li>Valid government-issued Photo ID or Passport copy</li></ul><p>Please log in to your portal and upload these documents at your earliest convenience.</p><p>Warm regards,<br/><strong>Tax Operations Team</strong><br/>TaxCRM Engine</p>`,
       isActive: true,
       createdById: adminUser?.id || null,
     },
@@ -593,31 +471,15 @@ async function main() {
       name: "Tax Draft Ready for Taxpayer Review",
       roles: [Role.TAX_PREPARER, Role.TAX_REVIEWER, Role.PREP_MANAGER, Role.ADMIN],
       subject: "Your TY2025 Form 1040 Draft is Ready for Review",
-      body: `<p>Dear {{taxpayer_name}},</p><p>Great news! Your 2025 federal and state tax calculations have been drafted and audited by our tax specialists. We have optimized your deductions and finalized your provisional figures.</p><p><strong>Summary of Your Draft:</strong></p><ul><li>Filing Status: Verified</li><li>Federal Refund / Balance Due: Calculated &amp; Optimized</li><li>State Return: Formulated</li></ul><p>Please review your Tax Draft Worksheet in the portal. Once reviewed, confirm your approval so we can route your return for final four-eyes QA sign-off.</p><p>Sincerely,<br/><strong>Tax Preparer Team</strong><br/>TaxCRM Specialists</p>`,
+      body: `<p>Dear {{taxpayer_name}},</p><p>Great news! Your 2025 federal and state tax calculations have been drafted and audited by our tax specialists. We have optimized your deductions and finalized your provisional figures.</p><p>Please review your Tax Draft Worksheet in the portal.</p><p>Sincerely,<br/><strong>Tax Preparer Team</strong><br/>TaxCRM Specialists</p>`,
       isActive: true,
       createdById: adminUser?.id || null,
     },
     {
-      name: "Tax Computation & Deductions Clarification",
-      roles: [Role.TAX_PREPARER, Role.TAX_REVIEWER, Role.PREP_MANAGER, Role.ADMIN],
-      subject: "Clarification Needed Regarding Deductions on Form 1040",
-      body: `<p>Dear {{taxpayer_name}},</p><p>While preparing your Form 1040 schedule, we noticed an item that requires your clarification regarding your eligible deductions/credits for Tax Year 2025.</p><p>Could you please provide additional details or supporting receipts for the queried item? You can reply directly to this email or update your notes in the portal.</p><p>Best regards,<br/><strong>Tax Preparer Specialist</strong><br/>TaxCRM</p>`,
-      isActive: true,
-      createdById: adminUser?.id || null,
-    },
-    {
-      name: "IRS Form 8879 E-Signature & PIN Authorization",
-      roles: [Role.FILE_OP_AGENT, Role.FILE_OP_TEAM_LEAD, Role.FILE_OP_MANAGER, Role.ADMIN],
-      subject: "Action Required: Sign Form 8879 (IRS e-File Signature Authorization)",
-      body: `<p>Dear {{taxpayer_name}},</p><p>Your tax return has successfully passed QA Compliance review and is ready for electronic transmission to the IRS Modernized e-File (MeF) Gateway.</p><p>Before we can transmit your return, federal law requires your signed authorization on <strong>IRS Form 8879</strong>.</p><p>Please log in to your portal to digitally sign Form 8879 and verify your 5-digit self-selected PIN. As soon as your signature is recorded, our CPA team will transmit your return directly to the IRS.</p><p>Best regards,<br/><strong>Filing Operations &amp; ERO Desk</strong><br/>TaxCRM</p>`,
-      isActive: true,
-      createdById: adminUser?.id || null,
-    },
-    {
-      name: "IRS Transmission Accepted Confirmation",
-      roles: [Role.FILE_OP_AGENT, Role.FILE_OP_TEAM_LEAD, Role.FILE_OP_MANAGER, Role.ADMIN],
-      subject: "Confirmed: Your 2025 Tax Return Has Been Accepted by the IRS!",
-      body: `<p>Dear {{taxpayer_name}},</p><p>We are delighted to inform you that your Tax Year 2025 return has been successfully transmitted and officially <strong>ACCEPTED</strong> by the IRS Modernized e-File (MeF) Gateway!</p><p><strong>Transmission Details:</strong></p><ul><li>Status: ACCEPTED (0000_ACCEPTED)</li><li>Submission Gateway: IRS MeF Direct Transmission</li><li>Official e-File Acknowledgment: Generated</li></ul><p>A copy of your certified transmission receipt and finalized Form 1040 is available for download in your portal vault.</p><p>Thank you for filing with us this tax season!</p><p>Warm regards,<br/><strong>Electronic Return Originator (ERO)</strong><br/>TaxCRM Transmission Operations</p>`,
+      name: "Sales Fee Quote & Filing Agreement",
+      roles: [Role.SALES_AGENT, Role.SALES_TEAM_LEAD, Role.SALES_MANAGER, Role.ADMIN],
+      subject: "Your TY2025 Tax Return Quote & Filing Fee Details",
+      body: `<p>Dear {{taxpayer_name}},</p><p>Our CPA and enrolled agent team has finalized your TY2025 Form 1040 return draft with an estimated refund of <strong>\${{refund_amount}}</strong>.</p><p>Your customized transparent fee quote is <strong>\${{quote_amount}}</strong>. Please click below to review your filing summary and confirm your payment link.</p><p>Best regards,<br/><strong>Kabir Das</strong><br/>Senior Sales Specialist | TaxCRM</p>`,
       isActive: true,
       createdById: adminUser?.id || null,
     },
@@ -628,7 +490,14 @@ async function main() {
     console.log(`+ Seeded Template: "${t.name}" (Roles: ${t.roles.join(", ")})`);
   }
 
-  console.log("\n--- Real Database Seed Finished Successfully! ---");
+  console.log("\n=======================================================");
+  console.log(" SUCCESS: Clean database ready for Kabir Das!");
+  console.log(`- Sales Agent: Kabir Das (kabir@taxcrm.com, OTP: 123456)`);
+  console.log(`- Client: Johnny Sins (johnnysins@taxcrm.com)`);
+  console.log(`- Status: QA_APPROVED in SALES_PITCH_QUEUE`);
+  console.log(`- Application ID: ${app.id}`);
+  console.log(`- Federal Refund: $5,250 | State Refund: $1,200 | Total: $6,450`);
+  console.log("=======================================================\n");
 }
 
 main()

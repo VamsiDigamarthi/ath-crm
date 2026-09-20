@@ -10,7 +10,7 @@ interface PrepAutoDistributeModalProps {
   onClose: () => void;
   unassignedLeads: PrepReviewLead[];
   staff: PrepStaffMember[];
-  onDistributeSuccess: () => void;
+  onDistributeSuccess: (distributionPlan?: any[]) => void;
 }
 
 export const PrepAutoDistributeModal: React.FC<PrepAutoDistributeModalProps> = ({

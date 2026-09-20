@@ -7,12 +7,7 @@ import {
   EyeOff, 
   ChevronDown, 
   ChevronUp, 
-  Sparkles,
-  Zap,
-  Info,
-  Clock,
-  CheckCircle2,
-  AlertCircle
+  Sparkles
 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
@@ -154,7 +149,6 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
   const hasSpouse = Boolean(m2.spouseName || m2.spouseFirstName || m2.spouseLastName || m2.spouseSsn || taxpayerFilingStatus.toLowerCase().includes('joint'));
   const spouseFullName = m2.spouseName || [m2.spouseFirstName, m2.spouseLastName].filter(Boolean).join(' ') || (hasSpouse ? '-' : 'N/A (Single/Individual)');
   const spouseSSN = m2.spouseSsn || m2.spouseSsnMasked || '-';
-  const spouseDOB = m2.spouseDob || '-';
   const spouseVisa = m2.spouseVisaType || '-';
   const dependentsList: any[] = Array.isArray(m2.dependents) ? m2.dependents : (Array.isArray(m2.dependentsList) ? m2.dependentsList : []);
   const isM2Provided = Boolean(m2.spouseFirstName || m2.spouseName || dependentsList.length > 0 || submittedModules.includes('m2'));
@@ -182,7 +176,6 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
   const interestBank = m5.bankName || m5.payerName || m5.institutionName || null;
   const taxableInterest = parseNum(m5.interestAmount ?? m5.totalInterest ?? taxDraftSummary?.taxableInterest);
   const dividendAmount = parseNum(m5.dividendAmount ?? m5.ordinaryDividends ?? taxDraftSummary?.dividends);
-  const oidAmount = parseNum(m5.form1099OidAmount ?? m5.oidAmount);
   const isM5Provided = Boolean(interestBank || (taxableInterest !== null && taxableInterest > 0) || (dividendAmount !== null && dividendAmount > 0) || submittedModules.includes('m5'));
 
   // Real Data Extraction - Module 6
@@ -216,7 +209,6 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
   const accountType = m9.accountType || null;
   const routingNumber = m9.routingNumber || null;
   const accountNumber = m9.accountNumber || null;
-  const accountOwner = m9.accountOwnerName || null;
   const isM9Provided = Boolean(bankName || routingNumber || accountNumber || submittedModules.includes('m9'));
 
   return (

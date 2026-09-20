@@ -2,11 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import type { PrepReviewLead, PrepStaffMember, PrepManagerStats } from '../types/prep-review.types';
 import { prepReviewService } from '../services/prep-review-service';
 import { INITIAL_PREP_MANAGER_STATS } from '../constants/prep-review-constants';
+import {
+  type DateFilterPreset,
+  getPeriodSuffix,
+} from '@/shared/utils/date-filters';
 import toast from 'react-hot-toast';
 
 export const usePrepReviewManager = () => {
   // 1. Time Range & Filters
-  const [timeRange, setTimeRange] = useState<'TODAY' | 'WEEK' | 'SEASON'>('TODAY');
+  const [timeRange, setTimeRange] = useState<DateFilterPreset>('TODAY');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   const [selectedStageFilter, setSelectedStageFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
@@ -99,22 +105,33 @@ export const usePrepReviewManager = () => {
     }));
   };
 
-  // Handle 1-Click Auto Round-Robin Lead Distribution
-  const handleAutoDistributeSuccess = () => {
-    const activePreparers = staff.filter((s) => s.role === 'TAX_PREPARER' && s.isAvailable);
-    const activeReviewers = staff.filter((s) => s.role === 'TAX_REVIEWER' && s.isAvailable);
-
-    if (activePreparers.length === 0) return;
+  // Handle Auto-Distribution Algorithm Execution
+  const handleAutoDistributeSuccess = (distributionPlan?: any[]) => {
+    if (!distributionPlan || distributionPlan.length === 0) {
+      refreshData();
+      return;
+    }
+    const updatedLeadIds: string[] = [];
+    distributionPlan.forEach((group) => {
+      group.assignedLeadIds?.forEach((id: string) => updatedLeadIds.push(id));
+    });
 
     setLeads((prev) =>
-      prev.map((lead, idx) => {
-        if (!lead.assignedPreparer || lead.currentStage === 'DOC_PREP_COMPLETE') {
-          const prep = activePreparers[idx % activePreparers.length];
-          const rev = activeReviewers[idx % activeReviewers.length];
+      prev.map((lead) => {
+        const found = distributionPlan.find((g) => g.assignedLeadIds?.includes(lead.id));
+        if (found) {
           return {
             ...lead,
-            assignedPreparer: { id: prep.id, name: prep.name, email: prep.email },
-            assignedReviewer: { id: rev.id, name: rev.name, email: rev.email },
+            assignedPreparer: {
+              id: found.preparerId,
+              name: found.preparerName,
+              email: `${found.preparerName.toLowerCase().replace(/ /g, '.')}@taxcrm.com`,
+            },
+            assignedReviewer: {
+              id: found.reviewerId,
+              name: found.reviewerName,
+              email: `${found.reviewerName.toLowerCase().replace(/ /g, '.')}@taxcrm.com`,
+            },
             currentStage: 'PREP_IN_PROGRESS',
             prepStartedAt: 'Just now',
           };
@@ -125,15 +142,25 @@ export const usePrepReviewManager = () => {
 
     setStats((prev) => ({
       ...prev,
-      unassignedToPrep: 0,
-      underPreparation: prev.underPreparation + prev.unassignedToPrep,
+      unassignedToPrep: Math.max(0, prev.unassignedToPrep - updatedLeadIds.length),
+      underPreparation: prev.underPreparation + updatedLeadIds.length,
     }));
   };
 
+  const handleCustomDateChange = (start: string, end: string) => {
+    setCustomStartDate(start);
+    setCustomEndDate(end);
+  };
+
+  const periodSuffix = getPeriodSuffix(timeRange, customStartDate, customEndDate);
+
   return {
-    // State
     timeRange,
     setTimeRange,
+    customStartDate,
+    customEndDate,
+    handleCustomDateChange,
+    periodSuffix,
     selectedStageFilter,
     setSelectedStageFilter,
     searchQuery,
@@ -143,13 +170,11 @@ export const usePrepReviewManager = () => {
     staff,
     leads,
     isLoading,
+    refreshData,
     assignModalLeads,
     setAssignModalLeads,
     isAutoDistributeOpen,
     setIsAutoDistributeOpen,
-
-    // Methods
-    refreshData,
     handleAssignSuccess,
     handleAutoDistributeSuccess,
   };

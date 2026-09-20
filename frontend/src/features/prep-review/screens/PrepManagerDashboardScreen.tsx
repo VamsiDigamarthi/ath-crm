@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { DashboardDateFilter } from '@/shared/components/DashboardDateFilter';
 import { usePrepReviewManager } from '../hooks/usePrepReviewManager';
 import { PrepAssignLeadDrawer } from '../components/manager/PrepAssignLeadDrawer';
 import { PrepAutoDistributeModal } from '../components/manager/PrepAutoDistributeModal';
@@ -43,6 +44,10 @@ export const PrepManagerDashboardScreen: React.FC = () => {
   const {
     timeRange,
     setTimeRange,
+    customStartDate,
+    customEndDate,
+    handleCustomDateChange,
+    periodSuffix,
     stats,
     staff,
     leads,
@@ -169,26 +174,18 @@ export const PrepManagerDashboardScreen: React.FC = () => {
             Tax Prep &amp; Review Operations Command Center
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Real-time interactive command deck for Form 1040 computation velocity, 4-Eyes QA audits, and staff load balancing.
+            Real-time interactive command deck for Form 1040 computation velocity, 4-Eyes QA audits, and staff load balancing ({periodSuffix || 'Today'}).
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0 flex-wrap lg:flex-nowrap">
-          {/* Time Range Pills */}
-          <div className="flex items-center bg-white p-1 rounded-lg border border-slate-200 text-xs font-bold shadow-2xs">
-            {(['TODAY', 'WEEK', 'SEASON'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${timeRange === range
-                    ? 'bg-slate-100 text-[#16A34A] font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                  }`}
-              >
-                {range === 'TODAY' ? 'Today' : range === 'WEEK' ? 'This Week' : 'All-Time Season'}
-              </button>
-            ))}
-          </div>
+          <DashboardDateFilter
+            preset={timeRange}
+            onPresetChange={setTimeRange}
+            startDate={customStartDate}
+            endDate={customEndDate}
+            onCustomDateChange={handleCustomDateChange}
+          />
 
           <Button
             variant="outline"
@@ -584,7 +581,7 @@ export const PrepManagerDashboardScreen: React.FC = () => {
                     paddingAngle={4}
                     dataKey="value"
                   >
-                    {complexityData.map((entry, index) => (
+                    {complexityData.map((entry: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -599,7 +596,7 @@ export const PrepManagerDashboardScreen: React.FC = () => {
 
             {/* Legend List */}
             <div className="space-y-1.5 pt-2 border-t border-slate-100">
-              {complexityData.map((c) => (
+              {complexityData.map((c: any) => (
                 <div key={c.name} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: c.color }} />

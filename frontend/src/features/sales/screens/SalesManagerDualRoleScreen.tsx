@@ -4,7 +4,6 @@ import {
   Sparkles, 
   Search, 
   RefreshCw, 
-  Briefcase, 
   Phone, 
   Mail, 
   ShieldCheck, 

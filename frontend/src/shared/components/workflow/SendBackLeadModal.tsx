@@ -36,7 +36,8 @@ export interface SendBackLeadModalProps {
 }
 
 const COMMON_REVERT_REASONS = [
-  { id: 'MISSING_DOCUMENTS', label: 'Missing Required Tax Documents', desc: 'W-2s, 1099s, or health coverage forms not uploaded' },
+  { id: 'MISSING_DOCUMENTS', label: 'Documents missed at Documents team / P-Team (W-2, 1099, Receipts)', desc: 'W-2s, 1099s, or receipts not uploaded or missed' },
+  { id: 'STATE_RETURN_ADDITION_CORRECTION', label: 'State Tax Return Addition / Correction', desc: 'Add new state return, update multi-state allocation, or adjust state withholdings' },
   { id: 'INCOMPLETE_ORGANIZER', label: 'Incomplete Tax Organizer', desc: 'Missing answers for residency, dependents, or foreign assets' },
   { id: 'DATA_DISCREPANCY', label: 'Data Discrepancy / Validation Error', desc: 'Uploaded documents mismatch entered figures or SSN' },
   { id: 'TAXPAYER_CLARIFICATION', label: 'Taxpayer Clarification Needed', desc: 'Need direct client confirmation on marital status or state residency' },
@@ -45,7 +46,8 @@ const COMMON_REVERT_REASONS = [
 
 const SALES_REVERT_REASONS = [
   { id: 'TAX_REDUCTION_REQUEST', label: 'Taxpayer Requested Lower Tax / Review Deductions', desc: 'Client requested CPA review deductions, credits or minimize balance due' },
-  { id: 'MISSING_DOCUMENTS', label: 'Client Uploading Additional Documents', desc: 'Client has additional W-2, 1099, 1098, or expense receipts to attach' },
+  { id: 'MISSING_DOCUMENTS', label: 'Documents missed at Documents team / P-Team (W-2, 1099, Receipts)', desc: 'Client or staff identified missing tax documents (W-2, 1099, Receipts)' },
+  { id: 'STATE_RETURN_ADDITION_CORRECTION', label: 'State Tax Return Addition / Correction', desc: 'Add new state return, update multi-state allocation, or adjust state withholdings' },
   { id: 'FILING_STATUS_CHANGE', label: 'Filing Status / Dependent Adjustment', desc: 'Client requested change to Single / Married Filing Jointly / Dependents' },
   { id: 'DATA_DISCREPANCY', label: 'Data Discrepancy / Calculation Adjustment', desc: 'Income or withholding figures need correction after client discussion' },
   { id: 'TAXPAYER_CLARIFICATION', label: 'Taxpayer Clarification / Policy Inquiry', desc: 'Need preparer or documenter to verify specific client rules' },
@@ -194,7 +196,7 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
       isOpen={isOpen}
       onClose={() => !isSubmitting && onClose()}
       title="Send Back & Revert Return File"
-      width="840px"
+      size="xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 font-sans text-slate-800">
         {/* 1. Header Information Banner */}

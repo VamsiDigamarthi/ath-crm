@@ -10,10 +10,13 @@ interface SpecialistKpiCardsProps {
     correctionsPending: number;
     totalCaseload: number;
     passRate: number;
+    periodSuffix?: string;
   };
 }
 
 export const SpecialistKpiCards: React.FC<SpecialistKpiCardsProps> = ({ stats }) => {
+  const periodLabel = stats.periodSuffix || 'This Month';
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. Assigned as Preparer */}
@@ -68,11 +71,11 @@ export const SpecialistKpiCards: React.FC<SpecialistKpiCardsProps> = ({ stats })
         <div className="h-1 w-full bg-purple-600 rounded-full mt-3" />
       </div>
 
-      {/* 3. Passed QA (MTD) */}
+      {/* 3. Passed QA in Period */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
-            Passed QA (MTD)
+            Passed QA ({periodLabel})
           </span>
           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
             <CheckCircle2 className="w-4 h-4" />

@@ -11,39 +11,31 @@ import {
   Rocket
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
+import { DashboardDateFilter } from '@/shared/components/DashboardDateFilter';
 import { SalesManagerStatsCards } from '../components/manager/SalesManagerStatsCards';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesManagerStats } from '../types/sales.types';
+import {
+  type DateFilterPreset,
+  isDateInRange,
+  getPeriodSuffix,
+} from '@/shared/utils/date-filters';
 import toast from 'react-hot-toast';
 
 export const SalesManagerDashboardScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState<SalesManagerStats>({
-    pipelineLeads: 0,
-    activePitching: 0,
-    pendingPayment: 0,
-    closedPaidDeals: 0,
-    totalRevenueMTD: 0,
-    avgDealSize: 0,
-    conversionRatePct: 0,
-  });
   const [leads, setLeads] = useState<SalesLeadItem[]>([]);
-  const [timeRange, setTimeRange] = useState<'TODAY' | 'WEEK' | 'MTD'>('MTD');
+  const [timeRange, setTimeRange] = useState<DateFilterPreset>('MONTH');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchDashboardData = useCallback(async (showToast = false) => {
     try {
       if (showToast) setIsRefreshing(true);
-      const [leadsRes, statsRes] = await Promise.all([
-        salesService.getPipelineLeads({ limit: 100 }),
-        salesService.getManagerStats(),
-      ]);
-
+      const leadsRes = await salesService.getPipelineLeads({ limit: 100 });
       setLeads(leadsRes?.leads || []);
-      if (statsRes) {
-        setStats(statsRes);
-      }
       if (showToast) {
         toast.success('Sales operations analytics refreshed! 🔄');
       }
@@ -59,6 +51,25 @@ export const SalesManagerDashboardScreen: React.FC = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Stage checks
+  const isPaidOrClosed = (lead: SalesLeadItem) => {
+    return (
+      lead.paymentStatus === 'PAID' ||
+      lead.currentStage === 'PAID_AND_AUTHORIZED' ||
+      lead.currentStage === 'FILING_QUEUE' ||
+      lead.currentStage === 'FILING_IN_PROGRESS' ||
+      lead.currentStage === 'FILING_SUCCESS'
+    );
+  };
+
+  const getLeadClosedDate = (lead: SalesLeadItem): string | Date | null => {
+    if (lead.paidAt) return lead.paidAt;
+    if (lead.esignCompletedAt) return lead.esignCompletedAt;
+    const paidHistory = lead.stageHistories?.find((h) => h.toStage === 'PAID_AND_AUTHORIZED');
+    if (paidHistory?.createdAt) return paidHistory.createdAt;
+    return (lead as any).updatedAt || null;
+  };
 
   // Dynamic Funnel Stage Counts from live database leads
   const funnelStages = useMemo(() => {
@@ -113,16 +124,58 @@ export const SalesManagerDashboardScreen: React.FC = () => {
     ];
   }, [leads]);
 
+  // Dynamically Filtered KPI Stats for the selected Date Range
+  const stats: SalesManagerStats & { periodSuffix: string } = useMemo(() => {
+    const totalLeads = leads.length;
+    const activePitching = leads.filter((l) => l.currentStage === 'SALES_PITCHING').length;
+    const pendingPayment = leads.filter(
+      (l) => l.currentStage === 'QUOTATION_SENT' || l.currentStage === 'PAYMENT_PENDING'
+    ).length;
+
+    let closedInPeriod = 0;
+    let revenueInPeriod = 0;
+
+    leads.forEach((l) => {
+      if (isPaidOrClosed(l)) {
+        const closedDate = getLeadClosedDate(l);
+        if (isDateInRange(closedDate, timeRange, customStartDate, customEndDate)) {
+          closedInPeriod++;
+          revenueInPeriod += Number(l.feeBreakdown?.totalServiceFee || 0);
+        }
+      }
+    });
+
+    const conversionRatePct = totalLeads > 0 ? Math.round((closedInPeriod / totalLeads) * 100) : 0;
+    const avgDealSize = closedInPeriod > 0 ? Math.round(revenueInPeriod / closedInPeriod) : 0;
+    const periodSuffix = getPeriodSuffix(timeRange, customStartDate, customEndDate);
+
+    return {
+      pipelineLeads: totalLeads,
+      activePitching,
+      pendingPayment,
+      closedPaidDeals: closedInPeriod,
+      totalRevenueMTD: revenueInPeriod,
+      avgDealSize,
+      conversionRatePct,
+      periodSuffix,
+    };
+  }, [leads, timeRange, customStartDate, customEndDate]);
+
   const readyForTransmissionCount = useMemo(() => {
     return leads.filter(
       (l) => l.currentStage === 'PAID_AND_AUTHORIZED' || l.currentStage === 'FILING_QUEUE'
     ).length;
   }, [leads]);
 
+  const handleCustomDateChange = (start: string, end: string) => {
+    setCustomStartDate(start);
+    setCustomEndDate(end);
+  };
+
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
       {/* 1. Header & Live Time Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
@@ -138,24 +191,14 @@ export const SalesManagerDashboardScreen: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Time Range Pill Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl">
-            {(['TODAY', 'WEEK', 'MTD'] as const).map((range) => (
-              <button
-                key={range}
-                type="button"
-                onClick={() => setTimeRange(range)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  timeRange === range
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {range === 'TODAY' ? 'Today' : range === 'WEEK' ? 'This Week' : 'MTD'}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <DashboardDateFilter
+            preset={timeRange}
+            onPresetChange={setTimeRange}
+            startDate={customStartDate}
+            endDate={customEndDate}
+            onCustomDateChange={handleCustomDateChange}
+          />
 
           <Button
             variant="outline"
@@ -180,7 +223,7 @@ export const SalesManagerDashboardScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top 4 KPI Metrics */}
+      {/* 2. Top 4 KPI Metrics (Dynamically Filtered) */}
       <SalesManagerStatsCards stats={stats} />
 
       {/* 3. Sales Pipeline Stage-by-Stage Progression Stepper */}

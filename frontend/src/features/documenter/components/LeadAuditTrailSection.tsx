@@ -168,6 +168,14 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                                  s.remarks?.toLowerCase().includes('closer (') ||
                                  (s.fromStage === 'SALES_PITCH_QUEUE' && s.toStage === 'SALES_PITCHING')) && !isAutoRoundRobin;
 
+      const isPitchNegotiation = s.remarks?.toLowerCase().includes('pitch negotiation') ||
+                                 s.remarks?.toLowerCase().includes('fee negotiation') ||
+                                 s.remarks?.toLowerCase().includes('negotiated counter-offer') ||
+                                 s.remarks?.toLowerCase().includes('closer updated negotiation');
+
+      const isPaymentLink = s.remarks?.toLowerCase().includes('payment link') ||
+                            s.remarks?.toLowerCase().includes('checkout link');
+
       const isFilingDispatch = s.remarks?.toLowerCase().includes('filing transmission') ||
                                s.remarks?.toLowerCase().includes('dispatched to irs') ||
                                (s.fromStage === 'SALES_PITCHING' && s.toStage === 'FILING_QUEUE');
@@ -240,6 +248,16 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         eventType = 'INGESTION';
         eventTitle = 'Raw Prospect Ingestion (Admin Bulk Import)';
         eventDescription = `Admin uploaded raw prospect lead into TaxCRM Intake Pipeline via Excel/CSV bulk ingestion. Lead deduplicated by SSN/Email and queued in Documenter Department Unassigned Pool at RAW_PROSPECT stage for manager assignment.`;
+      } else if (isPaymentLink) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Stripe Self-Checkout Payment Link Dispatched';
+        displayFromStage = s.fromStage;
+        displayToStage = s.toStage;
+      } else if (isPitchNegotiation) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Closer Pitch Status & Fee Negotiation Updated';
+        displayFromStage = s.fromStage;
+        displayToStage = s.toStage;
       } else if (isAutoRoundRobin) {
         eventType = 'ASSIGNMENT';
         eventTitle = '1-Click Auto Round-Robin Lead Allocation (Sales Manager)';
@@ -330,13 +348,15 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
 
     // 3. System Audits (Organizer, Document Vault, Tax Draft Calculations - Excluding duplicate call/stage events)
     auditLogs.forEach((a) => {
-      const isCallAction = a.action === 'DISPOSITION_LOG' || a.moduleKey === 'OUTREACH_CALL';
+      const isSalesPitch = a.moduleKey === 'SALES_PITCH' || a.moduleKey === 'SALES_NEGOTIATION' || a.moduleKey === 'SALES_NOTE';
+      const isPaymentLinkAudit = a.moduleKey === 'SALES_PAYMENT_LINK' || a.action === 'PAYMENT_LINK_SENT';
+      const isCallAction = (a.action === 'DISPOSITION_LOG' || a.moduleKey === 'OUTREACH_CALL') && !isSalesPitch;
       const isIngestionAction = a.moduleKey === 'ADMIN_BULK_IMPORT' || a.moduleKey === 'LEAD_INGESTION';
       const isAssignmentAction = a.moduleKey === 'LEAD_ASSIGNMENT' || a.moduleKey === 'AUTO_ROUND_ROBIN';
-      const isStageChange = a.action === 'STAGE_CHANGE';
+      const isStageChange = a.action === 'STAGE_CHANGE' && !isSalesPitch && !isPaymentLinkAudit;
 
-      // Skip records already cleanly represented by stageHistories or callLogs
-      if (isCallAction || isIngestionAction || isAssignmentAction || isStageChange) {
+      // Skip records already cleanly represented by stageHistories or callLogs (unless sales pitch or payment link audit)
+      if ((isCallAction || isIngestionAction || isAssignmentAction || isStageChange) && !isSalesPitch && !isPaymentLinkAudit) {
         return;
       }
 
@@ -356,7 +376,11 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
       const isSalesEsignUpload = a.moduleKey === 'SALES' && (isDocUpload || details?.fileName?.includes('8879') || details?.fileName?.includes('8878'));
 
       let eventTitle = `Audit Action: ${a.action.replace(/_/g, ' ')}`;
-      if (isSalesEsignUpload) {
+      if (isSalesPitch) {
+        eventTitle = `Closer Pitch Status & Fee Negotiation Updated`;
+      } else if (isPaymentLinkAudit) {
+        eventTitle = `Stripe Self-Checkout Payment Link Dispatched`;
+      } else if (isSalesEsignUpload) {
         eventTitle = `IRS Form 8879 E-Sign Authorized & Attached (PIN: ${details?.taxpayerPin || 'Authorized'})`;
       } else if (isOrganizer) {
         eventTitle = `9-Module Tax Organizer Saved`;
