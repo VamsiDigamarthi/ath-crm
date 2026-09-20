@@ -27,6 +27,18 @@ export const renderDualRoleBadge = (item: DocumenterLeadItem) => {
   );
 };
 
+export const renderLeadSourceBadge = (item: DocumenterLeadItem) => {
+  const source = (item.taxDraftSummary as any)?.leadSource;
+  if (source === 'SELF_SIGNUP' || source === 'PUBLIC_PORTAL') {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 shadow-2xs whitespace-nowrap shrink-0">
+        <span>🌐 Direct Sign-Up</span>
+      </span>
+    );
+  }
+  return null;
+};
+
 export const renderVisaBadge = (visaType?: string | null) => {
   if (!visaType || visaType.trim() === '') {
     return null;

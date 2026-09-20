@@ -20,4 +20,8 @@ export const authService = {
   getCurrentUser: async () => {
     return apiClient.get('/auth/current-user');
   },
+
+  registerTaxpayer: async (payload: any) => {
+    return apiClient.post('/auth/register', payload);
+  },
 };

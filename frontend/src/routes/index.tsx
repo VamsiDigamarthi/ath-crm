@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './guards/ProtectedRoute';
 import { PublicRoute } from './guards/PublicRoute';
 import { LoginScreen } from '@/features/auth/screens/LoginScreen';
+import { SignupScreen } from '@/features/auth/screens/SignupScreen';
 import { DashboardScreen } from '@/features/dashboard/screens/DashboardScreen';
 import { AdminLayout } from '@/features/admin/layouts/AdminLayout';
 import { AdminOverviewScreen } from '@/features/admin/screens/AdminOverviewScreen';
@@ -115,6 +116,14 @@ export const router = createBrowserRouter([
       {
         path: '/login',
         element: <LoginScreen />,
+      },
+      {
+        path: '/signup',
+        element: <SignupScreen />,
+      },
+      {
+        path: '/register',
+        element: <SignupScreen />,
       },
     ],
   },

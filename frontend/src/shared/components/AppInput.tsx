@@ -21,6 +21,8 @@ export interface AppInputProps {
   id?: string
   name?: string
   className?: string
+  maxLength?: number
+  autoComplete?: string
 }
 
 const SIZE_CLS = {
@@ -54,6 +56,8 @@ export function AppInput({
   id,
   name,
   className,
+  maxLength,
+  autoComplete,
 }: AppInputProps) {
   const [showPassword, setShowPassword] = useState(false)
   const inputType = type === 'password' ? (showPassword ? 'text' : 'password') : type
@@ -88,6 +92,8 @@ export function AppInput({
           disabled={disabled}
           readOnly={readOnly}
           required={required}
+          maxLength={maxLength}
+          autoComplete={autoComplete}
           className={cn(
             'w-full rounded-xl border-[1.5px] bg-white px-3.5 transition-all duration-200 outline-none',
             'placeholder:text-slate-300 placeholder:font-normal placeholder:italic text-slate-900 font-semibold',

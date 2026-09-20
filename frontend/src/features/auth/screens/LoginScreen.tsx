@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useLogin';
 import { AuthBrandShowcase } from '../components/AuthBrandShowcase';
 import { EmailLoginForm } from '../components/EmailLoginForm';
@@ -75,6 +76,17 @@ export const LoginScreen: React.FC = () => {
 
           {/* Security Guarantee Footer Component */}
           <AuthSecurityFooter />
+
+          {/* Direct Taxpayer Signup Link */}
+          <div className="mt-5 pt-4 border-t border-slate-100 text-center">
+            <p className="text-xs text-slate-600">
+              New Taxpayer?{' '}
+              <Link to="/signup" className="font-bold text-[#16A34A] hover:underline inline-flex items-center gap-1">
+                <span>Create an Account / Self-Register</span>
+                <span aria-hidden="true">&rarr;</span>
+              </Link>
+            </p>
+          </div>
         </div>
 
         {/* Footer info */}
