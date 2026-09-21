@@ -938,6 +938,8 @@ export class SalesService {
         totalQuotedFee: totalFeeResolved,
         remainingBalance,
         paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
+        closerCallNotes: draft.closerCallNotes || draft.notes || '',
+        closerNotesHistory: Array.isArray(draft.closerNotesHistory) ? draft.closerNotesHistory : [],
       },
       feeBreakdown,
       paymentStatus,
@@ -945,6 +947,8 @@ export class SalesService {
       remainingBalance,
       paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
       esignStatus,
+      closerCallNotes: draft.closerCallNotes || draft.notes || '',
+      closerNotesHistory: Array.isArray(draft.closerNotesHistory) ? draft.closerNotesHistory : [],
       paidAt: draft.paidAt || (latestQuote?.status === 'PAID' ? latestQuote.createdAt.toISOString() : null),
       esignCompletedAt: draft.esignCompletedAt || null,
       stageHistories: (app.stageHistories || []).map((s: any) => {
@@ -995,6 +999,16 @@ export class SalesService {
           createdAt: a.createdAt?.toISOString ? a.createdAt.toISOString() : a.createdAt,
         };
       }),
+      notes: draft.closerCallNotes || draft.notes || latestQuote?.userFeedback || '',
+      salesPitch: draft.salesPitch || {
+        pitchStatus: draft.pitchStatus || 'NEED_TIME',
+        originalFee: draft.originalFee || totalFeeResolved,
+        negotiatedAmount: draft.negotiatedAmount ?? null,
+        comment: draft.closerCallNotes || '',
+      },
+      pitchStatus: draft.salesPitch?.pitchStatus || draft.pitchStatus || 'NEED_TIME',
+      negotiatedAmount: draft.salesPitch?.negotiatedAmount ?? draft.negotiatedAmount ?? null,
+      originalFee: draft.salesPitch?.originalFee || draft.originalFee || totalFeeResolved,
       createdAt: app.createdAt.toISOString(),
       updatedAt: app.updatedAt.toISOString(),
     };
@@ -1072,7 +1086,10 @@ export class SalesService {
   /**
    * Dispatch paid & e-signed return to IRS Filing Queue
    */
-  public static async dispatchToFiling(applicationId: string, userId: string) {
+  /**
+   * Dispatch paid & e-signed return to IRS Filing Queue with optional closer notes
+   */
+  public static async dispatchToFiling(applicationId: string, userId: string, notes?: string) {
     const app = await prisma.taxApplication.findUnique({
       where: { id: applicationId },
       include: { customer: true },
@@ -1131,9 +1148,12 @@ export class SalesService {
       };
     }
 
+    const updatedNotes = notes?.trim() || currentDraft.closerCallNotes || '';
     const updatedDraftSummary = {
       ...currentDraft,
       status: 'QA_APPROVED',
+      closerCallNotes: updatedNotes,
+      lastCallNoteAt: notes?.trim() ? new Date().toISOString() : currentDraft.lastCallNoteAt,
       revertsByTarget: resolvedRevertsByTarget,
       lastRevert: currentDraft.lastRevert ? {
         ...currentDraft.lastRevert,
@@ -1161,11 +1181,27 @@ export class SalesService {
             fromStage: ApplicationStage.SALES_PITCHING,
             toStage: ApplicationStage.FILING_QUEUE,
             movedByUserId: effectiveActorId,
-            remarks: `Form 1040 certified return for ${clientName} authorized & dispatched to IRS E-Filing Queue by ${actorName}`,
+            remarks: `Form 1040 certified return for ${clientName} authorized & dispatched to IRS E-Filing Queue by ${actorName}${updatedNotes ? ` • Notes: "${updatedNotes}"` : ''}`,
           },
         });
       } catch (err) {
         console.error('Failed to create stage history on filing dispatch:', err);
+      }
+    }
+
+    // 1.1 Optional CallLog if notes provided
+    if (effectiveActorId && updatedNotes) {
+      try {
+        await prisma.callLog.create({
+          data: {
+            applicationId,
+            agentId: effectiveActorId,
+            disposition: 'DISPATCHED_TO_IRS_FILING',
+            callSummary: updatedNotes,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create call log on dispatch:', err);
       }
     }
 
@@ -1184,7 +1220,8 @@ export class SalesService {
             fromStage: ApplicationStage.SALES_PITCHING,
             toStage: ApplicationStage.FILING_QUEUE,
             actionDescription: `Form 1040 certified return for ${clientName} dispatched to IRS E-Filing Queue by ${actorName}`,
-            remarks: `Fee payment verified ($${draft.paidAmount || 227}) and Form 8879 authorized with PIN (${draft.taxpayerPin || '84920'}). Dispatched to IRS Modernized e-File Queue.`,
+            closerCallNotes: updatedNotes,
+            remarks: `Fee payment verified ($${draft.paidAmount || 227}) and Form 8879 authorized with PIN (${draft.taxpayerPin || '84920'}). Dispatched to IRS Modernized e-File Queue.${updatedNotes ? ` Closer Notes: "${updatedNotes}"` : ''}`,
             taxYear: app.taxYear || 2025,
             clientName,
           },
@@ -1229,6 +1266,251 @@ export class SalesService {
     }
 
     return { success: true, application: updated };
+  }
+
+  /**
+   * Update and persist Pitch Negotiation Status, Original Fee & Negotiated Amount
+   */
+  public static async updatePitchNegotiation(
+    applicationId: string,
+    payload: {
+      pitchStatus?: string;
+      originalFee?: number;
+      negotiatedAmount?: number | null;
+      comment?: string;
+    },
+    userId: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true, quotes: { orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const currentFeeBreakdown = currentDraft.feeBreakdown || {};
+    const origFee = payload.originalFee !== undefined && payload.originalFee !== null
+      ? Number(payload.originalFee)
+      : Number(currentFeeBreakdown.basePrepFee || currentFeeBreakdown.totalServiceFee || currentDraft.totalQuotedFee || 247);
+
+    const negAmount = payload.negotiatedAmount !== undefined && payload.negotiatedAmount !== null && !isNaN(Number(payload.negotiatedAmount))
+      ? Number(payload.negotiatedAmount)
+      : null;
+
+    const pitchStatus = payload.pitchStatus || currentDraft.salesPitch?.pitchStatus || currentDraft.pitchStatus || 'NEED_TIME';
+    const comment = payload.comment !== undefined ? payload.comment.trim() : (currentDraft.salesPitch?.comment || '');
+
+    const salesPitch = {
+      pitchStatus,
+      originalFee: origFee,
+      negotiatedAmount: negAmount,
+      comment,
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: userId,
+    };
+
+    const updatedDraft = {
+      ...currentDraft,
+      salesPitch,
+      pitchStatus,
+      negotiatedAmount: negAmount,
+      originalFee: origFee,
+      closerCallNotes: comment || currentDraft.closerCallNotes,
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedDraft,
+      },
+    });
+
+    // Safely resolve actor details
+    let effectiveUserId = userId;
+    const user = effectiveUserId && effectiveUserId !== 'SYSTEM'
+      ? await prisma.user.findUnique({ where: { id: effectiveUserId } })
+      : null;
+
+    if (!user && app.assignedSalesAgentId) {
+      effectiveUserId = app.assignedSalesAgentId;
+    }
+
+    const actorUser = user || (effectiveUserId ? await prisma.user.findUnique({ where: { id: effectiveUserId } }) : null);
+    const actorName = actorUser
+      ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email || 'Sales Closer'
+      : 'Sales Closer';
+    const actorRole = actorUser?.role || 'SALES_AGENT';
+
+    const PITCH_STATUS_MAP: Record<string, string> = {
+      NEED_TIME: 'Need time (Client needs time to think/review before closing)',
+      PRICING_ISSUE: 'Pricing issue (Client feels the price is high / asking for discount)',
+      FILING_WITH_OTHERS: 'Filing with others (Client decided to file with local CPA or other software)',
+      NEED_CALL_WITH_CPA: 'Need call with CPA (Client requires technical tax consultation before paying)',
+      OTHER_COMMENT: 'Other comment (Custom note entry)',
+    };
+
+    const statusLabel = PITCH_STATUS_MAP[pitchStatus] || pitchStatus;
+    const formattedRemarks = `Pitch Negotiation: Status="${statusLabel}" | Original Fee=$${origFee.toFixed(2)}${negAmount !== null ? ` | Negotiated Counter-Offer=$${negAmount.toFixed(2)}` : ''}${comment ? ` | Closer Note: "${comment}"` : ''}`;
+
+    // 1. Create StageHistory record for the lead lifecycle audit
+    if (effectiveUserId) {
+      try {
+        await prisma.stageHistory.create({
+          data: {
+            applicationId,
+            fromStage: app.currentStage,
+            toStage: app.currentStage,
+            movedByUserId: effectiveUserId,
+            remarks: formattedRemarks,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create stage history for pitch negotiation:', err);
+      }
+    }
+
+    // 2. Create AuditLog record
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: effectiveUserId || null,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole,
+          action: AuditActionType.TAX_DRAFT_SAVE,
+          moduleKey: 'SALES_PITCH',
+          details: {
+            actionDescription: `Pitch negotiation status updated: ${statusLabel}`,
+            pitchStatus,
+            statusLabel,
+            originalFee: origFee,
+            negotiatedAmount: negAmount,
+            comment,
+            remarks: formattedRemarks,
+          },
+        },
+      });
+    } catch (err) {
+      console.error('Failed to create audit log for negotiation update:', err);
+    }
+
+    // 3. If a custom comment was entered, also log to CallLog
+    if (effectiveUserId && comment) {
+      try {
+        await prisma.callLog.create({
+          data: {
+            applicationId,
+            agentId: effectiveUserId,
+            disposition: pitchStatus,
+            callSummary: comment,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create call log in updatePitchNegotiation:', err);
+      }
+    }
+
+    return { success: true, salesPitch, application: updatedApp };
+  }
+
+  /**
+   * Save closer call notes directly into database & CallLog
+   */
+  public static async saveCloserNotes(
+    applicationId: string,
+    payload: {
+      notes: string;
+      disposition?: string;
+      callDuration?: number;
+    },
+    userId: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+    if (!app) {
+      throw new Error('Application not found');
+    }
+    const currentDraft: any = app.taxDraftSummary || {};
+    const notes = (payload.notes || '').trim();
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Sales Closer';
+
+    const existingHistory: any[] = Array.isArray(currentDraft.closerNotesHistory)
+      ? currentDraft.closerNotesHistory
+      : [];
+
+    const newNoteRecord = {
+      id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      note: notes,
+      authorId: user?.id || userId,
+      authorName: actorName,
+      authorEmail: user?.email || '',
+      authorRole: user?.role || 'SALES_AGENT',
+      disposition: payload.disposition || 'NOTE_RECORDED',
+      callDuration: payload.callDuration || 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedHistory = [newNoteRecord, ...existingHistory];
+
+    const updatedDraft = {
+      ...currentDraft,
+      closerCallNotes: notes,
+      notes,
+      closerNotesHistory: updatedHistory,
+      lastCallNoteAt: new Date().toISOString(),
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedDraft,
+      },
+    });
+
+    if (userId && notes) {
+      try {
+        await prisma.callLog.create({
+          data: {
+            applicationId,
+            agentId: userId,
+            disposition: payload.disposition || 'SALES_CALL_LOGGED',
+            callSummary: notes,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create call log in saveCloserNotes:', err);
+      }
+
+      try {
+        await prisma.auditLog.create({
+          data: {
+            applicationId,
+            actorId: userId,
+            actorType: AuditActorType.AGENT,
+            actorName,
+            actorRole: user?.role || 'SALES_AGENT',
+            action: AuditActionType.DISPOSITION_LOG,
+            moduleKey: 'SALES',
+            details: {
+              notes,
+              disposition: payload.disposition || 'SALES_CALL_LOGGED',
+              callDuration: payload.callDuration || 0,
+              remarks: `Closer call note logged by ${actorName}: "${notes}"`,
+            },
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create audit log in saveCloserNotes:', err);
+      }
+    }
+
+    return { success: true, notes, application: updatedApp };
   }
 
   /**
@@ -1575,5 +1857,206 @@ export class SalesService {
     }
 
     return { success: true, document: doc, application: updatedApp };
+  }
+
+  /**
+   * Dispatch and record Stripe Self-Checkout Payment Link to Primary & optional Secondary Email
+   */
+  public static async sendPaymentLink(
+    applicationId: string,
+    payload: {
+      amount: number;
+      primaryEmail?: string;
+      secondaryEmail?: string;
+      sendToPrimary?: boolean;
+      sendToSecondary?: boolean;
+      phone?: string;
+      notes?: string;
+    },
+    userId: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: {
+        customer: true,
+        assignedSalesAgent: true,
+        quotes: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+    });
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const amount = Number(payload.amount) || Number(currentDraft.totalQuotedFee) || 247;
+    const clientName = app.customer
+      ? `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Client'
+      : 'Client';
+
+    const defaultPrimary = app.customer?.email || '';
+    const primaryEmail = (payload.primaryEmail || defaultPrimary).trim();
+    const secondaryEmail = (payload.secondaryEmail || '').trim();
+    const sendToPrimary = payload.sendToPrimary !== false;
+    const sendToSecondary = Boolean(secondaryEmail && payload.sendToSecondary !== false);
+
+    const recipientEmails: string[] = [];
+    if (sendToPrimary && primaryEmail) recipientEmails.push(primaryEmail);
+    if (sendToSecondary && secondaryEmail && !recipientEmails.includes(secondaryEmail)) {
+      recipientEmails.push(secondaryEmail);
+    }
+    if (recipientEmails.length === 0) {
+      if (primaryEmail) recipientEmails.push(primaryEmail);
+      else if (secondaryEmail) recipientEmails.push(secondaryEmail);
+      else recipientEmails.push(defaultPrimary);
+    }
+
+    const recipientSummary = recipientEmails.join(', ');
+
+    // Actor details
+    let validAgentId = app.assignedSalesAgentId || userId;
+    let agentUser = validAgentId && validAgentId !== 'SYSTEM'
+      ? await prisma.user.findUnique({ where: { id: validAgentId } })
+      : null;
+
+    if (!agentUser) {
+      agentUser = await prisma.user.findFirst({
+        where: { role: { in: [Role.SALES_AGENT, Role.SALES_MANAGER, Role.ADMIN] }, isActive: true },
+      });
+      if (agentUser) {
+        validAgentId = agentUser.id;
+      }
+    }
+
+    const actorName = agentUser
+      ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email || 'Sales Closer'
+      : 'Sales Closer';
+    const actorRole = agentUser?.role || 'SALES_AGENT';
+
+    const paymentLinkRecord = {
+      id: `link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      amount,
+      primaryEmail,
+      secondaryEmail: secondaryEmail || null,
+      recipients: recipientEmails,
+      phone: payload.phone || app.customer?.phone || '',
+      notes: payload.notes || '',
+      sentAt: new Date().toISOString(),
+      sentBy: {
+        id: validAgentId,
+        name: actorName,
+        email: agentUser?.email,
+        role: actorRole,
+      },
+    };
+
+    const existingLinks = Array.isArray(currentDraft.paymentLinkHistory) ? currentDraft.paymentLinkHistory : [];
+    const paymentLinkHistory = [paymentLinkRecord, ...existingLinks];
+
+    const updatedDraft = {
+      ...currentDraft,
+      paymentStatus: currentDraft.paymentStatus === 'PAID' ? 'PAID' : 'PAYMENT_LINK_SENT',
+      paymentLinkDetails: paymentLinkRecord,
+      secondaryEmail: secondaryEmail || currentDraft.secondaryEmail || null,
+      paymentLinkHistory,
+    };
+
+    // Record / Update SalesQuote status as SENT
+    if (validAgentId && agentUser) {
+      try {
+        await prisma.salesQuote.create({
+          data: {
+            applicationId,
+            salesAgentId: validAgentId,
+            quoteAmount: amount,
+            status: 'SENT',
+            userFeedback: `Checkout link ($${amount}) dispatched to: ${recipientSummary}${secondaryEmail ? ` (Secondary Email: ${secondaryEmail})` : ''}`,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create salesQuote for payment link:', err);
+      }
+    }
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedDraft,
+      },
+    });
+
+    const remarks = `Payment Link of $${amount.toLocaleString()} sent to ${recipientSummary}${secondaryEmail ? ` (Secondary Email: ${secondaryEmail})` : ''} by ${actorName}`;
+
+    // 1. StageHistory
+    if (validAgentId && agentUser) {
+      try {
+        await prisma.stageHistory.create({
+          data: {
+            applicationId,
+            fromStage: app.currentStage,
+            toStage: app.currentStage,
+            movedByUserId: validAgentId,
+            remarks,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create stageHistory for payment link:', err);
+      }
+    }
+
+    // 2. AuditLog
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: agentUser?.id || null,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole,
+          action: AuditActionType.TAX_DRAFT_SAVE,
+          moduleKey: 'SALES_PAYMENT_LINK',
+          details: {
+            actionDescription: `Stripe checkout payment link ($${amount}) sent to ${recipientSummary}`,
+            amount,
+            primaryEmail,
+            secondaryEmail: secondaryEmail || null,
+            recipients: recipientEmails,
+            remarks,
+          },
+        },
+      });
+    } catch (err) {
+      console.error('Failed to create auditLog for payment link:', err);
+    }
+
+    // 3. SentEmail record for each destination email
+    if (agentUser?.id) {
+      const senderId = agentUser.id;
+      for (const email of recipientEmails) {
+        try {
+          await prisma.sentEmail.create({
+            data: {
+              applicationId,
+              senderUserId: senderId,
+              recipientEmail: email,
+              subject: `Secure Service Fee Checkout ($${amount}) - Form 1040 Tax Filing (${clientName})`,
+              body: `Dear ${clientName},\n\nPlease find your secure checkout link of $${amount} for Form 1040 tax preparation & filing service.\n\nSent by ${actorName} (${agentUser?.email || 'TaxCRM Sales Team'}).\n\nThank you,\nTaxCRM Team`,
+              status: 'SENT',
+            },
+          });
+        } catch (e) {
+          console.error('Failed to record sentEmail on payment link dispatch:', e);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      amount,
+      primaryEmail,
+      secondaryEmail: secondaryEmail || null,
+      recipients: recipientEmails,
+      paymentLinkRecord,
+      application: updatedApp,
+    };
   }
 }

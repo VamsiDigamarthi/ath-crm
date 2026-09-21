@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneCall, ArrowRight, RefreshCw, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
+import { DashboardDateFilter } from '@/shared/components/DashboardDateFilter';
 import { SalesAgentStatsCards } from '../components/agent/SalesAgentStatsCards';
 import { SalesAgentVelocityCharts } from '../components/dashboard/SalesAgentVelocityCharts';
 import { SalesAgentPriorityTargets } from '../components/dashboard/SalesAgentPriorityTargets';
@@ -18,6 +19,9 @@ export const SalesAgentDashboardScreen: React.FC = () => {
     setChartMode,
     timeRange,
     setTimeRange,
+    customStartDate,
+    customEndDate,
+    handleCustomDateChange,
     hourlyData,
     weeklyData,
     priorityTargets,
@@ -39,7 +43,7 @@ export const SalesAgentDashboardScreen: React.FC = () => {
   return (
     <div className="w-full space-y-6 pb-12 font-sans animate-in fade-in duration-150">
       {/* 1. Header with Title, Time Range Selector & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center gap-1">
@@ -57,42 +61,13 @@ export const SalesAgentDashboardScreen: React.FC = () => {
 
         {/* Right Actions: Time Range & Quick Pitch Queue Button */}
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          {/* Time Range Pills */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-            <button
-              type="button"
-              onClick={() => setTimeRange('TODAY')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                timeRange === 'TODAY'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={() => setTimeRange('WEEK')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                timeRange === 'WEEK'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Week
-            </button>
-            <button
-              type="button"
-              onClick={() => setTimeRange('MTD')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                timeRange === 'MTD'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Month
-            </button>
-          </div>
+          <DashboardDateFilter
+            preset={timeRange}
+            onPresetChange={setTimeRange}
+            startDate={customStartDate}
+            endDate={customEndDate}
+            onCustomDateChange={handleCustomDateChange}
+          />
 
           <Button
             variant="outline"

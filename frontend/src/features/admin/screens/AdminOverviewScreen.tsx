@@ -5,12 +5,17 @@ import { AdminExecutiveCharts, type PipelineFlowItem, type VisaMixItem } from '.
 import { ShieldCheck, RefreshCw, Calculator, DollarSign, FileCheck2, Users, ArrowRight } from 'lucide-react';
 import { adminService } from '../services/admin-service';
 import { Button } from '@/shared/components/Button';
+import { DashboardDateFilter } from '@/shared/components/DashboardDateFilter';
+import type { DateFilterPreset } from '@/shared/utils/date-filters';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 export const AdminOverviewScreen: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [timeRange, setTimeRange] = useState<DateFilterPreset>('MONTH');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   const [counts, setCounts] = useState<{
     totalProspects: number;
     documenterCount: number;
@@ -124,7 +129,18 @@ export const AdminOverviewScreen: React.FC = () => {
           </p>
         </div>
 
-        <div className="relative z-10 shrink-0">
+        <div className="relative z-10 shrink-0 flex flex-wrap items-center gap-2.5">
+          <DashboardDateFilter
+            preset={timeRange}
+            onPresetChange={setTimeRange}
+            startDate={customStartDate}
+            endDate={customEndDate}
+            onCustomDateChange={(start, end) => {
+              setCustomStartDate(start);
+              setCustomEndDate(end);
+            }}
+          />
+
           <Button
             variant="outline"
             size="sm"

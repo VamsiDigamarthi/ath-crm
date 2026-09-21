@@ -164,12 +164,12 @@ export const useBulkImport = () => {
 
       if (skippedCount > 0) {
         toast.error(
-          `Ingested ${validCount} leads, but ${skippedCount} existing customer duplicates were blocked & skipped!`,
+          `Ingested ${validCount} leads (${newProfiles} new profiles), but ${skippedCount} duplicates were skipped!`,
           { duration: 6000 }
         );
       } else {
         toast.success(
-          res?.message || `Successfully imported ${validCount} leads for Tax Year ${taxYear}!`,
+          res?.message || `Successfully imported ${validCount} leads (${newProfiles} new profiles) for Tax Year ${taxYear}!`,
           { duration: 6000 }
         );
       }

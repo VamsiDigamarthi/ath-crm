@@ -96,10 +96,33 @@ export class SalesController {
     try {
       const id = req.params.id as string;
       const userId = req.currentUser?.id || (req as any).user?.id || '';
-      const result = await SalesService.dispatchToFiling(id, userId);
+      const notes = req.body.notes || req.body.closerCallNotes || '';
+      const result = await SalesService.dispatchToFiling(id, userId, notes);
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to dispatch to filing' });
+    }
+  }
+
+  public static async updatePitchNegotiation(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.updatePitchNegotiation(id, req.body, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to update pitch negotiation' });
+    }
+  }
+
+  public static async saveCloserNotes(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.saveCloserNotes(id, req.body, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to save closer call notes' });
     }
   }
 
@@ -133,6 +156,17 @@ export class SalesController {
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to record Form 8879 authorization' });
+    }
+  }
+
+  public static async sendPaymentLink(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.sendPaymentLink(id, req.body, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to send payment link' });
     }
   }
 }

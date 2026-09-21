@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { RotateCcw } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
+import { PitchNegotiationBar } from '../components/pitch/PitchNegotiationBar';
 import { PitchTaxDraftSummaryCard } from '../components/pitch/PitchTaxDraftSummaryCard';
 import { PitchFeeCalculator } from '../components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
@@ -29,6 +30,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   const [isEsignModalOpen, setIsEsignModalOpen] = useState(false);
   const [isDispatchConfirmOpen, setIsDispatchConfirmOpen] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
+  const [pendingDispatchNotes, setPendingDispatchNotes] = useState<string>('');
   const [isSendBackOpen, setIsSendBackOpen] = useState(false);
 
   const fetchLeadDetail = useCallback(async () => {
@@ -83,6 +85,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
     );
   }
 
+  const appId = lead.id || lead.applicationId || id || '';
   const lastRevert =
     (lead.taxDraftSummary as any)?.revertsByTarget?.SALES ||
     (lead.taxDraftSummary as any)?.revertsByTarget?.['FILING_TO_SALES'] ||
@@ -179,8 +182,8 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
           ? `Partial payment of $${amount.toLocaleString()} successfully recorded via ${method}! 💳✅`
           : `Full service fee payment of $${amount.toLocaleString()} successfully recorded via ${method}! 💳✅`
       );
-    } catch {
-      toast.error('Payment recorded locally, but failed to sync with database');
+    } catch (err: any) {
+      toast.error(err?.message || err?.response?.data?.message || 'Payment recorded locally, but failed to sync with database');
     }
   };
 
@@ -229,7 +232,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
       toast.success(`Form 8879 E-Sign verified & audit record logged in database! ✍️✅`);
     } catch (err: any) {
       console.error('Failed to sync e-sign:', err);
-      toast.error(err?.response?.data?.message || 'E-Sign recorded locally, but failed to sync with database');
+      toast.error(err?.message || err?.response?.data?.message || 'E-Sign recorded locally, but failed to sync with database');
     }
   };
 
@@ -239,7 +242,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
     setIsDispatching(true);
 
     try {
-      await salesService.dispatchToFiling(appId);
+      await salesService.dispatchToFiling(appId, { notes: pendingDispatchNotes });
       
       const updated = await salesService.getLeadById(appId);
       if (updated) {
@@ -250,6 +253,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
             ? {
               ...prev,
               currentStage: 'FILING_QUEUE',
+              closerCallNotes: pendingDispatchNotes || prev.closerCallNotes,
             }
             : prev
         );
@@ -258,7 +262,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
       setIsDispatchConfirmOpen(false);
       toast.success('Form 1040 certified and dispatched to IRS Modernized e-File Queue! 🚀');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to dispatch return to IRS Filing');
+      toast.error(err?.message || err?.response?.data?.message || 'Failed to dispatch return to IRS Filing');
     } finally {
       setIsDispatching(false);
     }
@@ -269,7 +273,19 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
       {/* 1. Taxpayer Header & Certified 1040 Refund Banner */}
       <PitchTaxpayerHeader lead={lead} onOpenSendBack={() => setIsSendBackOpen(true)} />
 
-      {/* 1.1 Revert Alert Banner */}
+      {/* 1.1 Closer Pitch Status & Fee Negotiation Toolbar */}
+      <PitchNegotiationBar
+        lead={lead}
+        onUpdateSuccess={async (updated) => {
+          setLead((prev) => (prev ? { ...prev, ...updated } : prev));
+          const refreshed = await salesService.getLeadById(appId);
+          if (refreshed) {
+            setLead(refreshed);
+          }
+        }}
+      />
+
+      {/* 1.2 Revert Alert Banner */}
       {isReverted && lastRevert && (
         <div className="bg-amber-50/70 border border-amber-300/80 rounded-xl p-3.5 sm:p-4 text-amber-950 shadow-2xs animate-in fade-in duration-200">
           <div className="flex items-start gap-3">
@@ -354,7 +370,16 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
             lead={lead}
             paymentStatus={lead.paymentStatus}
             esignStatus={lead.esignStatus}
-            onDispatchToFiling={() => setIsDispatchConfirmOpen(true)}
+            onNotesSaved={async () => {
+              const refreshed = await salesService.getLeadById(appId);
+              if (refreshed) {
+                setLead(refreshed);
+              }
+            }}
+            onDispatchToFiling={(notes) => {
+              setPendingDispatchNotes(notes || '');
+              setIsDispatchConfirmOpen(true);
+            }}
           />
         </div>
       </div>
@@ -379,6 +404,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         isEsignModalOpen={isEsignModalOpen}
         onCloseEsignModal={() => setIsEsignModalOpen(false)}
         onEsignSuccess={handleEsignSuccess}
+        onPaymentLinkSent={fetchLeadDetail}
       />
 
       {/* 5. Dispatch to Filing Confirmation Dialog */}

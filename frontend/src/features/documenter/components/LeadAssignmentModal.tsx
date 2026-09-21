@@ -9,9 +9,7 @@ import {
   Headphones,
   Users,
   DollarSign,
-  Check,
-  ShieldCheck,
-  Briefcase
+  Check
 } from 'lucide-react';
 import type { DocumenterAgentItem, DocumenterLeadItem } from '../types/documenter.types';
 

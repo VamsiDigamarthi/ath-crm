@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AuthBrandShowcase } from '../components/AuthBrandShowcase';
 import { TaxpayerSignupForm } from '../components/TaxpayerSignupForm';
 import { AuthSecurityFooter } from '../components/AuthSecurityFooter';
-import { FileSpreadsheet, UserPlus, LogIn } from 'lucide-react';
+import { FileSpreadsheet, LogIn } from 'lucide-react';
 
 export const SignupScreen: React.FC = () => {
   return (

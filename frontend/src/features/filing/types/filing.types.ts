@@ -167,5 +167,11 @@ export interface FilingManagerStats {
   rejectedToday: number;
   totalDepartmentLeads: number;
   acceptanceRatePct: number;
-  efinGatewayStatus: string;
+  efinGatewayStatus?: string;
+  inProgressCount?: number;
+  acceptedCount?: number;
+  rejectedCount?: number;
+  acceptanceRate?: string;
+  avgTransmissionMinutes?: number;
+  periodSuffix?: string;
 }

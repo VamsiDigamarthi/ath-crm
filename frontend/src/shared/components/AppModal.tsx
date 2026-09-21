@@ -7,6 +7,7 @@ export interface AppModalProps {
   isOpen: boolean
   onClose: () => void
   title: ReactNode
+  subtitle?: ReactNode
   children: ReactNode
   footer?: ReactNode
   footerError?: string | null
@@ -14,12 +15,14 @@ export interface AppModalProps {
   closeOnBackdrop?: boolean
   width?: string
   height?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | string
 }
 
 export function AppModal({
   isOpen,
   onClose,
   title,
+  subtitle,
   children,
   footer,
   footerError,
@@ -27,6 +30,7 @@ export function AppModal({
   closeOnBackdrop = false,
   width,
   height,
+  size = 'md',
 }: AppModalProps) {
   const handleEsc = useCallback(
     (e: KeyboardEvent) => {
@@ -47,6 +51,14 @@ export function AppModal({
   }, [isOpen, handleEsc])
 
   if (!isOpen) return null
+
+  const sizeClasses: Record<string, string> = {
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+    '2xl': 'max-w-6xl',
+  }
 
   const panelStyle: CSSProperties = {
     ...(width  && { width }),
@@ -74,22 +86,28 @@ export function AppModal({
         style={panelStyle}
         className={cn(
           'relative z-10 flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden',
-          'w-full max-w-[90vw] max-h-[90vh]',
+          'w-full max-h-[90vh]',
+          sizeClasses[size] || 'max-w-lg',
           className
         )}
       >
         {/* Fixed Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
-          <h2
-            id="app-modal-title"
-            className="text-xl font-semibold text-gray-900 leading-tight"
-          >
-            {title}
-          </h2>
+          <div>
+            <h2
+              id="app-modal-title"
+              className="text-lg font-bold text-gray-900 leading-tight"
+            >
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="text-xs text-gray-500 font-medium mt-0.5">{subtitle}</p>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
