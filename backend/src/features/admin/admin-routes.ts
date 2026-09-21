@@ -14,6 +14,9 @@ import {
   getReturnedLeads,
   assignReturnedLeadsBulk,
   autoRoundRobinReturnedLeads,
+  getSelfSignups,
+  assignSelfSignupsBulk,
+  autoRoundRobinSelfSignups,
 } from "./admin-controller.js";
 import { validateRequest } from "../../middlewares/validate-request.js";
 import {
@@ -132,6 +135,28 @@ router.post(
   requireAuth,
   authorize(Role.ADMIN),
   autoRoundRobinReturnedLeads
+);
+
+// Admin Direct / Online Self-Signups Management
+router.get(
+  "/self-signups",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getSelfSignups
+);
+
+router.post(
+  "/self-signups/assign-bulk",
+  requireAuth,
+  authorize(Role.ADMIN),
+  assignSelfSignupsBulk
+);
+
+router.post(
+  "/self-signups/assign-round-robin",
+  requireAuth,
+  authorize(Role.ADMIN),
+  autoRoundRobinSelfSignups
 );
 
 export { router as adminRouter };

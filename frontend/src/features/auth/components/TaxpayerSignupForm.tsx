@@ -30,11 +30,23 @@ const VISA_OPTIONS = [
   { value: 'OTHER', label: 'Other Visa / Non-Resident' },
 ];
 
-const TAX_YEARS = [2025, 2024, 2023, 2022];
+// Dynamically generate tax years: 2 years in the future to 6 years in the past (descending)
+// E.g., for currentYear 2025: [2027, 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019]
+export const generateTaxYears = (futureOffset = 2, pastOffset = 6): number[] => {
+  const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let yr = currentYear + futureOffset; yr >= currentYear - pastOffset; yr--) {
+    years.push(yr);
+  }
+  return years;
+};
+
+const TAX_YEARS = generateTaxYears(2, 6);
+const CURRENT_TAX_YEAR = new Date().getFullYear();
 
 export const TaxpayerSignupForm: React.FC = () => {
   const navigate = useNavigate();
-  const { setUser } = useAuthStore();
+  const { setUser, refreshUser } = useAuthStore();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -50,7 +62,7 @@ export const TaxpayerSignupForm: React.FC = () => {
       lastName: '',
       email: '',
       phone: '',
-      taxYear: 2025,
+      taxYear: CURRENT_TAX_YEAR,
       visaType: 'H1B',
       ssnTin: '',
     },
@@ -90,7 +102,7 @@ export const TaxpayerSignupForm: React.FC = () => {
         lastName: data.lastName.trim(),
         email: data.email.trim().toLowerCase(),
         phone: data.phone.trim(),
-        taxYear: Number(data.taxYear) || 2025,
+        taxYear: Number(data.taxYear) || CURRENT_TAX_YEAR,
         visaType: data.visaType,
         ssnTin: data.ssnTin?.trim() || null,
       };
@@ -100,6 +112,13 @@ export const TaxpayerSignupForm: React.FC = () => {
 
       if (responseData?.user) {
         setUser(responseData.user);
+      } else if (responseData?.data?.user) {
+        setUser(responseData.data.user);
+      }
+      try {
+        await refreshUser();
+      } catch {
+        // ignore
       }
 
       setIsSuccess(true);

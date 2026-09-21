@@ -27,7 +27,7 @@ export const registerTaxpayerSchema = z.object({
     lastName: z.string().min(2, "Last name must be at least 2 characters"),
     email: z.string().email("Please provide a valid email address"),
     phone: z.string().min(10, "Phone number must be at least 10 digits"),
-    taxYear: z.union([z.number(), z.string()]).transform((val) => Number(val) || 2025).optional(),
+    taxYear: z.union([z.number(), z.string()]).transform((val) => Number(val) || new Date().getFullYear()).optional(),
     visaType: z.string().min(1, "Visa or residency status is required").optional(),
     ssnTin: z.string().optional().nullable(),
   }),

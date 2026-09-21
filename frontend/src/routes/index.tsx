@@ -11,6 +11,7 @@ import { EmployeeManagementScreen } from '@/features/admin/screens/EmployeeManag
 import { AdminCustomerDirectoryScreen } from '@/features/admin/screens/AdminCustomerDirectoryScreen';
 import { AdminEmailTemplatesScreen } from '@/features/admin/screens/AdminEmailTemplatesScreen';
 import { AdminReturnedLeadsScreen } from '@/features/admin/screens/AdminReturnedLeadsScreen';
+import { AdminSelfSignupsScreen } from '@/features/admin/screens/AdminSelfSignupsScreen';
 import { DocumenterDepartmentScreen } from '@/features/documenter/screens/DocumenterDepartmentScreen';
 import { DocumenterManagerDashboardScreen } from '@/features/documenter/screens/DocumenterManagerDashboardScreen';
 import { ManagerScorecardsScreen } from '@/features/documenter/screens/ManagerScorecardsScreen';
@@ -162,6 +163,10 @@ export const router = createBrowserRouter([
           {
             path: 'prospects',
             element: <BulkLeadImportScreen />,
+          },
+          {
+            path: 'self-signups',
+            element: <AdminSelfSignupsScreen />,
           },
           {
             path: 'returned-leads',

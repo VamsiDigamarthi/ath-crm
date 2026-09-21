@@ -201,16 +201,17 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
     lastName,
     email,
     phone,
-    taxYear = 2025,
+    taxYear,
     visaType,
     ssnTin,
   } = req.body;
 
+  const currentYear = new Date().getFullYear();
   const cleanEmail = email.trim().toLowerCase();
   const cleanPhone = phone.trim();
   const cleanFirstName = firstName.trim();
   const cleanLastName = lastName.trim();
-  const targetTaxYear = Number(taxYear) || 2025;
+  const targetTaxYear = Number(taxYear) || currentYear;
   const cleanSsn = ssnTin?.trim() || null;
 
   // 1. Strict Duplicate Check: If already in DB by email, phone, or SSN, directly reject with contact message

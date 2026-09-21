@@ -429,5 +429,68 @@ export const autoRoundRobinReturnedLeads = async (req: Request, res: Response) =
   );
 };
 
+// Admin Self-Signups & Direct Web Registrations
+export const getSelfSignups = async (req: Request, res: Response) => {
+  const { search, visaType, taxYear, stage, priority, page, limit } = req.query;
+
+  const { SelfSignupsService } = await import("./self-signups-service.js");
+  const result = await SelfSignupsService.getSelfSignups({
+    search: typeof search === 'string' ? search : undefined,
+    visaType: typeof visaType === 'string' ? visaType : undefined,
+    taxYear: taxYear ? Number(taxYear) : undefined,
+    stage: typeof stage === 'string' ? stage : undefined,
+    priority: typeof priority === 'string' ? priority : undefined,
+    page: page ? Number(page) : undefined,
+    limit: limit ? Number(limit) : undefined,
+  });
+
+  return SuccessHandler.handle(res, "Self-registered leads fetched successfully", result, 200);
+};
+
+export const assignSelfSignupsBulk = async (req: Request, res: Response) => {
+  const { applicationIds, targetAgentId } = req.body;
+  const adminUserId = req.currentUser?.id;
+
+  if (!adminUserId) {
+    throw new BadRequestError("Authenticated Admin User ID is required");
+  }
+
+  const { SelfSignupsService } = await import("./self-signups-service.js");
+  const result = await SelfSignupsService.assignSelfSignupsBulk({
+    applicationIds,
+    targetAgentId,
+    adminUserId,
+  });
+
+  return SuccessHandler.handle(
+    res,
+    `Successfully assigned ${result.assignedCount} direct online lead(s) to Calling Agent ${result.targetAgent.email}`,
+    result,
+    200
+  );
+};
+
+export const autoRoundRobinSelfSignups = async (req: Request, res: Response) => {
+  const { applicationIds } = req.body;
+  const adminUserId = req.currentUser?.id;
+
+  if (!adminUserId) {
+    throw new BadRequestError("Authenticated Admin User ID is required");
+  }
+
+  const { SelfSignupsService } = await import("./self-signups-service.js");
+  const result = await SelfSignupsService.autoRoundRobinSelfSignups({
+    applicationIds,
+    adminUserId,
+  });
+
+  return SuccessHandler.handle(
+    res,
+    `Successfully distributed ${result.totalDistributed} online lead(s) evenly across ${result.agentsCount} Calling Agent(s) via Round-Robin`,
+    result,
+    200
+  );
+};
+
 
 

@@ -6,6 +6,7 @@ interface AuthState {
   user: any;
   isAuthenticated: boolean;
   isLoading: boolean;
+  setUser: (user: any) => void;
   login: (identifier: string) => Promise<void>;
   verify: (identifier: string, otp: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -16,6 +17,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+
+  setUser: (user: any) => {
+    set({ user, isAuthenticated: Boolean(user), isLoading: false });
+    if (user) {
+      useNotificationStore.getState().fetchNotifications();
+    }
+  },
 
   refreshUser: async () => {
     try {
