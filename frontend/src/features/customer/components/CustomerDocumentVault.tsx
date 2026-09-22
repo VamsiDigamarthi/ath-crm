@@ -10,6 +10,7 @@ import { VaultUploadDropzone } from './vault/VaultUploadDropzone';
 import { VaultDocumentsTable } from './vault/VaultDocumentsTable';
 import { CustomerDriveLinkModal } from './vault/CustomerDriveLinkModal';
 import { CustomerMultiUploadModal } from './vault/CustomerMultiUploadModal';
+import { DOCUMENT_TYPES } from '@/shared/constants/document-taxonomy';
 
 interface CustomerDocumentVaultProps {
   isConvertedCustomer?: boolean;
@@ -27,10 +28,14 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
 
   // All Business Logic and State encapsulated in Hook
   const {
+    allDocuments,
     documents,
     filteredDocs,
     physicalFiles,
     driveLinks,
+    docTypeCounts,
+    activeDocType,
+    setActiveDocType,
     selectedYear,
     setSelectedYear,
     activeVaultTab,
@@ -72,11 +77,11 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
     handleUploadDriveLink,
   } = useCustomerDocuments(context.selectedTaxYear);
 
-  // Tabs for All Items, Files, and Drive Links
+  // Tabs for All Items, Files, and Drive Links within active document type
   const vaultTabs: TabItem[] = [
     {
       id: 'ALL',
-      label: 'All Items',
+      label: 'All Items in Section',
       count: documents.length,
     },
     {
@@ -101,16 +106,11 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
               {isConvertedCustomer ? 'Multi-Year Tax Document Vault' : 'TY 2025 Intake Document Vault'}
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              {documents.length} Items Total
+              {allDocuments.length} Total Items
             </span>
-            {driveLinks.length > 0 && (
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                {driveLinks.length} Drive Link(s)
-              </span>
-            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Upload your official W-2, 1099, and FBAR statements or attach a Google Drive / OneDrive folder link for CPA review.
+            Upload your official W-2, 1099, FBAR, and tax statements or attach a Google Drive / OneDrive folder link for CPA review.
           </p>
         </div>
 
@@ -173,10 +173,71 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         </div>
       </div>
 
-      {/* 2. Drag & Drop Upload Sub-Component */}
+      {/* 2. 4 DOCUMENT TYPE TABS */}
+      <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          {DOCUMENT_TYPES.map((dt) => {
+            const Icon = dt.icon;
+            const count = docTypeCounts[dt.id] || 0;
+            const isActive = activeDocType === dt.id;
+
+            return (
+              <button
+                key={dt.id}
+                type="button"
+                onClick={() => setActiveDocType(dt.id)}
+                className={`flex items-start gap-3 p-3.5 rounded-xl text-left transition-all cursor-pointer relative ${
+                  isActive
+                    ? 'bg-slate-900 text-white shadow-sm ring-2 ring-slate-900 ring-offset-1'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold ${
+                    isActive
+                      ? 'bg-white/15 text-white'
+                      : dt.colorClass
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-xs font-bold truncate">
+                      {dt.number}) {dt.label}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : count > 0
+                          ? 'bg-emerald-100 text-[#16A34A] border border-emerald-200'
+                          : 'bg-slate-200/80 text-slate-500'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </div>
+                  <p
+                    className={`text-[11px] line-clamp-1 mt-0.5 ${
+                      isActive ? 'text-slate-300' : 'text-slate-500'
+                    }`}
+                  >
+                    {dt.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. Drag & Drop Upload Sub-Component */}
       <VaultUploadDropzone
         uploadCategory={uploadCategory}
         setUploadCategory={setUploadCategory}
+        activeDocType={activeDocType}
         stagedFile={stagedFile}
         uploading={uploading}
         uploadProgress={uploadProgress}
@@ -191,7 +252,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         onOpenDriveLinkModal={() => setIsDriveLinkModalOpen(true)}
       />
 
-      {/* 3. Tab Switcher: All Items vs Uploaded Files vs Drive Links */}
+      {/* 4. Tab Switcher: All Items vs Uploaded Files vs Drive Links (for active doc type) */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-1">
         <AppTabs
           tabs={vaultTabs}
@@ -201,12 +262,13 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         />
       </div>
 
-      {/* 4. Uploaded Documents Table Sub-Component */}
+      {/* 5. Uploaded Documents Table Sub-Component */}
       <VaultDocumentsTable
         selectedYear={selectedYear}
         filteredDocs={filteredDocs}
         filterCategory={filterCategory}
         setFilterCategory={setFilterCategory}
+        activeDocType={activeDocType}
         loading={loading}
         onOpenUpload={() => fileInputRef.current?.click()}
         onOpenDriveLinkModal={() => setIsDriveLinkModalOpen(true)}
@@ -214,16 +276,17 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         onDelete={deleteDocument}
       />
 
-      {/* 5. Drive Link Upload Modal */}
+      {/* 6. Drive Link Upload Modal */}
       <CustomerDriveLinkModal
         isOpen={isDriveLinkModalOpen}
         onClose={() => setIsDriveLinkModalOpen(false)}
         onSubmit={handleUploadDriveLink}
         isSubmitting={isSubmittingLink}
         selectedTaxYear={selectedYear}
+        activeDocType={activeDocType}
       />
 
-      {/* 6. Multi-Document Staging & Upload Modal */}
+      {/* 7. Multi-Document Staging & Upload Modal */}
       <CustomerMultiUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => {
@@ -241,6 +304,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         uploadProgress={uploadProgress}
         formatFileSize={formatFileSize}
         selectedTaxYear={selectedYear}
+        activeDocType={activeDocType}
       />
     </div>
   );

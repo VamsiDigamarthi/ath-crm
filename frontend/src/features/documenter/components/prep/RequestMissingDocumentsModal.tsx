@@ -25,23 +25,82 @@ export interface RequestMissingDocumentsModalProps {
   onRequestSent?: () => void;
 }
 
-const DEFAULT_CATEGORIES = [
-  'W-2 Wage Statement (Employer)',
-  '1099-INT Bank Interest Statement',
-  '1099-DIV Dividend & Distribution',
-  '1099-B Brokerage & Stock Sales',
-  '1099-MISC / 1099-NEC Self-Employment',
-  '1099-R / SSA-1099 Retirement & Pension',
-  '1098 Mortgage Interest Statement',
-  '1095-A / B / C Health Insurance Form',
-  'Taxpayer ID / Passport / Visa Copy',
-  'State ID / Driver\'s License Copy',
-  'Prior Year 1040 Tax Return',
-  'FBAR / Foreign Bank Account Summary',
-  'Schedule C Business Expense Receipts',
-  'Rental Property Income / Expense Records',
-  'Form 8879 E-Sign Signature Form',
+const CATEGORIES_BY_TYPE = [
+  {
+    type: 'INDIVIDUAL',
+    title: '1. Individual Documents',
+    icon: '👤',
+    categories: [
+      'W-2 Wage Statement (Employer)',
+      '1099-INT Bank Interest Statement',
+      '1099-DIV Dividend & Distribution',
+      '1099-B Brokerage & Stock Sales',
+      '1098 Mortgage Interest Statement',
+      '1098-T Tuition Fees Statement',
+      '1098-E Student Loan Interest',
+      '1099-R / SSA-1099 Retirement & Pension',
+      '1099-G State Refund / Unemployment',
+      '1099-SA HSA Distributions',
+      '1095-A / B / C Health Insurance Form',
+      'Taxpayer ID / Passport / Visa Copy',
+      'State ID / Driver\'s License Copy',
+      'Prior Year 1040 Tax Return',
+      'Form 8879 E-Sign Signature Form',
+      'Daycare / Solar / Property Tax Receipts',
+      'Rental Property Income / Expense Records',
+    ],
+  },
+  {
+    type: 'BUSINESS',
+    title: '2. Business Documents',
+    icon: '💼',
+    categories: [
+      'Schedule C Business Profit & Loss Ledger',
+      '1099-MISC / 1099-NEC Self-Employment',
+      '1099-K Payment Card Network (Stripe/PayPal)',
+      'Schedule K-1 (Form 1065 / 1120-S)',
+      'Form 1120 / 1120-S Corporate Tax Return',
+      'Form 1065 Partnership Tax Return',
+      'Business Profit & Loss Statement (P&L)',
+      'Business Bank & Merchant Statements',
+      'Articles of Incorporation / EIN Letter',
+      'Business Invoices & Expense Receipts',
+    ],
+  },
+  {
+    type: 'TAX_COMPLIANCE',
+    title: '3. Tax compliance FBAR/FATCA/Other',
+    icon: '🛡️',
+    categories: [
+      'FBAR FinCEN 114 Foreign Indian Bank Accounts',
+      'FATCA Form 8938 Specified Foreign Assets',
+      'Indian Bank Statements (SBI/HDFC/ICICI NRE & NRO)',
+      'Indian Fixed Deposits & Recurring Deposit Records',
+      'Indian Income Tax Return (ITR) / Form 16 / Salary Slips',
+      'Indian Form 26AS / AIS / TIS Annual Statement',
+      'Indian Mutual Funds & Demat Capital Gains',
+      'Traditional Insurance / ULIP Policy Records',
+      'Foreign Real Estate Purchase & Sale Records',
+      'Other Foreign Compliance Documents',
+    ],
+  },
+  {
+    type: 'TAX_AUDIT',
+    title: '4. Tax Audit',
+    icon: '⚖️',
+    categories: [
+      'IRS Notice / Audit Inquiry Letter (CP2000, CP501)',
+      'State Tax Department Notice / Inquiry Letter',
+      'Form 2848 Power of Attorney (Representation)',
+      'Form 8821 Tax Information Authorization',
+      'Audit Substantiation Expense Receipts & Proofs',
+      'IRS Audit Examination Report / Closing Letter',
+      'Tax Penalty Abatement Request Records',
+    ],
+  },
 ];
+
+const ALL_DEFAULT_CATEGORIES = CATEGORIES_BY_TYPE.flatMap((g) => g.categories);
 
 export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModalProps> = ({
   isOpen,
@@ -53,6 +112,7 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
   onRequestSent,
 }) => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [activeTypeTab, setActiveTypeTab] = useState<string>('INDIVIDUAL');
   const [customDocInput, setCustomDocInput] = useState<string>('');
   const [customNotes, setCustomNotes] = useState<string>('');
   const [sendInApp, setSendInApp] = useState<boolean>(true);
@@ -82,11 +142,24 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
   };
 
   const selectAll = () => {
-    setSelectedCategories([...DEFAULT_CATEGORIES]);
+    setSelectedCategories([...ALL_DEFAULT_CATEGORIES]);
   };
 
   const clearAll = () => {
     setSelectedCategories([]);
+  };
+
+  const selectCurrentTabCategories = () => {
+    const group = CATEGORIES_BY_TYPE.find((g) => g.type === activeTypeTab);
+    if (!group) return;
+    const newItems = group.categories.filter((c) => !selectedCategories.includes(c));
+    setSelectedCategories((prev) => [...prev, ...newItems]);
+  };
+
+  const clearCurrentTabCategories = () => {
+    const group = CATEGORIES_BY_TYPE.find((g) => g.type === activeTypeTab);
+    if (!group) return;
+    setSelectedCategories((prev) => prev.filter((c) => !group.categories.includes(c)));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,12 +206,15 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
     }
   };
 
+  const activeGroup = CATEGORIES_BY_TYPE.find((g) => g.type === activeTypeTab) || CATEGORIES_BY_TYPE[0];
+  const activeTabSelectedCount = activeGroup.categories.filter((c) => selectedCategories.includes(c)).length;
+
   return (
     <AppModal
       isOpen={isOpen}
       onClose={onClose}
       title="Request Missing Documents from Client"
-      width="680px"
+      width="720px"
     >
       <form onSubmit={handleSubmit} className="space-y-4 font-sans py-1 text-slate-800">
         {/* Banner Header */}
@@ -151,7 +227,7 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
               Notify {customerName} for Required Tax Documents
             </div>
             <div className="text-purple-700 text-[11px] mt-0.5">
-              Select the documents needed to continue preparation. The taxpayer will receive an instant checklist alert to upload them into their vault.
+              Select documents across <strong>Individual</strong>, <strong>Business</strong>, <strong>Tax Compliance</strong> &amp; <strong>Tax Audit</strong> categories.
               {customerEmail && (
                 <span className="block mt-0.5 font-medium text-slate-600">
                   Target Email: <strong>{customerEmail}</strong>
@@ -161,20 +237,20 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
           </div>
         </div>
 
-        {/* Category Multi-Select Section */}
-        <div className="space-y-2">
+        {/* 4 Document Type Tabs */}
+        <div className="space-y-2.5">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-blue-600" />
-              <span>Select Missing Document Categories ({selectedCategories.length} selected)</span>
+              <span>Document Type Categories ({selectedCategories.length} total selected)</span>
             </label>
             <div className="flex items-center gap-2 text-[11px]">
               <button
                 type="button"
                 onClick={selectAll}
-                className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                className="text-blue-600 hover:text-blue-800 font-bold cursor-pointer"
               >
-                Select All
+                Select All ({ALL_DEFAULT_CATEGORIES.length})
               </button>
               <span className="text-slate-300">•</span>
               <button
@@ -182,21 +258,73 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
                 onClick={clearAll}
                 className="text-slate-500 hover:text-slate-700 font-semibold cursor-pointer"
               >
-                Clear
+                Clear All
               </button>
             </div>
           </div>
 
-          {/* Quick Category Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50/50">
-            {DEFAULT_CATEGORIES.map((category) => {
+          {/* 4 Tabs Header */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
+            {CATEGORIES_BY_TYPE.map((g) => {
+              const count = g.categories.filter((c) => selectedCategories.includes(c)).length;
+              const isActive = activeTypeTab === g.type;
+              return (
+                <button
+                  key={g.type}
+                  type="button"
+                  onClick={() => setActiveTypeTab(g.type)}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer truncate ${
+                    isActive
+                      ? 'bg-white text-slate-900 shadow-2xs border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <span className="shrink-0">{g.icon}</span>
+                  <span className="truncate">{g.title.split('. ')[1]?.split(' ')[0] || g.type}</span>
+                  {count > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tab Sub-Header with per-tab quick select */}
+          <div className="flex items-center justify-between px-1 text-[11px]">
+            <span className="font-bold text-slate-700">
+              {activeGroup.title} ({activeTabSelectedCount}/{activeGroup.categories.length} selected)
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={selectCurrentTabCategories}
+                className="text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
+              >
+                Select {activeGroup.title.split('. ')[1]}
+              </button>
+              <span className="text-slate-300">•</span>
+              <button
+                type="button"
+                onClick={clearCurrentTabCategories}
+                className="text-slate-500 hover:text-slate-700 font-semibold cursor-pointer"
+              >
+                Clear Section
+              </button>
+            </div>
+          </div>
+
+          {/* Category Grid for Active Tab */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto p-2 border border-slate-200 rounded-xl bg-slate-50/50">
+            {activeGroup.categories.map((category) => {
               const isSelected = selectedCategories.includes(category);
               return (
                 <button
                   key={category}
                   type="button"
                   onClick={() => toggleCategory(category)}
-                  className={`flex items-center gap-2.5 p-2 rounded-lg text-left text-xs transition-all cursor-pointer border ${
+                  className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs transition-all cursor-pointer border ${
                     isSelected
                       ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold shadow-2xs'
                       : 'bg-white border-slate-200/80 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
@@ -227,7 +355,7 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
                   handleAddCustomDoc();
                 }
               }}
-              placeholder="Type other custom document name (e.g. Robinhood Crypto 1099-B)..."
+              placeholder="Type other custom document name (e.g. Robinhood Crypto 1099-B, Indian Demat Statement)..."
               className="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1.5 focus:ring-blue-500 bg-white placeholder-slate-400"
             />
             <Button
@@ -245,13 +373,13 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
 
           {/* Selected Badges Pill Box */}
           {selectedCategories.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-blue-50/70 border border-blue-200">
+            <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-blue-50/70 border border-blue-200 max-h-24 overflow-y-auto">
               {selectedCategories.map((cat) => (
                 <span
                   key={cat}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-white text-blue-800 border border-blue-200 shadow-2xs"
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-white text-blue-800 border border-blue-200 shadow-2xs"
                 >
-                  <span>{cat}</span>
+                  <span className="truncate max-w-[200px]">{cat}</span>
                   <button
                     type="button"
                     onClick={() => removeCategory(cat)}

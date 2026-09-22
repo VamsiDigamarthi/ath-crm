@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   FileCheck, 
   FileText, 
@@ -21,7 +21,11 @@ import { AppSelect } from '@/shared/components/AppSelect';
 import { type CustomerDocumentItem } from '../../services/customer-api';
 import { isDriveLinkDoc } from '../../hooks/useCustomerDocuments';
 import { CustomerDocumentPreviewModal } from './CustomerDocumentPreviewModal';
-import { CATEGORY_FILTER_OPTIONS } from '../../constants/upload-categories';
+import { 
+  type DocumentTypeId, 
+  getCategoriesForType, 
+  getCategoryBadgeInfo 
+} from '@/shared/constants/document-taxonomy';
 import toast from 'react-hot-toast';
 
 interface VaultDocumentsTableProps {
@@ -29,6 +33,7 @@ interface VaultDocumentsTableProps {
   filteredDocs: CustomerDocumentItem[];
   filterCategory: string;
   setFilterCategory: (cat: string) => void;
+  activeDocType?: DocumentTypeId;
   loading: boolean;
   onOpenUpload: () => void;
   onOpenDriveLinkModal?: () => void;
@@ -41,6 +46,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
   filteredDocs,
   filterCategory,
   setFilterCategory,
+  activeDocType = 'INDIVIDUAL',
   loading,
   onOpenUpload,
   onOpenDriveLinkModal,
@@ -49,58 +55,21 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
 }) => {
   const [previewDoc, setPreviewDoc] = useState<CustomerDocumentItem | null>(null);
 
+  const categoryOptions = useMemo(() => {
+    const typeCategories = getCategoriesForType(activeDocType);
+    return [
+      { label: 'All Categories in Section', value: 'ALL' },
+      ...typeCategories.map((c) => ({ label: c.label, value: c.value })),
+    ];
+  }, [activeDocType]);
+
   const getCategoryBadge = (cat: string) => {
-    switch (cat) {
-      case 'GOOGLE_DRIVE_LINK':
-      case 'DRIVE_LINK':
-        return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1 w-fit">
-            <Globe className="w-3 h-3 text-indigo-500" />
-            <span>Drive Folder</span>
-          </span>
-        );
-      case 'W2_WAGES':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">W-2 Wages</span>;
-      case '1099_BROKERAGE':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">1099-B Stocks</span>;
-      case '1099_INT':
-      case '1099_INT_DIV':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">1099-INT Interest</span>;
-      case '1099_DIV':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">1099-DIV Dividends</span>;
-      case '1098_T_TUITION':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200">1098-T Tuition</span>;
-      case '1098_E_STUDENT_LOAN':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200">1098-E Loan</span>;
-      case '1099_MISC':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200">1099-MISC</span>;
-      case '1099_G_STATE_REFUND':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">1099-G State</span>;
-      case '1099_R_RETIREMENT':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">1099-R Pension</span>;
-      case '1099_SA_HSA':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">1099-SA HSA</span>;
-      case '1099_HC_MA_HEALTH':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200">1099-HC Health</span>;
-      case '1095_A_MARKETPLACE':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200">1095-A ACA</span>;
-      case 'W2_G_GAMBLING':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-50 text-yellow-800 border border-yellow-200">W-2G Gaming</span>;
-      case 'STOCK_3921_3922':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">3921/3922 ESPP</span>;
-      case 'FBAR_FOREIGN':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">FBAR Indian</span>;
-      case 'PRIOR_YEAR_RETURN':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300">Prior Tax Return</span>;
-      case 'MORTGAGE_1098':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">1098 Mortgage</span>;
-      case 'VISA_IDENTITY':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">Visa / I-797</span>;
-      case 'FINAL_1040_RETURN':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Form 1040 Certified</span>;
-      default:
-        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">Tax Document</span>;
-    }
+    const info = getCategoryBadgeInfo(cat);
+    return (
+      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${info.badgeBg} ${info.badgeText} border ${info.badgeBorder} inline-flex items-center gap-1`}>
+        {info.label}
+      </span>
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -144,9 +113,9 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
             </span>
           </div>
 
-          <div className="w-64">
+          <div className="w-72">
             <AppSelect
-              options={CATEGORY_FILTER_OPTIONS}
+              options={categoryOptions}
               value={filterCategory}
               onChange={(val) => setFilterCategory(val || 'ALL')}
               placeholder="Filter by Category"

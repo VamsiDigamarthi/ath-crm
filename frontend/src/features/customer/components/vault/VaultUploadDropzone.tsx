@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { UploadCloud, FileText, X, RotateCcw, FileUp, Link2, Plus } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSelect } from '@/shared/components/AppSelect';
-import { UPLOAD_CATEGORIES } from '../../constants/upload-categories';
+import { 
+  type DocumentTypeId, 
+  getCategoriesForType, 
+  getCategoryBadgeInfo 
+} from '@/shared/constants/document-taxonomy';
 
 interface VaultUploadDropzoneProps {
   uploadCategory: string;
   setUploadCategory: (cat: string) => void;
+  activeDocType?: DocumentTypeId;
   stagedFile: File | null;
   uploading: boolean;
   uploadProgress: number;
@@ -24,6 +29,7 @@ interface VaultUploadDropzoneProps {
 export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
   uploadCategory,
   setUploadCategory,
+  activeDocType = 'INDIVIDUAL',
   stagedFile,
   uploading,
   uploadProgress,
@@ -37,6 +43,13 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
   formatFileSize,
   onOpenDriveLinkModal,
 }) => {
+  const categoryOptions = useMemo(() => {
+    return getCategoriesForType(activeDocType, false).map((c) => ({
+      label: c.label,
+      value: c.value,
+    }));
+  }, [activeDocType]);
+
   return (
     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
       {/* Category Selection Bar & Action Buttons */}
@@ -48,12 +61,12 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
 
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500">Default Type:</span>
-            <div className="w-64">
+            <span className="text-xs font-bold text-slate-500">Category:</span>
+            <div className="w-72">
               <AppSelect
-                options={UPLOAD_CATEGORIES}
+                options={categoryOptions}
                 value={uploadCategory}
-                onChange={(val) => setUploadCategory(val || 'W2_WAGES')}
+                onChange={(val) => setUploadCategory(val || categoryOptions[0]?.value || 'W2_WAGES')}
                 placeholder="Select Category"
               />
             </div>
@@ -119,7 +132,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
                     {stagedFile.name}
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                    {UPLOAD_CATEGORIES.find((c) => c.value === uploadCategory)?.label || uploadCategory}
+                    {getCategoryBadgeInfo(uploadCategory).label}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
