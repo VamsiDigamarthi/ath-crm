@@ -138,7 +138,8 @@ export class SalesService {
       const grossIncome = Number(draft.grossIncome) || computedGross;
       const validFedRefund = hasDraftData ? fedRefund : (Number(draft.estimatedRefund) || 0);
       const validStateRefund = hasDraftData ? stateRefund : (Number(draft.estimatedStateRefund) || 0);
-      const stdDeduction = Number(draft.standardDeduction) || (customer?.maritalStatus?.includes('Joint') ? 29200 : 14600);
+      const isMarriedJoint = customer?.maritalStatus?.includes('Joint') || customer?.maritalStatus === 'Married' || (customer?.maritalStatus?.includes('Married') && !customer?.maritalStatus?.includes('Separately'));
+      const stdDeduction = Number(draft.standardDeduction) || (isMarriedJoint ? 29200 : 14600);
       const validTaxable = Number(draft.taxableIncome) || Math.max(0, grossIncome - stdDeduction);
       const validTax = Number(draft.taxLiability) || 0;
       const validWithholding = Number(draft.fedWithheld) || (validFedRefund > 0 ? (validTax + validFedRefund) : Math.max(0, validTax - balanceDue));
@@ -272,7 +273,7 @@ export class SalesService {
           capitalGains: Number(draft.capitalGains) || 0,
           otherIncome: Number(draft.otherIncome) || 0,
           grossIncome,
-          deductionType: draft.deductionType || (customer?.maritalStatus?.includes('Joint') ? 'STANDARD (MFJ)' : 'STANDARD (Single)'),
+          deductionType: draft.deductionType || (isMarriedJoint ? 'STANDARD (MFJ)' : 'STANDARD (Single)'),
           standardDeduction: stdDeduction,
           effectiveDeduction: Number(draft.effectiveDeduction) || stdDeduction,
           taxableIncome: validTaxable,
@@ -793,7 +794,8 @@ export class SalesService {
     const grossIncome = Number(draft.grossIncome) || computedGross;
     const validFedRefund = hasDraftData ? fedRefund : (Number(draft.estimatedRefund) || 0);
     const validStateRefund = hasDraftData ? stateRefund : (Number(draft.estimatedStateRefund) || 0);
-    const stdDeduction = Number(draft.standardDeduction) || (customer?.maritalStatus?.includes('Joint') ? 29200 : 14600);
+    const isMarriedJoint = customer?.maritalStatus?.includes('Joint') || customer?.maritalStatus === 'Married' || (customer?.maritalStatus?.includes('Married') && !customer?.maritalStatus?.includes('Separately'));
+    const stdDeduction = Number(draft.standardDeduction) || (isMarriedJoint ? 29200 : 14600);
     const validTaxable = Number(draft.taxableIncome) || Math.max(0, grossIncome - stdDeduction);
     const validTax = Number(draft.taxLiability) || 0;
     const validWithholding = Number(draft.fedWithheld) || (validFedRefund > 0 ? (validTax + validFedRefund) : Math.max(0, validTax - balanceDue));
@@ -917,7 +919,7 @@ export class SalesService {
         capitalGains: Number(draft.capitalGains) || 0,
         otherIncome: Number(draft.otherIncome) || 0,
         grossIncome,
-        deductionType: draft.deductionType || (customer?.maritalStatus?.includes('Joint') ? 'STANDARD (MFJ)' : 'STANDARD (Single)'),
+        deductionType: draft.deductionType || (isMarriedJoint ? 'STANDARD (MFJ)' : 'STANDARD (Single)'),
         standardDeduction: stdDeduction,
         effectiveDeduction: Number(draft.effectiveDeduction) || stdDeduction,
         taxableIncome: validTaxable,

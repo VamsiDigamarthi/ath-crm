@@ -1,6 +1,6 @@
 import apiClient from '@/lib/api-client';
 
-export interface SelfSignupLeadItem {
+export interface SelfSignupLeadItem extends Record<string, unknown> {
   id: string;
   customerId: string;
   taxYear: number;

@@ -56,7 +56,7 @@ export const TaxpayerSignupForm: React.FC = () => {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterTaxpayerInput>({
-    resolver: zodResolver(registerTaxpayerSchema),
+    resolver: zodResolver(registerTaxpayerSchema) as any,
     defaultValues: {
       firstName: '',
       lastName: '',

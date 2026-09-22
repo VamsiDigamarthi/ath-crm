@@ -18,7 +18,8 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
 
   const grossIncome = Number(draft.grossIncome || lead.grossIncome) || 0;
   const w2Wages = Number(draft.w2Wages) || grossIncome;
-  const stdDeduction = Number(draft.standardDeduction || draft.effectiveDeduction) || (lead.maritalStatus?.includes('Joint') ? 29200 : 14600);
+  const isMarriedJoint = lead.maritalStatus?.includes('Joint') || lead.maritalStatus === 'Married' || (lead.maritalStatus?.includes('Married') && !lead.maritalStatus?.includes('Separately'));
+  const stdDeduction = Number(draft.standardDeduction || draft.effectiveDeduction) || (isMarriedJoint ? 29200 : 14600);
   const taxableIncome = Number(draft.taxableIncome) || Math.max(0, grossIncome - stdDeduction);
   const taxLiability = Number(draft.taxLiability) || 0;
   const fedRefund = Number(draft.federalRefund ?? lead.federalRefund) || 0;
@@ -111,7 +112,7 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
                 <div className="flex items-center justify-between text-slate-600">
                   <span>Filing Category / Type</span>
                   <span className="font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
-                    {lead.maritalStatus?.includes('Joint') ? 'Married Filing Jointly (MFJ)' : 'Single Taxpayer'}
+                    {isMarriedJoint ? 'Married (MFJ)' : 'Single Taxpayer'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600">
