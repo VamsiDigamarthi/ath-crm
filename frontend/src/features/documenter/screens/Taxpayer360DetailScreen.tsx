@@ -472,7 +472,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           { id: 'TIMELINE', label: 'Call History & Outreach Timeline', count: callLogs.length },
           { id: 'DOCUMENTS', label: 'Client Documents Vault', count: (lead?.documents || currentLead.documents || []).length },
           { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
-          { id: 'ORGANIZER', label: '9-Module Intake Form' },
+          { id: 'ORGANIZER', label: 'Tax Organizer' },
           ...(isDualRole ? [{ id: 'SALES_PITCH', label: 'Sales Pitch & Pricing' }] : []),
         ]}
         activeTab={activeTab}
@@ -494,7 +494,9 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
             <TaxPrepDocumentVault
               leadId={currentLead.id}
+              applicationId={currentLead.id}
               customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+              customerEmail={customer.email || (currentLead.taxpayerEmail as string) || undefined}
               documents={(lead?.documents || currentLead.documents || []) as any}
               onDocumentVerified={fetchLeadDetails}
               onDocumentUploaded={fetchLeadDetails}

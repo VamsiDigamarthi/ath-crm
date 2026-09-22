@@ -196,7 +196,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-purple-600" />
             <span className="font-bold text-slate-900 text-sm">
-              Complete 9-Module Taxpayer Intake Audit Dossier (QA 4-Eyes Verification) — {taxpayerName}
+              Complete Tax Organizer Audit Dossier (QA 4-Eyes Verification) — {taxpayerName}
             </span>
           </div>
         }

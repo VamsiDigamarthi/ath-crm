@@ -160,7 +160,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
   const hasSptDays = days2025 !== null;
   const weightedDays = hasSptDays ? ((days2025 || 0) + ((days2024 || 0) / 3) + ((days2023 || 0) / 6)).toFixed(2) : null;
   const sptStatus = m3.residencyStatus || (weightedDays && Number(weightedDays) >= 183 ? 'Form 1040 Resident Alien' : (hasSptDays ? 'Form 1040-NR Non-Resident Alien' : 'Not Calculated / Pending Intake'));
-  const isM3Provided = Boolean(hasSptDays || m3.residencyStatus || submittedModules.includes('m3'));
+  const isM3Provided = Boolean(hasSptDays || m3.residencyStatus || (m3.rentalProperties && m3.rentalProperties.length > 0) || submittedModules.includes('m3'));
 
   // Real Data Extraction - Module 4
   const employerName = m4.employerName || m4.w2Entries?.[0]?.employerName || null;
@@ -169,8 +169,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
   const fedWithheld = parseNum(m4.fedWithholding ?? m4.w2Entries?.[0]?.fedWithholding ?? taxDraftSummary?.fedWithheld);
   const stateWithheld = parseNum(m4.stateWithholding ?? m4.w2Entries?.[0]?.stateWithholding ?? taxDraftSummary?.stateWithheld);
   const stateWages = parseNum(m4.stateWages ?? m4.w2Entries?.[0]?.stateWages ?? w2Wages);
-  const rentalList = Array.isArray(m4.rentalProperties) ? m4.rentalProperties : [];
-  const isM4Provided = Boolean(employerName || (w2Wages !== null && w2Wages > 0) || rentalList.length > 0 || submittedModules.includes('m4'));
+  const isM4Provided = Boolean(employerName || (w2Wages !== null && w2Wages > 0) || submittedModules.includes('m4'));
 
   // Real Data Extraction - Module 5
   const interestBank = m5.bankName || m5.payerName || m5.institutionName || null;
@@ -311,7 +310,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-400" />
               <h4 className="font-bold text-xs sm:text-sm text-white tracking-tight">
-                9-Module Taxpayer Intake Dossier
+                Tax Organizer Dossier
               </h4>
             </div>
             <p className="text-[11px] text-slate-300 mt-0.5">
@@ -339,7 +338,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
                 size="sm"
                 onClick={onOpenOrganizerModal}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold h-7 px-2.5 flex items-center gap-1 shadow-xs cursor-pointer ml-1"
-                title="Open full-screen 9-module audit form"
+                title="Open full-screen tax organizer audit form"
               >
                 <ExternalLink className="w-3 h-3" />
                 <span>Full Modal</span>
@@ -551,7 +550,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
                 </div>
                 <div className="min-w-0">
                   <span className="font-bold text-slate-900 block truncate">
-                    Substantial Presence Test (SPT)
+                    State of Residency (SPT)
                   </span>
                   <span className="text-[10px] text-slate-500 truncate block">
                     {hasSptDays ? `${sptStatus} • ${weightedDays} Weighted Days` : 'Residency calculation pending'}

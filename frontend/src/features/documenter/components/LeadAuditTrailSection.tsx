@@ -383,7 +383,7 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
       } else if (isSalesEsignUpload) {
         eventTitle = `IRS Form 8879 E-Sign Authorized & Attached (PIN: ${details?.taxpayerPin || 'Authorized'})`;
       } else if (isOrganizer) {
-        eventTitle = `9-Module Tax Organizer Saved`;
+        eventTitle = `Tax Organizer Saved`;
       } else if (isDocUpload) {
         eventTitle = `Document Uploaded: ${details?.fileName || details?.categoryLabel || 'Tax Document'}`;
       } else if (isDocDelete) {

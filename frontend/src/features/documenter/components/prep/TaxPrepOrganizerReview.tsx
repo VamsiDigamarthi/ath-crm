@@ -3,9 +3,6 @@ import {
   User, 
   Users, 
   Globe, 
-  FileSpreadsheet, 
-  Landmark, 
-  TrendingUp, 
   ShieldCheck, 
   Receipt, 
   Building2, 
@@ -204,19 +201,16 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const modulesList = [
     { id: 'm1', number: 1, title: 'Personal Info, Visa & Marriage', label: 'Personal Info & Visa', icon: User, section: 'Demographics & Family' },
     { id: 'm2', number: 2, title: 'Spouse, Dependents & Daycare', label: 'Spouse & Dependents', icon: Users, section: 'Demographics & Family' },
-    { id: 'm3', number: 3, title: 'Substantial Presence & Multi-State', label: 'Substantial Presence', icon: Globe, section: 'Residency & Visa' },
-    { id: 'm4', number: 4, title: 'W-2 Wages & Rental Properties', label: 'W-2 Wages & Income', icon: FileSpreadsheet, section: 'Wages & Income' },
-    { id: 'm5', number: 5, title: '1099-INT / DIV / OID Interest', label: '1099 Interest & Dividends', icon: Landmark, section: 'Wages & Income' },
-    { id: 'm6', number: 6, title: '1099-B Stocks, ESPP, RSU & Losses', label: '1099-B Stocks & Gains', icon: TrendingUp, section: 'Wages & Income' },
-    { id: 'm7', number: 7, title: 'FBAR / FATCA & Indian Income (INR)', label: 'FBAR & FATCA', icon: ShieldCheck, section: 'Foreign & FBAR' },
-    { id: 'm8', number: 8, title: 'Itemized Deductions & Solar Energy', label: 'Itemized Deductions', icon: Receipt, section: 'Deductions & Credits' },
-    { id: 'm9', number: 9, title: 'Direct Deposit & $10 Referrals', label: 'Direct Deposit & Refund', icon: Building2, section: 'IRS Refund Payout' },
+    { id: 'm3', number: 3, title: 'State of Residency & Multi-State', label: 'STATE OF RESIDENCY', icon: Globe, section: 'Residency & Visa' },
+    { id: 'm7', number: 4, title: 'FBAR / FATCA & Indian Income (INR)', label: 'FBAR & FATCA', icon: ShieldCheck, section: 'Foreign & FBAR' },
+    { id: 'm9', number: 5, title: 'Direct Deposit & Referrals', label: 'Direct Deposit & Refund', icon: Building2, section: 'IRS Refund Payout' },
+    { id: 'm_income_expenses', number: 6, title: 'Income and Expenses', label: 'Income and Expenses', icon: Receipt, section: 'Income & Expenses' },
   ];
 
   const currentOrgData = viewMode === 'AGENT_EDIT' ? localOrganizer : organizer;
   const completedCount = modulesList.filter((m) => isModuleCompleted(m.id, currentOrgData)).length;
-  const progressPercent = Math.round((completedCount / 9) * 100);
-  const currentModIndex = modulesList.findIndex((m) => m.id === selectedModId);
+  const progressPercent = Math.round((completedCount / 6) * 100);
+  const currentModIndex = Math.max(0, modulesList.findIndex((m) => m.id === selectedModId));
 
   return (
     <div className="space-y-4 font-sans selection:bg-emerald-500 selection:text-white">
@@ -229,7 +223,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h4 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                9-Module Taxpayer Intake {viewMode === 'AGENT_EDIT' ? '— Agent Live Entry' : 'Audit'}
+                Tax Organizer {viewMode === 'AGENT_EDIT' ? '— Agent Live Entry' : 'Audit'}
               </h4>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
                 {progressPercent}% Complete
@@ -246,7 +240,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           {/* Progress Pill */}
           <div className="text-right hidden md:block">
-            <span className="text-xs font-bold text-emerald-400">{completedCount} of 9 Modules Completed</span>
+            <span className="text-xs font-bold text-emerald-400">{completedCount} of 6 Sections Completed</span>
             <div className="w-28 bg-slate-800 rounded-full h-1.5 mt-1 overflow-hidden">
               <div 
                 className="bg-emerald-500 h-full rounded-full transition-all duration-300" 
@@ -388,7 +382,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                     Intake Ledger
                   </h4>
                   <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-[#16A34A] border border-emerald-200">
-                    {completedCount}/9 Done
+                    {completedCount}/{modulesList.length} Done
                   </span>
                 </div>
 
@@ -491,33 +485,9 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             />
           )}
 
-          {selectedModId === 'm4' && (
-            <ReviewModule4Wages
-              m4={m4}
-            />
-          )}
-
-          {selectedModId === 'm5' && (
-            <ReviewModule5Interest
-              m5={m5}
-            />
-          )}
-
-          {selectedModId === 'm6' && (
-            <ReviewModule6Stocks
-              m6={m6}
-            />
-          )}
-
           {selectedModId === 'm7' && (
             <ReviewModule7Foreign
               m7={m7}
-            />
-          )}
-
-          {selectedModId === 'm8' && (
-            <ReviewModule8Deductions
-              m8={m8}
             />
           )}
 
@@ -527,6 +497,46 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               showSensitive={showSensitive}
               toggleShow={toggleShow}
             />
+          )}
+
+          {(selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6' || selectedModId === 'm8') && (
+            <div className="space-y-6">
+              {/* Part 1: W-2 Wages */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">Part 1</span>
+                  <h4 className="text-xs font-bold text-slate-800">Form W-2 Wages &amp; Taxable Earnings</h4>
+                </div>
+                <ReviewModule4Wages m4={m4} />
+              </div>
+
+              {/* Part 2: 1099 Interest & Dividends */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700">Part 2</span>
+                  <h4 className="text-xs font-bold text-slate-800">1099-INT / DIV / OID Interest &amp; Dividends</h4>
+                </div>
+                <ReviewModule5Interest m5={m5} />
+              </div>
+
+              {/* Part 3: 1099-B Stocks & Gains */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Part 3</span>
+                  <h4 className="text-xs font-bold text-slate-800">1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</h4>
+                </div>
+                <ReviewModule6Stocks m6={m6} />
+              </div>
+
+              {/* Part 4: Itemized Deductions & Expenses */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Part 4</span>
+                  <h4 className="text-xs font-bold text-slate-800">Itemized Deductions, State Rent &amp; Expenses</h4>
+                </div>
+                <ReviewModule8Deductions m8={m8} />
+              </div>
+            </div>
           )}
 
           {/* Module Navigation Footer */}

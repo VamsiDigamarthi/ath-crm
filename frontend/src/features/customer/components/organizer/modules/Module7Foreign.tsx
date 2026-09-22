@@ -27,12 +27,14 @@ export const Module7Foreign: React.FC<Module7Props> = ({
 
   return (
     <div className="space-y-6 font-sans">
-      <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-950 space-y-2">
+      <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs space-y-2">
         <div className="flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
           <div>
-            <strong className="text-rose-900 block text-sm">Mandatory FBAR &amp; FATCA Reporting Notice:</strong>
-            If your aggregate foreign Indian accounts (Bank/Fixed Deposits/Bonds/Mutual Funds) exceeded <strong>$10,000</strong> (FBAR FinCEN 114) or <strong>$50,000</strong> (FATCA Form 8938) at any time during {selectedTaxYear}, reporting is legally mandatory. Non-reporting attracts civil penalties between <strong>$12,921 to $129,210</strong> or 50% of account balance!
+            <strong className="text-rose-900 block text-sm mb-1">Mandatory FBAR &amp; FATCA Reporting Notice:</strong>
+            <p className="text-slate-900 leading-relaxed font-medium">
+              Report FBAR/FATCA, if your foreign (INDIA) financial accounts, like Bank Accounts/Fixed Deposits/Recurring Accounts/Bonds/Traditional Insurance Policies/Unit Linked Policies/Mutual Funds/Securities, etc., need to report FBAR accounts value over $10,000 and FATCA $50,000-$1,00,000. Non-Reporting FBAR and Non-Filing of FBAR &amp; FATCA will attract CIVIL LEGAL CASES &amp; PENALTIES between $12,921 to $129,210 or 50% of the account balance, whichever is HIGHER!
+            </p>
           </div>
         </div>
       </div>

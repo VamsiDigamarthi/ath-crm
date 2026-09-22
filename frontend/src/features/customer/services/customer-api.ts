@@ -276,6 +276,19 @@ export interface OrganizerData {
       spouseToDate?: string;
     }>;
     cityCountyTaxesRequired: boolean;
+    hasRentalProperty?: boolean;
+    rentalProperties?: Array<{
+      propertyType: 'RESIDENTIAL' | 'COMMERCIAL' | string;
+      address: string;
+      monthsRented2025: number;
+      personalMonths2025: number;
+      ownership: 'TAXPAYER' | 'SPOUSE' | 'JOINT' | string;
+      purchaseDate: string;
+      rentedDate?: string;
+      costOfProperty: number;
+      totalRentalIncome: number;
+      rentalExpenses: number;
+    }>;
   };
   m4_wages: {
     hasW2: boolean;

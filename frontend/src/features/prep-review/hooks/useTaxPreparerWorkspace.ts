@@ -78,8 +78,9 @@ export function useTaxPreparerWorkspace() {
 
   // Standard deduction for 2025: MFJ = 29200, Single = 14600
   const standardDeductionAmount = useMemo(() => {
-    if (taxpayer?.maritalStatus?.toLowerCase().includes('joint')) return 29200;
-    if (taxpayer?.maritalStatus?.toLowerCase().includes('head')) return 21900;
+    const status = taxpayer?.maritalStatus?.toLowerCase() || '';
+    if (status.includes('joint') || status === 'married' || (status.includes('married') && !status.includes('separately'))) return 29200;
+    if (status.includes('head')) return 21900;
     return 14600;
   }, [taxpayer?.maritalStatus]);
 

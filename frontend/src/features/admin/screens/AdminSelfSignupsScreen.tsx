@@ -21,12 +21,10 @@ import {
   Phone,
   Calendar,
   AlertCircle,
-  FileSpreadsheet,
   Layers,
   ArrowUpRight,
   ShieldCheck,
 } from 'lucide-react';
-import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { generateTaxYears } from '@/features/auth/components/TaxpayerSignupForm';
 
@@ -73,7 +71,6 @@ export const AdminSelfSignupsScreen: React.FC = () => {
     isAssignModalOpen,
     setIsAssignModalOpen,
     isAuditDrawerOpen,
-    setIsAuditDrawerOpen,
     activeLeadForAudit,
     handleSearchChange,
     handleVisaChange,
@@ -410,7 +407,6 @@ export const AdminSelfSignupsScreen: React.FC = () => {
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search by taxpayer name, email, phone, or SSN..."
-              size="md"
             />
           </div>
 
@@ -499,33 +495,21 @@ export const AdminSelfSignupsScreen: React.FC = () => {
       {/* Main Table */}
       <div className="rounded-xl bg-white border border-slate-200 shadow-2xs overflow-hidden">
         <AppTable
-          columns={columns}
-          data={leads}
-          loading={isLoading}
-          enableSelection
-          selectedRows={selectedRows}
-          onSelectionChange={setSelectedRows}
+          columns={columns as any}
+          data={leads as any}
+          isLoading={isLoading}
+          selectable
+          selectedRows={selectedRows as any}
+          onSelectionChange={setSelectedRows as any}
           rowKey="id"
-          emptyState={
-            <div className="text-center py-12 space-y-3">
-              <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                <Globe className="w-6 h-6" />
-              </div>
-              <h4 className="text-sm font-bold text-slate-800">No Direct Sign-Ups Found</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                {searchQuery || visaFilter !== 'ALL' || taxYearFilter || stageFilter !== 'ALL'
-                  ? 'No online registered leads match your current search and filter criteria.'
-                  : 'New taxpayer registrations from the public sign-up portal will appear here in real time.'}
-              </p>
-            </div>
-          }
+          emptyText="No direct self-signups found"
           pagination={{
-            page,
-            pageSize: limit,
+            currentPage: page,
+            itemsPerPage: limit,
             totalPages,
-            totalRows: totalItems,
+            totalItems,
             onPageChange: handlePageChange,
-            onPageSizeChange: handleLimitChange,
+            onPerPageChange: handleLimitChange,
           }}
         />
       </div>
@@ -535,10 +519,11 @@ export const AdminSelfSignupsScreen: React.FC = () => {
         <LeadAssignmentModal
           isOpen={isAssignModalOpen}
           onClose={handleCloseAssignModal}
-          agents={agents}
-          selectedCount={selectedRows.length}
-          onAssign={handleDirectAssign}
-          loading={isActionLoading}
+          agents={agents as any}
+          selectedLeads={selectedRows as any}
+          onConfirmDirectAssign={handleDirectAssign}
+          onConfirmRoundRobin={handleAutoRoundRobin}
+          isLoading={isActionLoading}
         />
       )}
 
@@ -551,10 +536,12 @@ export const AdminSelfSignupsScreen: React.FC = () => {
             ? `Audit History: ${activeLeadForAudit.customer?.firstName} ${activeLeadForAudit.customer?.lastName}`
             : 'Lead Audit Trail'
         }
-        size="lg"
       >
         {activeLeadForAudit && (
-          <LeadAuditTrailSection leadId={activeLeadForAudit.id} />
+          <LeadAuditTrailSection
+            leadId={activeLeadForAudit.id}
+            taxpayerName={`${activeLeadForAudit.customer?.firstName || ''} ${activeLeadForAudit.customer?.lastName || ''}`.trim() || 'Taxpayer Client'}
+          />
         )}
       </AppDrawer>
     </div>

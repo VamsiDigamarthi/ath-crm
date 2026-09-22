@@ -74,7 +74,7 @@ export const CustomerLayout: React.FC = () => {
     },
     { 
       id: 'customer_organizer', 
-      label: '9-Module Organizer', 
+      label: 'Tax Organizer', 
       icon: CheckSquare, 
       section: 'Tax Filing Workspace', 
       badge: isConvertedCustomer ? '100%' : '85%', 
@@ -127,7 +127,7 @@ export const CustomerLayout: React.FC = () => {
   const getHeaderTitle = () => {
     switch (activeId) {
       case 'customer_organizer':
-        return '9-Module Comprehensive Tax Organizer';
+        return 'Tax Organizer';
       case 'customer_documents':
         return 'Multi-Year Tax Document Vault & Downloads';
       case 'customer_billing':

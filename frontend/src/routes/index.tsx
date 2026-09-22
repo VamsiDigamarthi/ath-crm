@@ -533,6 +533,14 @@ export const router = createBrowserRouter([
 
   // 6. Common & Fallback Routes
   {
+    path: '/portal/vault',
+    element: <Navigate to="/customer/documents" replace />,
+  },
+  {
+    path: '/portal/documents',
+    element: <Navigate to="/customer/documents" replace />,
+  },
+  {
     path: '/unauthorized',
     element: <UnauthorizedScreen />,
   },

@@ -796,9 +796,18 @@ export class CustomerService {
       },
     };
 
-    // Calculate real completion progress strictly based on actual submitted modules
-    const completedCount = submittedModules.length;
-    const progressPercent = Math.round((completedCount / 9) * 100);
+    // Calculate real completion strictly based on 6 unified sections
+    const effectiveCompletedSet = new Set<string>();
+    submittedModules.forEach((m) => {
+      if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
+        effectiveCompletedSet.add(m);
+      }
+      if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
+        effectiveCompletedSet.add('m_income_expenses');
+      }
+    });
+    const completedCount = effectiveCompletedSet.size;
+    const progressPercent = Math.min(100, Math.round((completedCount / 6) * 100));
 
     return {
       taxYear: activeApp.taxYear,
@@ -806,7 +815,7 @@ export class CustomerService {
       organizer: defaultOrganizer,
       progressPercent,
       completedCount,
-      totalModules: 9,
+      totalModules: 6,
     };
   }
 
@@ -884,8 +893,17 @@ export class CustomerService {
     const submittedModules = Array.from(new Set(newSubmitted));
 
     cleanOrganizerData.submittedModules = submittedModules;
-    const completedCount = submittedModules.length;
-    const progressPercent = Math.round((completedCount / 9) * 100);
+    const effectiveSavedSet = new Set<string>();
+    submittedModules.forEach((m) => {
+      if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
+        effectiveSavedSet.add(m);
+      }
+      if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
+        effectiveSavedSet.add('m_income_expenses');
+      }
+    });
+    const completedCount = effectiveSavedSet.size;
+    const progressPercent = Math.min(100, Math.round((completedCount / 6) * 100));
 
     const updatedSummary = {
       ...currentDraft,
@@ -903,15 +921,16 @@ export class CustomerService {
     });
 
     const moduleNamesMap: Record<string, string> = {
-      m1: 'Module 01 (Personal Info & Demographics)',
-      m2: 'Module 02 (Spouse & Dependents)',
-      m3: 'Module 03 (Substantial Presence & Multi-State)',
-      m4: 'Module 04 (W-2 Wages & Rental Properties)',
-      m5: 'Module 05 (1099-INT / DIV / OID Interest)',
-      m6: 'Module 06 (1099-B Stock & Crypto Capital Gains)',
-      m7: 'Module 07 (Foreign Assets & FBAR)',
-      m8: 'Module 08 (Itemized Deductions & HSA)',
-      m9: 'Module 09 (Direct Deposit Bank Details)',
+      m1: 'Section 01 (Personal Info & Demographics)',
+      m2: 'Section 02 (Spouse & Dependents)',
+      m3: 'Section 03 (Substantial Presence & Multi-State)',
+      m7: 'Section 04 (Foreign Assets & FBAR)',
+      m9: 'Section 05 (Direct Deposit Bank Details)',
+      m_income_expenses: 'Section 06 (Income and Expenses)',
+      m4: 'Section 06 (W-2 Wages & Rental Income)',
+      m5: 'Section 06 (1099 Interest & Dividends)',
+      m6: 'Section 06 (1099-B Stock & Crypto Gains)',
+      m8: 'Section 06 (Itemized Deductions & Expenses)',
     };
     const latestModuleKey = submittedModules[submittedModules.length - 1] || 'm1';
     const latestModuleName = moduleNamesMap[latestModuleKey] || `Section ${latestModuleKey.toUpperCase()}`;
@@ -932,7 +951,7 @@ export class CustomerService {
           progressPercent,
           completedCount,
           source: 'TAXPAYER_CLIENT_PORTAL',
-          remarks: `Taxpayer saved ${latestModuleName} in 9-Module Organizer (${completedCount}/9 verified, ${progressPercent}% complete).`,
+          remarks: `Taxpayer saved ${latestModuleName} in Tax Organizer (${completedCount}/6 verified, ${progressPercent}% complete).`,
           clientEmail: profile.email,
           clientName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email,
           timestamp: new Date().toISOString(),

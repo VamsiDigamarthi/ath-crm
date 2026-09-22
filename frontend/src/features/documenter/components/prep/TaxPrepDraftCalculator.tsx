@@ -35,10 +35,10 @@ interface TaxPrepDraftCalculatorProps {
 }
 
 const FILING_STATUS_OPTIONS = [
-  { label: 'Single ($15,000 Standard Deduction)', value: 'SINGLE' },
-  { label: 'Married Filing Jointly ($30,000 Deduction)', value: 'MFJ' },
-  { label: 'Married Filing Separately ($15,000 Deduction)', value: 'MFS' },
-  { label: 'Head of Household ($22,500 Deduction)', value: 'HOH' },
+  { label: 'Single', value: 'SINGLE' },
+  { label: 'Married', value: 'MFJ' },
+  { label: 'Married Filing Separately', value: 'MFS' },
+  { label: 'Head of Household', value: 'HOH' },
 ];
 
 export const TaxPrepDraftCalculator: React.FC<TaxPrepDraftCalculatorProps> = ({

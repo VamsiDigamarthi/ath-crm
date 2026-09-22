@@ -42,7 +42,7 @@ export function isRouteAllowedForRole(url: string, role?: string): boolean {
   if (url.startsWith('/customer')) {
     return role === 'TAXPAYER_USER';
   }
-  return true;
+  return false;
 }
 
 /**
@@ -58,6 +58,16 @@ export function resolveNotificationClickUrl(notif: AppNotification, userRole?: s
   // Normalize legacy shorthand URLs
   if (directUrl.startsWith('/prep/')) {
     directUrl = directUrl.replace('/prep/', '/prep-review/');
+  }
+
+  // Normalize vault/portal URLs to client documents vault
+  if (
+    directUrl === '/portal/vault' ||
+    directUrl === '/portal/documents' ||
+    directUrl === '/customer/vault' ||
+    directUrl.startsWith('/portal/')
+  ) {
+    directUrl = '/customer/documents';
   }
 
   // 1. If notification has an explicit actionUrl that is permitted for this role, prioritize it
@@ -117,10 +127,22 @@ export function resolveNotificationClickUrl(notif: AppNotification, userRole?: s
 
   // --- CUSTOMER PORTAL ---
   if (userRole === 'TAXPAYER_USER') {
-    if (title.includes('document') || msg.includes('document')) return '/customer/documents';
+    if (
+      title.includes('document') ||
+      msg.includes('document') ||
+      title.includes('upload') ||
+      msg.includes('upload') ||
+      title.includes('missing') ||
+      msg.includes('missing') ||
+      title.includes('vault') ||
+      msg.includes('vault') ||
+      notif.category === 'DOCUMENTER'
+    ) {
+      return '/customer/documents';
+    }
     if (title.includes('organizer') || msg.includes('questionnaire')) return '/customer/organizer';
     if (title.includes('billing') || title.includes('quote') || title.includes('invoice')) return '/customer/billing';
-    return '/customer';
+    return '/customer/documents';
   }
 
   // --- ADMIN PORTAL ---
