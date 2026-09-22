@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { StorageService } from '../../utils/storage-service.js';
+import { EmailService } from '../../utils/email-service.js';
 import { sanitizeObject } from '../customer/customer-validator.js';
 
 export interface DocumenterLeadQuery {
@@ -2003,5 +2004,160 @@ export class DocumenterService {
     });
 
     return updated;
+  }
+
+  /**
+   * Send notification / email to client requesting specific missing document categories
+   */
+  public static async requestMissingDocuments(
+    leadOrAppId: string,
+    agentUserId: string,
+    payload: {
+      documentCategories: string[];
+      customNotes?: string;
+      sendInApp: boolean;
+      sendEmail: boolean;
+    }
+  ) {
+    const { documentCategories = [], customNotes = '', sendInApp = true, sendEmail = false } = payload;
+    if (documentCategories.length === 0 && !customNotes?.trim()) {
+      throw new Error('Please select at least one document category or enter a custom note.');
+    }
+    if (!sendInApp && !sendEmail) {
+      throw new Error('Please select at least one delivery channel (Notification or Email).');
+    }
+
+    // Find lead/application
+    const app = await prisma.taxApplication.findFirst({
+      where: {
+        OR: [{ id: leadOrAppId }, { customerId: leadOrAppId }],
+      },
+      include: {
+        customer: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const agentUser = await prisma.user.findUnique({
+      where: { id: agentUserId },
+      select: { id: true, firstName: true, lastName: true, email: true, role: true },
+    });
+    const actorName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Operations Staff';
+
+    const customerUser = app.customer.user;
+    const customerEmail = app.customer.email || customerUser?.email;
+    const customerName = `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || 'Taxpayer';
+
+    const categoryListFormatted = documentCategories.map((c) => `• ${c}`).join('\n');
+    const noteFormatted = customNotes?.trim() ? `\n\nStaff Note:\n"${customNotes.trim()}"` : '';
+
+    let inAppDelivered = false;
+    let emailDelivered = false;
+
+    // 1. In-App Notification to Customer
+    if (sendInApp && customerUser?.id) {
+      await prisma.notification.create({
+        data: {
+          recipientUserId: customerUser.id,
+          applicationId: app.id,
+          title: 'Action Required: Missing Tax Documents Requested',
+          message: `Your tax agent (${actorName}) requested the following document(s):\n${categoryListFormatted}${noteFormatted}`,
+          category: NotificationCategory.DOCUMENTER,
+          priority: NotificationPriority.HIGH,
+          actionUrl: '/customer/documents',
+          actionLabel: 'Upload to Document Vault',
+          relatedLeadName: customerName,
+        },
+      });
+      inAppDelivered = true;
+    }
+
+    // 2. Email Dispatch to Customer
+    if (sendEmail && customerEmail) {
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 18px; border-radius: 8px; text-align: center; color: white; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px;">Tax Documentation Required</h2>
+            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Tax Year ${app.taxYear} Preparation</p>
+          </div>
+          <p>Dear <strong>${customerName}</strong>,</p>
+          <p>Our tax operations team is reviewing your <strong>Tax Year ${app.taxYear}</strong> return. To ensure accurate calculations, maximize your tax deductions, and avoid filing delays, please upload the following missing document(s) to your secure portal:</p>
+          <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #16a34a; margin: 16px 0;">
+            <h4 style="margin: 0 0 10px 0; color: #0f172a; font-size: 14px;">Requested Documents:</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${documentCategories.map((c) => `<li style="margin-bottom: 6px; font-weight: bold; color: #334155;">${c}</li>`).join('')}
+            </ul>
+            ${customNotes?.trim() ? `<p style="margin-top: 12px; font-style: italic; color: #64748b; font-size: 13px;"><strong>Agent Note:</strong> ${customNotes.trim()}</p>` : ''}
+          </div>
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${process.env.APP_URL || 'http://localhost:5173'}/customer/documents" style="background-color: #16a34a; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px;">Upload Missing Documents</a>
+          </div>
+          <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 24px;">
+            Requested by: <strong>${actorName}</strong> (${agentUser?.role || 'Tax Operations Team'})<br/>
+            TaxCRM Client Secure Vault
+          </p>
+        </div>
+      `;
+
+      await EmailService.sendEmail({
+        to: customerEmail,
+        subject: `[Action Required] Missing Tax Documents Needed for TY${app.taxYear} - ${customerName}`,
+        text: `Dear ${customerName},\n\nPlease upload the following missing document(s) for your TY${app.taxYear} return:\n${categoryListFormatted}${noteFormatted}\n\nUpload link: ${process.env.APP_URL || 'http://localhost:5173'}/customer/documents`,
+        html: emailHtml,
+      });
+      emailDelivered = true;
+    }
+
+    const channelsUsed = [inAppDelivered && 'In-App Notification', emailDelivered && `Email (${customerEmail})`].filter(Boolean).join(' and ');
+
+    // 3. Record AuditLog
+    await prisma.auditLog.create({
+      data: {
+        applicationId: app.id,
+        actorId: agentUserId,
+        actorType: 'AGENT',
+        actorName,
+        actorRole: agentUser?.role || 'DOC_AGENT',
+        action: 'STAGE_CHANGE',
+        moduleKey: 'DOCUMENT_VAULT',
+        details: {
+          actionType: 'MISSING_DOCUMENTS_REQUESTED',
+          requestedCategories: documentCategories,
+          customNotes,
+          sendInApp,
+          sendEmail,
+          recipientEmail: customerEmail,
+          timestamp: new Date().toISOString(),
+          remarks: `Agent ${actorName} requested missing documents (${documentCategories.join(', ')}) via ${channelsUsed || 'Portal'}.`,
+        },
+      },
+    });
+
+    // 4. Record StageHistory note
+    await prisma.stageHistory.create({
+      data: {
+        applicationId: app.id,
+        fromStage: app.currentStage,
+        toStage: app.currentStage,
+        remarks: `Requested missing documents: ${documentCategories.slice(0, 3).join(', ')}${documentCategories.length > 3 ? ` (+${documentCategories.length - 3} more)` : ''}. Channels: ${[inAppDelivered && 'In-App', emailDelivered && 'Email'].filter(Boolean).join(', ')}.`,
+        movedByUserId: agentUserId,
+      },
+    });
+
+    return {
+      success: true,
+      documentCategories,
+      sendInApp: inAppDelivered,
+      sendEmail: emailDelivered,
+      recipientEmail: customerEmail,
+      message: `Successfully sent missing documents request to ${customerName} via ${[inAppDelivered && 'In-App Notification', emailDelivered && 'Email'].filter(Boolean).join(' & ')}!`,
+    };
   }
 }

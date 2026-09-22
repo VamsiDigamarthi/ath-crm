@@ -16,6 +16,7 @@ import {
   deleteLeadDocument,
   saveLeadOrganizer,
   updateLeadPriority,
+  requestMissingDocuments,
 } from './documenter-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
@@ -175,6 +176,14 @@ router.patch(
   requireAuth,
   authorize(...DOCUMENTER_ROLES),
   updateLeadPriority
+);
+
+// 14. Send Missing Documents Notification / Email Request to Client
+router.post(
+  '/leads/:id/request-documents',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  requestMissingDocuments
 );
 
 export { router as documenterRouter };

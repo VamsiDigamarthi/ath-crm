@@ -20,10 +20,12 @@ import {
   Link2,
   ExternalLink,
   Copy,
-  Globe
+  Globe,
+  Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '@/lib/api-client';
+import { RequestMissingDocumentsModal } from './RequestMissingDocumentsModal';
 
 export interface DocumentItem {
   id: string;
@@ -38,6 +40,7 @@ interface TaxPrepDocumentVaultProps {
   leadId?: string;
   applicationId?: string;
   customerName: string;
+  customerEmail?: string;
   documents?: DocumentItem[];
   onDocumentVerified?: (docId: string) => void;
   onDocumentUploaded?: () => void;
@@ -109,7 +112,9 @@ const formatFileSize = (bytes: number): string => {
 
 export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
   leadId,
+  applicationId,
   customerName,
+  customerEmail,
   documents: initialDocuments = [],
   onDocumentVerified,
   onDocumentUploaded,
@@ -119,6 +124,9 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
   
   // Vault Tab Switcher State: 'ALL' | 'FILES' | 'LINKS'
   const [activeVaultTab, setActiveVaultTab] = useState<'ALL' | 'FILES' | 'LINKS'>('ALL');
+
+  // Request Missing Documents Modal State
+  const [isRequestDocsModalOpen, setIsRequestDocsModalOpen] = useState(false);
 
   // Agent Multi-Upload Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -464,6 +472,16 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
           <Button
             size="sm"
             variant="outline"
+            onClick={() => setIsRequestDocsModalOpen(true)}
+            className="bg-white hover:bg-purple-50 text-purple-700 border-purple-300 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer h-7.5 px-3 rounded-lg"
+            title="Send in-app notification and email requesting missing documents from client"
+          >
+            <Bell className="w-3.5 h-3.5 text-purple-600" />
+            <span>Send Notification / Request Docs</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             onClick={() => setIsDriveLinkModalOpen(true)}
             className="bg-white hover:bg-blue-50 text-blue-700 border-blue-300 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer h-7.5 px-3 rounded-lg"
           >
@@ -517,10 +535,19 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
                 ? `No external Google Drive or Cloud links have been added for ${customerName}. You can paste and save drive links shared by the client using the button below.`
                 : activeVaultTab === 'FILES'
                 ? `No files are uploaded yet for ${customerName}. You can upload W-2s, 1099s, Word/Text documents, or ID proofs directly on behalf of the client.`
-                : `No files or drive links are recorded yet for ${customerName}. You can upload physical files or save shared Google Drive links using the buttons below.`}
+                : `No files or drive links are recorded yet for ${customerName}. You can upload physical files, save shared Google Drive links, or send a missing documents request to the client.`}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsRequestDocsModalOpen(true)}
+              className="bg-white hover:bg-purple-50 text-purple-700 border-purple-300 text-xs font-bold inline-flex items-center gap-1.5 shadow-xs cursor-pointer px-4 h-8"
+            >
+              <Bell className="w-3.5 h-3.5 text-purple-600" />
+              <span>Send Notification / Request Missing Docs</span>
+            </Button>
             {(activeVaultTab === 'LINKS' || activeVaultTab === 'ALL') && (
               <Button
                 size="sm"
@@ -1136,6 +1163,19 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
           isLoading={isDeleting}
         />
       )}
+
+      {/* Request Missing Documents Modal */}
+      <RequestMissingDocumentsModal
+        isOpen={isRequestDocsModalOpen}
+        onClose={() => setIsRequestDocsModalOpen(false)}
+        leadId={leadId}
+        applicationId={applicationId}
+        customerName={customerName}
+        customerEmail={customerEmail}
+        onRequestSent={() => {
+          if (onDocumentUploaded) onDocumentUploaded();
+        }}
+      />
     </div>
   );
 };
