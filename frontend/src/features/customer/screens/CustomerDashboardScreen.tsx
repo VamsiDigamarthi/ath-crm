@@ -141,7 +141,7 @@ export const CustomerDashboardScreen: React.FC = () => {
             </div>
             <h4 className="text-sm font-bold text-slate-900">Tax Organizer</h4>
             <p className="text-xs text-slate-500 leading-relaxed font-medium">
-              You are <strong>{organizerPercent}% complete</strong> ({organizerVerifiedCount} of 9 modules verified). Review stock trades & direct deposit routing.
+              You are <strong>{organizerPercent}% complete</strong> ({Math.min(organizerVerifiedCount, 6)} of 6 sections verified). Review income, deductions & direct deposit routing.
             </p>
           </div>
           <Button

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Globe, Home, Calendar, Plus, Trash2 } from 'lucide-react';
+import { Globe, Home, Calendar, Plus, Trash2, Building2 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppInput } from '@/shared/components/AppInput';
+import { AppSelect } from '@/shared/components/AppSelect';
 import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { parseUsDate, formatUsDate } from '../utils/organizer-date-helpers';
 import { type OrganizerData } from '../../../services/customer-api';
@@ -11,6 +12,8 @@ interface Module3Props {
   data: OrganizerData['m3_presence'];
   updateField: <K extends keyof OrganizerData['m3_presence']>(field: K, value: OrganizerData['m3_presence'][K]) => void;
   selectedTaxYear: number;
+  organizerData?: OrganizerData | null;
+  updateModuleField?: <K extends keyof OrganizerData>(moduleKey: K, field: keyof OrganizerData[K], value: any) => void;
   errors?: ValidationErrorMap;
   clearError?: (field: string) => void;
 }
@@ -19,11 +22,16 @@ export const Module3Presence: React.FC<Module3Props> = ({
   data,
   updateField,
   selectedTaxYear,
+  organizerData,
+  updateModuleField,
   errors = {},
   clearError,
 }) => {
   const d = (data || {}) as Partial<OrganizerData['m3_presence']>;
   const historyList = d.statesResidedHistory || [];
+  
+  // Support rental properties stored in either m3_presence or legacy m4_wages
+  const rentalList = d.rentalProperties || organizerData?.m4_wages?.rentalProperties || [];
 
   const maxCurrentDays = isLeapYear(selectedTaxYear) ? 366 : 365;
   const maxPrior1Days = isLeapYear(selectedTaxYear - 1) ? 366 : 365;
@@ -45,51 +53,70 @@ export const Module3Presence: React.FC<Module3Props> = ({
     updateField(field, clamped as any);
   };
 
+  const handleUpdateRentalProperties = (newList: any[]) => {
+    updateField('rentalProperties', newList as any);
+    if (updateModuleField) {
+      updateModuleField('m4_wages', 'rentalProperties', newList as any);
+    }
+  };
+
   return (
     <div className="space-y-6 font-sans">
       {/* Notice Banner */}
       <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 flex items-start gap-2.5">
         <Globe className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
         <div>
-          <strong>Mandatory Substantial Presence Calculation:</strong> Mention your total days present in the US for {selectedTaxYear}, {selectedTaxYear - 1} &amp; {selectedTaxYear - 2}. Maximum allowed is <strong>{maxCurrentDays} days/year</strong>. This legally defines whether you file Form 1040 (Resident) or Form 1040-NR (Non-Resident).
+          <strong>State of Residency &amp; Physical Presence Calculation:</strong> Mention your multi-state residence history, total physical days in the US for {selectedTaxYear}, {selectedTaxYear - 1} &amp; {selectedTaxYear - 2}, and any real estate rental properties owned/rented. Maximum allowed physical days is <strong>{maxCurrentDays} days/year</strong>.
         </div>
       </div>
 
-      {/* 3-Year Physical Presence Day Inputs with Strict 0-365/366 Bound Validation */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <AppInput
-          label={`TY ${selectedTaxYear} Days in U.S. (Max: ${maxCurrentDays}) *`}
-          type="number"
-          placeholder="e.g. 365"
-          leftIcon={<Calendar className="w-4 h-4" />}
-          error={errors.days2025}
-          value={d.days2025 !== undefined && d.days2025 !== null ? d.days2025.toString() : ''}
-          onChange={(e) => handleDaysChange('days2025', e.target.value, maxCurrentDays)}
-        />
+      {/* 1. 3-Year Physical Presence Day Inputs with Strict 0-365/366 Bound Validation */}
+      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div className="border-b border-slate-100 pb-2">
+          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-indigo-600" />
+            <span>Substantial Presence Test (Physical Days in U.S.)</span>
+          </h4>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Legally determines whether you file Form 1040 (Resident Alien) or Form 1040-NR (Non-Resident Alien)
+          </p>
+        </div>
 
-        <AppInput
-          label={`TY ${selectedTaxYear - 1} Days in U.S. (Max: ${maxPrior1Days}) *`}
-          type="number"
-          placeholder={isLeapYear(selectedTaxYear - 1) ? 'e.g. 366 (Leap)' : 'e.g. 365'}
-          leftIcon={<Calendar className="w-4 h-4" />}
-          error={errors.days2024}
-          value={d.days2024 !== undefined && d.days2024 !== null ? d.days2024.toString() : ''}
-          onChange={(e) => handleDaysChange('days2024', e.target.value, maxPrior1Days)}
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <AppInput
+            label={`TY ${selectedTaxYear} Days in U.S. (Max: ${maxCurrentDays}) *`}
+            type="number"
+            placeholder="e.g. 365"
+            leftIcon={<Calendar className="w-4 h-4" />}
+            error={errors.days2025}
+            value={d.days2025 !== undefined && d.days2025 !== null ? d.days2025.toString() : ''}
+            onChange={(e) => handleDaysChange('days2025', e.target.value, maxCurrentDays)}
+          />
 
-        <AppInput
-          label={`TY ${selectedTaxYear - 2} Days in U.S. (Max: ${maxPrior2Days}) *`}
-          type="number"
-          placeholder="e.g. 365"
-          leftIcon={<Calendar className="w-4 h-4" />}
-          error={errors.days2023}
-          value={d.days2023 !== undefined && d.days2023 !== null ? d.days2023.toString() : ''}
-          onChange={(e) => handleDaysChange('days2023', e.target.value, maxPrior2Days)}
-        />
+          <AppInput
+            label={`TY ${selectedTaxYear - 1} Days in U.S. (Max: ${maxPrior1Days}) *`}
+            type="number"
+            placeholder={isLeapYear(selectedTaxYear - 1) ? 'e.g. 366 (Leap)' : 'e.g. 365'}
+            leftIcon={<Calendar className="w-4 h-4" />}
+            error={errors.days2024}
+            value={d.days2024 !== undefined && d.days2024 !== null ? d.days2024.toString() : ''}
+            onChange={(e) => handleDaysChange('days2024', e.target.value, maxPrior1Days)}
+          />
+
+          <AppInput
+            label={`TY ${selectedTaxYear - 2} Days in U.S. (Max: ${maxPrior2Days}) *`}
+            type="number"
+            placeholder="e.g. 365"
+            leftIcon={<Calendar className="w-4 h-4" />}
+            error={errors.days2023}
+            value={d.days2023 !== undefined && d.days2023 !== null ? d.days2023.toString() : ''}
+            onChange={(e) => handleDaysChange('days2023', e.target.value, maxPrior2Days)}
+          />
+        </div>
       </div>
 
-      {/* Multi-State Residing History Table (Taxpayer & Spouse) */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4">
+      {/* 2. Multi-State Residing History Table (Taxpayer & Spouse) */}
+      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2">
           <div>
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -231,9 +258,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         accentColor="#16A34A"
                         error={errors[`state_${idx}_fromDate`]}
                         value={parseUsDate(row.fromDate)}
-                        onChange={(d) => {
+                        onChange={(dVal) => {
                           const list = [...historyList];
-                          list[idx].fromDate = formatUsDate(d);
+                          list[idx].fromDate = formatUsDate(dVal);
                           updateField('statesResidedHistory', list);
                           if (clearError) clearError(`state_${idx}_fromDate`);
                         }}
@@ -248,9 +275,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         accentColor="#16A34A"
                         error={errors[`state_${idx}_toDate`]}
                         value={parseUsDate(row.toDate)}
-                        onChange={(d) => {
+                        onChange={(dVal) => {
                           const list = [...historyList];
-                          list[idx].toDate = formatUsDate(d);
+                          list[idx].toDate = formatUsDate(dVal);
                           updateField('statesResidedHistory', list);
                           if (clearError) clearError(`state_${idx}_toDate`);
                         }}
@@ -281,9 +308,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         accentColor="#6366F1"
                         error={errors[`state_${idx}_spouseFromDate`]}
                         value={parseUsDate(row.spouseFromDate)}
-                        onChange={(d) => {
+                        onChange={(dVal) => {
                           const list = [...historyList];
-                          list[idx].spouseFromDate = formatUsDate(d);
+                          list[idx].spouseFromDate = formatUsDate(dVal);
                           updateField('statesResidedHistory', list);
                           if (clearError) clearError(`state_${idx}_spouseFromDate`);
                         }}
@@ -298,9 +325,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         accentColor="#6366F1"
                         error={errors[`state_${idx}_spouseToDate`]}
                         value={parseUsDate(row.spouseToDate)}
-                        onChange={(d) => {
+                        onChange={(dVal) => {
                           const list = [...historyList];
-                          list[idx].spouseToDate = formatUsDate(d);
+                          list[idx].spouseToDate = formatUsDate(dVal);
                           updateField('statesResidedHistory', list);
                           if (clearError) clearError(`state_${idx}_spouseToDate`);
                         }}
@@ -325,6 +352,243 @@ export const Module3Presence: React.FC<Module3Props> = ({
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Rental Property Income & Expenses Worksheet (Schedule E) */}
+      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <div>
+            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <Building2 className="w-4 h-4 text-[#16A34A]" />
+              <span>Rental Property Income &amp; Expenses (Schedule E)</span>
+            </h4>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Report rental real estate properties owned and rented in {selectedTaxYear}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const list = rentalList;
+              handleUpdateRentalProperties([
+                ...list,
+                {
+                  propertyType: 'RESIDENTIAL',
+                  address: '',
+                  monthsRented2025: 12,
+                  personalMonths2025: 0,
+                  ownership: 'TAXPAYER',
+                  purchaseDate: '',
+                  rentedDate: '',
+                  costOfProperty: 0,
+                  totalRentalIncome: 0,
+                  rentalExpenses: 0,
+                },
+              ]);
+            }}
+            className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Rental Property</span>
+          </Button>
+        </div>
+
+        {rentalList.length === 0 ? (
+          <div className="p-6 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
+            <p>No rental properties added.</p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const list = rentalList;
+                handleUpdateRentalProperties([
+                  ...list,
+                  {
+                    propertyType: 'RESIDENTIAL',
+                    address: '',
+                    monthsRented2025: 12,
+                    personalMonths2025: 0,
+                    ownership: 'TAXPAYER',
+                    purchaseDate: '',
+                    rentedDate: '',
+                    costOfProperty: 0,
+                    totalRentalIncome: 0,
+                    rentalExpenses: 0,
+                  },
+                ]);
+              }}
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              <span>Add Rental Property</span>
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {rentalList.map((prop, idx) => (
+              <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="text-xs font-bold text-slate-800">Rental Property #{idx + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const list = rentalList.filter((_, i) => i !== idx);
+                      handleUpdateRentalProperties(list);
+                    }}
+                    className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <AppSelect
+                    label="Property Type"
+                    options={[
+                      { label: 'Residential Single/Multi-Family', value: 'RESIDENTIAL' },
+                      { label: 'Commercial / Land', value: 'COMMERCIAL' },
+                    ]}
+                    value={prop.propertyType}
+                    onChange={(val) => {
+                      const list = [...rentalList];
+                      list[idx].propertyType = val || 'RESIDENTIAL';
+                      handleUpdateRentalProperties(list);
+                    }}
+                  />
+
+                  <div className="sm:col-span-2">
+                    <AppInput
+                      label="Property Location / Full Address *"
+                      placeholder="e.g. 1024 Grand Pkwy, Katy, TX 77494"
+                      error={errors[`rental_${idx}_address`]}
+                      value={prop.address || ''}
+                      onChange={(e) => {
+                        const list = [...rentalList];
+                        list[idx].address = e.target.value;
+                        handleUpdateRentalProperties(list);
+                        if (clearError) clearError(`rental_${idx}_address`);
+                      }}
+                    />
+                  </div>
+
+                  <AppInput
+                    label={`Months Rented in ${selectedTaxYear} (0-12)`}
+                    type="number"
+                    placeholder="12"
+                    value={prop.monthsRented2025 !== undefined ? prop.monthsRented2025.toString() : '12'}
+                    onChange={(e) => {
+                      const list = [...rentalList];
+                      const val = parseInt(e.target.value, 10);
+                      list[idx].monthsRented2025 = isNaN(val) ? 0 : Math.min(12, Math.max(0, val));
+                      handleUpdateRentalProperties(list);
+                    }}
+                  />
+
+                  <AppInput
+                    label="Months Used for Personal Purpose (0-12)"
+                    type="number"
+                    placeholder="0"
+                    value={prop.personalMonths2025 !== undefined ? prop.personalMonths2025.toString() : '0'}
+                    onChange={(e) => {
+                      const list = [...rentalList];
+                      const val = parseInt(e.target.value, 10);
+                      list[idx].personalMonths2025 = isNaN(val) ? 0 : Math.min(12, Math.max(0, val));
+                      handleUpdateRentalProperties(list);
+                    }}
+                  />
+
+                  <AppSelect
+                    label="Ownership"
+                    options={[
+                      { label: 'Primary Taxpayer (100%)', value: 'TAXPAYER' },
+                      { label: 'Spouse (100%)', value: 'SPOUSE' },
+                      { label: 'Joint Ownership (50/50)', value: 'JOINT' },
+                    ]}
+                    value={prop.ownership}
+                    onChange={(val) => {
+                      const list = [...rentalList];
+                      list[idx].ownership = val || 'TAXPAYER';
+                      handleUpdateRentalProperties(list);
+                    }}
+                  />
+
+                  <AppDatePicker
+                    label="Property Purchase Date (MM/DD/YYYY)"
+                    placeholder="MM/DD/YYYY"
+                    format="MM/dd/yyyy"
+                    accentColor="#16A34A"
+                    error={errors[`rental_${idx}_purchaseDate`]}
+                    value={parseUsDate(prop.purchaseDate)}
+                    onChange={(dateVal) => {
+                      const list = [...rentalList];
+                      list[idx].purchaseDate = formatUsDate(dateVal);
+                      handleUpdateRentalProperties(list);
+                      if (clearError) clearError(`rental_${idx}_purchaseDate`);
+                    }}
+                  />
+
+                  <AppDatePicker
+                    label="Property Rented Date (MM/DD/YYYY)"
+                    placeholder="MM/DD/YYYY"
+                    format="MM/dd/yyyy"
+                    accentColor="#16A34A"
+                    error={errors[`rental_${idx}_rentedDate`]}
+                    value={parseUsDate(prop.rentedDate)}
+                    onChange={(dateVal) => {
+                      const list = [...rentalList];
+                      list[idx].rentedDate = formatUsDate(dateVal);
+                      handleUpdateRentalProperties(list);
+                      if (clearError) clearError(`rental_${idx}_rentedDate`);
+                    }}
+                  />
+
+                  <AppInput
+                    label="Cost Basis / Purchase Price ($)"
+                    type="number"
+                    placeholder="e.g. 350000"
+                    value={prop.costOfProperty ? prop.costOfProperty.toString() : ''}
+                    onChange={(e) => {
+                      const list = [...rentalList];
+                      list[idx].costOfProperty = parseFloat(e.target.value) || 0;
+                      handleUpdateRentalProperties(list);
+                    }}
+                  />
+
+                  <AppInput
+                    label="Total Rental Income Received ($) *"
+                    type="number"
+                    placeholder="e.g. 28000"
+                    error={errors[`rental_${idx}_totalRentalIncome`] || errors[`rental_${idx}_income`]}
+                    value={prop.totalRentalIncome ? prop.totalRentalIncome.toString() : ''}
+                    onChange={(e) => {
+                      const list = [...rentalList];
+                      list[idx].totalRentalIncome = parseFloat(e.target.value) || 0;
+                      handleUpdateRentalProperties(list);
+                      if (clearError) {
+                        clearError(`rental_${idx}_totalRentalIncome`);
+                        clearError(`rental_${idx}_income`);
+                      }
+                    }}
+                  />
+
+                  <AppInput
+                    label="Expenses Incurred to Earn Rent ($)"
+                    type="number"
+                    placeholder="e.g. 6400 (HOA, Repairs, Tax)"
+                    value={prop.rentalExpenses ? prop.rentalExpenses.toString() : ''}
+                    onChange={(e) => {
+                      const list = [...rentalList];
+                      list[idx].rentalExpenses = parseFloat(e.target.value) || 0;
+                      handleUpdateRentalProperties(list);
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
