@@ -311,7 +311,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-400" />
               <h4 className="font-bold text-xs sm:text-sm text-white tracking-tight">
-                9-Module Taxpayer Intake Dossier
+                Tax Organizer Dossier
               </h4>
             </div>
             <p className="text-[11px] text-slate-300 mt-0.5">
@@ -339,7 +339,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
                 size="sm"
                 onClick={onOpenOrganizerModal}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold h-7 px-2.5 flex items-center gap-1 shadow-xs cursor-pointer ml-1"
-                title="Open full-screen 9-module audit form"
+                title="Open full-screen tax organizer audit form"
               >
                 <ExternalLink className="w-3 h-3" />
                 <span>Full Modal</span>

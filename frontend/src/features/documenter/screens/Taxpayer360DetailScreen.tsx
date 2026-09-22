@@ -472,7 +472,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           { id: 'TIMELINE', label: 'Call History & Outreach Timeline', count: callLogs.length },
           { id: 'DOCUMENTS', label: 'Client Documents Vault', count: (lead?.documents || currentLead.documents || []).length },
           { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
-          { id: 'ORGANIZER', label: '9-Module Intake Form' },
+          { id: 'ORGANIZER', label: 'Tax Organizer' },
           ...(isDualRole ? [{ id: 'SALES_PITCH', label: 'Sales Pitch & Pricing' }] : []),
         ]}
         activeTab={activeTab}

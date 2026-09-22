@@ -1126,7 +1126,7 @@ export class DocumenterService {
           targetStage = ApplicationStage.DOC_OUTREACH;
           auditRemark = subDisposition
             ? `Lead agreed & interested in filing (${subDisposition}). Provisioned Client Portal access for taxpayer.`
-            : `Lead agreed & interested in filing. Provisioned Client Portal access for taxpayer (9-Module Organizer & Document Vault).`;
+            : `Lead agreed & interested in filing. Provisioned Client Portal access for taxpayer (Tax Organizer & Document Vault).`;
 
           // Lazy Taxpayer User Provisioning
           if (!app.customer.userId && (app.customer.email || app.customer.phone)) {

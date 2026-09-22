@@ -35,7 +35,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              9-Module Comprehensive Tax Organizer
+              Tax Organizer
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
               {progressPercent}% Complete

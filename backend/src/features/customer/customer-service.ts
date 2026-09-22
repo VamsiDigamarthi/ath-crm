@@ -932,7 +932,7 @@ export class CustomerService {
           progressPercent,
           completedCount,
           source: 'TAXPAYER_CLIENT_PORTAL',
-          remarks: `Taxpayer saved ${latestModuleName} in 9-Module Organizer (${completedCount}/9 verified, ${progressPercent}% complete).`,
+          remarks: `Taxpayer saved ${latestModuleName} in Tax Organizer (${completedCount}/9 verified, ${progressPercent}% complete).`,
           clientEmail: profile.email,
           clientName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email,
           timestamp: new Date().toISOString(),

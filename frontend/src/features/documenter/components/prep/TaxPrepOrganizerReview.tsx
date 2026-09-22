@@ -229,7 +229,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h4 className="text-sm sm:text-base font-bold text-white tracking-tight">
-                9-Module Taxpayer Intake {viewMode === 'AGENT_EDIT' ? '— Agent Live Entry' : 'Audit'}
+                Tax Organizer {viewMode === 'AGENT_EDIT' ? '— Agent Live Entry' : 'Audit'}
               </h4>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
                 {progressPercent}% Complete
