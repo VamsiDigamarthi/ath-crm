@@ -17,6 +17,8 @@ import {
   getSelfSignups,
   assignSelfSignupsBulk,
   autoRoundRobinSelfSignups,
+  getMasterTaxpayers,
+  getTaxpayerYearDetails,
 } from "./admin-controller.js";
 import { validateRequest } from "../../middlewares/validate-request.js";
 import {
@@ -157,6 +159,21 @@ router.post(
   requireAuth,
   authorize(Role.ADMIN),
   autoRoundRobinSelfSignups
+);
+
+// Master Taxpayers Registry & Multi-Year Details
+router.get(
+  "/master-taxpayers",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getMasterTaxpayers
+);
+
+router.get(
+  "/master-taxpayers/:id/year/:taxYear",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getTaxpayerYearDetails
 );
 
 export { router as adminRouter };

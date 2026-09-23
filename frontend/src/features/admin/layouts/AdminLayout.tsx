@@ -47,6 +47,7 @@ export const AdminLayout: React.FC = () => {
     { id: 'prospects', label: 'Bulk Lead Import', icon: FileSpreadsheet, section: 'Operations', path: '/admin/prospects' },
     { id: 'self-signups', label: 'Direct Sign-ups', icon: Globe, section: 'Operations', path: '/admin/self-signups' },
     { id: 'returned-leads', label: 'Returned Leads', icon: RotateCcw, section: 'Operations', path: '/admin/returned-leads' },
+    { id: 'all-taxpayers', label: 'All Taxpayers Hub', icon: Users, section: 'Management', path: '/admin/all-taxpayers' },
     { id: 'customers', label: 'Client Directory', icon: UserCheck, section: 'Management', path: '/admin/customers' },
     { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', path: '/admin/employees' },
     { id: 'email-templates', label: 'Email Templates', icon: Mail, section: 'Management', path: '/admin/email-templates' },
@@ -62,6 +63,7 @@ export const AdminLayout: React.FC = () => {
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/admin/notifications')) return 'notifications';
+    if (currentPath.includes('/admin/all-taxpayers')) return 'all-taxpayers';
     if (currentPath.includes('/admin/self-signups')) return 'self-signups';
     if (currentPath.includes('/admin/returned-leads')) return 'returned-leads';
     if (currentPath.includes('/admin/prospects') || currentPath.includes('/admin/leads')) return 'prospects';
@@ -82,6 +84,8 @@ export const AdminLayout: React.FC = () => {
     switch (activeId) {
       case 'notifications':
         return 'Department Notifications & Activity Hub';
+      case 'all-taxpayers':
+        return 'Master Taxpayer Registry & Lifecycle Funnel';
       case 'self-signups':
         return 'Direct Online Sign-ups & Self-Registration Pool';
       case 'returned-leads':

@@ -9,6 +9,7 @@ import { AdminOverviewScreen } from '@/features/admin/screens/AdminOverviewScree
 import { BulkLeadImportScreen } from '@/features/admin/screens/BulkLeadImportScreen';
 import { EmployeeManagementScreen } from '@/features/admin/screens/EmployeeManagementScreen';
 import { AdminCustomerDirectoryScreen } from '@/features/admin/screens/AdminCustomerDirectoryScreen';
+import { AdminMasterTaxpayerDirectoryScreen } from '@/features/admin/screens/AdminMasterTaxpayerDirectoryScreen';
 import { AdminEmailTemplatesScreen } from '@/features/admin/screens/AdminEmailTemplatesScreen';
 import { AdminReturnedLeadsScreen } from '@/features/admin/screens/AdminReturnedLeadsScreen';
 import { AdminSelfSignupsScreen } from '@/features/admin/screens/AdminSelfSignupsScreen';
@@ -175,6 +176,10 @@ export const router = createBrowserRouter([
           {
             path: 'customers',
             element: <AdminCustomerDirectoryScreen />,
+          },
+          {
+            path: 'all-taxpayers',
+            element: <AdminMasterTaxpayerDirectoryScreen />,
           },
           {
             path: 'employees',

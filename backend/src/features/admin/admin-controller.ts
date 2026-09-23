@@ -492,5 +492,38 @@ export const autoRoundRobinSelfSignups = async (req: Request, res: Response) => 
   );
 };
 
+// Master Taxpayer Registry (All Ingested Records & Lifecycle Funnel)
+export const getMasterTaxpayers = async (req: Request, res: Response) => {
+  const { search, stage, source, lifecycle, taxYear, visa, priority, page, limit } = req.query;
+
+  const { MasterTaxpayersService } = await import("./master-taxpayers-service.js");
+  const result = await MasterTaxpayersService.getMasterTaxpayers({
+    search: typeof search === 'string' ? search : undefined,
+    stage: typeof stage === 'string' ? stage : undefined,
+    source: typeof source === 'string' ? source : undefined,
+    lifecycle: typeof lifecycle === 'string' ? lifecycle : undefined,
+    taxYear: taxYear ? Number(taxYear) : undefined,
+    visa: typeof visa === 'string' ? visa : undefined,
+    priority: typeof priority === 'string' ? priority : undefined,
+    page: page ? Number(page) : undefined,
+    limit: limit ? Number(limit) : undefined,
+  });
+
+  return SuccessHandler.handle(res, "Master taxpayers retrieved successfully", result, 200);
+};
+
+export const getTaxpayerYearDetails = async (req: Request, res: Response) => {
+  const { id, taxYear } = req.params;
+
+  if (!id || !taxYear) {
+    throw new BadRequestError("Taxpayer ID and Tax Year are required");
+  }
+
+  const { MasterTaxpayersService } = await import("./master-taxpayers-service.js");
+  const result = await MasterTaxpayersService.getTaxpayerYearDetails(String(id), Number(taxYear));
+
+  return SuccessHandler.handle(res, "Taxpayer year details retrieved successfully", result, 200);
+};
+
 
 
