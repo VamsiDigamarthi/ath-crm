@@ -7,7 +7,8 @@ import {
   EyeOff, 
   ChevronDown, 
   ChevronUp, 
-  Sparkles
+  Sparkles,
+  Bell
 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
@@ -25,6 +26,7 @@ interface ClientProfilePanelProps {
   onOpenOrganizerModal?: () => void;
   onApplyValue?: (field: string, value: number) => void;
   drakeTaxComponent?: React.ReactNode;
+  onOpenRequestDocsModal?: () => void;
 }
 
 export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
@@ -37,6 +39,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
   onOpenOrganizerModal,
   onApplyValue,
   drakeTaxComponent,
+  onOpenRequestDocsModal,
 }) => {
   const reviewerName = assignedReviewer?.name || '-';
   const reviewerEmail = assignedReviewer?.email || '-';
@@ -242,9 +245,24 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
             <FileText className="w-3.5 h-3.5 text-[#16A34A]" />
             <span>Verified Source Documents</span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#16A34A] border border-emerald-200">
-            {documents.filter((d) => d.verificationStatus === 'VERIFIED').length}/{documents.length} Verified
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#16A34A] border border-emerald-200">
+              {documents.filter((d) => d.verificationStatus === 'VERIFIED').length}/{documents.length} Verified
+            </span>
+            {onOpenRequestDocsModal && (
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={onOpenRequestDocsModal}
+                className="h-6 px-2 text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-200 flex items-center gap-1 shadow-2xs cursor-pointer rounded-md"
+                title="Send notification & email to client and document agent requesting missing documents"
+              >
+                <Bell className="w-3 h-3 text-purple-600" />
+                <span>Request Docs</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         {documents.length === 0 ? (

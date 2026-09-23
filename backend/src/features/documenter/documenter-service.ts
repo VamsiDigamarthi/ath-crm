@@ -2060,6 +2060,7 @@ export class DocumenterService {
 
     let inAppDelivered = false;
     let emailDelivered = false;
+    let docAgentNotified = false;
 
     // 1. In-App Notification to Customer
     if (sendInApp && customerUser?.id) {
@@ -2115,9 +2116,90 @@ export class DocumenterService {
       emailDelivered = true;
     }
 
-    const channelsUsed = [inAppDelivered && 'In-App Notification', emailDelivered && `Email (${customerEmail})`].filter(Boolean).join(' and ');
+    // 3. In-App Notification & Email to the Document Agent who handled/verified this lead
+    let docAgentUser = app.assignedDocAgentId 
+      ? await prisma.user.findUnique({ where: { id: app.assignedDocAgentId }, select: { id: true, firstName: true, lastName: true, email: true, role: true } })
+      : null;
 
-    // 3. Record AuditLog
+    if (!docAgentUser) {
+      const docHistory = await prisma.stageHistory.findFirst({
+        where: {
+          applicationId: app.id,
+          movedByUser: {
+            role: { in: [Role.DOC_AGENT, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD] },
+          },
+        },
+        include: {
+          movedByUser: {
+            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (docHistory?.movedByUser) {
+        docAgentUser = docHistory.movedByUser;
+      }
+    }
+
+    if (docAgentUser && docAgentUser.id !== agentUserId) {
+      const docAgentName = `${docAgentUser.firstName || ''} ${docAgentUser.lastName || ''}`.trim() || 'Document Agent';
+
+      // 3a. In-App Notification to Document Agent
+      await prisma.notification.create({
+        data: {
+          recipientUserId: docAgentUser.id,
+          applicationId: app.id,
+          title: `Missing Documents Requested: ${customerName}`,
+          message: `${actorName} (${agentUser?.role || 'Tax Operations'}) requested missing documents from client ${customerName} (TY${app.taxYear}):\n${categoryListFormatted}${noteFormatted}`,
+          category: NotificationCategory.DOCUMENTER,
+          priority: NotificationPriority.HIGH,
+          actionUrl: `/documenter?leadId=${app.id}`,
+          actionLabel: 'View Lead in Documenter',
+          relatedLeadName: customerName,
+        },
+      });
+
+      // 3b. Email to Document Agent
+      if (sendEmail && docAgentUser.email) {
+        const docAgentEmailHtml = `
+          <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #7c3aed, #6d28d9); padding: 18px; border-radius: 8px; text-align: center; color: white; margin-bottom: 20px;">
+              <h2 style="margin: 0; font-size: 20px;">Missing Documents Alert</h2>
+              <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Client: ${customerName} • TY${app.taxYear}</p>
+            </div>
+            <p>Hello <strong>${docAgentName}</strong>,</p>
+            <p><strong>${actorName}</strong> (${agentUser?.role || 'Tax Operations'}) has requested additional missing documents from client <strong>${customerName}</strong>:</p>
+            <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #7c3aed; margin: 16px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #0f172a; font-size: 14px;">Requested Documents:</h4>
+              <ul style="margin: 0; padding-left: 20px;">
+                ${documentCategories.map((c) => `<li style="margin-bottom: 6px; font-weight: bold; color: #334155;">${c}</li>`).join('')}
+              </ul>
+              ${customNotes?.trim() ? `<p style="margin-top: 12px; font-style: italic; color: #64748b; font-size: 13px;"><strong>Staff Note:</strong> ${customNotes.trim()}</p>` : ''}
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 24px;">
+              TaxCRM Operations Workflow Dispatch
+            </p>
+          </div>
+        `;
+
+        await EmailService.sendEmail({
+          to: docAgentUser.email,
+          subject: `[Missing Documents Alert] ${actorName} requested documents for ${customerName}`,
+          text: `Hello ${docAgentName},\n\n${actorName} requested missing documents for ${customerName}:\n${categoryListFormatted}${noteFormatted}`,
+          html: docAgentEmailHtml,
+        });
+      }
+
+      docAgentNotified = true;
+    }
+
+    const channelsUsed = [
+      inAppDelivered && 'In-App Notification to Client',
+      emailDelivered && `Email to Client (${customerEmail})`,
+      docAgentNotified && 'Notification to Document Agent',
+    ].filter(Boolean).join(', ');
+
+    // 4. Record AuditLog
     await prisma.auditLog.create({
       data: {
         applicationId: app.id,
@@ -2134,19 +2216,20 @@ export class DocumenterService {
           sendInApp,
           sendEmail,
           recipientEmail: customerEmail,
+          docAgentNotified,
           timestamp: new Date().toISOString(),
-          remarks: `Agent ${actorName} requested missing documents (${documentCategories.join(', ')}) via ${channelsUsed || 'Portal'}.`,
+          remarks: `${actorName} requested missing documents (${documentCategories.join(', ')}) via ${channelsUsed || 'Portal'}.`,
         },
       },
     });
 
-    // 4. Record StageHistory note
+    // 5. Record StageHistory note
     await prisma.stageHistory.create({
       data: {
         applicationId: app.id,
         fromStage: app.currentStage,
         toStage: app.currentStage,
-        remarks: `Requested missing documents: ${documentCategories.slice(0, 3).join(', ')}${documentCategories.length > 3 ? ` (+${documentCategories.length - 3} more)` : ''}. Channels: ${[inAppDelivered && 'In-App', emailDelivered && 'Email'].filter(Boolean).join(', ')}.`,
+        remarks: `Requested missing documents: ${documentCategories.slice(0, 3).join(', ')}${documentCategories.length > 3 ? ` (+${documentCategories.length - 3} more)` : ''}. Dispatched to Client${docAgentNotified ? ' & Document Agent' : ''}.`,
         movedByUserId: agentUserId,
       },
     });
@@ -2156,8 +2239,9 @@ export class DocumenterService {
       documentCategories,
       sendInApp: inAppDelivered,
       sendEmail: emailDelivered,
+      docAgentNotified,
       recipientEmail: customerEmail,
-      message: `Successfully sent missing documents request to ${customerName} via ${[inAppDelivered && 'In-App Notification', emailDelivered && 'Email'].filter(Boolean).join(' & ')}!`,
+      message: `Successfully sent missing documents request to ${customerName}${docAgentNotified ? ' and notified Document Agent' : ''}! 🚀`,
     };
   }
 }

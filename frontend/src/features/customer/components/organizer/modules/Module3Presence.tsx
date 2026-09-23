@@ -33,6 +33,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
   // Support rental properties stored in either m3_presence or legacy m4_wages
   const rentalList = d.rentalProperties || organizerData?.m4_wages?.rentalProperties || [];
 
+  const [isOpenStateHistory, setIsOpenStateHistory] = React.useState<boolean>(false);
+  const [isOpenRentals, setIsOpenRentals] = React.useState<boolean>(false);
+
   const maxCurrentDays = isLeapYear(selectedTaxYear) ? 366 : 365;
   const maxPrior1Days = isLeapYear(selectedTaxYear - 1) ? 366 : 365;
   const maxPrior2Days = isLeapYear(selectedTaxYear - 2) ? 366 : 365;
@@ -116,70 +119,105 @@ export const Module3Presence: React.FC<Module3Props> = ({
       </div>
 
       {/* 2. Multi-State Residing History Table (Taxpayer & Spouse) */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Home className="w-4 h-4 text-emerald-600" />
-              <span>Resided / Residing State Details (Taxpayer &amp; Spouse)</span>
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Mention residence history with exact From and To dates for both Taxpayer and Spouse ({selectedTaxYear - 3} - {selectedTaxYear})
-            </p>
-          </div>
+      {!isOpenStateHistory ? (
+        /* Collapsed State (Default): Heading at left, Add Button at right */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Home className="w-4 h-4 text-emerald-600" />
+                <span>Resided / Residing State Details (Taxpayer &amp; Spouse)</span>
+                {historyList.length > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    {historyList.length} Added
+                  </span>
+                )}
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Mention residence history with exact From and To dates for both Taxpayer and Spouse ({selectedTaxYear - 3} - {selectedTaxYear})
+              </p>
+            </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              const updated = [
-                ...historyList,
-                {
-                  taxYear: selectedTaxYear,
-                  state: '',
-                  fromDate: '',
-                  toDate: '',
-                  spouseState: '',
-                  spouseFromDate: '',
-                  spouseToDate: '',
-                },
-              ];
-              updateField('statesResidedHistory', updated);
-            }}
-            className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add State Row</span>
-          </Button>
-        </div>
-
-        {historyList.length === 0 ? (
-          <div className="p-6 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
-            <p>No multi-state residence history added yet.</p>
             <Button
               size="sm"
               variant="outline"
+              type="button"
               onClick={() => {
-                const updated = [
-                  {
-                    taxYear: selectedTaxYear,
-                    state: '',
-                    fromDate: '',
-                    toDate: '',
-                    spouseState: '',
-                    spouseFromDate: '',
-                    spouseToDate: '',
-                  },
-                ];
-                updateField('statesResidedHistory', updated);
+                setIsOpenStateHistory(true);
+                if (historyList.length === 0) {
+                  const updated = [
+                    {
+                      taxYear: selectedTaxYear,
+                      state: '',
+                      fromDate: '',
+                      toDate: '',
+                      spouseState: '',
+                      spouseFromDate: '',
+                      spouseToDate: '',
+                    },
+                  ];
+                  updateField('statesResidedHistory', updated);
+                }
               }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 cursor-pointer"
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              <span>Add State Row</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>{historyList.length > 0 ? 'View / Edit State Rows' : 'Add State Row'}</span>
             </Button>
           </div>
-        ) : (
+        </div>
+      ) : (
+        /* Open State: Full Table with Header & Add Button */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Home className="w-4 h-4 text-emerald-600" />
+                <span>Resided / Residing State Details (Taxpayer &amp; Spouse)</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  {historyList.length} Added
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Mention residence history with exact From and To dates for both Taxpayer and Spouse ({selectedTaxYear - 3} - {selectedTaxYear})
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  const updated = [
+                    ...historyList,
+                    {
+                      taxYear: selectedTaxYear,
+                      state: '',
+                      fromDate: '',
+                      toDate: '',
+                      spouseState: '',
+                      spouseFromDate: '',
+                      spouseToDate: '',
+                    },
+                  ];
+                  updateField('statesResidedHistory', updated);
+                }}
+                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Row</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => setIsOpenStateHistory(false)}
+                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border border-slate-200 rounded-lg overflow-hidden">
               <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
@@ -353,80 +391,112 @@ export const Module3Presence: React.FC<Module3Props> = ({
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 3. Rental Property Income & Expenses Worksheet (Schedule E) */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 className="w-4 h-4 text-[#16A34A]" />
-              <span>Rental Property Income &amp; Expenses (Schedule E)</span>
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Report rental real estate properties owned and rented in {selectedTaxYear}
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              const list = rentalList;
-              handleUpdateRentalProperties([
-                ...list,
-                {
-                  propertyType: 'RESIDENTIAL',
-                  address: '',
-                  monthsRented2025: 12,
-                  personalMonths2025: 0,
-                  ownership: 'TAXPAYER',
-                  purchaseDate: '',
-                  rentedDate: '',
-                  costOfProperty: 0,
-                  totalRentalIncome: 0,
-                  rentalExpenses: 0,
-                },
-              ]);
-            }}
-            className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Rental Property</span>
-          </Button>
-        </div>
-
-        {rentalList.length === 0 ? (
-          <div className="p-6 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
-            <p>No rental properties added.</p>
+      {!isOpenRentals ? (
+        /* Collapsed State (Default): Heading at left, Add Button at right */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-[#16A34A]" />
+                <span>Rental Property Income &amp; Expenses (Schedule E)</span>
+                {rentalList.length > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    {rentalList.length} Added
+                  </span>
+                )}
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Report rental real estate properties owned and rented in {selectedTaxYear}
+              </p>
+            </div>
             <Button
               size="sm"
               variant="outline"
+              type="button"
               onClick={() => {
-                const list = rentalList;
-                handleUpdateRentalProperties([
-                  ...list,
-                  {
-                    propertyType: 'RESIDENTIAL',
-                    address: '',
-                    monthsRented2025: 12,
-                    personalMonths2025: 0,
-                    ownership: 'TAXPAYER',
-                    purchaseDate: '',
-                    rentedDate: '',
-                    costOfProperty: 0,
-                    totalRentalIncome: 0,
-                    rentalExpenses: 0,
-                  },
-                ]);
+                setIsOpenRentals(true);
+                if (rentalList.length === 0) {
+                  handleUpdateRentalProperties([
+                    {
+                      propertyType: 'RESIDENTIAL',
+                      address: '',
+                      monthsRented2025: 12,
+                      personalMonths2025: 0,
+                      ownership: 'TAXPAYER',
+                      purchaseDate: '',
+                      rentedDate: '',
+                      costOfProperty: 0,
+                      totalRentalIncome: 0,
+                      rentalExpenses: 0,
+                    },
+                  ]);
+                }
               }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 cursor-pointer"
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              <span>Add Rental Property</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>{rentalList.length > 0 ? 'View / Edit Rentals' : 'Add Rental Property'}</span>
             </Button>
           </div>
-        ) : (
+        </div>
+      ) : (
+        /* Open State: Header with Count + Add Button, List of Rental Properties */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-[#16A34A]" />
+                <span>Rental Property Income &amp; Expenses (Schedule E)</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  {rentalList.length} Added
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Report rental real estate properties owned and rented in {selectedTaxYear}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  const list = rentalList;
+                  handleUpdateRentalProperties([
+                    ...list,
+                    {
+                      propertyType: 'RESIDENTIAL',
+                      address: '',
+                      monthsRented2025: 12,
+                      personalMonths2025: 0,
+                      ownership: 'TAXPAYER',
+                      purchaseDate: '',
+                      rentedDate: '',
+                      costOfProperty: 0,
+                      totalRentalIncome: 0,
+                      rentalExpenses: 0,
+                    },
+                  ]);
+                }}
+                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Property</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => setIsOpenRentals(false)}
+                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-4">
             {rentalList.map((prop, idx) => (
               <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 shadow-2xs space-y-3">
@@ -590,8 +660,8 @@ export const Module3Presence: React.FC<Module3Props> = ({
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
