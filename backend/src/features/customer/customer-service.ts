@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db.js';
+import { ApplicationStage, ApplicationPriority, AuditActorType, AuditActionType, Role, NotificationCategory, NotificationPriority } from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { BadRequestError } from '../../errors/bad-request-error.js';
 import { StorageService } from '../../utils/storage-service.js';
@@ -968,4 +969,146 @@ export class CustomerService {
       message: 'Organizer saved successfully to your tax filing file',
     };
   }
+
+  /**
+   * Client-initiated: Start a new Tax Year return directly from client portal
+   */
+  static async startTaxYearReturn(userId: string, taxYearInput: number | string) {
+    const taxYear = parseInt(taxYearInput.toString(), 10);
+    if (isNaN(taxYear) || taxYear < 2000 || taxYear > 2100) {
+      throw new BadRequestError('Please provide a valid 4-digit Tax Year (between 2000 and 2100)');
+    }
+
+    const profile = await prisma.customerProfile.findFirst({
+      where: { userId },
+      include: {
+        applications: {
+          orderBy: { taxYear: 'desc' },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Taxpayer customer profile not found');
+    }
+
+    // Check if an application for this tax year already exists
+    const existing = profile.applications.find((a) => a.taxYear === taxYear);
+    if (existing) {
+      throw new BadRequestError(`A filing application for Tax Year ${taxYear} already exists in your account.`);
+    }
+
+    // Carry forward basic demographics from prior application or profile
+    const priorApp = profile.applications[0];
+    const priorDraft = (priorApp?.taxDraftSummary as any) || {};
+
+    const initialTaxDraftSummary = {
+      leadSource: 'SELF_SIGNUP',
+      source: 'SELF_SIGNUP',
+      signupMethod: 'ONLINE_PORTAL',
+      isSelfRegistered: true,
+      isRetainedClient: true,
+      registrationChannel: 'SELF_SERVICE_PORTAL_ADD_YEAR',
+      registeredAt: new Date().toISOString(),
+      firstName: profile.firstName || priorDraft.firstName,
+      lastName: profile.lastName || priorDraft.lastName,
+      email: profile.email || priorDraft.email,
+      phone: profile.phone || priorDraft.phone,
+      ssnTin: profile.ssnTin || priorDraft.ssnTin,
+      dob: profile.dob || priorDraft.dob,
+      visaType: profile.visaType || priorDraft.visaType || 'Standard',
+      maritalStatus: profile.maritalStatus || priorDraft.maritalStatus || 'Single',
+      bankDetails: priorDraft.bankDetails || null,
+      notes: `Taxpayer client self-initiated new Tax Year ${taxYear} filing via client portal. Awaiting Admin assignment.`,
+    };
+
+    const newApplication = await prisma.taxApplication.create({
+      data: {
+        customerId: profile.id,
+        taxYear,
+        filingType: 'INDIVIDUAL',
+        currentStage: ApplicationStage.RAW_PROSPECT,
+        priority: ApplicationPriority.HIGH,
+        assignedDocAgentId: null,
+        taxDraftSummary: initialTaxDraftSummary,
+        stageHistories: {
+          create: {
+            fromStage: null,
+            toStage: ApplicationStage.RAW_PROSPECT,
+            movedByUserId: userId,
+            remarks: `Client self-initiated Tax Year ${taxYear} filing via Client Portal. Inbound lead in Direct Sign-ups queue.`,
+          },
+        },
+        auditLogs: {
+          create: {
+            actorId: userId,
+            actorType: AuditActorType.CLIENT,
+            actorName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client',
+            actorRole: 'TAXPAYER_USER',
+            action: AuditActionType.ORGANIZER_UPDATE,
+            moduleKey: 'CLIENT_NEW_TAX_YEAR',
+            details: {
+              taxYear,
+              channel: 'SELF_SERVICE_PORTAL',
+              source: 'SELF_SIGNUP',
+              isRetainedClient: true,
+            },
+          },
+        },
+      },
+    });
+
+    // Notify DOC_MANAGER & ADMIN of client's new year return
+    try {
+      await prisma.notification.create({
+        data: {
+          targetRole: Role.ADMIN,
+          applicationId: newApplication.id,
+          title: `Client Self-Added Tax Year ${taxYear}`,
+          message: `${profile.firstName} ${profile.lastName} (${profile.phone}) started a new Tax Year ${taxYear} filing. Ready in Direct Sign-ups queue for agent assignment.`,
+          category: NotificationCategory.DOCUMENTER,
+          priority: NotificationPriority.HIGH,
+          actionUrl: '/admin/self-signups',
+          actionLabel: 'Assign Lead in Direct Sign-ups',
+          relatedLeadName: `${profile.firstName} ${profile.lastName}`.trim(),
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          targetRole: Role.DOC_MANAGER,
+          applicationId: newApplication.id,
+          title: `New Return: ${profile.firstName} ${profile.lastName} (TY ${taxYear})`,
+          message: `Taxpayer initiated Tax Year ${taxYear} return. Waiting for Admin lead assignment in Direct Sign-ups.`,
+          category: NotificationCategory.DOCUMENTER,
+          priority: NotificationPriority.NORMAL,
+          actionUrl: '/admin/self-signups',
+          actionLabel: 'Direct Sign-ups',
+          relatedLeadName: `${profile.firstName} ${profile.lastName}`.trim(),
+        },
+      });
+    } catch (notifErr) {
+      console.error('Failed to create notification for self-added tax year:', notifErr);
+    }
+
+    // Fetch updated applications list for this customer
+    const updatedApplications = await prisma.taxApplication.findMany({
+      where: { customerId: profile.id },
+      select: {
+        id: true,
+        taxYear: true,
+        currentStage: true,
+        filingType: true,
+      },
+      orderBy: { taxYear: 'desc' },
+    });
+
+    return {
+      application: newApplication,
+      applications: updatedApplications,
+      taxYear: newApplication.taxYear,
+      message: `Tax Year ${taxYear} return initiated! Admin has been notified to assign your Documenter agent.`,
+    };
+  }
 }
+

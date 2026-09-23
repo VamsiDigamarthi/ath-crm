@@ -199,18 +199,28 @@ export const AdminSelfSignupsScreen: React.FC = () => {
       },
       {
         header: 'Tax Year & Source',
-        render: (lead: SelfSignupLeadItem) => (
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Tax Year {lead.taxYear}</span>
+        render: (lead: SelfSignupLeadItem) => {
+          const isRetained = (lead.taxDraftSummary as any)?.isRetainedClient;
+          return (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Tax Year {lead.taxYear}</span>
+              </div>
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+                  <Globe className="w-2.5 h-2.5" />
+                  <span>Direct Sign-Up</span>
+                </span>
+                {isRetained && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                    Existing Client
+                  </span>
+                )}
+              </div>
             </div>
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              <Globe className="w-2.5 h-2.5" />
-              <span>Direct Sign-Up</span>
-            </span>
-          </div>
-        ),
+          );
+        },
       },
       {
         header: 'Registered On',
