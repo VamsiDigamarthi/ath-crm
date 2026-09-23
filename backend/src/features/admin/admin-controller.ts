@@ -514,13 +514,16 @@ export const getMasterTaxpayers = async (req: Request, res: Response) => {
 
 export const getTaxpayerYearDetails = async (req: Request, res: Response) => {
   const { id, taxYear } = req.params;
+  const queryTaxYear = req.query.taxYear;
 
-  if (!id || !taxYear) {
-    throw new BadRequestError("Taxpayer ID and Tax Year are required");
+  if (!id) {
+    throw new BadRequestError("Taxpayer ID is required");
   }
 
+  const selectedYear = taxYear ? Number(taxYear) : queryTaxYear ? Number(queryTaxYear) : undefined;
+
   const { MasterTaxpayersService } = await import("./master-taxpayers-service.js");
-  const result = await MasterTaxpayersService.getTaxpayerYearDetails(String(id), Number(taxYear));
+  const result = await MasterTaxpayersService.getTaxpayerYearDetails(String(id), selectedYear);
 
   return SuccessHandler.handle(res, "Taxpayer year details retrieved successfully", result, 200);
 };

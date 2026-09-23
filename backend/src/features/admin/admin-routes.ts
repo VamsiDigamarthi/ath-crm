@@ -170,6 +170,13 @@ router.get(
 );
 
 router.get(
+  "/master-taxpayers/:id",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getTaxpayerYearDetails
+);
+
+router.get(
   "/master-taxpayers/:id/year/:taxYear",
   requireAuth,
   authorize(Role.ADMIN),

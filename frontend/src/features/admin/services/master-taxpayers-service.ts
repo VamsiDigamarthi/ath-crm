@@ -38,7 +38,19 @@ export interface TaxpayerYearDetailsResponse {
     city?: string;
     state?: string;
     zipCode?: string;
+    isConvertedCustomer?: boolean;
+    createdAt?: string;
   };
+  taxYearsList: Array<{
+    year: number;
+    status: 'COMPLETED' | 'IN_PROGRESS' | 'DROPPED';
+    currentStage: string;
+    formType?: string;
+    federalRefund?: number;
+    federalTaxDue?: number;
+    stateName?: string;
+    stateRefund?: number;
+  }>;
   yearDetails: {
     taxYear: number;
     applicationId?: string;
@@ -79,11 +91,11 @@ export interface TaxpayerYearDetailsResponse {
       agent?: string;
     }>;
     assignedAgents: {
-      docAgent?: { id: string; name: string; role: string };
-      prepAgent?: { id: string; name: string; role: string };
-      reviewAgent?: { id: string; name: string; role: string };
-      salesAgent?: { id: string; name: string; role: string };
-      fileOp?: { id: string; name: string; role: string };
+      docAgent?: { id: string; name: string; role: string; email?: string };
+      prepAgent?: { id: string; name: string; role: string; email?: string };
+      reviewAgent?: { id: string; name: string; role: string; email?: string };
+      salesAgent?: { id: string; name: string; role: string; email?: string };
+      fileOp?: { id: string; name: string; role: string; email?: string };
     };
   };
 }
@@ -96,10 +108,11 @@ export const MasterTaxpayersApiService = {
     return res.data?.data || res.data || res;
   },
 
-  async getTaxpayerYearDetails(customerId: string, taxYear: number): Promise<TaxpayerYearDetailsResponse> {
-    const res: any = await apiClient.get(
-      `/admin/master-taxpayers/${customerId}/year/${taxYear}`
-    );
+  async getTaxpayerYearDetails(customerId: string, taxYear?: number): Promise<TaxpayerYearDetailsResponse> {
+    const url = taxYear 
+      ? `/admin/master-taxpayers/${customerId}/year/${taxYear}`
+      : `/admin/master-taxpayers/${customerId}`;
+    const res: any = await apiClient.get(url);
     return res.data?.data || res.data || res;
   },
 };

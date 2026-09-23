@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMasterTaxpayers } from '../hooks/useMasterTaxpayers';
-import { MasterTaxpayerInspectModal } from '../components/MasterTaxpayerInspectModal';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppSelect } from '@/shared/components/AppSelect';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
@@ -83,6 +83,7 @@ const VISA_OPTIONS = [
 ];
 
 export const AdminMasterTaxpayerDirectoryScreen: React.FC = () => {
+  const navigate = useNavigate();
   const {
     records = [],
     totalItems = 0,
@@ -649,7 +650,7 @@ export const AdminMasterTaxpayerDirectoryScreen: React.FC = () => {
                   <tr
                     key={taxpayer.id}
                     className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                    onClick={() => handleInspect(taxpayer)}
+                    onClick={() => navigate(`/admin/all-taxpayers/${taxpayer.customerId || taxpayer.id}`)}
                   >
                     {/* Taxpayer Identity */}
                     <td className="py-3 px-4">
@@ -750,8 +751,8 @@ export const AdminMasterTaxpayerDirectoryScreen: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleInspect(taxpayer)}
-                          className="h-8 text-xs font-bold border-slate-200 hover:bg-slate-900 hover:text-white transition-colors cursor-pointer rounded-lg flex items-center gap-1"
+                          onClick={() => navigate(`/admin/all-taxpayers/${taxpayer.customerId || taxpayer.id}`)}
+                          className="h-8 text-xs font-bold border-slate-200 hover:bg-slate-900 hover:text-white transition-colors cursor-pointer rounded-lg flex items-center gap-1.5"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Inspect 360</span>
@@ -779,17 +780,6 @@ export const AdminMasterTaxpayerDirectoryScreen: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* 7. 360 Inspect Modal */}
-      <MasterTaxpayerInspectModal
-        isOpen={isInspectModalOpen}
-        onClose={handleCloseInspect}
-        taxpayer={selectedTaxpayer}
-        activeYearDetails={activeYearDetails}
-        selectedYear={selectedYearForDetail}
-        isLoadingYear={yearDetailsLoading}
-        onSelectYear={handleSelectYear}
-      />
     </div>
   );
 };

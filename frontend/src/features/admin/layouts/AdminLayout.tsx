@@ -85,6 +85,9 @@ export const AdminLayout: React.FC = () => {
       case 'notifications':
         return 'Department Notifications & Activity Hub';
       case 'all-taxpayers':
+        if (currentPath.match(/\/admin\/all-taxpayers\/.+/)) {
+          return 'Taxpayer 360 Full Profile & Multi-Year Filing Details';
+        }
         return 'Master Taxpayer Registry & Lifecycle Funnel';
       case 'self-signups':
         return 'Direct Online Sign-ups & Self-Registration Pool';

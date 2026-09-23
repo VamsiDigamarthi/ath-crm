@@ -419,13 +419,13 @@ export class MasterTaxpayersService {
   /**
    * Get A-to-Z comprehensive details for a specific taxpayer and tax year
    */
-  public static async getTaxpayerYearDetails(customerId: string, taxYear: number) {
-    const customer = await prisma.customerProfile.findUnique({
+  public static async getTaxpayerYearDetails(customerId: string, taxYear?: number) {
+    let customer = await prisma.customerProfile.findUnique({
       where: { id: customerId },
       include: {
         user: true,
         applications: {
-          where: { taxYear: Number(taxYear) },
+          orderBy: { taxYear: 'desc' },
           include: {
             assignedDocAgent: true,
             assignedPrepAgent: true,
@@ -460,11 +460,78 @@ export class MasterTaxpayersService {
     });
 
     if (!customer) {
+      const cleanId = customerId.replace('TX-', '').trim();
+      customer = await prisma.customerProfile.findFirst({
+        where: {
+          OR: [
+            { id: { contains: cleanId } },
+            { user: { id: customerId } },
+            { applications: { some: { id: customerId } } },
+          ],
+        },
+        include: {
+          user: true,
+          applications: {
+            orderBy: { taxYear: 'desc' },
+            include: {
+              assignedDocAgent: true,
+              assignedPrepAgent: true,
+              assignedReviewAgent: true,
+              assignedSalesAgent: true,
+              assignedFileOp: true,
+              documents: {
+                include: {
+                  uploadedByUser: { select: { id: true, firstName: true, lastName: true, role: true } },
+                },
+              },
+              quotes: {
+                include: {
+                  salesAgent: { select: { id: true, firstName: true, lastName: true, role: true } },
+                },
+              },
+              stageHistories: {
+                orderBy: { createdAt: 'desc' },
+                include: {
+                  movedByUser: { select: { id: true, firstName: true, lastName: true, role: true } },
+                },
+              },
+              callLogs: {
+                orderBy: { createdAt: 'desc' },
+                include: {
+                  agent: { select: { id: true, firstName: true, lastName: true, role: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+
+    if (!customer) {
       throw new Error(`Taxpayer profile with ID ${customerId} not found`);
     }
 
-    const application = customer.applications[0];
+    const targetYear = taxYear ? Number(taxYear) : customer.applications[0]?.taxYear || 2025;
+    const application = customer.applications.find((a) => a.taxYear === targetYear) || customer.applications[0];
     const summary = (application?.taxDraftSummary as any) || {};
+
+    const taxYearsList = customer.applications.map((app) => {
+      const appSummary = (app.taxDraftSummary as any) || {};
+      let status: 'COMPLETED' | 'IN_PROGRESS' | 'DROPPED' = 'IN_PROGRESS';
+      if (app.currentStage === ApplicationStage.FILING_SUCCESS) status = 'COMPLETED';
+      else if (app.currentStage === ApplicationStage.DROPPED_CANCELLED || app.currentStage === ApplicationStage.FILING_FAILED) status = 'DROPPED';
+
+      return {
+        year: app.taxYear,
+        status,
+        currentStage: app.currentStage,
+        formType: appSummary.formType || (app.filingType === 'CORPORATE' ? 'FORM_1120' : 'FORM_1040'),
+        federalRefund: appSummary.federalRefund || undefined,
+        federalTaxDue: appSummary.federalTaxDue || undefined,
+        stateName: appSummary.stateName || customer.state || undefined,
+        stateRefund: appSummary.stateRefund || undefined,
+      };
+    });
 
     return {
       taxpayer: {
@@ -479,9 +546,12 @@ export class MasterTaxpayersService {
         city: customer.city,
         state: customer.state,
         zipCode: customer.zipCode,
+        isConvertedCustomer: customer.isConvertedCustomer,
+        createdAt: customer.createdAt.toISOString(),
       },
+      taxYearsList,
       yearDetails: {
-        taxYear: Number(taxYear),
+        taxYear: targetYear,
         applicationId: application?.id,
         currentStage: application?.currentStage || 'RAW_PROSPECT',
         priority: application?.priority || 'MEDIUM',
@@ -524,26 +594,31 @@ export class MasterTaxpayersService {
             id: application.assignedDocAgent.id,
             name: `${application.assignedDocAgent.firstName || ''} ${application.assignedDocAgent.lastName || ''}`.trim(),
             role: application.assignedDocAgent.role,
+            email: application.assignedDocAgent.email || '',
           } : undefined,
           prepAgent: application?.assignedPrepAgent ? {
             id: application.assignedPrepAgent.id,
             name: `${application.assignedPrepAgent.firstName || ''} ${application.assignedPrepAgent.lastName || ''}`.trim(),
             role: application.assignedPrepAgent.role,
+            email: application.assignedPrepAgent.email || '',
           } : undefined,
           reviewAgent: application?.assignedReviewAgent ? {
             id: application.assignedReviewAgent.id,
             name: `${application.assignedReviewAgent.firstName || ''} ${application.assignedReviewAgent.lastName || ''}`.trim(),
             role: application.assignedReviewAgent.role,
+            email: application.assignedReviewAgent.email || '',
           } : undefined,
           salesAgent: application?.assignedSalesAgent ? {
             id: application.assignedSalesAgent.id,
             name: `${application.assignedSalesAgent.firstName || ''} ${application.assignedSalesAgent.lastName || ''}`.trim(),
             role: application.assignedSalesAgent.role,
+            email: application.assignedSalesAgent.email || '',
           } : undefined,
           fileOp: application?.assignedFileOp ? {
             id: application.assignedFileOp.id,
             name: `${application.assignedFileOp.firstName || ''} ${application.assignedFileOp.lastName || ''}`.trim(),
             role: application.assignedFileOp.role,
+            email: application.assignedFileOp.email || '',
           } : undefined,
         },
       },
