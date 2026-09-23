@@ -496,3 +496,13 @@ export const saveOrganizerSchema = z.object({
     }),
   }),
 });
+
+/**
+ * Schema for starting a new tax year return by client
+ */
+export const startTaxYearReturnSchema = z.object({
+  body: z.object({
+    taxYear: z.coerce.number().int().min(2000, 'Tax Year must be at least 2000').max(2100, 'Tax Year must be at most 2100'),
+  }),
+});
+

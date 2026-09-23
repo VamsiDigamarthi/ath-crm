@@ -7,10 +7,7 @@ import {
   RefreshCw, 
   Layers, 
   FileCode, 
-  Archive,
-  Check,
-  X,
-  FileCheck
+  Archive
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import toast from 'react-hot-toast';
@@ -32,34 +29,19 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-
-  const handleFilePicked = (file: File) => {
+  const handleFilePicked = async (file: File) => {
     // Validate file size (50MB max)
     if (file.size > 50 * 1024 * 1024) {
       toast.error('File size exceeds 50MB limit.');
       return;
     }
-    setPendingFile(file);
-  };
-
-  const handleConfirmUpload = async () => {
-    if (!pendingFile) return;
     try {
-      await onUpload(pendingFile);
-      setPendingFile(null);
+      await onUpload(file);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     } catch {
       // Error handled in hook
-    }
-  };
-
-  const handleCancelSelection = () => {
-    setPendingFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
     }
   };
 
@@ -100,7 +82,6 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
   };
 
   const ext = drakeTaxFile?.fileName ? getFileExtension(drakeTaxFile.fileName) : '';
-  const pendingExt = pendingFile?.name ? getFileExtension(pendingFile.name) : '';
 
   const getFileIcon = (extStr: string) => {
     if (['PDF'].includes(extStr)) return <FileText className="w-5 h-5 text-rose-600" />;
@@ -150,7 +131,7 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
           <span className="text-[10px] font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
             .PDF • .D25 • .XML • .ZIP
           </span>
-          {!isReadOnly && drakeTaxFile && !pendingFile && (
+          {!isReadOnly && drakeTaxFile && (
             <Button
               size="sm"
               variant="outline"
@@ -160,7 +141,7 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
               title="Replace current Drake Tax calculation file"
             >
               <RefreshCw className={`w-3 h-3 ${isUploading ? 'animate-spin' : ''}`} />
-              <span>Replace File</span>
+              <span>{isUploading ? 'Uploading...' : 'Replace File'}</span>
             </Button>
           )}
         </div>
@@ -168,84 +149,19 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
 
       {/* Card Body */}
       <div className="p-4">
-        {/* State 1: A New File is Picked and Pending Confirmation */}
-        {pendingFile ? (
-          <div className="p-4 rounded-xl border-2 border-emerald-500 bg-emerald-50/50 space-y-3.5 animate-in fade-in duration-150">
-            <div className="flex items-center justify-between border-b border-emerald-200 pb-2.5">
-              <div className="flex items-center gap-2">
-                <FileCheck className="w-4 h-4 text-emerald-700" />
-                <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
-                  File Selected — Confirm Upload
-                </span>
-              </div>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                Pending Confirmation
-              </span>
+        {isUploading ? (
+          /* Uploading State */
+          <div className="p-8 rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/50 flex flex-col items-center justify-center text-center space-y-3 animate-pulse">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
             </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-white border border-emerald-300 flex items-center justify-center shrink-0 shadow-2xs">
-                  {getFileIcon(pendingExt)}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-slate-900 truncate block">
-                      {pendingFile.name}
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-200 text-emerald-900 border border-emerald-300 uppercase shrink-0">
-                      {pendingExt || 'FILE'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-slate-600 mt-0.5 flex items-center gap-2">
-                    <span>Size: <strong>{formatFileSize(pendingFile.size)}</strong></span>
-                    <span>•</span>
-                    <span className="text-emerald-800 font-medium">Ready to upload &amp; link to Form 1040 draft</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons: Confirm, Change, Cancel */}
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  size="sm"
-                  type="button"
-                  loading={isUploading}
-                  onClick={handleConfirmUpload}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-8 px-3.5 flex items-center gap-1.5 shadow-xs cursor-pointer"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Confirm Upload</span>
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  type="button"
-                  disabled={isUploading}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-white hover:bg-slate-50 text-slate-700 border-slate-300 text-xs font-bold h-8 px-3 flex items-center gap-1 cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Change</span>
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  type="button"
-                  disabled={isUploading}
-                  onClick={handleCancelSelection}
-                  className="bg-white hover:bg-rose-50 text-rose-700 border-rose-200 text-xs font-bold h-8 px-3 flex items-center gap-1 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Cancel</span>
-                </Button>
-              </div>
+            <div>
+              <h5 className="text-sm font-bold text-slate-800">Uploading Drake Tax File...</h5>
+              <p className="text-xs text-slate-500 mt-0.5">Linking computation file with Form 1040 workspace</p>
             </div>
           </div>
         ) : drakeTaxFile ? (
-          /* State 2: Uploaded File Present (Clean View: No Download/Preview buttons) */
+          /* State 1: Uploaded File Present */
           <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/40 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -275,12 +191,13 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
                 </div>
               </div>
 
-              {/* Action Buttons: Only Replace (No Download/Preview/Delete) */}
+              {/* Action Buttons: Only Replace */}
               <div className="flex items-center gap-2 shrink-0">
                 {!isReadOnly && (
                   <Button
                     size="sm"
                     variant="outline"
+                    type="button"
                     disabled={isUploading}
                     onClick={() => fileInputRef.current?.click()}
                     className="bg-white hover:bg-slate-50 text-slate-700 border-slate-300 text-xs font-bold h-8 px-3 flex items-center gap-1.5 cursor-pointer shadow-2xs"
@@ -301,18 +218,29 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
               <span className="font-bold">Verified File</span>
             </div>
           </div>
+        ) : isReadOnly ? (
+          /* State 2: Locked / Read-Only View (No file uploaded & workspace in QA / read-only) */
+          <div className="p-6 rounded-xl border border-slate-200 bg-slate-50/80 text-center space-y-2">
+            <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center mx-auto">
+              <FileSpreadsheet className="w-5 h-5 text-slate-500" />
+            </div>
+            <h5 className="text-xs sm:text-sm font-bold text-slate-700">Drake Tax File Locked</h5>
+            <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+              This tax return is currently submitted for QA Review or under Documenter Intake. Direct Drake Tax file uploads are temporarily disabled.
+            </p>
+          </div>
         ) : (
           /* State 3: Empty / Upload Dropzone View */
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={() => !isReadOnly && !isUploading && fileInputRef.current?.click()}
+            onClick={() => fileInputRef.current?.click()}
             className={`p-6 rounded-xl border-2 border-dashed text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2.5 ${
               isDragOver
                 ? 'border-emerald-500 bg-emerald-50/50 scale-[0.99]'
                 : 'border-slate-300 hover:border-emerald-400 bg-slate-50/60 hover:bg-white'
-            } ${isReadOnly ? 'cursor-not-allowed opacity-75' : ''}`}
+            }`}
           >
             <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
               <Upload className="w-6 h-6" />
@@ -327,19 +255,22 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
               </p>
             </div>
 
-            {!isReadOnly && (
-              <Button
-                size="sm"
-                type="button"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-8 px-4 flex items-center gap-1.5 shadow-xs cursor-pointer mt-1"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Select Drake Tax File</span>
-              </Button>
-            )}
+            <Button
+              size="sm"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-8 px-4 flex items-center gap-1.5 shadow-xs cursor-pointer mt-1"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Select Drake Tax File</span>
+            </Button>
           </div>
         )}
       </div>
     </div>
   );
 };
+

@@ -43,6 +43,9 @@ export const Module8Deductions: React.FC<Module8Props> = ({
   const rentList = d.rentDeductionsList || [];
   const charityList = d.charitableList || [];
 
+  const [isOpenRentDeductions, setIsOpenRentDeductions] = React.useState<boolean>(false);
+  const [isOpenCharity, setIsOpenCharity] = React.useState<boolean>(false);
+
   const totalRentMonths = rentList.reduce((sum, r) => sum + (r.months || 0), 0);
   const totalRentClaimed = rentList.reduce((sum, r) => sum + ((r.months || 0) * (r.monthlyRent || 0)), 0);
 
@@ -56,80 +59,118 @@ export const Module8Deductions: React.FC<Module8Props> = ({
       </div>
 
       {/* 1. Rental Deductions Table */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Home className="w-4 h-4 text-emerald-600" />
-              <span>Rental Deductions for TY{selectedTaxYear} (Max 12 Months Total)</span>
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Claim state renter tax credits for properties rented during {selectedTaxYear}. Total months across all states cannot exceed 12 months.
-            </p>
-          </div>
+      {!isOpenRentDeductions ? (
+        <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-2xs hover:border-emerald-300 transition-all">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0 mt-0.5">
+                <Home className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">
+                  Rental Deductions for TY{selectedTaxYear} (Max 12 Months Total)
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Optional: Claim state renter tax credits for properties rented during {selectedTaxYear}.
+                </p>
+              </div>
+            </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              // Find next available unused state
-              const usedStates = rentList.map((r) => r.state).filter(Boolean);
-              const nextState = ALL_ELIGIBLE_STATES.find((s) => !usedStates.includes(s.value))?.value || 'OTHER';
-              const remainingMonths = Math.max(0, 12 - totalRentMonths);
-
-              const updated = [
-                ...rentList,
-                {
-                  state: nextState,
-                  months: remainingMonths,
-                  monthlyRent: 0,
-                  totalRentPaid: 0,
-                },
-              ];
-              updateField('rentDeductionsList', updated);
-              updateField('hasRentDeductions', true);
-            }}
-            className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 shrink-0 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add State Rent Row</span>
-          </Button>
-        </div>
-
-        {/* 12 Months Warning Banner */}
-        {totalRentMonths > 12 && (
-          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2 font-bold">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>
-              Total rental months cannot exceed 12 months in a calendar year! You currently have {totalRentMonths} months entered across all states.
-            </span>
-          </div>
-        )}
-
-        {errors.rentMonthsTotal && (
-          <p className="text-xs font-bold text-rose-600">{errors.rentMonthsTotal}</p>
-        )}
-
-        {/* Dynamic State Rental Deductions Table */}
-        {rentList.length === 0 ? (
-          <div className="p-5 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
-            <p>No state rental deduction rows added yet.</p>
             <Button
               size="sm"
               variant="outline"
+              type="button"
               onClick={() => {
-                updateField('rentDeductionsList', [
-                  { state: 'CA', months: 12, monthlyRent: 0, totalRentPaid: 0 },
-                ]);
-                updateField('hasRentDeductions', true);
+                setIsOpenRentDeductions(true);
+                if (rentList.length === 0) {
+                  const usedStates = rentList.map((r) => r.state).filter(Boolean);
+                  const nextState = ALL_ELIGIBLE_STATES.find((s) => !usedStates.includes(s.value))?.value || 'OTHER';
+                  const remainingMonths = Math.max(0, 12 - totalRentMonths);
+
+                  const updated = [
+                    {
+                      state: nextState,
+                      months: remainingMonths,
+                      monthlyRent: 0,
+                      totalRentPaid: 0,
+                    },
+                  ];
+                  updateField('rentDeductionsList', updated);
+                  updateField('hasRentDeductions', true);
+                }
               }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 cursor-pointer"
+              className="text-xs font-bold border-emerald-300 text-emerald-700 bg-emerald-50/80 hover:bg-emerald-100 flex items-center gap-1.5 shrink-0 cursor-pointer px-3.5 py-2 self-start sm:self-auto rounded-xl shadow-2xs"
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              <span>Add State Rent Row</span>
+              <Plus className="w-4 h-4" />
+              <span>{rentList.length > 0 ? 'View / Edit State Rent' : 'Add State Rent Row'}</span>
             </Button>
           </div>
-        ) : (
+        </div>
+      ) : (
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Home className="w-4 h-4 text-emerald-600" />
+                <span>Rental Deductions for TY{selectedTaxYear} ({rentList.length} States)</span>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Claim state renter tax credits for properties rented during {selectedTaxYear}. Total months across all states cannot exceed 12 months.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  const usedStates = rentList.map((r) => r.state).filter(Boolean);
+                  const nextState = ALL_ELIGIBLE_STATES.find((s) => !usedStates.includes(s.value))?.value || 'OTHER';
+                  const remainingMonths = Math.max(0, 12 - totalRentMonths);
+
+                  const updated = [
+                    ...rentList,
+                    {
+                      state: nextState,
+                      months: remainingMonths,
+                      monthlyRent: 0,
+                      totalRentPaid: 0,
+                    },
+                  ];
+                  updateField('rentDeductionsList', updated);
+                  updateField('hasRentDeductions', true);
+                }}
+                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another State</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => setIsOpenRentDeductions(false)}
+                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
+          {/* 12 Months Warning Banner */}
+          {totalRentMonths > 12 && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2 font-bold">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>
+                Total rental months cannot exceed 12 months in a calendar year! You currently have {totalRentMonths} months entered across all states.
+              </span>
+            </div>
+          )}
+
+          {errors.rentMonthsTotal && (
+            <p className="text-xs font-bold text-rose-600">{errors.rentMonthsTotal}</p>
+          )}
+
+          {/* Dynamic State Rental Deductions Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left border border-slate-200 rounded-xl overflow-hidden min-w-[620px]">
               <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
@@ -231,6 +272,7 @@ export const Module8Deductions: React.FC<Module8Props> = ({
                           onClick={() => {
                             const list = rentList.filter((_, i) => i !== idx);
                             updateField('rentDeductionsList', list);
+                            if (list.length === 0) updateField('hasRentDeductions', false);
                           }}
                           className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
                           title="Remove Row"
@@ -244,52 +286,95 @@ export const Module8Deductions: React.FC<Module8Props> = ({
               </tbody>
             </table>
           </div>
-        )}
 
-        {/* Total Summary Footer */}
-        <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold">
-          <span className="text-slate-700">
-            Total Claimed Rental Deductions ({totalRentMonths} / 12 Months):
-          </span>
-          <span className={`text-sm font-extrabold ${totalRentMonths > 12 ? 'text-rose-600' : 'text-[#16A34A]'}`}>
-            ${totalRentClaimed.toLocaleString()}
-          </span>
+          {/* Total Summary Footer */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold">
+            <span className="text-slate-700">
+              Total Claimed Rental Deductions ({totalRentMonths} / 12 Months):
+            </span>
+            <span className={`text-sm font-extrabold ${totalRentMonths > 12 ? 'text-rose-600' : 'text-[#16A34A]'}`}>
+              ${totalRentClaimed.toLocaleString()}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 2. Charitable Donations Table */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Heart className="w-4 h-4 text-rose-600" />
-              <span>Charitable Donations Worksheet</span>
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">List 501(c)(3) religious, educational or disaster relief donations</p>
-          </div>
+      {!isOpenCharity ? (
+        <div className="p-4 sm:p-5 rounded-2xl border border-slate-200 bg-white shadow-2xs hover:border-rose-300 transition-all">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shrink-0 mt-0.5">
+                <Heart className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">
+                  Charitable Donations Worksheet
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Optional: List 501(c)(3) religious, educational or disaster relief donations in {selectedTaxYear}.
+                </p>
+              </div>
+            </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              const updated = [
-                ...charityList,
-                { institutionName: '', amountDonated: 0, donationType: 'CASH' },
-              ];
-              updateField('charitableList', updated);
-            }}
-            className="text-xs font-bold border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Charity Row</span>
-          </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsOpenCharity(true);
+                if (charityList.length === 0) {
+                  const updated = [
+                    { institutionName: '', amountDonated: 0, donationType: 'CASH' },
+                  ];
+                  updateField('charitableList', updated);
+                }
+              }}
+              className="text-xs font-bold border-rose-300 text-rose-700 bg-rose-50/80 hover:bg-rose-100 flex items-center gap-1.5 shrink-0 cursor-pointer px-3.5 py-2 self-start sm:self-auto rounded-xl shadow-2xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{charityList.length > 0 ? 'View / Edit Charities' : 'Add Charity Row'}</span>
+            </Button>
+          </div>
         </div>
+      ) : (
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Heart className="w-4 h-4 text-rose-600" />
+                <span>Charitable Donations Worksheet ({charityList.length})</span>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">List 501(c)(3) religious, educational or disaster relief donations</p>
+            </div>
 
-        {charityList.length === 0 ? (
-          <div className="p-4 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500">
-            No charitable donations listed. Click &quot;Add Charity Row&quot; if you made donations in {selectedTaxYear}.
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  const updated = [
+                    ...charityList,
+                    { institutionName: '', amountDonated: 0, donationType: 'CASH' },
+                  ];
+                  updateField('charitableList', updated);
+                }}
+                className="text-xs font-bold border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Charity</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => setIsOpenCharity(false)}
+                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+              >
+                Close
+              </button>
+            </div>
           </div>
-        ) : (
+
           <div className="space-y-2">
             {charityList.map((ch, idx) => (
               <div key={idx} className="p-3 rounded-xl border border-slate-200 bg-slate-50/70 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
@@ -342,8 +427,8 @@ export const Module8Deductions: React.FC<Module8Props> = ({
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 3. Expenses Incurred (12 Categories with Taxpayer & Spouse breakdown) */}
       <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">

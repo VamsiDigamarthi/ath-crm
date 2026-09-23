@@ -274,16 +274,11 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
     return counts;
   }, [allDocuments]);
 
-  // Documents belonging to the current active document type
-  const activeTypeDocs = useMemo(() => {
-    return allDocuments.filter((doc) => getDocumentTypeForCategory(doc.documentCategory) === activeDocType);
-  }, [allDocuments, activeDocType]);
-
-  // Split active type docs into physical files vs drive links
+  // Split all docs into physical files vs drive links
   const { physicalFiles, driveLinks } = useMemo(() => {
     const files: CustomerDocumentItem[] = [];
     const links: CustomerDocumentItem[] = [];
-    activeTypeDocs.forEach((doc) => {
+    allDocuments.forEach((doc) => {
       if (isDriveLinkDoc(doc)) {
         links.push(doc);
       } else {
@@ -291,24 +286,27 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
       }
     });
     return { physicalFiles: files, driveLinks: links };
-  }, [activeTypeDocs]);
+  }, [allDocuments]);
 
-  // Tab-filtered documents for the active document type
+  // Tab-filtered documents across all categories for the selected tax year
   const tabFilteredDocs = useMemo(() => {
     if (activeVaultTab === 'FILES') return physicalFiles;
     if (activeVaultTab === 'LINKS') return driveLinks;
-    return activeTypeDocs;
-  }, [activeVaultTab, physicalFiles, driveLinks, activeTypeDocs]);
+    return allDocuments;
+  }, [activeVaultTab, physicalFiles, driveLinks, allDocuments]);
 
   // Category-filtered documents
   const filteredDocs = useMemo(() => {
     if (filterCategory === 'ALL') return tabFilteredDocs;
+    if (filterCategory.startsWith('TYPE_')) {
+      const typeId = filterCategory.replace('TYPE_', '');
+      return tabFilteredDocs.filter((doc) => getDocumentTypeForCategory(doc.documentCategory) === typeId);
+    }
     return tabFilteredDocs.filter((doc) => doc.documentCategory === filterCategory);
   }, [tabFilteredDocs, filterCategory]);
 
   const handleSelectDocType = useCallback((typeId: DocumentTypeId) => {
     setActiveDocType(typeId);
-    setFilterCategory('ALL');
     setUploadCategory(getDefaultCategoryForType(typeId));
   }, []);
 
@@ -322,7 +320,7 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
 
   return {
     allDocuments,
-    documents: activeTypeDocs,
+    documents: allDocuments,
     filteredDocs,
     physicalFiles,
     driveLinks,

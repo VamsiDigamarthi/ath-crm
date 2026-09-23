@@ -176,6 +176,11 @@ export const customerApi = {
     const res: any = await apiClient.put('/customer/organizer', { taxYear, organizerData });
     return res;
   },
+
+  startTaxYearReturn: async (taxYear: number): Promise<{ success: boolean; data: any; message: string }> => {
+    const res: any = await apiClient.post('/customer/tax-years', { taxYear });
+    return res;
+  },
 };
 
 export interface OrganizerData {

@@ -167,4 +167,20 @@ export class CustomerController {
 
     return SuccessHandler.handle(res, 'Organizer saved successfully', result);
   }
+
+  /**
+   * POST /api/v1/customer/tax-years
+   * Start a new tax year return directly from client portal
+   */
+  static async startTaxYearReturn(req: Request, res: Response) {
+    if (!req.currentUser?.id) {
+      throw new NotAuthorizedError();
+    }
+
+    const { taxYear } = req.body;
+    const result = await CustomerService.startTaxYearReturn(req.currentUser.id, taxYear);
+
+    return SuccessHandler.handle(res, result.message, result, 201);
+  }
 }
+

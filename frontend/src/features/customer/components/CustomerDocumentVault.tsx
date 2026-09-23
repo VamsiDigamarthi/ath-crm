@@ -173,64 +173,18 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         </div>
       </div>
 
-      {/* 2. 4 DOCUMENT TYPE TABS */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {DOCUMENT_TYPES.map((dt) => {
-            const Icon = dt.icon;
-            const count = docTypeCounts[dt.id] || 0;
-            const isActive = activeDocType === dt.id;
-
-            return (
-              <button
-                key={dt.id}
-                type="button"
-                onClick={() => setActiveDocType(dt.id)}
-                className={`flex items-start gap-3 p-3.5 rounded-xl text-left transition-all cursor-pointer relative ${
-                  isActive
-                    ? 'bg-slate-900 text-white shadow-sm ring-2 ring-slate-900 ring-offset-1'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 hover:border-slate-300'
-                }`}
-              >
-                <div
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-bold ${
-                    isActive
-                      ? 'bg-white/15 text-white'
-                      : dt.colorClass
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-bold truncate">
-                      {dt.number}) {dt.label}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : count > 0
-                          ? 'bg-emerald-100 text-[#16A34A] border border-emerald-200'
-                          : 'bg-slate-200/80 text-slate-500'
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </div>
-                  <p
-                    className={`text-[11px] line-clamp-1 mt-0.5 ${
-                      isActive ? 'text-slate-300' : 'text-slate-500'
-                    }`}
-                  >
-                    {dt.description}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+      {/* 2. Small, Neat Document Type Switch Tabs */}
+      <div className="border-b border-slate-200 pb-1">
+        <AppTabs
+          tabs={DOCUMENT_TYPES.map((dt) => ({
+            id: dt.id,
+            label: `${dt.number}) ${dt.label}`,
+            count: docTypeCounts[dt.id] || 0,
+          }))}
+          activeTab={activeDocType}
+          onChange={(tabId) => setActiveDocType(tabId as any)}
+          size="sm"
+        />
       </div>
 
       {/* 3. Drag & Drop Upload Sub-Component */}
@@ -268,7 +222,6 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         filteredDocs={filteredDocs}
         filterCategory={filterCategory}
         setFilterCategory={setFilterCategory}
-        activeDocType={activeDocType}
         loading={loading}
         onOpenUpload={() => fileInputRef.current?.click()}
         onOpenDriveLinkModal={() => setIsDriveLinkModalOpen(true)}

@@ -48,10 +48,10 @@ const fileFilter = (
 ) => {
   const ext = path.extname(file.originalname).toLowerCase();
   
-  if (!ALLOWED_EXTENSIONS.includes(ext) || !ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+  if (!ALLOWED_EXTENSIONS.includes(ext) && !ALLOWED_MIME_TYPES.includes(file.mimetype)) {
     return cb(
       new BadRequestError(
-        `Invalid file type "${ext}". Allowed formats are PDF, PNG, JPG, JPEG, Word (.doc, .docx), Excel (.xlsx, .xls, .csv), Text (.txt, .rtf), and ZIP Archives (.zip).`
+        `Invalid file type "${ext}". Allowed formats are PDF, PNG, JPG, JPEG, Word (.doc, .docx), Excel (.xlsx, .xls, .csv), Text (.txt, .rtf), Drake Tax (.d25, .d24, .xml, .dat, .bak), and ZIP Archives (.zip).`
       )
     );
   }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail, Sparkles, Bell } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { AppModal } from '@/shared/components/AppModal';
@@ -13,6 +13,7 @@ import { DrakeTaxUploadCard } from '../components/workspace/DrakeTaxUploadCard';
 import { DocumentPreviewModal } from '../components/workspace/DocumentPreviewModal';
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
+import { RequestMissingDocumentsModal } from '@/features/documenter/components/prep/RequestMissingDocumentsModal';
 import toast from 'react-hot-toast';
 
 export const TaxPreparerWorkspaceScreen: React.FC = () => {
@@ -20,6 +21,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const [isSendBackOpen, setIsSendBackOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
+  const [isRequestDocsModalOpen, setIsRequestDocsModalOpen] = useState(false);
   const {
     isLoading,
     isSaving,
@@ -173,6 +175,17 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
           >
             <Mail className="w-3.5 h-3.5 text-blue-600" />
             <span>Email Client</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsRequestDocsModalOpen(true)}
+            className="border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            title="Request missing documents from client & notify assigned document agent"
+          >
+            <Bell className="w-3.5 h-3.5 text-purple-600" />
+            <span>Request Missing Docs</span>
           </Button>
 
           {(() => {
@@ -439,11 +452,12 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             onPreviewDoc={setSelectedDocForPreview}
             onOpenOrganizerModal={() => setIsOrganizerModalOpen(true)}
             onApplyValue={handleApplyFieldValue}
+            onOpenRequestDocsModal={() => setIsRequestDocsModalOpen(true)}
             drakeTaxComponent={
               <DrakeTaxUploadCard
                 drakeTaxFile={drakeTaxFile}
                 isUploading={isUploadingDrakeFile}
-                isReadOnly={isSubmittedToQA || isRevertedToDocs}
+                isReadOnly={currentStage.startsWith('FILING') || currentStage === 'PAID_AND_AUTHORIZED'}
                 onUpload={handleUploadDrakeFile}
                 onDelete={handleDeleteDrakeFile}
                 onPreview={setSelectedDocForPreview}
@@ -674,6 +688,15 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
           />
         </div>
       </AppModal>
+
+      {/* 8. Request Missing Documents Modal (Sends in-app notification and email to Client & Document Agent) */}
+      <RequestMissingDocumentsModal
+        isOpen={isRequestDocsModalOpen}
+        onClose={() => setIsRequestDocsModalOpen(false)}
+        applicationId={applicationId || ''}
+        customerName={taxpayerName}
+        customerEmail={taxpayer?.email}
+      />
     </div>
   );
 };
