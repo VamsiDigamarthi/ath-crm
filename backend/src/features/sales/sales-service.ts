@@ -3,6 +3,35 @@ import { ApplicationStage, Role, NotificationCategory, NotificationPriority, Aud
 
 export class SalesService {
   /**
+   * Helper to dynamically compute return complexity based on documents, schedules, deductions, and foreign reporting
+   */
+  public static computeReturnComplexity(app: any): 'STANDARD' | 'INVESTMENTS_1099B' | 'FOREIGN_FBAR' | 'SCHEDULE_C' {
+    const draft = app.taxDraftSummary || {};
+    const feeBreakdown = draft.feeBreakdown || {};
+    const documents: any[] = Array.isArray(app.documents) ? app.documents : [];
+    const docText = [
+      ...documents.map((d: any) => `${d.documentCategory || ''} ${d.fileName || ''} ${d.documentType || ''}`),
+      draft.notes || '',
+      draft.remarks || '',
+    ].join(' ').toUpperCase();
+
+    const selectedStates = Array.isArray(feeBreakdown.selectedStates) ? feeBreakdown.selectedStates : [];
+    const fbarFee = Number(feeBreakdown.fbarFee || draft.fbarFee || 0);
+    const fatcaFee = Number(feeBreakdown.fatcaFee || draft.fatcaFee || 0);
+
+    if (fbarFee > 0 || fatcaFee > 0 || docText.includes('FBAR') || docText.includes('FATCA') || docText.includes('8938') || docText.includes('NRE') || docText.includes('NRO') || docText.includes('FOREIGN') || docText.includes('PFIC') || docText.includes('8621')) {
+      return 'FOREIGN_FBAR';
+    }
+    if (docText.includes('SCHEDULE C') || docText.includes('1099-NEC') || docText.includes('SELF-EMPLOYED') || docText.includes('BUSINESS') || docText.includes('RENTAL') || docText.includes('SCHEDULE E') || selectedStates.length >= 2 || docText.includes('K-1') || docText.includes('PARTNERSHIP')) {
+      return 'SCHEDULE_C';
+    }
+    if (docText.includes('1099-B') || docText.includes('STOCK') || docText.includes('CRYPTO') || docText.includes('BROKERAGE') || docText.includes('INVESTMENT') || docText.includes('1099-INT') || docText.includes('1099-DIV') || docText.includes('ITEMIZED') || docText.includes('SCHEDULE A')) {
+      return 'INVESTMENTS_1099B';
+    }
+    return 'STANDARD';
+  }
+
+  /**
    * List all QA-Approved pipeline leads eligible for Sales Pitch & Fee Quotation
    */
   public static async getPipelineLeads(query: {
@@ -237,7 +266,7 @@ export class SalesService {
         visaType: customer?.visaType || '-',
         maritalStatus: customer?.maritalStatus || 'Single',
         stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
-        complexity: 'STANDARD',
+        complexity: SalesService.computeReturnComplexity(app),
         currentStage,
         priority: app.priority,
         grossIncome,
@@ -890,7 +919,7 @@ export class SalesService {
       visaType: customer?.visaType || '-',
       maritalStatus: customer?.maritalStatus || 'Single',
       stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
-      complexity: 'STANDARD',
+      complexity: SalesService.computeReturnComplexity(app),
       currentStage: app.currentStage,
       grossIncome,
       federalRefund: validFedRefund,

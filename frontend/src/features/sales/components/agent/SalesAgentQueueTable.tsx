@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
+import { PhoneCall, ArrowRight, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
+import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
+import { calculateReturnComplexity } from '../../utils/complexity-evaluator';
 import type { SalesLeadItem } from '../../types/sales.types';
+import type { ReturnComplexityTier } from '../../types/complexity.types';
 
 interface SalesAgentQueueTableProps {
   leads: SalesLeadItem[];
@@ -18,6 +21,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
   const [activeTab, setActiveTab] = useState<'ALL' | 'AWAITING' | 'QUOTED' | 'PAID' | 'REVERTED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [complexityFilter, setComplexityFilter] = useState<string>('ALL');
 
   const isReturnReverted = (lead: SalesLeadItem) => {
     const draftStatus = (lead.taxDraftSummary as any)?.status;
@@ -90,6 +94,12 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
       // Priority Filter
       if (priorityFilter !== 'ALL' && (lead.priority || 'NO_PRIORITY') !== priorityFilter) return false;
 
+      // Complexity Filter
+      if (complexityFilter !== 'ALL') {
+        const comp = calculateReturnComplexity(lead);
+        if (comp.tier !== complexityFilter) return false;
+      }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
@@ -101,7 +111,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
       }
       return true;
     });
-  }, [leads, activeTab, priorityFilter, searchQuery]);
+  }, [leads, activeTab, priorityFilter, complexityFilter, searchQuery]);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
@@ -131,6 +141,19 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
             value={priorityFilter}
             onChange={setPriorityFilter}
           />
+
+          {/* Complexity Filter Dropdown */}
+          <select
+            value={complexityFilter}
+            onChange={(e) => setComplexityFilter(e.target.value)}
+            className="h-8.5 text-xs font-bold bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs"
+          >
+            <option value="ALL">All Complexity</option>
+            <option value="BASIC">🟢 Basic (W-2)</option>
+            <option value="MODERATE">🟡 Moderate (1099/Stocks)</option>
+            <option value="COMPLEX">🟠 Complex (Sch C/Rental)</option>
+            <option value="SPECIALIZED">🔴 Specialized (Foreign/PFIC)</option>
+          </select>
 
           {filteredLeads.length > 0 && (
             <Button
@@ -230,6 +253,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
             <tr>
               <th className="py-3.5 px-4">Taxpayer Client</th>
               <th className="py-3.5 px-4">State &amp; Visa</th>
+              <th className="py-3.5 px-4">Return Complexity</th>
               <th className="py-3.5 px-4">Certified 1040 Refund</th>
               <th className="py-3.5 px-4">Quoted Service Fee</th>
               <th className="py-3.5 px-4">E-Sign &amp; Payment</th>
@@ -240,7 +264,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
                     <span>Loading live sales pitch queue...</span>
@@ -249,7 +273,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
               </tr>
             ) : filteredLeads.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                   No returns found in this filter tab.
                 </td>
               </tr>
@@ -284,6 +308,11 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
                     <td className="py-3.5 px-4">
                       <div className="text-slate-800 font-semibold text-xs">{lead.stateOfResidence}</div>
                       <div className="text-[10px] text-slate-500 font-medium">{lead.visaType}</div>
+                    </td>
+
+                    {/* Return Complexity Score & Factors */}
+                    <td className="py-3.5 px-4">
+                      <ReturnComplexityBadge lead={lead} size="md" />
                     </td>
 
                     {/* Certified 1040 Refund */}

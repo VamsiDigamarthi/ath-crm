@@ -7,8 +7,12 @@ import {
   UserCheck, 
   Sparkles,
   Headphones,
-  CheckCircle2
+  CheckCircle2,
+  ShieldAlert,
+  Award
 } from 'lucide-react';
+import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
+import { calculateReturnComplexity } from '../../utils/complexity-evaluator';
 import type { SalesRepItem, SalesLeadItem } from '../../types/sales.types';
 
 export interface SalesLeadAssignmentModalProps {
@@ -35,6 +39,8 @@ export const SalesLeadAssignmentModal: React.FC<SalesLeadAssignmentModalProps> =
   const [searchAgent, setSearchAgent] = useState<string>('');
 
   const leadCount = selectedLeads.length;
+  const singleLead = leadCount === 1 ? selectedLeads[0] : null;
+  const complexityInfo = singleLead ? calculateReturnComplexity(singleLead) : null;
 
   // Strictly Frontline Sales Closers (SALES_AGENT only - Managers and Team Leads excluded)
   const closers = useMemo(() => {
@@ -110,7 +116,34 @@ export const SalesLeadAssignmentModal: React.FC<SalesLeadAssignmentModalProps> =
         </div>
       }
     >
-      <div className="space-y-5 font-sans">
+      <div className="space-y-4 font-sans">
+        {/* Return Complexity Guideline Banner */}
+        {complexityInfo && (
+          <div className="p-3.5 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/70 space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-700">Taxpayer Return Complexity:</span>
+                <ReturnComplexityBadge complexityInfo={complexityInfo} size="md" />
+              </div>
+              <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                <Award className="w-3 h-3 text-emerald-600" />
+                <span>Guideline: {complexityInfo.recommendation}</span>
+              </span>
+            </div>
+
+            {complexityInfo.factors.length > 0 && (
+              <div className="text-[11px] text-slate-600 flex items-center gap-1.5 flex-wrap pt-0.5">
+                <span className="font-bold text-slate-500 text-[10px] uppercase">Detected Factors:</span>
+                {complexityInfo.factors.map((factor, idx) => (
+                  <span key={idx} className="bg-white text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-[10px] font-semibold">
+                    {factor}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Mode Selector Tabs */}
         <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
           <button

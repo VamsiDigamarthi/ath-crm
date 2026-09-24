@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { salesService } from '../services/sales-service';
+import { calculateReturnComplexity } from '../utils/complexity-evaluator';
+import type { ReturnComplexityTier } from '../types/complexity.types';
 import type { SalesLeadItem, SalesRepItem, SalesManagerStats } from '../types/sales.types';
 import toast from 'react-hot-toast';
 
@@ -33,6 +35,7 @@ export function useSalesManagerQueue() {
   const [liabilityFilter, setLiabilityFilter] = useState<'ALL' | 'REFUND' | 'TAX_DUE'>('ALL');
   const [visaFilter, setVisaFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
+  const [complexityFilter, setComplexityFilter] = useState<ReturnComplexityTier | 'ALL'>('ALL');
   const [selectedRows, setSelectedRows] = useState<SalesLeadItem[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [activeLeadForAssign, setActiveLeadForAssign] = useState<SalesLeadItem | null>(null);
@@ -117,6 +120,12 @@ export function useSalesManagerQueue() {
       // Priority Filtering
       if (priorityFilter !== 'ALL' && (lead.priority || 'NO_PRIORITY') !== priorityFilter) return false;
 
+      // Complexity Filtering
+      if (complexityFilter !== 'ALL') {
+        const comp = calculateReturnComplexity(lead);
+        if (comp.tier !== complexityFilter) return false;
+      }
+
       // Search Filtering
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -131,7 +140,7 @@ export function useSalesManagerQueue() {
       }
       return true;
     });
-  }, [leads, activeTab, paymentFilter, liabilityFilter, visaFilter, priorityFilter, searchQuery]);
+  }, [leads, activeTab, paymentFilter, liabilityFilter, visaFilter, priorityFilter, complexityFilter, searchQuery]);
 
   // Assign lead(s) to closer via real backend API
   const handleDirectAssign = async (agentId: string) => {
@@ -214,6 +223,8 @@ export function useSalesManagerQueue() {
     setVisaFilter,
     priorityFilter,
     setPriorityFilter,
+    complexityFilter,
+    setComplexityFilter,
     selectedRows,
     setSelectedRows,
     isAssignModalOpen,

@@ -4,6 +4,7 @@ import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin, ChevronDown, ChevronUp, Ro
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../common/SalesStageBadge';
+import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface PitchTaxpayerHeaderProps {
@@ -46,6 +47,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
               TY {lead.taxYear} Form 1040
             </span>
             <SalesStageBadge stage={lead.currentStage} />
+            <ReturnComplexityBadge lead={lead} size="md" />
             {(() => {
               const lastRevert =
                 (lead.taxDraftSummary as any)?.revertsByTarget?.SALES ||

@@ -9,6 +9,7 @@ import {
 import { Button } from '@/shared/components/Button';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { SalesStageBadge } from '../common/SalesStageBadge';
+import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
 import { SalesLeadAssignmentModal } from './SalesLeadAssignmentModal';
 import type { SalesLeadItem, SalesRepItem } from '../../types/sales.types';
 
@@ -195,6 +196,7 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
             <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
               <th className="py-3.5 px-4">Taxpayer Client</th>
               <th className="py-3.5 px-4">Location &amp; Visa</th>
+              <th className="py-3.5 px-4">Return Complexity</th>
               <th className="py-3.5 px-4">Certified 1040 Refund</th>
               <th className="py-3.5 px-4">Quoted Fee</th>
               <th className="py-3.5 px-4">Assigned Closer</th>
@@ -205,7 +207,7 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
           <tbody className="divide-y divide-slate-100">
             {filteredLeads.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                   No sales leads found matching criteria.
                 </td>
               </tr>
@@ -237,6 +239,11 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
                   <td className="py-3.5 px-4">
                     <div className="text-slate-800 font-semibold text-xs">{lead.stateOfResidence}</div>
                     <div className="text-[10px] text-slate-500 font-medium">{lead.visaType}</div>
+                  </td>
+
+                  {/* Return Complexity */}
+                  <td className="py-3.5 px-4">
+                    <ReturnComplexityBadge lead={lead} size="md" />
                   </td>
 
                   {/* Certified 1040 Refund */}

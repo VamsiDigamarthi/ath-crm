@@ -3,6 +3,7 @@ import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../components/common/SalesStageBadge';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { ReturnComplexityBadge } from '../components/common/ReturnComplexityBadge';
 import { PhoneCall, UserCheck } from 'lucide-react';
 import type { SalesLeadItem } from '../types/sales.types';
 
@@ -101,6 +102,13 @@ export function getSalesColumns({
       accessorKey: 'priority',
       render: (item) => (
         <PriorityBadge priority={item.priority || 'NO_PRIORITY'} size="sm" />
+      ),
+    },
+    {
+      header: 'Return Complexity',
+      accessorKey: 'complexityScore',
+      render: (item) => (
+        <ReturnComplexityBadge lead={item} size="sm" />
       ),
     },
     {

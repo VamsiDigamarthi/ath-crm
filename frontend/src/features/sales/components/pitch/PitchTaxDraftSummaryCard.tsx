@@ -11,6 +11,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { AppTabs } from '@/shared/components/AppTabs';
+import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface PitchTaxDraftSummaryCardProps {
@@ -39,13 +40,14 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
       {/* Header with Explainer Banner */}
       <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100 shrink-0">
               <FileText className="w-4 h-4" />
             </div>
             <h3 className="font-bold text-slate-900 text-sm truncate">
               Form 1040 Tax Calculation &amp; Deductions
             </h3>
+            <ReturnComplexityBadge lead={lead} size="sm" />
           </div>
           <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
             QA-Certified line-by-line deduction &amp; refund breakdown.
