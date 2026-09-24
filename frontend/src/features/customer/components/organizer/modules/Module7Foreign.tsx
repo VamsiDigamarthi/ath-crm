@@ -24,6 +24,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
   const d = (data || {}) as Partial<OrganizerData['m7_foreign']>;
   const accountsList = d.foreignAccountsList || [];
   const isFbarYes = d.hasFbarOver10k === 'YES' || d.hasFbar || d.spouseFbarOver10k === 'YES';
+  const [isOpenAccounts, setIsOpenAccounts] = React.useState<boolean>(false);
 
   return (
     <div className="space-y-6 font-sans">
@@ -76,65 +77,100 @@ export const Module7Foreign: React.FC<Module7Props> = ({
 
       {/* Foreign Bank Accounts Worksheet (if FBAR = YES or user adds accounts) */}
       {isFbarYes && (
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Landmark className="w-4 h-4 text-emerald-600" />
-                <span>Foreign Bank &amp; Demat Accounts (FinCEN Form 114)</span>
-              </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                List each Indian bank account / fixed deposit / demat account held during {selectedTaxYear}
-              </p>
-            </div>
+        !isOpenAccounts ? (
+          /* Collapsed State (Default): Heading at left, Add Button at right */
+          <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Landmark className="w-4 h-4 text-emerald-600" />
+                  <span>Foreign Bank &amp; Demat Accounts (FinCEN Form 114)</span>
+                  {accountsList.length > 0 && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                      {accountsList.length} Added
+                    </span>
+                  )}
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  List each Indian bank account / fixed deposit / demat account held during {selectedTaxYear}
+                </p>
+              </div>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const updated = [
-                  ...accountsList,
-                  {
-                    bankName: '',
-                    accountType: 'SAVINGS_NRE',
-                    accountNumber: '',
-                    maxBalanceInr: 0,
-                    interestEarnedInr: 0,
-                  },
-                ];
-                updateField('foreignAccountsList', updated);
-              }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Foreign Account</span>
-            </Button>
-          </div>
-
-          {accountsList.length === 0 ? (
-            <div className="p-5 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
-              <p>No foreign bank accounts added yet.</p>
               <Button
                 size="sm"
                 variant="outline"
+                type="button"
                 onClick={() => {
-                  updateField('foreignAccountsList', [
-                    {
-                      bankName: '',
-                      accountType: 'SAVINGS_NRE',
-                      accountNumber: '',
-                      maxBalanceInr: 0,
-                      interestEarnedInr: 0,
-                    },
-                  ]);
+                  setIsOpenAccounts(true);
+                  if (accountsList.length === 0) {
+                    updateField('foreignAccountsList', [
+                      {
+                        bankName: '',
+                        accountType: 'SAVINGS_NRE',
+                        accountNumber: '',
+                        maxBalanceInr: 0,
+                        interestEarnedInr: 0,
+                      },
+                    ]);
+                  }
                 }}
-                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 cursor-pointer"
+                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
               >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                <span>Add Foreign Account</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>{accountsList.length > 0 ? 'View / Edit Foreign Accounts' : 'Add Foreign Account'}</span>
               </Button>
             </div>
-          ) : (
+          </div>
+        ) : (
+          /* Open State: Header with Count + Add Button, List of Accounts */
+          <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div>
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Landmark className="w-4 h-4 text-emerald-600" />
+                  <span>Foreign Bank &amp; Demat Accounts (FinCEN Form 114)</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    {accountsList.length} Added
+                  </span>
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  List each Indian bank account / fixed deposit / demat account held during {selectedTaxYear}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  onClick={() => {
+                    const updated = [
+                      ...accountsList,
+                      {
+                        bankName: '',
+                        accountType: 'SAVINGS_NRE',
+                        accountNumber: '',
+                        maxBalanceInr: 0,
+                        interestEarnedInr: 0,
+                      },
+                    ];
+                    updateField('foreignAccountsList', updated);
+                  }}
+                  className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Another Account</span>
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setIsOpenAccounts(false)}
+                  className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-3">
               {accountsList.map((acc, idx) => (
                 <div key={idx} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 shadow-2xs space-y-3">
@@ -217,8 +253,8 @@ export const Module7Foreign: React.FC<Module7Props> = ({
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )
       )}
 
       {/* Indian Foreign Income in INR (₹) */}

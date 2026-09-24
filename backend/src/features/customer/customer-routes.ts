@@ -4,7 +4,7 @@ import { requireAuth } from '../../middlewares/require-auth.js';
 import { uploadTaxDocument } from '../../middlewares/file-upload-middleware.js';
 
 import { validateRequest } from '../../middlewares/validate-request.js';
-import { saveOrganizerSchema } from './customer-validator.js';
+import { saveOrganizerSchema, startTaxYearReturnSchema } from './customer-validator.js';
 
 const router = Router();
 
@@ -33,4 +33,10 @@ router.get('/documents/:id/download', CustomerController.downloadDocument);
 router.get('/organizer', CustomerController.getOrganizer);
 router.put('/organizer', validateRequest(saveOrganizerSchema), CustomerController.saveOrganizer);
 
+/**
+ * Tax Year Management Routes
+ */
+router.post('/tax-years', validateRequest(startTaxYearReturnSchema), CustomerController.startTaxYearReturn);
+
 export { router as customerRouter };
+

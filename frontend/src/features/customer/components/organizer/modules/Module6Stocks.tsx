@@ -22,6 +22,7 @@ export const Module6Stocks: React.FC<Module6Props> = ({
 }) => {
   const d = (data || {}) as Partial<OrganizerData['m6_stocks']>;
   const stockList = d.stocksList || [];
+  const [isOpenStocks, setIsOpenStocks] = React.useState<boolean>(false);
 
   return (
     <div className="space-y-6 font-sans">
@@ -33,66 +34,99 @@ export const Module6Stocks: React.FC<Module6Props> = ({
       </div>
 
       {/* Dynamic Multi-Brokerage Accounts Table */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 className="w-4 h-4 text-emerald-600" />
-              <span>Brokerage Accounts &amp; 1099-B Statements</span>
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">Add each brokerage platform traded during {selectedTaxYear}</p>
-          </div>
+      {!isOpenStocks ? (
+        /* Collapsed State (Default): Heading at left, Add Button at right */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-emerald-600" />
+                <span>Brokerage Accounts &amp; 1099-B Statements</span>
+                {stockList.length > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    {stockList.length} Added
+                  </span>
+                )}
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Add each brokerage platform traded during {selectedTaxYear}</p>
+            </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              const updated = [
-                ...stockList,
-                {
-                  brokerName: '',
-                  taxpayerGainLoss: 0,
-                  spouseGainLoss: 0,
-                  shortTermGainLoss: 0,
-                  longTermGainLoss: 0,
-                  totalProceeds: 0,
-                },
-              ];
-              updateField('stocksList', updated);
-            }}
-            className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Brokerage</span>
-          </Button>
-        </div>
-
-        {stockList.length === 0 ? (
-          <div className="p-6 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500 space-y-2">
-            <p>No 1099-B brokerage accounts added yet.</p>
             <Button
               size="sm"
               variant="outline"
+              type="button"
               onClick={() => {
-                const updated = [
-                  {
-                    brokerName: '',
-                    taxpayerGainLoss: 0,
-                    spouseGainLoss: 0,
-                    shortTermGainLoss: 0,
-                    longTermGainLoss: 0,
-                    totalProceeds: 0,
-                  },
-                ];
-                updateField('stocksList', updated);
+                setIsOpenStocks(true);
+                if (stockList.length === 0) {
+                  const updated = [
+                    {
+                      brokerName: '',
+                      taxpayerGainLoss: 0,
+                      spouseGainLoss: 0,
+                      shortTermGainLoss: 0,
+                      longTermGainLoss: 0,
+                      totalProceeds: 0,
+                    },
+                  ];
+                  updateField('stocksList', updated);
+                }
               }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 cursor-pointer"
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
             >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              <span>Add Brokerage Account</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>{stockList.length > 0 ? 'View / Edit Brokerages' : 'Add Brokerage'}</span>
             </Button>
           </div>
-        ) : (
+        </div>
+      ) : (
+        /* Open State: Header with Count + Add Button, List of Brokerages */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-emerald-600" />
+                <span>Brokerage Accounts &amp; 1099-B Statements</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  {stockList.length} Added
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Add each brokerage platform traded during {selectedTaxYear}</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  const updated = [
+                    ...stockList,
+                    {
+                      brokerName: '',
+                      taxpayerGainLoss: 0,
+                      spouseGainLoss: 0,
+                      shortTermGainLoss: 0,
+                      longTermGainLoss: 0,
+                      totalProceeds: 0,
+                    },
+                  ];
+                  updateField('stocksList', updated);
+                }}
+                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Brokerage</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => setIsOpenStocks(false)}
+                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-4">
             {stockList.map((broker, idx) => (
               <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 shadow-2xs space-y-3">
@@ -193,8 +227,8 @@ export const Module6Stocks: React.FC<Module6Props> = ({
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Direct Summary: Capital Gains & Prior Year Loss Carryforward */}
       <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '@/lib/api-client';
+import { AppSelect } from '@/shared/components/AppSelect';
 import { RequestMissingDocumentsModal } from './RequestMissingDocumentsModal';
 import {
   type DocumentTypeId,
@@ -100,6 +101,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
   
   // Vault Sub-Tab Switcher State: 'ALL' | 'FILES' | 'LINKS'
   const [activeVaultTab, setActiveVaultTab] = useState<'ALL' | 'FILES' | 'LINKS'>('ALL');
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
 
   // Request Missing Documents Modal State
   const [isRequestDocsModalOpen, setIsRequestDocsModalOpen] = useState(false);
@@ -180,20 +182,40 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
     return counts;
   }, [docList]);
 
-  // Documents filtered by active document type
-  const activeTypeDocs = useMemo(() => {
-    return docList.filter((d) => getDocumentTypeForCategory(d.documentCategory) === activeDocType);
-  }, [docList, activeDocType]);
+  // Separate physical files from Drive / Cloud links across all documents
+  const fileDocs = useMemo(() => docList.filter((d) => !isDriveLinkDoc(d)), [docList]);
+  const linkDocs = useMemo(() => docList.filter((d) => isDriveLinkDoc(d)), [docList]);
 
-  // Separate physical files from Drive / Cloud links for active document type
-  const fileDocs = useMemo(() => activeTypeDocs.filter((d) => !isDriveLinkDoc(d)), [activeTypeDocs]);
-  const linkDocs = useMemo(() => activeTypeDocs.filter((d) => isDriveLinkDoc(d)), [activeTypeDocs]);
-
-  const filteredDocs = useMemo(() => {
+  // Tab-filtered documents across all categories
+  const tabFilteredDocs = useMemo(() => {
     if (activeVaultTab === 'FILES') return fileDocs;
     if (activeVaultTab === 'LINKS') return linkDocs;
-    return activeTypeDocs;
-  }, [activeVaultTab, fileDocs, linkDocs, activeTypeDocs]);
+    return docList;
+  }, [activeVaultTab, fileDocs, linkDocs, docList]);
+
+  // Category-filtered documents
+  const filteredDocs = useMemo(() => {
+    if (filterCategory === 'ALL') return tabFilteredDocs;
+    if (filterCategory.startsWith('TYPE_')) {
+      const typeId = filterCategory.replace('TYPE_', '');
+      return tabFilteredDocs.filter((doc) => getDocumentTypeForCategory(doc.documentCategory) === typeId);
+    }
+    return tabFilteredDocs.filter((doc) => doc.documentCategory === filterCategory);
+  }, [tabFilteredDocs, filterCategory]);
+
+  const categoryOptions = useMemo(() => {
+    return [
+      { label: 'All Categories (All Documents)', value: 'ALL' },
+      { label: 'All 1) Individual Documents', value: 'TYPE_INDIVIDUAL' },
+      { label: 'All 2) Business Documents', value: 'TYPE_BUSINESS' },
+      { label: 'All 3) Tax Compliance (FBAR/FATCA)', value: 'TYPE_TAX_COMPLIANCE' },
+      { label: 'All 4) Tax Audit & Notices', value: 'TYPE_TAX_AUDIT' },
+      ...ALL_DOCUMENT_CATEGORIES.map((c) => ({
+        label: `${c.shortLabel || c.label}`,
+        value: c.value,
+      })),
+    ];
+  }, []);
 
   const handleConfirmVerify = async () => {
     if (!docToVerify) return;
@@ -504,71 +526,25 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
         </div>
       </div>
 
-      {/* 4 DOCUMENT TYPES TABS (Individual, Business, Tax compliance FBAR/FATCA/Other, Tax Audit) */}
-      <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {DOCUMENT_TYPES.map((dt) => {
-            const Icon = dt.icon;
-            const count = docTypeCounts[dt.id] || 0;
-            const isActive = activeDocType === dt.id;
-
-            return (
-              <button
-                key={dt.id}
-                type="button"
-                onClick={() => setActiveDocType(dt.id)}
-                className={`flex items-start gap-3 p-3 rounded-xl text-left transition-all cursor-pointer relative ${
-                  isActive
-                    ? 'bg-slate-900 text-white shadow-sm ring-2 ring-slate-900 ring-offset-1'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 hover:border-slate-300'
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold ${
-                    isActive
-                      ? 'bg-white/15 text-white'
-                      : dt.colorClass
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-bold truncate">
-                      {dt.number}) {dt.label}
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : count > 0
-                          ? 'bg-emerald-100 text-[#16A34A] border border-emerald-200'
-                          : 'bg-slate-200/80 text-slate-500'
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </div>
-                  <p
-                    className={`text-[10px] line-clamp-1 mt-0.5 ${
-                      isActive ? 'text-slate-300' : 'text-slate-500'
-                    }`}
-                  >
-                    {dt.description}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Tab Switcher: All Items, Uploaded Documents, Drive & Cloud Links within active document type */}
+      {/* 4 DOCUMENT TYPES TABS (Small, Neat Switch Tabs) */}
       <div className="border-b border-slate-200 pb-1">
         <AppTabs
+          tabs={DOCUMENT_TYPES.map((dt) => ({
+            id: dt.id,
+            label: `${dt.number}) ${dt.label}`,
+            count: docTypeCounts[dt.id] || 0,
+          }))}
+          activeTab={activeDocType}
+          onChange={(tabId) => setActiveDocType(tabId as DocumentTypeId)}
+          size="sm"
+        />
+      </div>
+
+      {/* Tab Switcher: All Items, Uploaded Documents, Drive & Cloud Links + Category Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-2">
+        <AppTabs
           tabs={[
-            { id: 'ALL', label: 'All Items in Section', count: activeTypeDocs.length },
+            { id: 'ALL', label: 'All Items in Vault', count: docList.length },
             { id: 'FILES', label: 'Uploaded Documents', count: fileDocs.length },
             { id: 'LINKS', label: 'Drive & Cloud Links', count: linkDocs.length },
           ]}
@@ -576,6 +552,15 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
           onChange={(tabId) => setActiveVaultTab(tabId as 'ALL' | 'FILES' | 'LINKS')}
           size="sm"
         />
+
+        <div className="w-64 sm:w-72">
+          <AppSelect
+            options={categoryOptions}
+            value={filterCategory}
+            onChange={(val) => setFilterCategory(val || 'ALL')}
+            placeholder="Filter by Category"
+          />
+        </div>
       </div>
 
       {/* Documents & Links List */}

@@ -22,6 +22,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
 }) => {
   const d = (data || {}) as Partial<OrganizerData['m9_directDeposit']>;
   const referrals = d.referrals || [];
+  const [isOpenReferrals, setIsOpenReferrals] = React.useState<boolean>(false);
 
   return (
     <div className="space-y-6 font-sans">
@@ -181,40 +182,95 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
       </div>
 
       {/* $10 Paid Referral Program Card */}
-      <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 space-y-3 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#16A34A] text-white flex items-center justify-center font-bold shrink-0">
-              <Gift className="w-4 h-4" />
+      {!isOpenReferrals ? (
+        /* Collapsed State (Default): Heading at left, Add Button at right */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold shrink-0">
+                <Gift className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <span>Earn $10 for Every Friend / Colleague You Refer! 🎁</span>
+                  {referrals.length > 0 && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                      {referrals.length} Added
+                    </span>
+                  )}
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Share your colleagues&apos; or friends&apos; contact details. When they file with us, we will honor you with $10 per paid referral.
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-xs font-bold text-slate-900">
-                Earn $10 for Every Friend / Colleague You Refer! 🎁
-              </h4>
-              <p className="text-[11px] text-slate-600">
-                Share your colleagues&apos; or friends&apos; contact details. When they file with us, we will honor you with $10 per paid referral.
-              </p>
+
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsOpenReferrals(true);
+                if (referrals.length === 0) {
+                  const list = [{ name: '', email: '', phone: '' }];
+                  updateField('referrals', list);
+                }
+              }}
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 shrink-0 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{referrals.length > 0 ? 'View / Edit Referrals' : 'Add Referral'}</span>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* Open State: Header with Count + Add Button, List of Referrals */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold shrink-0">
+                <Gift className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <span>Earn $10 for Every Friend / Colleague You Refer! 🎁</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    {referrals.length} Added
+                  </span>
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Share your colleagues&apos; or friends&apos; contact details. When they file with us, we will honor you with $10 per paid referral.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  const list = [...referrals, { name: '', email: '', phone: '' }];
+                  updateField('referrals', list);
+                }}
+                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Referral</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => setIsOpenReferrals(false)}
+                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+              >
+                Close
+              </button>
             </div>
           </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              const list = [...referrals, { name: '', email: '', phone: '' }];
-              updateField('referrals', list);
-            }}
-            className="text-xs font-bold border-emerald-300 text-emerald-800 bg-white hover:bg-emerald-100 flex items-center gap-1 shadow-2xs shrink-0 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Referral</span>
-          </Button>
-        </div>
-
-        {referrals.length > 0 && (
-          <div className="space-y-2 pt-2">
+          <div className="space-y-2">
             {referrals.map((refItem, idx) => (
-              <div key={idx} className="p-3 rounded-lg bg-white border border-emerald-100 shadow-2xs grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
+              <div key={idx} className="p-3 rounded-xl bg-slate-50/70 border border-slate-200 shadow-2xs grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
                 <AppInput
                   label="Friend / Colleague Name"
                   placeholder="e.g. Ramesh Kumar"
@@ -257,7 +313,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
                     const list = referrals.filter((_, i) => i !== idx);
                     updateField('referrals', list);
                   }}
-                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold border border-slate-200 flex items-center justify-center gap-1 cursor-pointer"
+                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold border border-slate-200 flex items-center justify-center gap-1 cursor-pointer h-9"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Remove</span>
@@ -265,8 +321,8 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Audit Substantiation Disclaimer */}
       <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 font-medium leading-relaxed">

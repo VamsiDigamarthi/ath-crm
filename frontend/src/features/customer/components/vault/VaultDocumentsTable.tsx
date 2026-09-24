@@ -22,9 +22,8 @@ import { type CustomerDocumentItem } from '../../services/customer-api';
 import { isDriveLinkDoc } from '../../hooks/useCustomerDocuments';
 import { CustomerDocumentPreviewModal } from './CustomerDocumentPreviewModal';
 import { 
-  type DocumentTypeId, 
-  getCategoriesForType, 
-  getCategoryBadgeInfo 
+  getCategoryBadgeInfo,
+  ALL_DOCUMENT_CATEGORIES 
 } from '@/shared/constants/document-taxonomy';
 import toast from 'react-hot-toast';
 
@@ -33,7 +32,6 @@ interface VaultDocumentsTableProps {
   filteredDocs: CustomerDocumentItem[];
   filterCategory: string;
   setFilterCategory: (cat: string) => void;
-  activeDocType?: DocumentTypeId;
   loading: boolean;
   onOpenUpload: () => void;
   onOpenDriveLinkModal?: () => void;
@@ -46,7 +44,6 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
   filteredDocs,
   filterCategory,
   setFilterCategory,
-  activeDocType = 'INDIVIDUAL',
   loading,
   onOpenUpload,
   onOpenDriveLinkModal,
@@ -56,12 +53,18 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
   const [previewDoc, setPreviewDoc] = useState<CustomerDocumentItem | null>(null);
 
   const categoryOptions = useMemo(() => {
-    const typeCategories = getCategoriesForType(activeDocType);
     return [
-      { label: 'All Categories in Section', value: 'ALL' },
-      ...typeCategories.map((c) => ({ label: c.label, value: c.value })),
+      { label: 'All Categories (All Documents)', value: 'ALL' },
+      { label: 'All 1) Individual Documents', value: 'TYPE_INDIVIDUAL' },
+      { label: 'All 2) Business Documents', value: 'TYPE_BUSINESS' },
+      { label: 'All 3) Tax Compliance (FBAR/FATCA)', value: 'TYPE_TAX_COMPLIANCE' },
+      { label: 'All 4) Tax Audit & Notices', value: 'TYPE_TAX_AUDIT' },
+      ...ALL_DOCUMENT_CATEGORIES.map((c) => ({
+        label: `${c.shortLabel || c.label}`,
+        value: c.value,
+      })),
     ];
-  }, [activeDocType]);
+  }, []);
 
   const getCategoryBadge = (cat: string) => {
     const info = getCategoryBadgeInfo(cat);

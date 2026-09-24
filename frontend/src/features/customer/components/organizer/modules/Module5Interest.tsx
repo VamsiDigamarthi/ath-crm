@@ -1,5 +1,5 @@
 import React from 'react';
-import { Landmark, Building2, DollarSign } from 'lucide-react';
+import { Building2, DollarSign } from 'lucide-react';
 import { AppInput } from '@/shared/components/AppInput';
 import { type OrganizerData } from '../../../services/customer-api';
 import { type ValidationErrorMap } from '../utils/organizer-validation';
@@ -21,19 +21,12 @@ export const Module5Interest: React.FC<Module5Props> = ({
   const d = (data || {}) as Partial<OrganizerData['m5_interest']>;
 
   return (
-    <div className="space-y-6 font-sans">
-      <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 flex items-start gap-2.5">
-        <Landmark className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-        <div>
-          <strong>Form 1099-INT, 1099-DIV &amp; 1099-OID Income (Optional):</strong> Report interest earned from High-Yield Savings Accounts (HYSA), CDs, Bonds, plus ordinary/qualified dividends from mutual funds and stocks. Leave blank or enter $0 if you did not receive passive interest/dividends.
-        </div>
-      </div>
-
+    <div className="space-y-4 font-sans">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <AppInput
           label="Primary 1099-INT Bank / Payer Name"
           placeholder="e.g. Marcus by Goldman Sachs / Chase / Discover"
-          leftIcon={<Building2 className="w-4 h-4" />}
+          leftIcon={<Building2 className="w-4 h-4 text-slate-400" />}
           error={errors.bankName}
           value={d.bankName || ''}
           onChange={(e) => {
@@ -46,7 +39,7 @@ export const Module5Interest: React.FC<Module5Props> = ({
           label="1099-INT Total Interest Income ($)"
           type="number"
           placeholder="e.g. 1850"
-          leftIcon={<DollarSign className="w-4 h-4" />}
+          leftIcon={<DollarSign className="w-4 h-4 text-slate-400" />}
           error={errors.interestAmount}
           value={d.interestAmount !== undefined && d.interestAmount !== null && d.interestAmount > 0 ? d.interestAmount.toString() : ''}
           onChange={(e) => {
@@ -61,7 +54,7 @@ export const Module5Interest: React.FC<Module5Props> = ({
           label="1099-DIV Dividend Income ($)"
           type="number"
           placeholder="e.g. 640"
-          leftIcon={<DollarSign className="w-4 h-4" />}
+          leftIcon={<DollarSign className="w-4 h-4 text-slate-400" />}
           error={errors.dividendAmount}
           value={d.dividendAmount !== undefined && d.dividendAmount !== null && d.dividendAmount > 0 ? d.dividendAmount.toString() : ''}
           onChange={(e) => {
@@ -76,7 +69,7 @@ export const Module5Interest: React.FC<Module5Props> = ({
           label="Form 1099-OID (Original Issue Discount) ($)"
           type="number"
           placeholder="0"
-          leftIcon={<DollarSign className="w-4 h-4" />}
+          leftIcon={<DollarSign className="w-4 h-4 text-slate-400" />}
           error={errors.form1099OidAmount}
           value={d.form1099OidAmount !== undefined && d.form1099OidAmount !== null && d.form1099OidAmount > 0 ? d.form1099OidAmount.toString() : ''}
           onChange={(e) => {

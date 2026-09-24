@@ -1,31 +1,31 @@
 import React from 'react';
-import { Sparkles, DollarSign, FileText, Lock } from 'lucide-react';
+import { FileText, Lock } from 'lucide-react';
 
 interface Tax1040FormEngineProps {
-  w2Wages: number;
-  setW2Wages: (v: number) => void;
-  taxableInterest: number;
-  setTaxableInterest: (v: number) => void;
-  capitalGains: number;
-  setCapitalGains: (v: number) => void;
-  otherIncome: number;
-  setOtherIncome: (v: number) => void;
-  deductionType: 'STANDARD' | 'ITEMIZED';
-  setDeductionType: (v: 'STANDARD' | 'ITEMIZED') => void;
-  itemizedDeduction: number;
-  setItemizedDeduction: (v: number) => void;
-  taxCredits: number;
-  setTaxCredits: (v: number) => void;
-  fedWithheld: number;
-  setFedWithheld: (v: number) => void;
-  stateWithheld: number;
-  setStateWithheld: (v: number) => void;
+  w2Wages?: number;
+  setW2Wages?: (v: number) => void;
+  taxableInterest?: number;
+  setTaxableInterest?: (v: number) => void;
+  capitalGains?: number;
+  setCapitalGains?: (v: number) => void;
+  otherIncome?: number;
+  setOtherIncome?: (v: number) => void;
+  deductionType?: 'STANDARD' | 'ITEMIZED';
+  setDeductionType?: (v: 'STANDARD' | 'ITEMIZED') => void;
+  itemizedDeduction?: number;
+  setItemizedDeduction?: (v: number) => void;
+  taxCredits?: number;
+  setTaxCredits?: (v: number) => void;
+  fedWithheld?: number;
+  setFedWithheld?: (v: number) => void;
+  stateWithheld?: number;
+  setStateWithheld?: (v: number) => void;
   preparerNotes: string;
   setPreparerNotes: (v: string) => void;
-  standardDeductionAmount: number;
+  standardDeductionAmount?: number;
   isReadOnly?: boolean;
   readOnlyReason?: 'QA_AUDIT' | 'REVERTED_DOCS';
-  calculations: {
+  calculations?: {
     totalGrossIncome: number;
     effectiveDeduction: number;
     taxableIncome: number;
@@ -40,30 +40,10 @@ interface Tax1040FormEngineProps {
 }
 
 export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
-  w2Wages,
-  setW2Wages,
-  taxableInterest,
-  setTaxableInterest,
-  capitalGains,
-  setCapitalGains,
-  otherIncome,
-  setOtherIncome,
-  deductionType,
-  setDeductionType,
-  itemizedDeduction,
-  setItemizedDeduction,
-  taxCredits,
-  setTaxCredits,
-  fedWithheld,
-  setFedWithheld,
-  stateWithheld,
-  setStateWithheld,
   preparerNotes,
   setPreparerNotes,
-  standardDeductionAmount,
   isReadOnly = false,
   readOnlyReason = 'QA_AUDIT',
-  calculations,
 }) => {
   return (
     <div className="space-y-6">
@@ -95,7 +75,8 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
         </div>
       )}
 
-      {/* 1. Live Computation Result Banner */}
+      {/* 1. Live Computation Result Banner (Commented Out) */}
+      {/*
       <div className="bg-gradient-to-r from-emerald-700 via-[#16A34A] to-teal-700 rounded-xl p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-emerald-100 text-xs font-bold uppercase tracking-wider">
@@ -127,8 +108,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
           </div>
         </div>
       </div>
+      */}
 
-      {/* 2. Part 1: Total Gross Income (Lines 1a - 9) */}
+      {/* 2. Part 1: Total Gross Income (Lines 1a - 9) (Commented Out) */}
+      {/*
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
@@ -145,7 +128,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Line 1a: W-2 Wages */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Line 1a: W-2 Wages &amp; Salaries *
@@ -165,7 +147,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             </div>
           </div>
 
-          {/* Line 2b: Taxable Interest */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Line 2b: Taxable Interest (1099-INT)
@@ -185,7 +166,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             </div>
           </div>
 
-          {/* Line 7: Capital Gains */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Line 7: Capital Gains (Schedule D / 1099-B)
@@ -205,7 +185,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             </div>
           </div>
 
-          {/* Line 8: Other Income */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Line 8: Other Income / 1099-MISC
@@ -226,8 +205,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
           </div>
         </div>
       </div>
+      */}
 
-      {/* 3. Part 2: Deductions & Taxable Base (Lines 12 - 15) */}
+      {/* 3. Part 2: Deductions & Taxable Base (Lines 12 - 15) (Commented Out) */}
+      {/*
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
@@ -244,7 +225,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Option A: Standard Deduction */}
           <div
             onClick={() => !isReadOnly && setDeductionType('STANDARD')}
             className={`p-4 rounded-xl border transition-all ${
@@ -264,7 +244,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             </p>
           </div>
 
-          {/* Option B: Itemized Deduction */}
           <div
             onClick={() => !isReadOnly && setDeductionType('ITEMIZED')}
             className={`p-4 rounded-xl border transition-all ${
@@ -295,8 +274,10 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
           </div>
         </div>
       </div>
+      */}
 
-      {/* 4. Part 3: Taxes, Withholdings & Net Refund (Lines 16 - 34) */}
+      {/* 4. Part 3: Taxes, Withholdings & Net Refund (Lines 16 - 34) (Commented Out) */}
+      {/*
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
@@ -310,7 +291,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Line 16: Tax Liability */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Line 16: Tax Liability
@@ -320,7 +300,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             </div>
           </div>
 
-          {/* Line 19: Tax Credits */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Line 19: Tax Credits
@@ -335,7 +314,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             />
           </div>
 
-          {/* Line 25a: Fed Withheld */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">
               Line 25a: Fed Withheld *
@@ -350,7 +328,6 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
             />
           </div>
 
-          {/* State Withheld */}
           <div>
             <label className="block text-[11px] font-bold text-slate-700 mb-1">
               State Withheld (Box 17) *
@@ -366,21 +343,22 @@ export const Tax1040FormEngine: React.FC<Tax1040FormEngineProps> = ({
           </div>
         </div>
       </div>
+      */}
 
-      {/* 5. Part 4: Preparer Observations & Audit Notes */}
+      {/* Preparer Observations & Audit Notes */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
         <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-slate-900 border-b border-slate-100 pb-2.5">
           <FileText className="w-4 h-4 text-purple-600" />
-          <span>Part 4: Preparer Notes &amp; Observations for QA Auditor</span>
+          <span>Preparer Notes &amp; Observations for QA Auditor</span>
         </div>
 
         <textarea
-          rows={3}
+          rows={6}
           disabled={isReadOnly}
           value={preparerNotes}
           onChange={(e) => setPreparerNotes(e.target.value)}
-          placeholder="Add notes for Senior QA Auditor (e.g. verified W-2 box 1 vs box 16, dual-state apportionment checked)..."
-          className={`w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 focus:border-blue-500 focus:outline-none placeholder:text-slate-400 ${isReadOnly ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
+          placeholder="Add notes for Senior QA Auditor (e.g. verified W-2 box 1 vs box 16, dual-state apportionment checked, notes on deductions, etc.)..."
+          className={`w-full rounded-xl border border-slate-200 p-3.5 text-xs text-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none placeholder:text-slate-400 leading-relaxed ${isReadOnly ? 'bg-slate-100 cursor-not-allowed' : 'bg-white'}`}
         />
       </div>
     </div>
