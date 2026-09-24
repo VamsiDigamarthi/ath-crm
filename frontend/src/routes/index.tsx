@@ -11,6 +11,7 @@ import { EmployeeManagementScreen } from '@/features/admin/screens/EmployeeManag
 import { AdminCustomerDirectoryScreen } from '@/features/admin/screens/AdminCustomerDirectoryScreen';
 import { AdminMasterTaxpayerDirectoryScreen } from '@/features/admin/screens/AdminMasterTaxpayerDirectoryScreen';
 import { AdminTaxpayerDetailScreen } from '@/features/admin/screens/AdminTaxpayerDetailScreen';
+import { AdminCouponsScreen } from '@/features/coupons/screens/AdminCouponsScreen';
 import { AdminEmailTemplatesScreen } from '@/features/admin/screens/AdminEmailTemplatesScreen';
 import { AdminReturnedLeadsScreen } from '@/features/admin/screens/AdminReturnedLeadsScreen';
 import { AdminSelfSignupsScreen } from '@/features/admin/screens/AdminSelfSignupsScreen';
@@ -143,6 +144,18 @@ export const router = createBrowserRouter([
         path: '/notifications',
         element: <NotificationRedirect />,
       },
+      {
+        path: '/coupons',
+        element: <Navigate to="/admin/coupons" replace />,
+      },
+      {
+        path: '/coupon',
+        element: <Navigate to="/admin/coupons" replace />,
+      },
+      {
+        path: '/discount-coupons',
+        element: <Navigate to="/admin/coupons" replace />,
+      },
     ],
   },
 
@@ -185,6 +198,18 @@ export const router = createBrowserRouter([
           {
             path: 'all-taxpayers/:id',
             element: <AdminTaxpayerDetailScreen />,
+          },
+          {
+            path: 'coupons',
+            element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'coupon',
+            element: <Navigate to="/admin/coupons" replace />,
+          },
+          {
+            path: 'discount-coupons',
+            element: <Navigate to="/admin/coupons" replace />,
           },
           {
             path: 'employees',
@@ -413,6 +438,22 @@ export const router = createBrowserRouter([
           {
             path: 'manager/team',
             element: <SalesTeamScorecardsScreen />,
+          },
+          {
+            path: 'coupons',
+            element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'manager/coupons',
+            element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'coupon',
+            element: <Navigate to="/sales/coupons" replace />,
+          },
+          {
+            path: 'discount-coupons',
+            element: <Navigate to="/sales/coupons" replace />,
           },
           // Agent / Closer Routes
           {

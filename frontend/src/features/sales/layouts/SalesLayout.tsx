@@ -12,6 +12,7 @@ import {
   LogOut,
   Bell,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 import { salesService } from '../services/sales-service';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
@@ -76,6 +77,7 @@ export const SalesLayout: React.FC = () => {
         { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/manager/queue' },
         { id: 'dual_role', label: 'Dual Doc + Sales', icon: Sparkles, section: 'Operations', badge: dualBadgeCount !== null ? String(dualBadgeCount) : undefined, path: '/sales/manager/dual-role' },
         { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/sales/manager/team' },
+        { id: 'coupons', label: 'Discount Coupons', icon: Tag, section: 'Management', path: '/sales/coupons' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
       ]
     : [
@@ -87,6 +89,7 @@ export const SalesLayout: React.FC = () => {
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/sales/notifications')) return 'notifications';
+    if (currentPath.includes('/sales/coupons')) return 'coupons';
     if (currentPath.includes('/sales/manager/dual-role')) return 'dual_role';
     if (currentPath.includes('/sales/manager/team')) return 'team';
     if (currentPath.includes('/sales/manager/queue')) return 'pipeline';
@@ -115,6 +118,7 @@ export const SalesLayout: React.FC = () => {
 
   const getHeaderTitle = () => {
     if (activeId === 'notifications') return 'Sales Department Notifications Hub';
+    if (activeId === 'coupons') return 'Manager-Approved Discount Coupons & Justification Control';
     if (activeId === 'team') return 'Sales Closers Staff Matrix & Capacity';
     if (activeId === 'pipeline') return 'Sales & Fee Quotation Department Queue';
     if (activeId === 'dashboard') return 'Sales Revenue & Closers Command Center';

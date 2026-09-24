@@ -21,6 +21,7 @@ model CustomerProfile {
   updatedAt           DateTime @updatedAt
 
   applications TaxApplication[]
+  couponUsages CouponUsage[]
 
   @@index([ssnTin])
   @@index([email])
