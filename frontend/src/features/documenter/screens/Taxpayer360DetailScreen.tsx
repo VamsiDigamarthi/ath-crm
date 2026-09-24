@@ -13,8 +13,12 @@ import {
   FileCheck2,
   CheckCircle2,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Paperclip,
+  Download,
+  FileText,
 } from 'lucide-react';
+import apiClient from '@/lib/api-client';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
@@ -166,6 +170,32 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       toast.error(err.response?.data?.message || 'Failed to submit to sales');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleOpenRevertDoc = async (doc: { id?: string; fileName: string; filePath?: string; fileUrl?: string }) => {
+    if (doc.fileUrl && (doc.fileUrl.startsWith('http://') || doc.fileUrl.startsWith('https://'))) {
+      window.open(doc.fileUrl, '_blank');
+      return;
+    }
+    if (!doc.id) {
+      toast.error('Document ID not available');
+      return;
+    }
+    try {
+      toast.loading(`Opening ${doc.fileName}...`, { id: 'doc-open' });
+      const response: any = await apiClient.get(`/documenter/documents/${doc.id}/download`, {
+        responseType: 'blob',
+      });
+      const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(doc.fileName);
+      const isPdf = /\.pdf$/i.test(doc.fileName);
+      const mimeType = isImage ? 'image/jpeg' : isPdf ? 'application/pdf' : 'application/octet-stream';
+      const blob = new Blob([response], { type: mimeType });
+      const fileUrl = URL.createObjectURL(blob);
+      window.open(fileUrl, '_blank');
+      toast.success('Document opened in new tab', { id: 'doc-open' });
+    } catch {
+      toast.error('Failed to open document', { id: 'doc-open' });
     }
   };
 
@@ -351,6 +381,62 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                 ))}
               </div>
             )}
+
+            {/* Attached Documents from Reverting Department (Sales / Preparer) */}
+            {(() => {
+              const attachedDocs =
+                lastRevert?.attachedDocuments ||
+                (lead?.taxDraftSummary as any)?.revertsByTarget?.DOCUMENTER?.attachedDocuments ||
+                (lead?.taxDraftSummary as any)?.revertsByTarget?.['SALES_TO_DOCUMENTER']?.attachedDocuments ||
+                (lead?.taxDraftSummary as any)?.lastRevert?.attachedDocuments ||
+                [];
+
+              if (Array.isArray(attachedDocs) && attachedDocs.length > 0) {
+                return (
+                  <div className="p-3 bg-white/90 rounded-xl border border-amber-300/80 space-y-2 mt-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-amber-950">
+                      <span className="flex items-center gap-1.5">
+                        <Paperclip className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Attached Client Documents from {lastRevert?.sourceDepartment || 'Sales Closer'} ({attachedDocs.length}):</span>
+                      </span>
+                      <span className="text-[10px] font-semibold text-amber-800">
+                        Uploaded for Documenter Intake
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      {attachedDocs.map((doc: any, idx: number) => (
+                        <div
+                          key={doc.id || idx}
+                          className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200 shadow-2xs flex items-center justify-between gap-2 text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-900 truncate text-[11px]" title={doc.fileName}>
+                                {doc.fileName}
+                              </p>
+                              <span className="text-[9px] text-slate-500">
+                                {doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB • ` : ''}Attachment
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRevertDoc(doc)}
+                            className="px-2.5 py-1 rounded bg-amber-200/80 hover:bg-amber-300 text-amber-950 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-colors shrink-0 shadow-2xs"
+                            title="View / Download Attached Document"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>View</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       )}

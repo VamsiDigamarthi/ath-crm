@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail, Sparkles, Bell } from 'lucide-react';
+import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail, Sparkles, Bell, Paperclip, Download, FileText } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { AppModal } from '@/shared/components/AppModal';
@@ -14,6 +14,7 @@ import { DocumentPreviewModal } from '../components/workspace/DocumentPreviewMod
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
 import { RequestMissingDocumentsModal } from '@/features/documenter/components/prep/RequestMissingDocumentsModal';
+import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
 
 export const TaxPreparerWorkspaceScreen: React.FC = () => {
@@ -93,6 +94,32 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
       setDeductionType('ITEMIZED');
     }
     toast.success(`Applied $${value.toLocaleString()} directly to Form 1040! 📝✓`);
+  };
+
+  const handleOpenRevertDoc = async (doc: { id?: string; fileName: string; filePath?: string; fileUrl?: string }) => {
+    if (doc.fileUrl && (doc.fileUrl.startsWith('http://') || doc.fileUrl.startsWith('https://'))) {
+      window.open(doc.fileUrl, '_blank');
+      return;
+    }
+    if (!doc.id) {
+      toast.error('Document ID not available');
+      return;
+    }
+    try {
+      toast.loading(`Opening ${doc.fileName}...`, { id: 'revert-open' });
+      const response: any = await apiClient.get(`/prep-review/documents/${doc.id}/download`, {
+        responseType: 'blob',
+      });
+      const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(doc.fileName);
+      const isPdf = /\.pdf$/i.test(doc.fileName);
+      const mimeType = isImage ? 'image/jpeg' : isPdf ? 'application/pdf' : 'application/octet-stream';
+      const blob = new Blob([response], { type: mimeType });
+      const fileUrl = URL.createObjectURL(blob);
+      window.open(fileUrl, '_blank');
+      toast.success('Document opened in new tab', { id: 'revert-open' });
+    } catch {
+      toast.error('Failed to open attached document', { id: 'revert-open' });
+    }
   };
 
   if (isLoading) {
@@ -367,8 +394,65 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
               <p className="text-xs font-medium text-slate-800 leading-relaxed bg-white/95 p-3 rounded-lg border border-amber-200 shadow-2xs">
                 "{revisionInstructions || lastRevertInfo.revertNotes || 'Client requested tax calculation / deduction adjustment.'}"
               </p>
+
+              {/* Attached Client Documents from Sales Closer */}
+              {(() => {
+                const attachedDocs =
+                  lastRevertInfo.attachedDocuments ||
+                  (taxDraftSummary as any)?.revertsByTarget?.['SALES_TO_PREPARATION']?.attachedDocuments ||
+                  (taxDraftSummary as any)?.revertsByTarget?.PREPARATION?.attachedDocuments ||
+                  (taxDraftSummary as any)?.lastRevert?.attachedDocuments ||
+                  [];
+
+                if (Array.isArray(attachedDocs) && attachedDocs.length > 0) {
+                  return (
+                    <div className="p-3 bg-amber-100/60 rounded-xl border border-amber-200/90 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-amber-950">
+                        <span className="flex items-center gap-1.5">
+                          <Paperclip className="w-3.5 h-3.5 text-amber-700" />
+                          <span>Attached Documents from Sales Closer ({attachedDocs.length}):</span>
+                        </span>
+                        <span className="text-[10px] font-semibold text-amber-800">
+                          Uploaded for P-Team Review
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                        {attachedDocs.map((doc: any, idx: number) => (
+                          <div
+                            key={doc.id || idx}
+                            className="p-2.5 rounded-lg bg-white border border-amber-200 shadow-2xs flex items-center justify-between gap-2 text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-900 truncate text-[11px]" title={doc.fileName}>
+                                  {doc.fileName}
+                                </p>
+                                <span className="text-[9px] text-slate-400">
+                                  {doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB • ` : ''}Sales Attachment
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenRevertDoc(doc)}
+                              className="px-2.5 py-1 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-colors shrink-0 shadow-2xs"
+                              title="View / Download Attached Document"
+                            >
+                              <Download className="w-3 h-3" />
+                              <span>View</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               <div className="pt-1 text-[11px] text-amber-800 font-medium border-t border-amber-200/60 flex items-center gap-1.5">
-                <span>💡 Please review taxpayer feedback from Sales, adjust Form 1040 line items/deductions below, and click <strong>Submit for QA</strong> to resubmit for certification.</span>
+                <span>💡 Please review taxpayer feedback and attached documents from Sales, adjust Form 1040 line items/deductions below, and click <strong>Submit for QA</strong> to resubmit for certification.</span>
               </div>
             </div>
           </div>
