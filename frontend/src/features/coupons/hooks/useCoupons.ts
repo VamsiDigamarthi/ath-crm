@@ -12,7 +12,6 @@ import type {
   CouponJustificationCategory,
   CouponDiscountType,
   CreateCouponFormData,
-  CouponValidationResult,
 } from '../types/coupon.types';
 import toast from 'react-hot-toast';
 
@@ -46,12 +45,6 @@ export const useCoupons = () => {
   const [auditCategory, setAuditCategory] = useState<CouponJustificationCategory | 'ALL'>('ALL');
   const [isAuditLoading, setIsAuditLoading] = useState(false);
 
-  // Simulator State
-  const [simulatorCode, setSimulatorCode] = useState('CLOSE50');
-  const [simulatorFee, setSimulatorFee] = useState<number>(350);
-  const [simulatorResult, setSimulatorResult] = useState<CouponValidationResult | null>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [simulatorError, setSimulatorError] = useState<string | null>(null);
 
   // Fetch Coupons
   const fetchCoupons = useCallback(async () => {
@@ -155,28 +148,6 @@ export const useCoupons = () => {
     }
   };
 
-  // Test Simulator
-  const handleSimulateCoupon = async (codeToTest?: string, feeToTest?: number) => {
-    const code = (codeToTest || simulatorCode).trim().toUpperCase();
-    const fee = feeToTest !== undefined ? feeToTest : simulatorFee;
-    if (!code) {
-      toast.error('Please enter a coupon code to test');
-      return;
-    }
-    setIsSimulating(true);
-    setSimulatorError(null);
-    try {
-      const res = await CouponsApiService.validateCoupon(code, fee);
-      setSimulatorResult(res);
-      toast.success(`Coupon '${code}' is VALID with authorized justification!`);
-    } catch (err: any) {
-      setSimulatorError(err.message || 'Coupon validation failed');
-      setSimulatorResult(null);
-      toast.error(err.message || 'Invalid coupon');
-    } finally {
-      setIsSimulating(false);
-    }
-  };
 
   const handleResetFilters = () => {
     setSearchQuery('');
@@ -226,13 +197,5 @@ export const useCoupons = () => {
     isAuditLoading,
     fetchAuditTrail,
 
-    simulatorCode,
-    setSimulatorCode,
-    simulatorFee,
-    setSimulatorFee,
-    simulatorResult,
-    simulatorError,
-    isSimulating,
-    handleSimulateCoupon,
   };
 };

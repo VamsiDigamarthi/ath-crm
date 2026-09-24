@@ -118,7 +118,23 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
     : undefined;
 
   const handleUpdateFeeBreakdown = (updated: SalesFeeBreakdown) => {
-    setLead((prev) => (prev ? { ...prev, feeBreakdown: updated } : prev));
+    setLead((prev) => {
+      if (!prev) return prev;
+      const totalFee = Number(updated.totalServiceFee) || 0;
+      const paid = Number(prev.paidAmount) || 0;
+      const rem = Math.max(0, totalFee - paid);
+      return {
+        ...prev,
+        feeBreakdown: updated,
+        remainingBalance: rem,
+        taxDraftSummary: {
+          ...(prev.taxDraftSummary as any),
+          feeBreakdown: updated,
+          totalQuotedFee: totalFee,
+          remainingBalance: rem,
+        },
+      };
+    });
     const appId = lead?.id || lead?.applicationId;
     if (appId) {
       salesService.updateFeeBreakdown(appId, updated).catch((err) => console.error('Failed to sync fee breakdown:', err));
@@ -359,6 +375,8 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
             remainingBalance={lead.remainingBalance}
             paymentHistory={lead.paymentHistory}
             esignStatus={lead.esignStatus}
+            applicationId={lead.id || lead.applicationId}
+            customerId={lead.taxpayerId || (lead as any).customerId}
             isLocked={isLocked}
             lockReason={lockReason}
           />

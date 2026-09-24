@@ -61,7 +61,7 @@ export function AppModal({
   }
 
   const panelStyle: CSSProperties = {
-    ...(width  && { width }),
+    ...(width ? { width, maxWidth: width.includes('px') || width.includes('rem') || width.includes('%') ? `min(96vw, ${width})` : width } : {}),
     ...(height && { height }),
   }
 
@@ -87,7 +87,7 @@ export function AppModal({
         className={cn(
           'relative z-10 flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden',
           'w-full max-h-[90vh]',
-          sizeClasses[size] || 'max-w-lg',
+          width ? 'max-w-none' : (sizeClasses[size] || 'max-w-lg'),
           className
         )}
       >

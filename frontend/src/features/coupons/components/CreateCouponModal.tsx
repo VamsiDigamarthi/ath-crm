@@ -40,16 +40,22 @@ export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState('CLOSE50');
   const [description, setDescription] = useState('');
   const [discountType, setDiscountType] = useState<CouponDiscountType>('FLAT');
   const [discountValue, setDiscountValue] = useState<number>(50);
-  const [minServiceFee, setMinServiceFee] = useState<number>(250);
+  const [minServiceFee, setMinServiceFee] = useState<number>(200);
   const [maxDiscountAmount, setMaxDiscountAmount] = useState<number | undefined>(undefined);
   const [justificationCategory, setJustificationCategory] = useState<CouponJustificationCategory>('IMMEDIATE_CLOSING_INCENTIVE');
-  const [justificationNotes, setJustificationNotes] = useState('');
+  const [justificationNotes, setJustificationNotes] = useState('Authorized concession for same-day client fee settlement');
   const [maxUsageLimit, setMaxUsageLimit] = useState<number>(25);
   const [validUntil, setValidUntil] = useState<string>('');
+
+  React.useEffect(() => {
+    if (isOpen && !code) {
+      setCode(`CLOSE${discountValue}-${Math.floor(100 + Math.random() * 900)}`);
+    }
+  }, [isOpen, discountValue, code]);
 
   const generateRandomCode = () => {
     const prefixes = ['CLOSE', 'SAVE', 'REF', 'LOYALTY', 'MATCH', 'SPECIAL'];
@@ -61,38 +67,35 @@ export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) {
-      toast.error('Coupon code is required');
-      return;
-    }
+    const finalCode = (code.trim() || `CLOSE${discountValue}-${Math.floor(100 + Math.random() * 900)}`).toUpperCase();
     if (discountValue <= 0) {
       toast.error('Discount value must be greater than 0');
       return;
     }
-    if (!justificationNotes.trim() || justificationNotes.trim().length < 10) {
-      toast.error('Please enter detailed manager justification notes (at least 10 characters)');
+    if (!justificationNotes.trim()) {
+      toast.error('Please enter manager justification notes');
       return;
     }
 
     try {
       await onSubmit({
-        code: code.trim().toUpperCase(),
+        code: finalCode,
         description: description.trim() || undefined,
         discountType,
-        discountValue,
-        minServiceFee: minServiceFee || 0,
-        maxDiscountAmount: discountType === 'PERCENTAGE' && maxDiscountAmount ? maxDiscountAmount : undefined,
+        discountValue: Number(discountValue),
+        minServiceFee: Number(minServiceFee) || 0,
+        maxDiscountAmount: discountType === 'PERCENTAGE' && maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
         justificationCategory,
         justificationNotes: justificationNotes.trim(),
-        maxUsageLimit: maxUsageLimit || undefined,
-        validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
+        maxUsageLimit: maxUsageLimit ? Number(maxUsageLimit) : undefined,
+        validUntil: validUntil && !isNaN(Date.parse(validUntil)) ? new Date(validUntil).toISOString() : undefined,
       });
 
-      // Reset form
-      setCode('');
+      // Reset form with fresh random code
+      setCode(`CLOSE${discountValue}-${Math.floor(100 + Math.random() * 900)}`);
       setDescription('');
       setDiscountValue(50);
-      setJustificationNotes('');
+      setJustificationNotes('Authorized concession for same-day client fee settlement');
     } catch {
       // Handled in parent
     }
@@ -106,7 +109,7 @@ export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
       onClose={onClose}
       title="Create Manager-Approved Discount Coupon"
       description="Authorize a tracked promotional discount code with mandatory business justification for fee collections."
-      size="lg"
+      size="xl"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Top Notification Banner */}

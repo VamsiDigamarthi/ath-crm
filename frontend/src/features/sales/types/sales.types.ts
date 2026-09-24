@@ -36,6 +36,9 @@ export interface SalesFeeBreakdown {
   hasAuditDefense: boolean;
   discountAmount: number;
   discountCode: string;
+  justificationCategory?: string;
+  justificationNotes?: string;
+  approvedByName?: string;
   totalServiceFee: number;
   isQuoted?: boolean;
 }

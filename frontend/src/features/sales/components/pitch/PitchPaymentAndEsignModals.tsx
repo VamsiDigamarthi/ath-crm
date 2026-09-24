@@ -17,12 +17,21 @@ import {
   UserCheck,
   Clock,
   Plus,
-  X
+  X,
+  Tag
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { salesService } from '../../services/sales-service';
 import type { SalesLeadItem, PaymentHistoryItem } from '../../types/sales.types';
 import toast from 'react-hot-toast';
+
+const formatAmount = (val: number | string | undefined | null): string => {
+  const num = Number(val) || 0;
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: num % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+};
 
 interface PitchPaymentAndEsignModalsProps {
   lead: SalesLeadItem;
@@ -53,12 +62,12 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
   const [paymentTab, setPaymentTab] = useState<'CARD' | 'LINK'>('CARD');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  // Partial Payment States
-  const totalQuotedFee = Number(lead.feeBreakdown?.totalServiceFee) || 247;
+  // Partial Payment States & Dynamic Discount Handling
+  const discountAmount = Number(lead.feeBreakdown?.discountAmount) || 0;
+  const discountCode = lead.feeBreakdown?.discountCode || '';
+  const totalQuotedFee = Number(lead.feeBreakdown?.totalServiceFee !== undefined ? lead.feeBreakdown.totalServiceFee : 247);
   const currentPaidAmount = Number(lead.paidAmount) || 0;
-  const currentRemainingBalance = lead.remainingBalance !== undefined
-    ? Number(lead.remainingBalance)
-    : Math.max(0, totalQuotedFee - currentPaidAmount);
+  const currentRemainingBalance = Math.max(0, totalQuotedFee - currentPaidAmount);
 
   const [paymentType, setPaymentType] = useState<'FULL' | 'PARTIAL'>('FULL');
   const [customAmount, setCustomAmount] = useState<string>(
@@ -330,17 +339,27 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                           Quoted Total Fee
                         </span>
                         <span className="text-xs font-black text-white">
-                          ${totalQuotedFee}.00
+                          ${formatAmount(totalQuotedFee)}
                         </span>
                       </div>
+
+                      {discountAmount > 0 && (
+                        <div className="flex items-center justify-between text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-1 rounded-lg">
+                          <span className="flex items-center gap-1">
+                            <Tag className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>Coupon ({discountCode || 'Applied'}):</span>
+                          </span>
+                          <span>-${formatAmount(discountAmount)}</span>
+                        </div>
+                      )}
 
                       <div className="pt-1 border-t border-slate-800 flex items-baseline justify-between">
                         <div>
                           <div className="text-[10px] text-emerald-400 font-bold">
-                            Paid: ${currentPaidAmount}
+                            Paid: ${formatAmount(currentPaidAmount)}
                           </div>
                           <div className="text-sm font-black text-amber-300">
-                            ${currentRemainingBalance > 0 ? `${currentRemainingBalance}.00 Due` : 'Fully Paid'}
+                            {currentRemainingBalance > 0 ? `$${formatAmount(currentRemainingBalance)} Due` : 'Fully Paid'}
                           </div>
                         </div>
                         <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-white/10 text-slate-300">
@@ -358,7 +377,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                         </label>
                         {isCustomExceeded ? (
                           <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded border border-rose-300 animate-pulse">
-                            Max: ${currentRemainingBalance}
+                            Max: ${formatAmount(currentRemainingBalance)}
                           </span>
                         ) : isCustomTooLow ? (
                           <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
@@ -366,7 +385,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                           </span>
                         ) : (
                           <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            ${effectiveChargeAmount}
+                            ${formatAmount(effectiveChargeAmount)}
                           </span>
                         )}
                       </div>
@@ -385,7 +404,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                           }`}
                         >
                           <div className="text-[9px] text-slate-500 uppercase">Full Balance</div>
-                          <div className="text-xs font-black text-slate-900">${currentRemainingBalance}.00</div>
+                          <div className="text-xs font-black text-slate-900">${formatAmount(currentRemainingBalance)}</div>
                         </button>
 
                         <button
@@ -427,7 +446,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                               onClick={() => setCustomAmount(String(currentRemainingBalance))}
                               className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded text-emerald-800 transition-colors cursor-pointer"
                             >
-                              Max (${currentRemainingBalance})
+                              Max (${formatAmount(currentRemainingBalance)})
                             </button>
                           </div>
 
@@ -443,7 +462,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                                   const val = e.target.value.replace(/[^0-9.]/g, '');
                                   setCustomAmount(val);
                                 }}
-                                placeholder={`Max allowable: $${currentRemainingBalance}`}
+                                placeholder={`Max allowable: $${formatAmount(currentRemainingBalance)}`}
                                 className={`w-full px-2.5 py-1 text-xs font-bold rounded-lg border transition-all focus:outline-none ${
                                   isCustomExceeded
                                     ? 'border-rose-500 bg-rose-50/60 text-rose-900 focus:ring-2 focus:ring-rose-400'
@@ -459,7 +478,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                               <div className="p-2 rounded-lg bg-rose-50 border border-rose-300 text-rose-900 text-[10px] font-bold flex items-center justify-between gap-1 shadow-2xs">
                                 <span className="flex items-center gap-1">
                                   <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
-                                  <span>Exceeds max remaining balance (${currentRemainingBalance})</span>
+                                  <span>Exceeds max remaining balance (${formatAmount(currentRemainingBalance)})</span>
                                 </span>
                                 <button
                                   type="button"
@@ -482,7 +501,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                               <div className="text-[10px] font-medium text-slate-600 flex items-center justify-between pt-0.5">
                                 <span>Bal after payment:</span>
                                 <strong className="text-emerald-700 font-bold">
-                                  ${(currentRemainingBalance - parsedCustom).toLocaleString()}.00 USD
+                                  ${formatAmount(currentRemainingBalance - parsedCustom)} USD
                                 </strong>
                               </div>
                             )}
@@ -596,7 +615,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                             <span>Instant Client Self-Checkout Link</span>
                           </div>
                           <p className="text-blue-800 text-[11px]">
-                            The client will receive an SMS and email with a secure Stripe payment checkout for <strong>${effectiveChargeAmount}.00 USD</strong>.
+                            The client will receive an SMS and email with a secure Stripe payment checkout for <strong>${formatAmount(effectiveChargeAmount)} USD</strong>.
                           </p>
                         </div>
 
@@ -748,12 +767,12 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                         {isProcessingPayment
                           ? 'Processing Charge...'
                           : isCustomExceeded
-                          ? `Exceeds Max Balance ($${currentRemainingBalance})`
+                          ? `Exceeds Max Balance ($${formatAmount(currentRemainingBalance)})`
                           : isCustomTooLow
                           ? 'Enter Valid Amount ($ > 0)'
                           : paymentType === 'PARTIAL' && effectiveChargeAmount < currentRemainingBalance
-                          ? `Charge Installment ($${effectiveChargeAmount}.00)`
-                          : `Charge Full Balance ($${effectiveChargeAmount}.00)`}
+                          ? `Charge Installment ($${formatAmount(effectiveChargeAmount)})`
+                          : `Charge Full Balance ($${formatAmount(effectiveChargeAmount)})`}
                       </span>
                     </Button>
                   ) : (
@@ -772,8 +791,8 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                         {isProcessingPayment
                           ? 'Sending...'
                           : isCustomExceeded
-                          ? `Exceeds Max ($${currentRemainingBalance})`
-                          : `Send Payment Link ($${effectiveChargeAmount})`}
+                          ? `Exceeds Max ($${formatAmount(currentRemainingBalance)})`
+                          : `Send Payment Link ($${formatAmount(effectiveChargeAmount)})`}
                       </span>
                     </Button>
                   )}
@@ -785,11 +804,11 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                   <div>
                     <div className="text-xs font-bold text-slate-900">Total Collected to Date</div>
-                    <div className="text-base font-black text-emerald-600">${currentPaidAmount}.00 USD</div>
+                    <div className="text-base font-black text-emerald-600">${formatAmount(currentPaidAmount)} USD</div>
                   </div>
                   <div className="text-right">
                     <div className="text-xs font-bold text-slate-900">Remaining Balance</div>
-                    <div className="text-base font-black text-amber-600">${currentRemainingBalance}.00 USD</div>
+                    <div className="text-base font-black text-amber-600">${formatAmount(currentRemainingBalance)} USD</div>
                   </div>
                 </div>
 

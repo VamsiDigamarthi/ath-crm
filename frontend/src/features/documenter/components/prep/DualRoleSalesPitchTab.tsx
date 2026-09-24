@@ -81,13 +81,11 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
   }, [lead.id, taxDraft.feeBreakdown, customer?.state]);
 
   const paidAmount = Number(taxDraft.paidAmount || (lead as any).paidAmount || 0);
-  const totalServiceFee = feeBreakdown.totalServiceFee || 247;
-  const remainingBalance = taxDraft.remainingBalance !== undefined
-    ? Number(taxDraft.remainingBalance)
-    : Math.max(0, totalServiceFee - paidAmount);
+  const totalServiceFee = Number(feeBreakdown.totalServiceFee !== undefined ? feeBreakdown.totalServiceFee : 247);
+  const remainingBalance = Math.max(0, totalServiceFee - paidAmount);
 
   let paymentStatus: any = (taxDraft.paymentStatus as any) || (lead as any).paymentStatus || 'UNPAID';
-  if (!taxDraft.paymentStatus) {
+  if (!taxDraft.paymentStatus || taxDraft.paymentStatus === 'UNPAID') {
     if (paidAmount >= totalServiceFee && totalServiceFee > 0) {
       paymentStatus = 'PAID';
     } else if (paidAmount > 0) {
@@ -123,7 +121,14 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
       name: (lead as any).assignedDocAgent.email?.split('@')[0] || 'Calling Agent',
       email: (lead as any).assignedDocAgent.email,
     } : null,
-    taxDraftSummary: taxDraft,
+    taxDraftSummary: {
+      ...taxDraft,
+      feeBreakdown,
+      totalQuotedFee: totalServiceFee,
+      remainingBalance,
+      paidAmount,
+      paymentStatus,
+    },
     feeBreakdown,
     paymentStatus,
     paidAmount,

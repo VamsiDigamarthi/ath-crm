@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useCoupons } from '../hooks/useCoupons';
 import { CreateCouponModal } from '../components/CreateCouponModal';
-import { CouponValidationSimulator } from '../components/CouponValidationSimulator';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppSelect } from '@/shared/components/AppSelect';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
@@ -26,13 +25,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Percent,
-  Calculator,
   RefreshCw,
   Sparkles,
   Layers,
   User,
-  ExternalLink,
-  ChevronRight,
   Zap,
   Award,
   Users,
@@ -41,7 +37,6 @@ import {
   Eye,
   Check,
   XCircle,
-  HelpCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -71,7 +66,7 @@ const DISCOUNT_TYPE_OPTIONS = [
 ];
 
 export const AdminCouponsScreen: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'DIRECTORY' | 'AUDIT_TRAIL' | 'SIMULATOR'>('DIRECTORY');
+  const [activeTab, setActiveTab] = useState<'DIRECTORY' | 'AUDIT_TRAIL'>('DIRECTORY');
 
   const {
     isLoading,
@@ -109,15 +104,6 @@ export const AdminCouponsScreen: React.FC = () => {
     setAuditCategory,
     isAuditLoading,
     fetchAuditTrail,
-
-    simulatorCode,
-    setSimulatorCode,
-    simulatorFee,
-    setSimulatorFee,
-    simulatorResult,
-    simulatorError,
-    isSimulating,
-    handleSimulateCoupon,
   } = useCoupons();
 
   const renderStatusBadge = (status: CouponStatus, isActive: boolean) => {
@@ -166,8 +152,12 @@ export const AdminCouponsScreen: React.FC = () => {
   };
 
   // Top driver
-  const topJustification = stats?.justificationBreakdown?.[0];
-  const topMeta = topJustification?.category ? JUSTIFICATION_CATEGORY_LABELS[topJustification.category] : null;
+  const topJustification = Array.isArray(stats?.justificationBreakdown) && stats.justificationBreakdown.length > 0
+    ? stats.justificationBreakdown[0]
+    : null;
+  const topMeta = topJustification?.category && topJustification.category in JUSTIFICATION_CATEGORY_LABELS
+    ? JUSTIFICATION_CATEGORY_LABELS[topJustification.category as keyof typeof JUSTIFICATION_CATEGORY_LABELS]
+    : null;
 
   return (
     <div className="w-full px-6 py-5 space-y-6 pb-24 font-sans">
@@ -288,7 +278,7 @@ export const AdminCouponsScreen: React.FC = () => {
             }`}
           >
             <Tag className="w-4 h-4" />
-            <span>1. Coupons Directory &amp; Rules ({totalCount})</span>
+            <span>1. Authorized Coupons ({totalCount})</span>
           </button>
 
           <button
@@ -301,20 +291,7 @@ export const AdminCouponsScreen: React.FC = () => {
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>2. Redemption &amp; Justification Audit Trail ({auditTotalCount})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('SIMULATOR')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'SIMULATOR'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Calculator className="w-4 h-4" />
-            <span>3. Live Quotation Engine Simulator</span>
+            <span>2. Fee Concession &amp; Justification Audit Trail ({auditTotalCount})</span>
           </button>
         </div>
       </div>
@@ -447,7 +424,7 @@ export const AdminCouponsScreen: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-slate-900 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
-                            {coupon.approvedBy?.name?.[0] || 'M'}
+                            {coupon.approvedBy?.name ? coupon.approvedBy.name.charAt(0).toUpperCase() : 'M'}
                           </div>
                           <div>
                             <div className="font-bold text-slate-900 text-xs">
@@ -489,22 +466,8 @@ export const AdminCouponsScreen: React.FC = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              setSimulatorCode(coupon.code);
-                              setActiveTab('SIMULATOR');
-                              handleSimulateCoupon(coupon.code, 350);
-                            }}
-                            className="h-7 px-2 text-[11px] font-semibold border-slate-200 hover:bg-slate-900 hover:text-white transition-colors cursor-pointer rounded-lg flex items-center gap-1"
-                          >
-                            <Calculator className="w-3 h-3" />
-                            <span>Test</span>
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
                             onClick={() => handleToggleStatus(coupon.id, coupon.status, coupon.isActive)}
-                            className={`h-7 px-2 text-[11px] font-semibold transition-colors cursor-pointer rounded-lg ${
+                            className={`h-7 px-2.5 text-[11px] font-semibold transition-colors cursor-pointer rounded-lg ${
                               coupon.isActive
                                 ? 'border-rose-200 text-rose-700 hover:bg-rose-50'
                                 : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
@@ -654,19 +617,7 @@ export const AdminCouponsScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 6. TAB 3: LIVE QUOTATION ENGINE SIMULATOR */}
-      {activeTab === 'SIMULATOR' && (
-        <CouponValidationSimulator
-          onSimulate={handleSimulateCoupon}
-          result={simulatorResult}
-          error={simulatorError}
-          isLoading={isSimulating}
-          initialCode={simulatorCode}
-          initialFee={simulatorFee}
-        />
-      )}
-
-      {/* 7. Create Coupon Modal */}
+      {/* 6. Create Coupon Modal */}
       <CreateCouponModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

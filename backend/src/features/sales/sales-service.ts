@@ -1,5 +1,5 @@
 import { prisma } from "../../config/db.js";
-import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType } from "@prisma/client";
+import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType, CouponStatus, Prisma } from "@prisma/client";
 
 export class SalesService {
   /**
@@ -1533,6 +1533,11 @@ export class SalesService {
 
     const currentDraft: any = app.taxDraftSummary || {};
     const paidAmount = Number(currentDraft.paidAmount || 0);
+    const isPaid = currentDraft.paymentStatus === 'PAID' || (paidAmount > 0 && paidAmount >= Number(currentDraft.totalQuotedFee || 0));
+    if (isPaid) {
+      throw new Error('Fee quotation is locked and cannot be modified because payment has already been verified.');
+    }
+
     const totalServiceFee = Number(feeBreakdown?.totalServiceFee || currentDraft.totalQuotedFee || 247);
     const remainingBalance = Math.max(0, totalServiceFee - paidAmount);
 
@@ -1683,6 +1688,58 @@ export class SalesService {
         });
       } catch (err) {
         console.error('Failed to create salesQuote record:', err);
+      }
+    }
+
+    // Automatically record CouponUsage redemption audit trail if an authorized promo code was applied
+    const appliedCode = mergedFeeBreakdown?.discountCode?.trim()?.toUpperCase();
+    const discountVal = Number(data.discountAmount || mergedFeeBreakdown?.discountAmount || 0);
+
+    if (appliedCode && discountVal > 0) {
+      try {
+        const coupon = await prisma.discountCoupon.findUnique({
+          where: { code: appliedCode },
+        });
+
+        if (coupon) {
+          const existingUsage = await prisma.couponUsage.findFirst({
+            where: {
+              couponId: coupon.id,
+              applicationId,
+            },
+          });
+
+          if (!existingUsage) {
+            await prisma.couponUsage.create({
+              data: {
+                couponId: coupon.id,
+                couponCode: coupon.code,
+                applicationId,
+                customerId: app.customerId || null,
+                appliedByUserId: validAgentId || userId,
+                originalFee: new Prisma.Decimal(totalFee + discountVal),
+                discountAmount: new Prisma.Decimal(discountVal),
+                finalFee: new Prisma.Decimal(totalFee),
+                justificationCategory: coupon.justificationCategory,
+                justificationNotes: coupon.justificationNotes,
+              },
+            });
+
+            const updatedCoupon = await prisma.discountCoupon.update({
+              where: { id: coupon.id },
+              data: { timesUsed: { increment: 1 } },
+            });
+
+            if (updatedCoupon.maxUsageLimit && updatedCoupon.timesUsed >= updatedCoupon.maxUsageLimit) {
+              await prisma.discountCoupon.update({
+                where: { id: coupon.id },
+                data: { status: CouponStatus.DEPLETED },
+              });
+            }
+          }
+        }
+      } catch (couponErr) {
+        console.error('Failed to log couponUsage during payment:', couponErr);
       }
     }
 

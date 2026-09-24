@@ -9,9 +9,13 @@ import {
   FileCheck,
   Lock,
   History,
-  Coins
+  Coins,
+  ShieldCheck,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
+import { CouponsApiService } from '@/features/coupons/services/coupon-service';
+import { JUSTIFICATION_CATEGORY_LABELS } from '@/features/coupons/types/coupon.types';
 import type { SalesFeeBreakdown, SalesPaymentStatus, PaymentHistoryItem } from '../../types/sales.types';
 import toast from 'react-hot-toast';
 
@@ -32,6 +36,8 @@ interface PitchFeeCalculatorProps {
   onOpenEsignModal: () => void;
   paymentStatus: SalesPaymentStatus;
   esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';
+  applicationId?: string;
+  customerId?: string;
   isLocked?: boolean;
   lockReason?: string;
   paidAmount?: number;
@@ -47,6 +53,8 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   onOpenEsignModal,
   paymentStatus,
   esignStatus,
+  applicationId,
+  customerId,
   isLocked = false,
   lockReason,
   paidAmount = 0,
@@ -55,6 +63,10 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   onOpenPaymentHistoryModal,
 }) => {
   const [couponCode, setCouponCode] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
+  const isPaymentVerified = paymentStatus === 'PAID' || paidAmount > 0;
+  const isQuotationLocked = isLocked || isPaymentVerified;
 
   const currentFatcaFee = feeBreakdown.fatcaFee || 0;
   const currentFbarFee = feeBreakdown.fbarFee || 0;
@@ -64,6 +76,10 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
     : Math.max(0, feeBreakdown.totalServiceFee - paidAmount);
 
   const handleToggleState = (stateIdentifier: string) => {
+    if (isQuotationLocked) {
+      toast.error('Quotation is locked because payment has already been verified.');
+      return;
+    }
     const targetState = AVAILABLE_STATES.find((s) => s.name === stateIdentifier || s.code === stateIdentifier);
     const standardName = targetState ? targetState.name : stateIdentifier;
     const isSelected = feeBreakdown.selectedStates.some((s) => 
@@ -98,6 +114,10 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   };
 
   const handleToggleAuditDefense = () => {
+    if (isQuotationLocked) {
+      toast.error('Quotation is locked because payment has already been verified.');
+      return;
+    }
     const nextHasDefense = !feeBreakdown.hasAuditDefense;
     const defenseAmount = nextHasDefense ? 29 : 0;
     const total = 
@@ -117,6 +137,10 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   };
 
   const handleToggleFbar = () => {
+    if (isQuotationLocked) {
+      toast.error('Quotation is locked because payment has already been verified.');
+      return;
+    }
     const nextFbarFee = currentFbarFee > 0 ? 0 : 99;
     const total = 
       feeBreakdown.fed1040PrepFee + 
@@ -134,6 +158,10 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   };
 
   const handleToggleFatca = () => {
+    if (isQuotationLocked) {
+      toast.error('Quotation is locked because payment has already been verified.');
+      return;
+    }
     const nextFatcaFee = currentFatcaFee > 0 ? 0 : 99;
     const total = 
       feeBreakdown.fed1040PrepFee + 
@@ -151,42 +179,65 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
     });
   };
 
-  const handleApplyCoupon = () => {
+  const handleApplyCoupon = async () => {
+    if (isQuotationLocked) {
+      toast.error('Coupon cannot be applied because payment has already been verified.');
+      return;
+    }
     const code = couponCode.trim().toUpperCase();
-    if (!code) return;
-
-    let discount = 0;
-    if (code === 'EARLYBIRD20' || code === 'SAVE20') {
-      discount = 20;
-    } else if (code === 'VIP25' || code === 'TAXHERO25') {
-      discount = 25;
-    } else if (code === 'SPECIAL50') {
-      discount = 50;
-    } else {
-      toast.error('Invalid coupon code');
+    if (!code) {
+      toast.error('Please enter a coupon code');
       return;
     }
 
-    const total = 
+    const currentSubtotal = 
       feeBreakdown.fed1040PrepFee + 
       feeBreakdown.statePrepFee + 
       currentAuditDefenseFee + 
       currentFbarFee + 
-      currentFatcaFee - 
-      discount;
+      currentFatcaFee;
 
-    onUpdateFeeBreakdown({
-      ...feeBreakdown,
-      discountAmount: discount,
-      discountCode: code,
-      totalServiceFee: Math.max(0, total),
-    });
+    setIsApplyingCoupon(true);
+    try {
+      const res = await CouponsApiService.validateCoupon(
+        code,
+        currentSubtotal,
+        applicationId,
+        customerId
+      );
 
-    toast.success(`Coupon ${code} applied! -$${discount} discount added.`);
-    setCouponCode('');
+      if (res.isValid) {
+        const discount = Number(res.discountAmount) || 0;
+        const total = Math.max(0, currentSubtotal - discount);
+
+        onUpdateFeeBreakdown({
+          ...feeBreakdown,
+          discountAmount: discount,
+          discountCode: res.code,
+          justificationCategory: res.justificationCategory,
+          justificationNotes: res.justificationNotes,
+          approvedByName: res.approvedBy?.name,
+          totalServiceFee: total,
+        });
+
+        toast.success(`Coupon ${res.code} applied! -$${discount} discount added.`);
+        setCouponCode('');
+      } else {
+        toast.error(res.rejectionReason || 'Invalid or non-applicable coupon code');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to validate coupon';
+      toast.error(msg);
+    } finally {
+      setIsApplyingCoupon(false);
+    }
   };
 
   const handleRemoveDiscount = () => {
+    if (isQuotationLocked) {
+      toast.error('Coupon cannot be removed because payment has already been verified.');
+      return;
+    }
     const total = 
       feeBreakdown.fed1040PrepFee + 
       feeBreakdown.statePrepFee + 
@@ -198,6 +249,9 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
       ...feeBreakdown,
       discountAmount: 0,
       discountCode: '',
+      justificationCategory: undefined,
+      justificationNotes: undefined,
+      approvedByName: undefined,
       totalServiceFee: total,
     });
     toast.success('Discount removed');
@@ -378,44 +432,102 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
         </div>
 
         {/* Item 5: Discount Coupon Code */}
-        <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-amber-500" />
-            <div>
-              <div className="text-xs font-bold text-slate-900">Discount Coupon / Promo Code</div>
-              <div className="text-[10px] text-slate-400">Try EARLYBIRD20 or TAXHERO25</div>
+        <div className="p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/70 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200">
+                <Tag className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-slate-900">Manager-Authorized Discount Coupon</div>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  Apply manager-issued promo code during customer fee collection.
+                </div>
+              </div>
             </div>
+
+            {feeBreakdown.discountAmount > 0 ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-[#16A34A] bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                  {feeBreakdown.discountCode}: -${feeBreakdown.discountAmount}
+                </span>
+                {isQuotationLocked ? (
+                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-lg flex items-center gap-1 border border-emerald-200">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Applied &amp; Verified</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleRemoveDiscount}
+                    className="text-xs text-rose-600 hover:text-rose-700 font-bold cursor-pointer transition-colors"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ) : isQuotationLocked ? (
+              <div className="text-xs font-semibold text-slate-400 italic">
+                (Fee Locked - Payment Verified)
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleApplyCoupon();
+                    }
+                  }}
+                  placeholder="Enter promo code"
+                  className="w-40 text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 uppercase font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleApplyCoupon}
+                  disabled={isApplyingCoupon || !couponCode.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isApplyingCoupon ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <span>Apply</span>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
 
-          {feeBreakdown.discountAmount > 0 ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#16A34A] bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
-                {feeBreakdown.discountCode}: -${feeBreakdown.discountAmount}
-              </span>
-              <button
-                type="button"
-                onClick={handleRemoveDiscount}
-                className="text-xs text-rose-600 hover:underline font-bold cursor-pointer"
-              >
-                Remove
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                placeholder="Enter promo code"
-                className="w-36 text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 uppercase font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <Button
-                size="sm"
-                onClick={handleApplyCoupon}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
-              >
-                Apply
-              </Button>
+          {/* If coupon is applied, show Manager-Approved Justification banner */}
+          {feeBreakdown.discountAmount > 0 && (
+            <div className="pt-2.5 border-t border-slate-200/80 bg-white p-3 rounded-lg border border-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Authorized Justification:</span>
+                </span>
+                {feeBreakdown.justificationCategory && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    {JUSTIFICATION_CATEGORY_LABELS[feeBreakdown.justificationCategory as keyof typeof JUSTIFICATION_CATEGORY_LABELS]?.label || feeBreakdown.justificationCategory}
+                  </span>
+                )}
+                {feeBreakdown.approvedByName && (
+                  <span className="text-[10px] text-slate-400">
+                    Approved by: <strong className="text-slate-700">{feeBreakdown.approvedByName}</strong>
+                  </span>
+                )}
+              </div>
+              {feeBreakdown.justificationNotes && (
+                <div className="text-[11px] text-slate-600 italic">
+                  &ldquo;{feeBreakdown.justificationNotes}&rdquo;
+                </div>
+              )}
             </div>
           )}
         </div>
