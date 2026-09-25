@@ -22,6 +22,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
     applicationId,
     taxYear,
     currentStage,
+    priority,
     taxpayer,
     assignedPreparer,
     assignedReviewer,
@@ -31,7 +32,6 @@ export const TaxReviewerAuditScreen: React.FC = () => {
     drakeTaxFile,
     prepNotes,
     taxDraftSummary,
-    clientPaymentStatus,
     availableApplications,
     checks,
     toggleCheck,
@@ -80,10 +80,11 @@ export const TaxReviewerAuditScreen: React.FC = () => {
       <ReviewerAuditHeader
         taxpayer={taxpayer}
         taxYear={taxYear}
+        priority={priority}
+        lead={{ ...taxDraftSummary, currentStage, taxDraftSummary, taxYear }}
         assignedPreparer={assignedPreparer}
         currentStage={currentStage}
         taxDraftSummary={taxDraftSummary}
-        clientPaymentStatus={clientPaymentStatus}
         onBack={() => navigate('/prep-review/reviewer')}
         onOpenApproveModal={() => setIsApproveModalOpen(true)}
         onOpenRevisionModal={() => setIsRevisionModalOpen(true)}

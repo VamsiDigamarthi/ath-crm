@@ -5,11 +5,12 @@ import {
   ShieldCheck 
 } from 'lucide-react';
 import type { ClientPaymentStatus } from '../types/payment-status.types';
-import { evaluateClientPaymentStatus } from '../utils/payment-status-evaluator';
+import { evaluateClientPaymentStatus, evaluateReturnPaymentStatus } from '../utils/payment-status-evaluator';
 
 export interface ClientPaymentStatusChipProps {
   status?: ClientPaymentStatus | null;
   lead?: any;
+  scope?: 'customer' | 'return';
   size?: 'xs' | 'sm' | 'md';
   showIcon?: boolean;
   className?: string;
@@ -18,12 +19,18 @@ export interface ClientPaymentStatusChipProps {
 export const ClientPaymentStatusChip: React.FC<ClientPaymentStatusChipProps> = ({
   status: statusProp,
   lead,
+  scope = 'customer',
   size = 'xs',
   showIcon = true,
   className = '',
 }) => {
   const resolvedStatus: ClientPaymentStatus = 
-    statusProp || (lead ? evaluateClientPaymentStatus(lead) : 'NEW');
+    statusProp ||
+    (lead
+      ? scope === 'return'
+        ? evaluateReturnPaymentStatus(lead)
+        : evaluateClientPaymentStatus(lead)
+      : 'NEW');
 
   const getConfig = () => {
     switch (resolvedStatus) {

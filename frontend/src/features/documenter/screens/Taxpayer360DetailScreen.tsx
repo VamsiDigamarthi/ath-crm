@@ -255,10 +255,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
                 {customer.fullName || `${customer.firstName} ${customer.lastName}`}
               </h2>
-              <ClientPaymentStatusChip lead={lead || currentLead} size="sm" />
-              {currentLead.priority && (
-                <PriorityBadge priority={currentLead.priority} size="sm" />
-              )}
+              <ClientPaymentStatusChip lead={lead || currentLead} scope="return" size="sm" />
+              <PriorityBadge priority={lead?.priority || currentLead.priority || 'NO_PRIORITY'} size="sm" />
               {isDualRole && (
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1 shadow-2xs">
                   <Sparkles className="w-3 h-3 text-indigo-600" />
@@ -520,7 +518,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                   {customer.fullName || `${customer.firstName} ${customer.lastName}`}
                 </h3>
                 {renderVisaBadge(customer.visaType)}
-                <ClientPaymentStatusChip lead={lead || currentLead} size="sm" />
+                <ClientPaymentStatusChip lead={lead || currentLead} scope="return" size="sm" />
+                <PriorityBadge priority={lead?.priority || currentLead.priority || 'NO_PRIORITY'} size="sm" />
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                   TY {currentLead.taxYear}
                 </span>

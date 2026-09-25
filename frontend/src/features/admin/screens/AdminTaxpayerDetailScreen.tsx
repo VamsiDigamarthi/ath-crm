@@ -7,6 +7,7 @@ import {
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import {
   ArrowLeft,
   User,
@@ -433,10 +434,8 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
             Current Stage for TY {currentTaxYear}:
           </div>
           {renderStageBadge(yearDetails?.currentStage || 'RAW_PROSPECT')}
-          <div className="h-4 w-px bg-slate-200 hidden md:block" />
-          <div className="text-xs text-slate-600">
-            Priority: <strong className="text-slate-900">{yearDetails?.priority || 'MEDIUM'}</strong>
-          </div>
+          <ClientPaymentStatusChip lead={yearDetails} scope="return" size="sm" />
+          <PriorityBadge priority={yearDetails?.priority || 'MEDIUM'} size="sm" />
         </div>
 
         <div className="flex items-center gap-3 text-xs text-slate-500">

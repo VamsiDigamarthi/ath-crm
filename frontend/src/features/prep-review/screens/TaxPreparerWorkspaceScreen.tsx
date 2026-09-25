@@ -39,7 +39,6 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
-    clientPaymentStatus,
     availableApplications,
     drakeTaxFile,
     isUploadingDrakeFile,
@@ -158,13 +157,11 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">
               {taxpayerName}
             </h1>
-            <ClientPaymentStatusChip status={clientPaymentStatus} size="sm" />
+            <ClientPaymentStatusChip lead={{ ...taxDraftSummary, currentStage, taxDraftSummary, taxYear }} scope="return" size="sm" />
             <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700">
               TY {taxYear} Form 1040
             </span>
-            {priority && (
-              <PriorityBadge priority={priority} size="sm" />
-            )}
+            <PriorityBadge priority={priority || 'NO_PRIORITY'} size="sm" />
             {isSubmittedToQA ? (
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3 text-purple-600" />

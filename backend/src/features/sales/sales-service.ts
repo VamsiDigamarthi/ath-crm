@@ -133,6 +133,12 @@ export class SalesService {
                 taxYear: true,
                 filingType: true,
                 currentStage: true,
+                taxDraftSummary: true,
+                quotes: {
+                  select: {
+                    status: true,
+                  },
+                },
                 assignedSalesAgentId: true,
                 assignedSalesAgent: {
                   select: { id: true, firstName: true, lastName: true, email: true },
@@ -190,6 +196,9 @@ export class SalesService {
         customer?.isConvertedCustomer ||
         allCustomerApps.some((a: any) =>
           a.currentStage === ApplicationStage.FILING_SUCCESS ||
+          a.currentStage === ApplicationStage.FILING_QUEUE ||
+          a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+          a.quotes?.some((q: any) => q.status === 'PAID') ||
           (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
           (a as any).taxDraftSummary?.paidAmount > 0
         )

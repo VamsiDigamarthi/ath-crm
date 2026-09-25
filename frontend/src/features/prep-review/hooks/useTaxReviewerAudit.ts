@@ -22,6 +22,7 @@ export function useTaxReviewerAudit() {
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<WorkspaceDocument | null>(null);
   const [drakeTaxFile, setDrakeTaxFile] = useState<any | null>(null);
   const [prepNotes, setPrepNotes] = useState<string>('');
+  const [priority, setPriority] = useState<string>('MEDIUM');
   const [taxDraftSummary, setTaxDraftSummary] = useState<any>(null);
   const [clientPaymentStatus, setClientPaymentStatus] = useState<'PAID' | 'NEW' | 'UNPAID'>('UNPAID');
   const [availableApplications, setAvailableApplications] = useState<any[]>([]);
@@ -80,6 +81,7 @@ export function useTaxReviewerAudit() {
       setDocuments(data.documents || []);
       setPrepNotes(data.prepNotes || '');
       setTaxDraftSummary(data.taxDraftSummary || {});
+      if (data.priority) setPriority(data.priority);
       if (data.clientPaymentStatus) setClientPaymentStatus(data.clientPaymentStatus);
       if (data.availableApplications) setAvailableApplications(data.availableApplications);
 
@@ -159,6 +161,7 @@ export function useTaxReviewerAudit() {
     applicationId,
     taxYear,
     currentStage,
+    priority,
     taxpayer,
     assignedPreparer,
     assignedReviewer,

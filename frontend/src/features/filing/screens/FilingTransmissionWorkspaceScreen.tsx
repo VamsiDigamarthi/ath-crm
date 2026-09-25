@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { FilingComplianceGate } from '../components/workspace/FilingComplianceGate';
 import { FilingTaxpayerInspectionCard } from '../components/workspace/FilingTaxpayerInspectionCard';
 import { MeFXMLViewer } from '../components/workspace/MeFXMLViewer';
@@ -97,7 +98,8 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
                 {lead.taxpayerName}
               </h2>
-              <ClientPaymentStatusChip lead={lead} size="sm" />
+              <ClientPaymentStatusChip lead={lead} scope="return" size="sm" />
+              <PriorityBadge priority={lead.priority || 'NO_PRIORITY'} size="sm" />
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${isAccepted
                   ? 'bg-emerald-100 text-emerald-800'
                   : isReverted

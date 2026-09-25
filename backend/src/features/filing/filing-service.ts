@@ -27,6 +27,9 @@ export class FilingService {
       customer?.isConvertedCustomer ||
       allCustomerApps.some((a: any) =>
         a.currentStage === ApplicationStage.FILING_SUCCESS ||
+        a.currentStage === ApplicationStage.FILING_QUEUE ||
+        a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+        a.quotes?.some((q: any) => q.status === 'PAID') ||
         (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
         (a as any).taxDraftSummary?.paidAmount > 0
       )
@@ -346,6 +349,12 @@ export class FilingService {
                 taxYear: true,
                 filingType: true,
                 currentStage: true,
+                taxDraftSummary: true,
+                quotes: {
+                  select: {
+                    status: true,
+                  },
+                },
                 assignedFileOpId: true,
                 assignedFileOp: {
                   select: { id: true, firstName: true, lastName: true, email: true },
@@ -453,6 +462,12 @@ export class FilingService {
         taxYear: true,
         filingType: true,
         currentStage: true,
+        taxDraftSummary: true,
+        quotes: {
+          select: {
+            status: true,
+          },
+        },
         assignedFileOpId: true,
         assignedFileOp: {
           select: { id: true, firstName: true, lastName: true, email: true },
@@ -475,6 +490,8 @@ export class FilingService {
             currentStage: app.currentStage,
             assignedFileOpId: app.assignedFileOpId,
             assignedFileOp: app.assignedFileOp,
+            taxDraftSummary: (app as any).taxDraftSummary || null,
+            quotes: (app as any).quotes || [],
             createdAt: app.createdAt,
             updatedAt: app.updatedAt,
           });
