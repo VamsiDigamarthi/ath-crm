@@ -21,5 +21,7 @@ router.post('/leads/:id/fee-breakdown', SalesController.updateFeeBreakdown);
 router.post('/leads/:id/record-payment', SalesController.recordPayment);
 router.post('/leads/:id/record-esign', SalesController.recordEsign);
 router.post('/leads/:id/send-payment-link', SalesController.sendPaymentLink);
+router.post('/leads/:id/return-to-admin', SalesController.returnLeadToAdmin);
+router.post('/return-to-admin', SalesController.returnLeadsBulkToAdmin);
 
 export { router as salesRouter };

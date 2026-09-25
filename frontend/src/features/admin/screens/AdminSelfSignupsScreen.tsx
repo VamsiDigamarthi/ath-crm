@@ -4,10 +4,8 @@ import type { SelfSignupLeadItem } from '../services/self-signups-service';
 import { AppTable, type ColumnDef } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
-import { AppDrawer } from '@/shared/components/AppDrawer';
 import { Button } from '@/shared/components/Button';
 import { LeadAssignmentModal } from '@/features/documenter/components/LeadAssignmentModal';
-import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import {
   Globe,
   UserPlus,
@@ -16,7 +14,6 @@ import {
   RefreshCw,
   Zap,
   UserCheck,
-  Eye,
   Mail,
   Phone,
   Calendar,
@@ -24,6 +21,7 @@ import {
   Layers,
   ArrowUpRight,
   ShieldCheck,
+  RotateCcw,
 } from 'lucide-react';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
@@ -71,8 +69,6 @@ export const AdminSelfSignupsScreen: React.FC = () => {
     setSelectedRows,
     isAssignModalOpen,
     setIsAssignModalOpen,
-    isAuditDrawerOpen,
-    activeLeadForAudit,
     handleSearchChange,
     handleVisaChange,
     handleTaxYearChange,
@@ -82,8 +78,6 @@ export const AdminSelfSignupsScreen: React.FC = () => {
     handleLimitChange,
     handleOpenAssignModal,
     handleCloseAssignModal,
-    handleOpenAuditDrawer,
-    handleCloseAuditDrawer,
     handleDirectAssign,
     handleAutoRoundRobin,
     refreshData,
@@ -200,15 +194,38 @@ export const AdminSelfSignupsScreen: React.FC = () => {
         ),
       },
       {
-        header: 'Tax Year & Source',
+        header: 'Tax Year & History',
         render: (lead: SelfSignupLeadItem) => {
           const isRetained = (lead.taxDraftSummary as any)?.isRetainedClient;
+          const allApps = lead.customer?.applications || [];
+          const hasMultipleYears = allApps.length > 1;
+
           return (
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
                 <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>Tax Year {lead.taxYear}</span>
+                <span>TY {lead.taxYear} ({lead.filingType || 'INDIVIDUAL'})</span>
               </div>
+
+              {hasMultipleYears && (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[10px] text-slate-400 font-medium">History:</span>
+                  {allApps.map((app) => (
+                    <span
+                      key={app.id}
+                      className={`px-1.5 py-0.2 rounded text-[10px] font-bold border ${
+                        app.id === lead.id
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}
+                      title={`TY ${app.taxYear} • Stage: ${app.currentStage?.replace(/_/g, ' ') || 'Intake'}`}
+                    >
+                      TY {app.taxYear}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center gap-1 flex-wrap">
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
                   <Globe className="w-2.5 h-2.5" />
@@ -216,7 +233,7 @@ export const AdminSelfSignupsScreen: React.FC = () => {
                 </span>
                 {isRetained && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                    Existing Client
+                    Existing Client • Self-Added Year
                   </span>
                 )}
               </div>
@@ -253,20 +270,35 @@ export const AdminSelfSignupsScreen: React.FC = () => {
           if (lead.assignedDocAgent) {
             return (
               <div className="flex items-center gap-1.5 text-xs text-slate-800 font-semibold">
-                <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <UserCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 <span className="truncate max-w-[140px]">
                   {lead.assignedDocAgent.firstName
-                    ? `${lead.assignedDocAgent.firstName} ${lead.assignedDocAgent.lastName || ''}`
+                    ? `${lead.assignedDocAgent.firstName} ${lead.assignedDocAgent.lastName || ''}`.trim()
                     : lead.assignedDocAgent.email}
                 </span>
               </div>
             );
           }
+
+          const prevAgent = lead.previousDocAgent;
           return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-              <AlertCircle className="w-2.5 h-2.5" />
-              <span>Unassigned (Pool)</span>
-            </span>
+            <div className="flex flex-col items-start gap-1">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                <AlertCircle className="w-2.5 h-2.5 shrink-0" />
+                <span>Unassigned (Pool)</span>
+              </span>
+              {prevAgent && (
+                <div
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/80 shadow-2xs"
+                  title={`Previously handled by ${prevAgent.firstName || ''} ${prevAgent.lastName || ''} (${prevAgent.email}) in Tax Year ${prevAgent.taxYear}`}
+                >
+                  <RotateCcw className="w-2.5 h-2.5 text-purple-600 shrink-0" />
+                  <span className="truncate max-w-[150px]">
+                    Prev: <strong className="font-bold">{prevAgent.firstName ? `${prevAgent.firstName} ${prevAgent.lastName || ''}`.trim() : prevAgent.email.split('@')[0]}</strong> (TY {prevAgent.taxYear})
+                  </span>
+                </div>
+              )}
+            </div>
           );
         },
       },
@@ -287,7 +319,8 @@ export const AdminSelfSignupsScreen: React.FC = () => {
               <span>Assign</span>
             </Button>
 
-            <Button
+            {/* View Audit Trail button commented out as requested */}
+            {/* <Button
               variant="outline"
               size="sm"
               onClick={() => handleOpenAuditDrawer(lead)}
@@ -295,12 +328,12 @@ export const AdminSelfSignupsScreen: React.FC = () => {
               title="View Complete Audit Trail"
             >
               <Eye className="w-3.5 h-3.5" />
-            </Button>
+            </Button> */}
           </div>
         ),
       },
     ],
-    [setSelectedRows, setIsAssignModalOpen, handleOpenAuditDrawer]
+    [setSelectedRows, setIsAssignModalOpen]
   );
 
   return (
@@ -539,10 +572,11 @@ export const AdminSelfSignupsScreen: React.FC = () => {
         />
       )}
 
-      {/* Audit Drawer */}
-      <AppDrawer
+      {/* Audit Drawer (Commented out as requested) */}
+      {/* <AppDrawer
         isOpen={isAuditDrawerOpen}
         onClose={handleCloseAuditDrawer}
+        className="sm:max-w-[620px] md:max-w-[700px] lg:max-w-[780px]"
         title={
           activeLeadForAudit
             ? `Audit History: ${activeLeadForAudit.customer?.firstName} ${activeLeadForAudit.customer?.lastName}`
@@ -553,9 +587,14 @@ export const AdminSelfSignupsScreen: React.FC = () => {
           <LeadAuditTrailSection
             leadId={activeLeadForAudit.id}
             taxpayerName={`${activeLeadForAudit.customer?.firstName || ''} ${activeLeadForAudit.customer?.lastName || ''}`.trim() || 'Taxpayer Client'}
+            taxpayerEmail={activeLeadForAudit.customer?.email || undefined}
+            currentStage={activeLeadForAudit.currentStage}
+            stageHistories={activeLeadForAudit.stageHistories as any}
+            auditLogs={activeLeadForAudit.auditLogs as any}
+            callLogs={activeLeadForAudit.callLogs as any}
           />
         )}
-      </AppDrawer>
+      </AppDrawer> */}
     </div>
   );
 };

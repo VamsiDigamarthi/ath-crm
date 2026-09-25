@@ -370,13 +370,15 @@ export const startNextYearApplication = async (req: Request, res: Response) => {
 };
 
 export const getReturnedLeads = async (req: Request, res: Response) => {
-  const { search, visaType, taxYear, page, limit } = req.query;
+  const { search, visaType, taxYear, priority, department, page, limit } = req.query;
 
   const { ReturnedLeadsService } = await import("./returned-leads-service.js");
   const result = await ReturnedLeadsService.getReturnedLeads({
     search: typeof search === 'string' ? search : undefined,
     visaType: typeof visaType === 'string' ? visaType : undefined,
     taxYear: taxYear ? Number(taxYear) : undefined,
+    priority: typeof priority === 'string' ? priority : undefined,
+    department: typeof department === 'string' ? department : undefined,
     page: page ? Number(page) : undefined,
     limit: limit ? Number(limit) : undefined,
   });
@@ -401,7 +403,7 @@ export const assignReturnedLeadsBulk = async (req: Request, res: Response) => {
 
   return SuccessHandler.handle(
     res,
-    `Successfully assigned ${result.assignedCount} lead(s) directly to Calling Agent ${result.targetAgent.email}`,
+    `Successfully assigned ${result.assignedCount} lead(s) to agent ${result.targetAgent.email || ''}`,
     result,
     200
   );
@@ -423,7 +425,7 @@ export const autoRoundRobinReturnedLeads = async (req: Request, res: Response) =
 
   return SuccessHandler.handle(
     res,
-    `Successfully distributed ${result.totalDistributed} lead(s) evenly across ${result.agentsCount} Calling Agent(s) via Round-Robin`,
+    result.message,
     result,
     200
   );

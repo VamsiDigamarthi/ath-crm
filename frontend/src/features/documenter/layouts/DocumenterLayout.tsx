@@ -13,6 +13,7 @@ import {
   Clock,
   FileCheck2,
   Bell,
+  Globe,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -41,8 +42,9 @@ export const DocumenterLayout: React.FC = () => {
   const navItems = isManager
     ? [
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/documenter/manager' },
-        { id: 'scorecards', label: 'Agent Scorecards', icon: Users, section: 'Operations', badge: '8', path: '/documenter/manager/scorecards' },
+        { id: 'self_signups', label: 'Direct Sign-ups', icon: Globe, section: 'Operations', path: '/documenter/manager/self-signups' },
         { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: '20', path: '/documenter/manager/queue' },
+        { id: 'scorecards', label: 'Agent Scorecards', icon: Users, section: 'Operations', badge: '8', path: '/documenter/manager/scorecards' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
       ]
     : [
@@ -57,6 +59,7 @@ export const DocumenterLayout: React.FC = () => {
   const getActiveId = () => {
     if (currentPath.includes('/documenter/notifications')) return 'notifications';
     if (currentPath.includes('/documenter/manager/scorecards')) return 'scorecards';
+    if (currentPath.includes('/documenter/manager/self-signups')) return 'self_signups';
     if (currentPath.includes('/documenter/manager/queue')) return 'caseload';
     if (currentPath.includes('/documenter/manager')) return 'dashboard';
     if (currentPath.includes('/documenter/agent/queue')) return 'agent_queue';
@@ -84,6 +87,7 @@ export const DocumenterLayout: React.FC = () => {
   const getHeaderTitle = () => {
     if (activeId === 'notifications') return 'Documenter Notifications & Activity Hub';
     if (activeId === 'scorecards') return 'Calling Agent Scorecards & Workload Health';
+    if (activeId === 'self_signups') return 'Direct Online Sign-ups & Self-Added Tax Years';
     if (activeId === 'caseload') return 'Department Caseload Queue & Pipeline';
     if (activeId === 'dashboard') return 'Documenter Operations Command Center';
     if (activeId === 'agent_queue') return 'My Active Calling Queue';
@@ -120,7 +124,7 @@ export const DocumenterLayout: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 min-w-0">
         {/* Top Header Bar */}
         <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-slate-200 shrink-0">
           <div className="flex items-center gap-3">
@@ -148,7 +152,7 @@ export const DocumenterLayout: React.FC = () => {
         </header>
 
         {/* Dynamic Screen Outlet */}
-        <main className="flex-1 overflow-y-auto p-6 sm:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 min-w-0">
           <Outlet />
         </main>
       </div>

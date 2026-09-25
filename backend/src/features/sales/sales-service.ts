@@ -611,6 +611,38 @@ export class SalesService {
           ? `$${balDue.toLocaleString()} Balance Due`
           : 'Form 1040 QA Approved';
 
+      // Update taxDraftSummary to mark lead as no longer returned to pool
+      try {
+        const prevHistory: any[] = Array.isArray(draft.assignmentHistory) ? draft.assignmentHistory : [];
+        const updatedSummary = {
+          ...draft,
+          isReturnedToPool: false,
+          returnedDepartment: null,
+          returnedReason: null,
+          assignmentHistory: [
+            ...prevHistory,
+            {
+              action: 'ASSIGNED_TO_SALES_CLOSER',
+              department: 'SALES',
+              role: 'SALES_AGENT',
+              agentId: salesAgentId,
+              agentName,
+              assignedByUserId: effectiveManagerId,
+              assignedByUserName: managerName,
+              assignedAt: new Date().toISOString(),
+            },
+          ],
+        };
+        await prisma.taxApplication.update({
+          where: { id: app.id },
+          data: {
+            taxDraftSummary: updatedSummary,
+          },
+        });
+      } catch (sumErr) {
+        console.error('Failed to update taxDraftSummary on sales assign:', sumErr);
+      }
+
       // A. StageHistory Audit Trail
       if (effectiveManagerId) {
         try {
@@ -2291,6 +2323,155 @@ export class SalesService {
       recipients: recipientEmails,
       paymentLinkRecord,
       application: updatedApp,
+    };
+  }
+
+  /**
+   * Sales Closer returns / releases lead back to Admin Unassigned Pool
+   */
+  public static async returnLeadToAdmin(options: {
+    applicationId: string;
+    returnedByUserId: string;
+    reason?: string;
+  }) {
+    const { applicationId, returnedByUserId, reason = 'Client not converting / rejected fee quote - Released to Admin Pool' } = options;
+
+    const returnedByUser = await prisma.user.findUnique({
+      where: { id: returnedByUserId },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+    });
+    const returnerName = returnedByUser?.firstName
+      ? `${returnedByUser.firstName} ${returnedByUser.lastName || ''}`.trim()
+      : returnedByUser?.email || 'Sales Closer';
+
+    return await prisma.$transaction(async (tx) => {
+      const app = await tx.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: {
+          assignedSalesAgent: {
+            select: { id: true, email: true, firstName: true, lastName: true, role: true },
+          },
+          customer: {
+            select: { firstName: true, lastName: true, email: true },
+          },
+        },
+      });
+
+      if (!app) {
+        throw new Error('Tax Application not found');
+      }
+
+      const prevSummary = (app.taxDraftSummary as Record<string, any>) || {};
+      const prevHistory: any[] = Array.isArray(prevSummary.assignmentHistory) ? prevSummary.assignmentHistory : [];
+
+      const prevAgent = app.assignedSalesAgent;
+      const prevAgentName = prevAgent?.firstName
+        ? `${prevAgent.firstName} ${prevAgent.lastName || ''}`.trim()
+        : prevAgent?.email || 'Sales Closer';
+
+      const nowIso = new Date().toISOString();
+
+      const newHistoryEntry = {
+        agentId: prevAgent?.id || app.assignedSalesAgentId || 'unknown',
+        agentName: prevAgentName,
+        agentEmail: prevAgent?.email || '',
+        role: prevAgent?.role || 'SALES_AGENT',
+        action: 'RETURNED_TO_POOL',
+        department: 'SALES',
+        assignedAt: app.updatedAt?.toISOString() || app.createdAt.toISOString(),
+        returnedAt: nowIso,
+        returnedByUserId,
+        returnedByUserName: returnerName,
+        reason,
+      };
+
+      const updatedHistory = [...prevHistory, newHistoryEntry];
+      const updatedSummary = {
+        ...prevSummary,
+        assignmentHistory: updatedHistory,
+        isReturnedToPool: true,
+        returnedDepartment: 'SALES',
+        returnedAt: nowIso,
+        returnedBy: returnerName,
+        returnedReason: reason,
+      };
+
+      // Unassign sales agent and set currentStage to SALES_PITCH_QUEUE (ready for Admin or manager re-assignment)
+      const updatedApp = await tx.taxApplication.update({
+        where: { id: app.id },
+        data: {
+          assignedSalesAgentId: null,
+          currentStage: ApplicationStage.SALES_PITCH_QUEUE,
+          taxDraftSummary: updatedSummary,
+        },
+      });
+
+      const clientName = `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || 'Taxpayer';
+
+      // Stage history audit
+      await tx.stageHistory.create({
+        data: {
+          applicationId: app.id,
+          fromStage: app.currentStage,
+          toStage: ApplicationStage.SALES_PITCH_QUEUE,
+          movedByUserId: returnedByUserId,
+          remarks: `Sales Closer ${returnerName} (${returnedByUser?.email || 'agent'}) released lead back to Admin Unassigned Pool. Reason: ${reason}. Previous Closer: ${prevAgentName}.`,
+        },
+      });
+
+      // Audit log
+      await tx.auditLog.create({
+        data: {
+          applicationId: app.id,
+          actorId: returnedByUserId,
+          actorType: returnedByUser?.role === Role.ADMIN ? AuditActorType.ADMIN : AuditActorType.AGENT,
+          actorName: returnerName,
+          actorRole: returnedByUser?.role || 'SALES_AGENT',
+          action: AuditActionType.STAGE_CHANGE,
+          moduleKey: 'SALES_RETURN_TO_ADMIN',
+          details: {
+            actorEmail: returnedByUser?.email || '',
+            previousAgentId: prevAgent?.id,
+            previousAgentEmail: prevAgent?.email,
+            previousAgentName: prevAgentName,
+            returnedDepartment: 'SALES',
+            clientName,
+            reason,
+            actionDescription: `Lead released back to Admin pool by ${returnerName}`,
+          },
+        },
+      });
+
+      return {
+        success: true,
+        message: `Lead for ${clientName} successfully returned to Admin Unassigned Pool`,
+        application: updatedApp,
+      };
+    });
+  }
+
+  /**
+   * Bulk return multiple sales leads back to Admin Unassigned Pool
+   */
+  public static async returnLeadsBulkToAdmin(options: {
+    applicationIds: string[];
+    returnedByUserId: string;
+    reason?: string;
+  }) {
+    const { applicationIds, returnedByUserId, reason } = options;
+    const results = [];
+    for (const appId of applicationIds) {
+      try {
+        const res = await this.returnLeadToAdmin({ applicationId: appId, returnedByUserId, reason });
+        results.push(res);
+      } catch (err: any) {
+        console.error(`Failed to return lead ${appId}:`, err);
+      }
+    }
+    return {
+      success: true,
+      count: results.length,
+      message: `Successfully returned ${results.length} sales lead(s) to Admin Unassigned Pool`,
     };
   }
 }

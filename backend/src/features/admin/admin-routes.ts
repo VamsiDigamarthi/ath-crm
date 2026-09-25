@@ -139,25 +139,25 @@ router.post(
   autoRoundRobinReturnedLeads
 );
 
-// Admin Direct / Online Self-Signups Management
+// Admin & Documenter Manager Direct / Online Self-Signups Management
 router.get(
   "/self-signups",
   requireAuth,
-  authorize(Role.ADMIN),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
   getSelfSignups
 );
 
 router.post(
   "/self-signups/assign-bulk",
   requireAuth,
-  authorize(Role.ADMIN),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
   assignSelfSignupsBulk
 );
 
 router.post(
   "/self-signups/assign-round-robin",
   requireAuth,
-  authorize(Role.ADMIN),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
   autoRoundRobinSelfSignups
 );
 

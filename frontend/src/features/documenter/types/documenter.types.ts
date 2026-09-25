@@ -148,6 +148,9 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
     id: string;
     email: string;
     name?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
     taxYear?: number;
   } | null;
   clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';

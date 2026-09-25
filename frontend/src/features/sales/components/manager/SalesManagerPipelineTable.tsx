@@ -371,7 +371,7 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
 
                           <Button
                             size="sm"
-                            onClick={() => navigate(`/sales/agent/pitch/${lead.id}`)}
+                            onClick={() => navigate(`/sales/manager/pitch/${lead.id}`)}
                             className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                           >
                             <PhoneCall className="w-3 h-3" />

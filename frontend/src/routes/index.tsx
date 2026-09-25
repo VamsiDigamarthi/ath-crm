@@ -275,6 +275,10 @@ export const router = createBrowserRouter([
             element: <DocumenterManagerDashboardScreen />,
           },
           {
+            path: 'manager/self-signups',
+            element: <AdminSelfSignupsScreen />,
+          },
+          {
             path: 'manager/scorecards',
             element: <ManagerScorecardsScreen />,
           },
@@ -430,6 +434,10 @@ export const router = createBrowserRouter([
           {
             path: 'manager/queue',
             element: <SalesManagerQueueScreen />,
+          },
+          {
+            path: 'manager/pitch/:id',
+            element: <SalesPitchWorkspaceScreen />,
           },
           {
             path: 'manager/dual-role',

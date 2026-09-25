@@ -92,8 +92,8 @@ export const SalesLayout: React.FC = () => {
     if (currentPath.includes('/sales/coupons')) return 'coupons';
     if (currentPath.includes('/sales/manager/dual-role')) return 'dual_role';
     if (currentPath.includes('/sales/manager/team')) return 'team';
-    if (currentPath.includes('/sales/manager/queue')) return 'pipeline';
-    if (currentPath.includes('/sales/manager')) return 'dashboard';
+    if (currentPath.includes('/sales/manager/pitch') || currentPath.includes('/sales/manager/queue')) return 'pipeline';
+    if (currentPath === '/sales/manager' || currentPath === '/sales/manager/') return 'dashboard';
     if (isManager && (currentPath.includes('/sales/agent/pitch') || currentPath.includes('/sales/pitch') || currentPath.includes('/sales/agent/queue'))) return 'pipeline';
     if (currentPath.includes('/sales/agent/queue') || currentPath.includes('/sales/agent/pitch')) return 'pitch_queue';
     if (currentPath.includes('/sales/agent')) return 'agent_hub';
@@ -120,6 +120,7 @@ export const SalesLayout: React.FC = () => {
     if (activeId === 'notifications') return 'Sales Department Notifications Hub';
     if (activeId === 'coupons') return 'Manager-Approved Discount Coupons & Justification Control';
     if (activeId === 'team') return 'Sales Closers Staff Matrix & Capacity';
+    if (currentPath.includes('/pitch/')) return 'Sales Closer Pitch & Revenue Workbench';
     if (activeId === 'pipeline') return 'Sales & Fee Quotation Department Queue';
     if (activeId === 'dashboard') return 'Sales Revenue & Closers Command Center';
     if (activeId === 'agent_hub') return 'Sales Closer Daily Operations Hub';

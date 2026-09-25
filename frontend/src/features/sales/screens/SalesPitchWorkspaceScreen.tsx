@@ -11,6 +11,7 @@ import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndE
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
+import { SalesReturnToAdminModal } from '../components/common/SalesReturnToAdminModal';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesFeeBreakdown } from '../types/sales.types';
 import apiClient from '@/lib/api-client';
@@ -32,6 +33,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   const [isDispatching, setIsDispatching] = useState(false);
   const [pendingDispatchNotes, setPendingDispatchNotes] = useState<string>('');
   const [isSendBackOpen, setIsSendBackOpen] = useState(false);
+  const [isReturnToAdminOpen, setIsReturnToAdminOpen] = useState(false);
 
   const fetchLeadDetail = useCallback(async () => {
     if (!id) return;
@@ -287,7 +289,11 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-150 font-sans">
       {/* 1. Taxpayer Header & Certified 1040 Refund Banner */}
-      <PitchTaxpayerHeader lead={lead} onOpenSendBack={() => setIsSendBackOpen(true)} />
+      <PitchTaxpayerHeader
+        lead={lead}
+        onOpenSendBack={() => setIsSendBackOpen(true)}
+        onOpenReturnToAdmin={() => setIsReturnToAdminOpen(true)}
+      />
 
       {/* 1.05 Multi-Year Return Switcher Tabs */}
       {lead.availableApplications && lead.availableApplications.length > 0 && (
@@ -510,6 +516,18 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         ]}
         defaultTargetDepartment="PREPARATION"
         onRevertSuccess={() => {
+          navigate(backQueuePath);
+        }}
+      />
+
+      {/* 7. Return to Super Admin Pool Modal (Closer cannot convert / price negotiation stalled) */}
+      <SalesReturnToAdminModal
+        isOpen={isReturnToAdminOpen}
+        onClose={() => setIsReturnToAdminOpen(false)}
+        applicationId={lead.id || lead.applicationId}
+        taxpayerName={lead.taxpayerName}
+        taxYear={lead.taxYear || 2025}
+        onReturnSuccess={() => {
           navigate(backQueuePath);
         }}
       />

@@ -56,7 +56,7 @@ export const SalesAgentQueueScreen: React.FC = () => {
       <SalesAgentStatsCards stats={stats} />
 
       {/* 3. My Active Queue Table */}
-      <SalesAgentQueueTable leads={allLeads} isLoading={isLoading} />
+      <SalesAgentQueueTable leads={allLeads} isLoading={isLoading} onRefresh={handleRefresh} />
     </div>
   );
 };

@@ -8,19 +8,24 @@ import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
 import { calculateReturnComplexity } from '../../utils/complexity-evaluator';
+import { SalesReturnToAdminModal } from '../common/SalesReturnToAdminModal';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface SalesAgentQueueTableProps {
   leads: SalesLeadItem[];
   isLoading?: boolean;
+  onRefresh?: () => void;
 }
 
-export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ leads, isLoading = false }) => {
+export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ leads, isLoading = false, onRefresh }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'ALL' | 'AWAITING' | 'QUOTED' | 'PAID' | 'REVERTED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [complexityFilter, setComplexityFilter] = useState<string>('ALL');
+
+  const [selectedLeadForReturn, setSelectedLeadForReturn] = useState<SalesLeadItem | null>(null);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
 
   const isReturnReverted = (lead: SalesLeadItem) => {
     const draftStatus = (lead.taxDraftSummary as any)?.status;
@@ -397,17 +402,33 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
 
                     {/* Action */}
                     <td className="py-3.5 px-4 text-right">
-                      <Button
-                        size="sm"
-                        onClick={() => navigate(`/sales/agent/pitch/${lead.id || lead.applicationId}`)}
-                        className={`text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer ml-auto ${
-                          isReverted ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'
-                        }`}
-                      >
-                        {isReverted ? <RotateCcw className="w-3.5 h-3.5" /> : <PhoneCall className="w-3.5 h-3.5" />}
-                        <span>{isReverted ? 'View Pitch Live' : 'Open Pitch Deck'}</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedLeadForReturn(lead);
+                            setIsReturnModalOpen(true);
+                          }}
+                          className="border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 text-xs font-semibold flex items-center gap-1 cursor-pointer h-8 px-2"
+                          title="Release / Return lead back to Super Admin Pool"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+                          <span className="hidden xl:inline">Return</span>
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          onClick={() => navigate(`/sales/agent/pitch/${lead.id || lead.applicationId}`)}
+                          className={`text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer ${
+                            isReverted ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'
+                          }`}
+                        >
+                          {isReverted ? <RotateCcw className="w-3.5 h-3.5" /> : <PhoneCall className="w-3.5 h-3.5" />}
+                          <span>{isReverted ? 'View Pitch Live' : 'Open Pitch Deck'}</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -416,6 +437,25 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
           </tbody>
         </table>
       </div>
+
+      {/* Return to Admin Modal */}
+      {selectedLeadForReturn && (
+        <SalesReturnToAdminModal
+          isOpen={isReturnModalOpen}
+          onClose={() => {
+            setIsReturnModalOpen(false);
+            setSelectedLeadForReturn(null);
+          }}
+          applicationId={selectedLeadForReturn.id || selectedLeadForReturn.applicationId}
+          taxpayerName={selectedLeadForReturn.taxpayerName}
+          taxYear={selectedLeadForReturn.taxYear || 2025}
+          onReturnSuccess={() => {
+            if (onRefresh) {
+              onRefresh();
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

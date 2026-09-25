@@ -177,4 +177,34 @@ export class SalesController {
       res.status(500).json({ message: err.message || 'Failed to send payment link' });
     }
   }
+
+  public static async returnLeadToAdmin(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.returnLeadToAdmin({
+        applicationId: id,
+        returnedByUserId: userId,
+        reason: req.body?.reason,
+      });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to return sales lead to admin pool' });
+    }
+  }
+
+  public static async returnLeadsBulkToAdmin(req: Request, res: Response) {
+    try {
+      const applicationIds = req.body.applicationIds || [];
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.returnLeadsBulkToAdmin({
+        applicationIds,
+        returnedByUserId: userId,
+        reason: req.body?.reason,
+      });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to return sales leads to admin pool' });
+    }
+  }
 }

@@ -12,9 +12,10 @@ import type { SalesLeadItem } from '../../types/sales.types';
 interface PitchTaxpayerHeaderProps {
   lead: SalesLeadItem;
   onOpenSendBack?: () => void;
+  onOpenReturnToAdmin?: () => void;
 }
 
-export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, onOpenSendBack }) => {
+export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, onOpenSendBack, onOpenReturnToAdmin }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
@@ -87,6 +88,20 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
+          {/* 1. Return to Admin Pool Button */}
+          {onOpenReturnToAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenReturnToAdmin}
+              className="text-xs font-bold flex items-center gap-1.5 shadow-2xs h-10 px-3.5 border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 cursor-pointer transition-all"
+              title="Release this lead back to Super Admin Pool if client does not convert"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+              <span>Return to Admin</span>
+            </Button>
+          )}
+
           {onOpenSendBack && (() => {
             const isDispatchedToFiling =
               lead.currentStage === 'FILING_QUEUE' ||

@@ -52,10 +52,11 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
     return ids;
   }, [selectedLeads]);
 
-  // Exclusively filter for frontline Documenter Calling Agents (DOC_AGENT)
-  // Managers (DOC_MANAGER) and Team Leads (DOC_TEAM_LEAD) are strictly excluded from lead intake queues
+  // Filter for frontline Documenter Calling Agents (DOC_AGENT) and Sales Closers (SALES_AGENT)
+  const hasSalesAgents = useMemo(() => agents.some((a) => a.role === 'SALES_AGENT'), [agents]);
+
   const callingAgents = useMemo(() => {
-    return agents.filter((a) => a.role === 'DOC_AGENT');
+    return agents.filter((a) => a.role === 'DOC_AGENT' || a.role === 'SALES_AGENT');
   }, [agents]);
 
   const selectedAgent = useMemo(() => {
@@ -93,11 +94,11 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <span>Distribute &amp; Assign Tax Leads</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              Calling Agents Only
+              {hasSalesAgents ? 'Calling Agents & Closers' : 'Calling Agents Only'}
             </span>
           </h3>
           <p className="text-xs text-slate-500 font-medium">
-            Assign {leadCount} selected {leadCount === 1 ? 'lead' : 'leads'} to Documenter Calling Agents
+            Assign {leadCount} selected {leadCount === 1 ? 'lead' : 'leads'} to {hasSalesAgents ? 'Calling Agents or Sales Closers' : 'Documenter Calling Agents'}
           </p>
         </div>
       }
@@ -168,7 +169,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                   Previous Tax Year (TY{selectedLeads[0].previousDocAgent.taxYear}) Handled by:
                 </span>
                 <span className="text-emerald-700 font-bold truncate block">
-                  {selectedLeads[0].previousDocAgent.name || selectedLeads[0].previousDocAgent.email}
+                  {selectedLeads[0].previousDocAgent.name || (selectedLeads[0].previousDocAgent.firstName ? `${selectedLeads[0].previousDocAgent.firstName} ${selectedLeads[0].previousDocAgent.lastName || ''}`.trim() : selectedLeads[0].previousDocAgent.email)}
                 </span>
               </div>
             </div>
@@ -180,7 +181,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
               }}
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shrink-0 cursor-pointer shadow-2xs"
             >
-              Assign to {selectedLeads[0].previousDocAgent.name?.split(' ')[0] || 'Previous Agent'}
+              Assign to {(selectedLeads[0].previousDocAgent.name || selectedLeads[0].previousDocAgent.firstName)?.split(' ')[0] || 'Previous Agent'}
             </Button>
           </div>
         )}
@@ -250,8 +251,12 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                       <div>
                         <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
                           <span>{agent.email}</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-                            Calling Agent
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            agent.role === 'SALES_AGENT'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-emerald-50 text-[#16A34A] border border-emerald-200'
+                          }`}>
+                            {agent.role === 'SALES_AGENT' ? 'Sales Closer' : 'Calling Agent'}
                           </span>
                         </div>
                         <div className="text-[10px] text-slate-400 font-medium">
@@ -336,8 +341,12 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                         <div className="min-w-0">
                           <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5 flex-wrap">
                             <span className="truncate max-w-[150px] sm:max-w-[200px]">{agent.email}</span>
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 shrink-0">
-                              Calling Agent
+                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border shrink-0 ${
+                              agent.role === 'SALES_AGENT'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-emerald-50 text-[#16A34A] border border-emerald-200'
+                            }`}>
+                              {agent.role === 'SALES_AGENT' ? 'Sales Closer' : 'Calling Agent'}
                             </span>
                             {isCurrentlyAssigned && (
                               <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-600 border border-slate-300 shrink-0">
