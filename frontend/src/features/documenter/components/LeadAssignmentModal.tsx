@@ -156,6 +156,35 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
       }
     >
       <div className="space-y-5 font-sans">
+        {/* Previous Agent Recommendation Banner */}
+        {selectedLeads.length === 1 && selectedLeads[0].previousDocAgent && (
+          <div className="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="min-w-0">
+                <span className="font-bold text-slate-900 block truncate">
+                  Previous Tax Year (TY{selectedLeads[0].previousDocAgent.taxYear}) Handled by:
+                </span>
+                <span className="text-emerald-700 font-bold truncate block">
+                  {selectedLeads[0].previousDocAgent.name || selectedLeads[0].previousDocAgent.email}
+                </span>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedAgentId(selectedLeads[0].previousDocAgent!.id);
+                setAssignmentMode('DIRECT');
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shrink-0 cursor-pointer shadow-2xs"
+            >
+              Assign to {selectedLeads[0].previousDocAgent.name?.split(' ')[0] || 'Previous Agent'}
+            </Button>
+          </div>
+        )}
+
         {/* Mode Selector Tabs */}
         <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
           <button

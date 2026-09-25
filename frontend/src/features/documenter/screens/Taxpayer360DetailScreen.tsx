@@ -17,9 +17,11 @@ import {
   Paperclip,
   Download,
   FileText,
+  Calendar,
 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
@@ -222,6 +224,13 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     (currentLead.taxDraftSummary as any)?.isDualDocSalesRole
   );
 
+  const availableApplications = (lead as any)?.availableApplications || (currentLead as any)?.availableApplications || [];
+
+  const handleSwitchTaxYear = (targetAppId: string) => {
+    if (targetAppId === (lead?.id || id)) return;
+    navigate(`/documenter/agent/lead/${targetAppId}`);
+  };
+
   return (
     <div className="space-y-6 pb-16 font-sans animate-in fade-in duration-150">
       {/* 1. Back Navigation & Header */}
@@ -246,6 +255,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
                 {customer.fullName || `${customer.firstName} ${customer.lastName}`}
               </h2>
+              <ClientPaymentStatusChip lead={lead || currentLead} size="sm" />
               {currentLead.priority && (
                 <PriorityBadge priority={currentLead.priority} size="sm" />
               )}
@@ -346,6 +356,61 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* 1.2 Multi-Year Return Switcher Tabs */}
+      {availableApplications && availableApplications.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
+              <Calendar className="w-4 h-4 text-emerald-600" />
+              <span>Tax Year Filings:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {availableApplications.map((appItem: any) => {
+                const isSelected = appItem.id === (lead?.id || id);
+                return (
+                  <button
+                    key={appItem.id}
+                    type="button"
+                    onClick={() => handleSwitchTaxYear(appItem.id)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
+                      isSelected
+                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
+                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>TY {appItem.taxYear}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
+                      isSelected ? 'bg-slate-800 text-emerald-400' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {appItem.filingType || 'INDIVIDUAL'}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${
+                      isSelected
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : appItem.currentStage === 'DOC_OUTREACH'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : appItem.currentStage === 'DOC_PREP'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : appItem.currentStage?.startsWith('SALES')
+                        ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                        : appItem.currentStage?.startsWith('FILING')
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {appItem.currentStage?.replace(/_/g, ' ') || 'Outreach'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-500 font-medium px-2">
+            Viewing: <strong className="text-slate-800 font-bold">TY {currentLead.taxYear} ({currentLead.filingType})</strong>
+          </div>
+        </div>
+      )}
 
       {/* 1.5 Revert from Preparation / Sales Alert Banner */}
       {isRevertedToDocumenter && Boolean(lastRevert) && (
@@ -455,6 +520,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                   {customer.fullName || `${customer.firstName} ${customer.lastName}`}
                 </h3>
                 {renderVisaBadge(customer.visaType)}
+                <ClientPaymentStatusChip lead={lead || currentLead} size="sm" />
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                   TY {currentLead.taxYear}
                 </span>

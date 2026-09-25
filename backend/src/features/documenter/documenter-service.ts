@@ -29,9 +29,13 @@ export interface DocumenterLeadQuery {
 export class DocumenterService {
   /**
    * Fetch full 360 case details for a single application including ALL historical call logs,
-   * stage history, and uploaded documents
+   * stage history, and uploaded documents, along with authorized multi-year applications
    */
-  public static async getLeadDetails(applicationId: string) {
+  public static async getLeadDetails(
+    applicationId: string,
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const app = await prisma.taxApplication.findUnique({
       where: { id: applicationId },
       include: {
@@ -113,6 +117,53 @@ export class DocumenterService {
       throw new NotFoundError('Tax Application not found');
     }
 
+    // Fetch all tax year applications for this customer profile
+    const allCustomerApps = await prisma.taxApplication.findMany({
+      where: { customerId: app.customerId },
+      select: {
+        id: true,
+        taxYear: true,
+        filingType: true,
+        currentStage: true,
+        assignedDocAgentId: true,
+        assignedDocAgent: {
+          select: {
+            id: true,
+            email: true,
+            mobile: true,
+            role: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { taxYear: 'desc' },
+    });
+
+    // Scoping check for DOC_AGENT:
+    // If regular calling agent, filter available applications to only those assigned to them.
+    let availableApplications = allCustomerApps;
+    if (currentUserRole === Role.DOC_AGENT && currentUserId) {
+      availableApplications = allCustomerApps.filter(
+        (a) => a.assignedDocAgentId === currentUserId
+      );
+      // Ensure the current app is present if assigned or unassigned
+      if (!availableApplications.some((a) => a.id === app.id)) {
+        if (app.assignedDocAgentId === currentUserId || !app.assignedDocAgentId) {
+          availableApplications.push({
+            id: app.id,
+            taxYear: app.taxYear,
+            filingType: app.filingType,
+            currentStage: app.currentStage,
+            assignedDocAgentId: app.assignedDocAgentId,
+            assignedDocAgent: app.assignedDocAgent,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+          });
+        }
+      }
+    }
+
     const formattedCallLogs = app.callLogs.map((c) => ({
       id: c.id,
       applicationId: c.applicationId,
@@ -179,11 +230,40 @@ export class DocumenterService {
       };
     });
 
+    const isPaidClient = Boolean(
+      app.customer.isConvertedCustomer ||
+      allCustomerApps.some((a) =>
+        a.currentStage === ApplicationStage.FILING_SUCCESS ||
+        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+        (a as any).taxDraftSummary?.paidAmount > 0
+      )
+    );
+
+    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+    if (isPaidClient) {
+      clientPaymentStatus = 'PAID';
+    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+      clientPaymentStatus = 'NEW';
+    } else {
+      clientPaymentStatus = 'UNPAID';
+    }
+
     return {
       ...app,
+      clientPaymentStatus,
       callLogs: formattedCallLogs,
       stageHistories: formattedStageHistories,
       auditLogs: formattedAuditLogs,
+      availableApplications: availableApplications.map((a) => ({
+        id: a.id,
+        taxYear: a.taxYear,
+        filingType: a.filingType,
+        currentStage: a.currentStage,
+        assignedDocAgentId: a.assignedDocAgentId,
+        assignedDocAgent: a.assignedDocAgent,
+        createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
+        updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
+      })),
     };
   }
 
@@ -328,11 +408,35 @@ export class DocumenterService {
     ] = await Promise.all([
       prisma.taxApplication.findMany({
         where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { taxYear: 'desc' },
+          { createdAt: 'desc' },
+        ],
         include: {
-          customer: true,
+          customer: {
+            include: {
+              applications: {
+                select: {
+                  id: true,
+                  taxYear: true,
+                  filingType: true,
+                  currentStage: true,
+                  assignedDocAgentId: true,
+                  assignedDocAgent: {
+                    select: {
+                      id: true,
+                      email: true,
+                      mobile: true,
+                      role: true,
+                    },
+                  },
+                  createdAt: true,
+                  updatedAt: true,
+                },
+                orderBy: { taxYear: 'desc' },
+              },
+            },
+          },
           assignedDocAgent: {
             select: {
               id: true,
@@ -432,7 +536,6 @@ export class DocumenterService {
       }),
     ]);
 
-    const totalPages = Math.ceil(totalItems / limit) || 1;
     const contactRatePct = todayDialsCount > 0 
       ? Number(((todayConnectedCount / todayDialsCount) * 100).toFixed(1)) 
       : 0;
@@ -534,17 +637,103 @@ export class DocumenterService {
       };
     });
 
-    const mappedLeads = leads.map((app) => ({
-      ...app,
-      lastCallLog: app.callLogs?.[0] || null,
-    }));
+    // Group matching applications by customerId so each customer appears as exactly 1 row
+    const customerGroupsMap = new Map<string, typeof leads[0][]>();
+    for (const app of leads) {
+      const cId = app.customerId;
+      if (!customerGroupsMap.has(cId)) {
+        customerGroupsMap.set(cId, []);
+      }
+      customerGroupsMap.get(cId)!.push(app);
+    }
+
+    const groupedLeads: any[] = [];
+    for (const [, appsList] of customerGroupsMap.entries()) {
+      // Pick primary/representative application:
+      // If tab is UNASSIGNED, pick the unassigned application
+      // Otherwise pick the most actionable application or highest tax year
+      let primaryApp = appsList[0];
+      if (tab === 'UNASSIGNED') {
+        const unassigned = appsList.find((a) => !a.assignedDocAgentId);
+        if (unassigned) primaryApp = unassigned;
+      } else {
+        const activeStageApp = appsList.find(
+          (a) => a.currentStage === ApplicationStage.DOC_OUTREACH || a.currentStage === ApplicationStage.DOC_PREP
+        );
+        if (activeStageApp) primaryApp = activeStageApp;
+      }
+
+      const customer = primaryApp.customer;
+      const allCustomerApps = (customer as any)?.applications || [];
+
+      // Find previous doc agent from any other applications for this customer
+      let previousDocAgent: { id: string; email: string; name?: string; taxYear?: number } | null = null;
+      const priorAppWithAgent = allCustomerApps.find(
+        (a: any) => a.assignedDocAgent && a.assignedDocAgentId !== primaryApp.assignedDocAgentId
+      );
+      if (priorAppWithAgent && priorAppWithAgent.assignedDocAgent) {
+        const email = priorAppWithAgent.assignedDocAgent.email || '';
+        const rawName = email.split('@')[0].replace('.', ' ');
+        const name = rawName.split(' ').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        previousDocAgent = {
+          id: priorAppWithAgent.assignedDocAgent.id,
+          email: priorAppWithAgent.assignedDocAgent.email,
+          name,
+          taxYear: priorAppWithAgent.taxYear,
+        };
+      }
+
+      // If current user is DOC_AGENT, filter visibleApplications to only those assigned to this agent
+      let visibleApplications = allCustomerApps;
+      if (currentUserRole === Role.DOC_AGENT && currentUserId) {
+        visibleApplications = allCustomerApps.filter((a: any) => a.assignedDocAgentId === currentUserId);
+      }
+
+      const isPaidClient = Boolean(
+        customer.isConvertedCustomer ||
+        allCustomerApps.some((a: any) =>
+          a.currentStage === ApplicationStage.FILING_SUCCESS ||
+          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+          (a as any).taxDraftSummary?.paidAmount > 0
+        )
+      );
+
+      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+      if (isPaidClient) {
+        clientPaymentStatus = 'PAID';
+      } else if (allCustomerApps.length <= 1 && (primaryApp.currentStage === ApplicationStage.RAW_PROSPECT || primaryApp.currentStage === ApplicationStage.DOC_OUTREACH)) {
+        clientPaymentStatus = 'NEW';
+      } else {
+        clientPaymentStatus = 'UNPAID';
+      }
+
+      groupedLeads.push({
+        ...primaryApp,
+        lastCallLog: primaryApp.callLogs?.[0] || null,
+        clientPaymentStatus,
+        allApplications: visibleApplications.map((a: any) => ({
+          id: a.id,
+          taxYear: a.taxYear,
+          filingType: a.filingType,
+          currentStage: a.currentStage,
+          assignedDocAgentId: a.assignedDocAgentId,
+          assignedDocAgent: a.assignedDocAgent,
+        })),
+        previousDocAgent,
+        totalTaxYears: visibleApplications.length,
+      });
+    }
+
+    const totalGroupedItems = groupedLeads.length;
+    const totalPages = Math.ceil(totalGroupedItems / limit) || 1;
+    const paginatedLeads = groupedLeads.slice(skip, skip + limit);
 
     return {
-      leads: mappedLeads,
+      leads: paginatedLeads,
       pagination: {
         currentPage: page,
         totalPages,
-        totalItems,
+        totalItems: totalGroupedItems,
         itemsPerPage: limit,
       },
       stats: {
