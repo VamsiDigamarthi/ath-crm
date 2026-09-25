@@ -30,6 +30,7 @@ import { useCustomerDirectory } from '../hooks/useCustomerDirectory';
 import type { AdminCustomerItem } from '../types/customer-directory.types';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 
 export const AdminCustomerDirectoryScreen: React.FC = () => {
   const {
@@ -297,8 +298,9 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                             {c.firstName[0] || 'C'}{c.lastName?.[0] || ''}
                           </div>
                           <div>
-                            <div className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center gap-1.5">
+                            <div className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center gap-1.5 flex-wrap">
                               <span>{c.fullName}</span>
+                              <ClientPaymentStatusChip lead={c} size="xs" />
                               <span title="Verified Client">
                                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                               </span>

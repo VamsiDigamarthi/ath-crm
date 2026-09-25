@@ -13,32 +13,19 @@ import {
 import type {
   CouponJustificationCategory,
   CouponStatus,
-  CouponDiscountType,
 } from '../types/coupon.types';
 import {
   Tag,
   Plus,
   ShieldCheck,
   DollarSign,
-  TrendingUp,
   Clock,
   CheckCircle2,
   AlertCircle,
-  Percent,
   RefreshCw,
-  Sparkles,
-  Layers,
-  User,
   Zap,
-  Award,
-  Users,
-  FileText,
-  Lock,
-  Eye,
-  Check,
   XCircle,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
@@ -76,7 +63,6 @@ export const AdminCouponsScreen: React.FC = () => {
     page,
     setPage,
     stats,
-    isStatsLoading,
 
     searchQuery,
     setSearchQuery,

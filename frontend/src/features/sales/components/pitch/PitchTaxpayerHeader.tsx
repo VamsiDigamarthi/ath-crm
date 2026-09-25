@@ -5,6 +5,7 @@ import { useAuthStore } from '@/features/auth/store/auth-store';
 import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface PitchTaxpayerHeaderProps {
@@ -43,6 +44,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {lead.taxpayerName}
             </h2>
+            <ClientPaymentStatusChip lead={lead} size="sm" />
             <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
               TY {lead.taxYear} Form 1040
             </span>

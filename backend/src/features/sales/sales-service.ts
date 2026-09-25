@@ -34,15 +34,19 @@ export class SalesService {
   /**
    * List all QA-Approved pipeline leads eligible for Sales Pitch & Fee Quotation
    */
-  public static async getPipelineLeads(query: {
-    stage?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-    salesAgentId?: string;
-    priority?: string;
-    isDualRole?: string | boolean;
-  }) {
+  public static async getPipelineLeads(
+    query: {
+      stage?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+      salesAgentId?: string;
+      priority?: string;
+      isDualRole?: string | boolean;
+    },
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
     const skip = (page - 1) * limit;
@@ -118,38 +122,88 @@ export class SalesService {
       };
     }
 
-    const [totalCount, applications] = await Promise.all([
-      prisma.taxApplication.count({ where: baseWhere }),
-      prisma.taxApplication.findMany({
-        where: baseWhere,
-        include: {
-          customer: true,
-          documents: true,
-          assignedDocAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          assignedPrepAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          assignedReviewAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          assignedSalesAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true, role: true },
-          },
-          quotes: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
+    const applications = await prisma.taxApplication.findMany({
+      where: baseWhere,
+      include: {
+        customer: {
+          include: {
+            applications: {
+              select: {
+                id: true,
+                taxYear: true,
+                filingType: true,
+                currentStage: true,
+                assignedSalesAgentId: true,
+                assignedSalesAgent: {
+                  select: { id: true, firstName: true, lastName: true, email: true },
+                },
+                createdAt: true,
+                updatedAt: true,
+              },
+              orderBy: { taxYear: 'desc' },
+            },
           },
         },
-        orderBy: { updatedAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-    ]);
+        documents: true,
+        assignedDocAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedPrepAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedReviewAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedSalesAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+        },
+        quotes: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
 
-    const formattedLeads = applications.map((app: any) => {
+    // Group applications by customerId so each customer appears as 1 unique row
+    const customerGroupsMap = new Map<string, typeof applications[0][]>();
+    for (const app of applications) {
+      const cId = app.customerId;
+      if (!customerGroupsMap.has(cId)) {
+        customerGroupsMap.set(cId, []);
+      }
+      customerGroupsMap.get(cId)!.push(app);
+    }
+
+    const formattedLeads: any[] = [];
+    for (const [, appsList] of customerGroupsMap.entries()) {
+      let app = appsList[0];
       const customer = app.customer;
+      const allCustomerApps = (customer as any)?.applications || [];
+
+      let visibleApplications = allCustomerApps;
+      if (currentUserRole === Role.SALES_AGENT && currentUserId) {
+        visibleApplications = allCustomerApps.filter((a: any) => a.assignedSalesAgentId === currentUserId);
+      }
+
+      const isPaidClient = Boolean(
+        customer?.isConvertedCustomer ||
+        allCustomerApps.some((a: any) =>
+          a.currentStage === ApplicationStage.FILING_SUCCESS ||
+          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+          (a as any).taxDraftSummary?.paidAmount > 0
+        )
+      );
+
+      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+      if (isPaidClient) {
+        clientPaymentStatus = 'PAID';
+      } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+        clientPaymentStatus = 'NEW';
+      } else {
+        clientPaymentStatus = 'UNPAID';
+      }
+
       const fullName = customer
         ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'
         : '-';
@@ -188,7 +242,7 @@ export class SalesService {
       const fatcaFee = Number(savedFeeBreakdown?.fatcaFee || 0);
       const fbarFee = Number(savedFeeBreakdown?.fbarFee || 0);
       const discountAmount = savedFeeBreakdown?.discountAmount !== undefined ? Number(savedFeeBreakdown.discountAmount) : (hasQuote ? Number(latestQuote.discountAmount || 0) : 0);
-      const discountCode = savedFeeBreakdown?.discountCode || latestQuote?.discountCode || '';
+      const discountCode = savedFeeBreakdown?.discountCode || (latestQuote as any)?.discountCode || '';
 
       const calculatedTotal = baseFee + stateFee + (hasAuditDefense ? auditDefenseAmount : 0) + fbarFee + fatcaFee - discountAmount;
       const totalServiceFee = Number(
@@ -255,7 +309,7 @@ export class SalesService {
         currentStage = app.currentStage;
       }
 
-      return {
+      formattedLeads.push({
         id: app.id,
         applicationId: app.id,
         taxpayerId: customer?.id || '',
@@ -268,6 +322,16 @@ export class SalesService {
         stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
         complexity: SalesService.computeReturnComplexity(app),
         currentStage,
+        clientPaymentStatus,
+        allApplications: visibleApplications.map((a: any) => ({
+          id: a.id,
+          taxYear: a.taxYear,
+          filingType: a.filingType,
+          currentStage: a.currentStage,
+          assignedSalesAgentId: a.assignedSalesAgentId,
+          assignedSalesAgent: a.assignedSalesAgent,
+        })),
+        totalTaxYears: visibleApplications.length,
         priority: app.priority,
         grossIncome,
         federalRefund: validFedRefund,
@@ -332,11 +396,14 @@ export class SalesService {
         esignStatus,
         createdAt: app.createdAt.toISOString(),
         updatedAt: app.updatedAt.toISOString(),
-      };
-    });
+      });
+    }
+
+    const totalCount = formattedLeads.length;
+    const paginatedLeads = formattedLeads.slice(skip, skip + limit);
 
     return {
-      leads: formattedLeads,
+      leads: paginatedLeads,
       pagination: {
         total: totalCount,
         page,
@@ -752,7 +819,11 @@ export class SalesService {
   /**
    * Get single Sales Lead by ID for Pitch Workspace
    */
-  public static async getLeadById(applicationId: string) {
+  public static async getLeadById(
+    applicationId: string,
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const [app, auditLogs] = await Promise.all([
       prisma.taxApplication.findUnique({
         where: { id: applicationId },
@@ -806,7 +877,62 @@ export class SalesService {
 
     if (!app) return null;
 
+    // Query sibling applications for multi-tax-year switcher
+    const allCustomerApps = await prisma.taxApplication.findMany({
+      where: { customerId: app.customerId },
+      select: {
+        id: true,
+        taxYear: true,
+        filingType: true,
+        currentStage: true,
+        assignedSalesAgentId: true,
+        assignedSalesAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { taxYear: 'desc' },
+    });
+
+    let availableApplications = allCustomerApps;
+    if (currentUserRole === Role.SALES_AGENT && currentUserId) {
+      availableApplications = allCustomerApps.filter((a) => a.assignedSalesAgentId === currentUserId);
+      if (!availableApplications.some((a) => a.id === app.id)) {
+        if (app.assignedSalesAgentId === currentUserId || !app.assignedSalesAgentId) {
+          availableApplications.push({
+            id: app.id,
+            taxYear: app.taxYear,
+            filingType: app.filingType,
+            currentStage: app.currentStage,
+            assignedSalesAgentId: app.assignedSalesAgentId,
+            assignedSalesAgent: app.assignedSalesAgent,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+          });
+        }
+      }
+    }
+
     const customer = app.customer;
+    const isPaidClient = Boolean(
+      customer?.isConvertedCustomer ||
+      allCustomerApps.some((a: any) =>
+        a.currentStage === ApplicationStage.FILING_SUCCESS ||
+        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+        (a as any).taxDraftSummary?.paidAmount > 0
+      )
+    );
+
+    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+    if (isPaidClient) {
+      clientPaymentStatus = 'PAID';
+    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+      clientPaymentStatus = 'NEW';
+    } else {
+      clientPaymentStatus = 'UNPAID';
+    }
+
     const fullName = customer
       ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'
       : '-';
@@ -1040,6 +1166,17 @@ export class SalesService {
       pitchStatus: draft.salesPitch?.pitchStatus || draft.pitchStatus || 'NEED_TIME',
       negotiatedAmount: draft.salesPitch?.negotiatedAmount ?? draft.negotiatedAmount ?? null,
       originalFee: draft.salesPitch?.originalFee || draft.originalFee || totalFeeResolved,
+      clientPaymentStatus,
+      availableApplications: availableApplications.map((a: any) => ({
+        id: a.id,
+        taxYear: a.taxYear,
+        filingType: a.filingType,
+        currentStage: a.currentStage,
+        assignedSalesAgentId: a.assignedSalesAgentId,
+        assignedSalesAgent: a.assignedSalesAgent,
+        createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
+        updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
+      })),
       createdAt: app.createdAt.toISOString(),
       updatedAt: app.updatedAt.toISOString(),
     };

@@ -5,29 +5,15 @@ import { Button } from '@/shared/components/Button';
 import type { MasterTaxpayerRecord } from '../types/master-taxpayers.types';
 import type { TaxpayerYearDetailsResponse } from '../services/master-taxpayers-service';
 import {
-  User,
-  Mail,
-  Phone,
   ShieldCheck,
-  Globe,
-  FileSpreadsheet,
   Clock,
   CheckCircle2,
   AlertTriangle,
   FileText,
   Calendar,
-  Building2,
   DollarSign,
-  ArrowRight,
-  Sparkles,
-  MapPin,
-  HelpCircle,
   Copy,
-  ExternalLink,
-  ChevronRight,
-  Info,
   Download,
-  Eye,
   FileCheck,
   PhoneCall,
   UserCheck,
@@ -183,7 +169,7 @@ State Refund: $${activeYearDetails?.taxDraftSummary?.stateRefund || 0}`;
               <span className="font-mono font-semibold text-slate-600">ID: {taxpayer.id}</span>
               <span>•</span>
               <span className="font-mono">SSN: {taxpayer.ssnMasked}</span>
-              <AppCopyButton text={taxpayer.fullSsn} label="Copy SSN" />
+              <AppCopyButton text={taxpayer.fullSsn} tooltip="Copy SSN" />
               <span>•</span>
               <span>{taxpayer.email}</span>
             </div>

@@ -8,7 +8,6 @@ import {
   Sparkles,
   Headphones,
   CheckCircle2,
-  ShieldAlert,
   Award
 } from 'lucide-react';
 import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';

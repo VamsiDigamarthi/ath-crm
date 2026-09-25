@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail, Sparkles, Bell, Paperclip, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail, Sparkles, Bell, Paperclip, Download, FileText, Calendar } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { AppModal } from '@/shared/components/AppModal';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
@@ -38,6 +39,8 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
+    clientPaymentStatus,
+    availableApplications,
     drakeTaxFile,
     isUploadingDrakeFile,
     handleUploadDrakeFile,
@@ -151,10 +154,11 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back to Queue</span>
           </button>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-lg sm:text-xl font-bold text-slate-900">
               {taxpayerName}
             </h1>
+            <ClientPaymentStatusChip status={clientPaymentStatus} size="sm" />
             <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700">
               TY {taxYear} Form 1040
             </span>
@@ -331,6 +335,45 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* 1.2 Multi-Year Return Switcher Tabs */}
+      {availableApplications && availableApplications.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
+              <Calendar className="w-4 h-4 text-emerald-600" />
+              <span>Tax Year Filings:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {availableApplications.map((appItem: any) => {
+                const isSelected = appItem.id === applicationId;
+                return (
+                  <button
+                    key={appItem.id}
+                    type="button"
+                    onClick={() => {
+                      if (appItem.id !== applicationId) {
+                        navigate(`/prep-review/preparer/workspace/${appItem.id}`);
+                      }
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
+                      isSelected
+                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
+                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>TY {appItem.taxYear}</span>
+                    <span className="text-[10px] font-medium opacity-80">
+                      ({appItem.filingType || 'INDIVIDUAL'})
+                    </span>
+                    <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 1.3 Documenter Intake Handover Notes Banner */}
       {documenterNotes && !isRevertedToDocs && (

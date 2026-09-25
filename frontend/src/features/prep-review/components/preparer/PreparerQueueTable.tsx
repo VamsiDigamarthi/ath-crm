@@ -4,6 +4,7 @@ import { Button } from '@/shared/components/Button';
 import { AppEmptyState } from '@/shared/components/AppEmptyState';
 import { PrepStageBadge } from '../common/PrepStageBadge';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import type { PrepReviewLead } from '../../types/prep-review.types';
 
 interface PreparerQueueTableProps {
@@ -65,6 +66,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
               const reviewerInitial = reviewerName !== '-' ? reviewerName[0].toUpperCase() : 'Q';
               const verifiedDocs = item.verifiedDocumentsCount || 0;
               const totalDocs = item.documentsCount || 0;
+              const hasMultipleYears = Boolean(item.allApplications && item.allApplications.length > 1);
 
               // Format Target SLA Time
               const slaTime = (item as any).targetDueDate 
@@ -82,9 +84,32 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
                       <div>
                         <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5 flex-wrap">
                           <span>{taxpayerName}</span>
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                            TY {item.taxYear || 2025}
-                          </span>
+                          <ClientPaymentStatusChip lead={item} size="xs" />
+                          {hasMultipleYears ? (
+                            <div className="inline-flex items-center gap-1">
+                              {item.allApplications?.map((app) => (
+                                <button
+                                  key={app.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenWorkspace(app.id);
+                                  }}
+                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                                    app.id === (item.id || item.applicationId)
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
+                                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                                  }`}
+                                  title={`Switch to TY ${app.taxYear} (${app.filingType || 'INDIVIDUAL'})`}
+                                >
+                                  TY {app.taxYear}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                              TY {item.taxYear || 2025}
+                            </span>
+                          )}
                           {item.priority && (
                             <PriorityBadge priority={item.priority} size="sm" />
                           )}

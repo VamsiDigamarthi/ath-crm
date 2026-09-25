@@ -1,6 +1,5 @@
 import React from 'react';
 import { 
-  CheckCircle2, 
   Sparkles, 
   Clock, 
   ShieldCheck 

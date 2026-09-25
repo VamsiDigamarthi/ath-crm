@@ -9,6 +9,7 @@ import { AppEmptyState } from '@/shared/components/AppEmptyState';
 import { Button } from '@/shared/components/Button';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { generateTaxYears } from '@/features/auth/components/TaxpayerSignupForm';
 import {
   Users,
@@ -22,17 +23,11 @@ import {
   Filter,
   Eye,
   Sparkles,
-  Search,
-  UserCheck,
-  ChevronRight,
   TrendingUp,
   Layers,
   FileText,
   DollarSign,
   ShieldCheck,
-  RotateCcw,
-  Mail,
-  Phone,
   User,
   XCircle,
 } from 'lucide-react';
@@ -110,17 +105,6 @@ export const AdminMasterTaxpayerDirectoryScreen: React.FC = () => {
 
     page,
     setPage,
-    limit,
-    setLimit,
-
-    selectedTaxpayer,
-    isInspectModalOpen,
-    activeYearDetails,
-    selectedYearForDetail,
-    yearDetailsLoading,
-    handleInspect,
-    handleCloseInspect,
-    handleSelectYear,
 
     handleResetFilters,
     handleRefresh,
@@ -660,10 +644,11 @@ export const AdminMasterTaxpayerDirectoryScreen: React.FC = () => {
                           {taxpayer.lastName[0]}
                         </div>
                         <div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-bold text-slate-900 text-xs">
                               {taxpayer.firstName} {taxpayer.lastName}
                             </span>
+                            <ClientPaymentStatusChip lead={taxpayer} size="xs" />
                             <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
                               {taxpayer.visaType}
                             </span>

@@ -135,7 +135,7 @@ export const useCoupons = () => {
   };
 
   // Toggle Coupon Status
-  const handleToggleStatus = async (id: string, currentStatus: CouponStatus, currentActive: boolean) => {
+  const handleToggleStatus = async (id: string, _currentStatus: CouponStatus, currentActive: boolean) => {
     try {
       const newActive = !currentActive;
       const newStatus = newActive ? 'ACTIVE' : 'DISABLED';

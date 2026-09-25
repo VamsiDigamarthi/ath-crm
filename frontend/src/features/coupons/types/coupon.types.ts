@@ -133,6 +133,8 @@ export interface CouponValidationResult {
   finalFee: number;
   justificationCategory: CouponJustificationCategory;
   justificationNotes: string;
+  rejectionReason?: string;
+  message?: string;
   approvedBy: {
     id: string;
     name: string;

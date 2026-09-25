@@ -1,15 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  ShieldAlert, 
-  Sparkles, 
-  HelpCircle, 
   UserCheck, 
-  ChevronRight,
   FileSpreadsheet,
   Check
 } from 'lucide-react';
 import { calculateReturnComplexity, RETURN_COMPLEXITY_TIERS } from '../../utils/complexity-evaluator';
-import type { ReturnComplexityInfo, ReturnComplexityTier } from '../../types/complexity.types';
+import type { ReturnComplexityInfo } from '../../types/complexity.types';
 
 interface ReturnComplexityBadgeProps {
   lead?: any;
@@ -23,7 +19,6 @@ interface ReturnComplexityBadgeProps {
 export const ReturnComplexityBadge: React.FC<ReturnComplexityBadgeProps> = ({
   lead,
   complexityInfo: explicitInfo,
-  showDetailsOnHover = true,
   size = 'md',
   showScoreLabel = true,
   className = '',

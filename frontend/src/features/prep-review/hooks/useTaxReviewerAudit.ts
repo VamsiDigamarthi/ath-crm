@@ -23,6 +23,8 @@ export function useTaxReviewerAudit() {
   const [drakeTaxFile, setDrakeTaxFile] = useState<any | null>(null);
   const [prepNotes, setPrepNotes] = useState<string>('');
   const [taxDraftSummary, setTaxDraftSummary] = useState<any>(null);
+  const [clientPaymentStatus, setClientPaymentStatus] = useState<'PAID' | 'NEW' | 'UNPAID'>('UNPAID');
+  const [availableApplications, setAvailableApplications] = useState<any[]>([]);
   const [stageHistories, setStageHistories] = useState<any[]>([]);
   const [callLogs, setCallLogs] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -78,6 +80,8 @@ export function useTaxReviewerAudit() {
       setDocuments(data.documents || []);
       setPrepNotes(data.prepNotes || '');
       setTaxDraftSummary(data.taxDraftSummary || {});
+      if (data.clientPaymentStatus) setClientPaymentStatus(data.clientPaymentStatus);
+      if (data.availableApplications) setAvailableApplications(data.availableApplications);
 
       const drakeFile = data.taxDraftSummary?.drakeTaxFile || (data.documents || []).find((d: any) => d.category === 'DRAKE_TAX_CALCULATION' || d.category === 'DRAKE_TAX_FILE');
       if (drakeFile) {
@@ -181,6 +185,8 @@ export function useTaxReviewerAudit() {
     stageHistories,
     callLogs,
     auditLogs,
+    clientPaymentStatus,
+    availableApplications,
     handleConfirmApprove,
     handleConfirmRevision,
   };

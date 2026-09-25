@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Calendar } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
 import { PitchNegotiationBar } from '../components/pitch/PitchNegotiationBar';
@@ -288,6 +288,45 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
     <div className="space-y-6 pb-12 animate-in fade-in duration-150 font-sans">
       {/* 1. Taxpayer Header & Certified 1040 Refund Banner */}
       <PitchTaxpayerHeader lead={lead} onOpenSendBack={() => setIsSendBackOpen(true)} />
+
+      {/* 1.05 Multi-Year Return Switcher Tabs */}
+      {lead.availableApplications && lead.availableApplications.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
+              <Calendar className="w-4 h-4 text-purple-600" />
+              <span>Tax Year Filings:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {lead.availableApplications.map((appItem: any) => {
+                const isSelected = appItem.id === (lead.id || lead.applicationId || id);
+                return (
+                  <button
+                    key={appItem.id}
+                    type="button"
+                    onClick={() => {
+                      if (appItem.id !== (lead.id || lead.applicationId || id)) {
+                        navigate(isManager ? `/sales/manager/pitch/${appItem.id}` : `/sales/agent/pitch/${appItem.id}`);
+                      }
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
+                      isSelected
+                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
+                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>TY {appItem.taxYear}</span>
+                    <span className="text-[10px] font-medium opacity-80">
+                      ({appItem.filingType || 'INDIVIDUAL'})
+                    </span>
+                    <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-purple-400' : 'bg-slate-300'}`} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 1.1 Closer Pitch Status & Fee Negotiation Toolbar */}
       <PitchNegotiationBar

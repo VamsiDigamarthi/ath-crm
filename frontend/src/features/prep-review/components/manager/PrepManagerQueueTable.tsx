@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { PrepReviewLead } from '../../types/prep-review.types';
 import { PrepStageBadge } from '../common/PrepStageBadge';
 import { PrepComplexityBadge } from '../common/PrepComplexityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppEmptyState } from '@/shared/components/AppEmptyState';
 import { Button } from '@/shared/components/Button';
@@ -376,16 +377,35 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
                     {/* Taxpayer Client Info */}
                     <td className="py-3.5 px-4">
                       <div>
-                        <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                        <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5 flex-wrap">
                           <span
                             onClick={() => onViewLeadDetail(lead)}
                             className="hover:text-[#16A34A] cursor-pointer"
                           >
                             {lead.taxpayerName}
                           </span>
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                            TY {lead.taxYear}
-                          </span>
+                          <ClientPaymentStatusChip lead={lead} size="xs" />
+                          {lead.allApplications && lead.allApplications.length > 1 ? (
+                            <div className="inline-flex items-center gap-1">
+                              {lead.allApplications.map((app) => (
+                                <span
+                                  key={app.id}
+                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                    app.id === (lead.id || lead.applicationId)
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
+                                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                                  }`}
+                                  title={`TY ${app.taxYear} (${app.filingType || 'INDIVIDUAL'})`}
+                                >
+                                  TY {app.taxYear}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
+                              TY {lead.taxYear}
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-slate-500 font-medium">{lead.taxpayerEmail}</div>
                         <div className="text-[10px] text-slate-400">
@@ -397,7 +417,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
                     {/* Complexity & Location */}
                     <td className="py-3.5 px-4">
                       <div className="space-y-1">
-                        <PrepComplexityBadge complexity={lead.complexity} />
+                        <PrepComplexityBadge complexity={lead.complexity || 'STANDARD'} />
                         <div className="text-[11px] text-slate-500 font-medium">
                           {lead.stateOfResidence}
                         </div>

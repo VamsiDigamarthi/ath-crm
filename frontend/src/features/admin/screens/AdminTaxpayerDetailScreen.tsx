@@ -6,35 +6,29 @@ import {
 } from '../services/master-taxpayers-service';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import {
   ArrowLeft,
   User,
   Mail,
   Phone,
   ShieldCheck,
-  Globe,
   FileSpreadsheet,
   Clock,
   CheckCircle2,
   AlertTriangle,
   FileText,
   Calendar,
-  Building2,
   DollarSign,
-  ArrowRight,
-  Sparkles,
   MapPin,
-  ExternalLink,
   ChevronRight,
   Info,
   Download,
-  Eye,
   FileCheck,
   PhoneCall,
   UserCheck,
   RefreshCw,
   Calculator,
-  Layers,
   FileCode,
   Check,
   XCircle,
@@ -282,6 +276,7 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight">
                   {taxpayer.firstName} {taxpayer.lastName}
                 </h1>
+                <ClientPaymentStatusChip lead={taxpayer} size="sm" />
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
                   {taxpayer.visaType || 'H-1B'}
                 </span>

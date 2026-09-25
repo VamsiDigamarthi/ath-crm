@@ -89,6 +89,24 @@ export interface SalesLeadItem extends Record<string, unknown> {
   priority?: string;
   complexity: 'STANDARD' | 'INVESTMENTS_1099B' | 'FOREIGN_FBAR' | 'SCHEDULE_C';
   currentStage: SalesLeadStage;
+  clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
+  totalTaxYears?: number;
+  allApplications?: Array<{
+    id: string;
+    taxYear: number;
+    filingType?: string;
+    currentStage: string;
+    assignedSalesAgentId?: string | null;
+    assignedSalesAgent?: { id: string; firstName?: string; lastName?: string; email?: string } | null;
+  }>;
+  availableApplications?: Array<{
+    id: string;
+    taxYear: number;
+    filingType?: string;
+    currentStage: string;
+    assignedSalesAgentId?: string | null;
+    assignedSalesAgent?: { id: string; firstName?: string; lastName?: string; email?: string } | null;
+  }>;
   
   // Tax Return Financials from QA Sign-Off
   grossIncome: number;

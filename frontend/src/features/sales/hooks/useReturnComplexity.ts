@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { calculateReturnComplexity, RETURN_COMPLEXITY_TIERS } from '../utils/complexity-evaluator';
-import type { ReturnComplexityInfo, ReturnComplexityTier } from '../types/complexity.types';
+import type { ReturnComplexityInfo } from '../types/complexity.types';
 
 export interface WorkloadComplexityStats {
   basic: number;

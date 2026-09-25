@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PhoneCall, ArrowRight, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { SalesStageBadge } from '../common/SalesStageBadge';
@@ -9,7 +9,6 @@ import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
 import { calculateReturnComplexity } from '../../utils/complexity-evaluator';
 import type { SalesLeadItem } from '../../types/sales.types';
-import type { ReturnComplexityTier } from '../../types/complexity.types';
 
 interface SalesAgentQueueTableProps {
   leads: SalesLeadItem[];

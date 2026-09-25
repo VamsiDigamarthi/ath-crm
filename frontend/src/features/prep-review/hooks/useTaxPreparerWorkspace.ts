@@ -51,6 +51,8 @@ export function useTaxPreparerWorkspace() {
   const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<WorkspaceDocument | null>(null);
   const [taxDraftSummary, setTaxDraftSummary] = useState<any>(null);
+  const [clientPaymentStatus, setClientPaymentStatus] = useState<'PAID' | 'NEW' | 'UNPAID'>('UNPAID');
+  const [availableApplications, setAvailableApplications] = useState<any[]>([]);
   const [drakeTaxFile, setDrakeTaxFile] = useState<any | null>(null);
   const [isUploadingDrakeFile, setIsUploadingDrakeFile] = useState(false);
 
@@ -98,6 +100,8 @@ export function useTaxPreparerWorkspace() {
       setAssignedReviewer(data.assignedReviewer || null);
       setDocuments(data.documents || []);
       setTaxDraftSummary(data.taxDraftSummary || {});
+      if (data.clientPaymentStatus) setClientPaymentStatus(data.clientPaymentStatus);
+      if (data.availableApplications) setAvailableApplications(data.availableApplications);
 
       // Extract Drake Tax file if available
       const drakeFile = data.taxDraftSummary?.drakeTaxFile || (data.documents || []).find((d: any) => d.category === 'DRAKE_TAX_CALCULATION' || d.category === 'DRAKE_TAX_FILE');
@@ -377,6 +381,8 @@ export function useTaxPreparerWorkspace() {
     stageHistories,
     callLogs,
     auditLogs,
+    clientPaymentStatus,
+    availableApplications,
     handleSaveDraft,
     handleSubmitForQA,
   };

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 
 export const AdminReturnedLeadsScreen: React.FC = () => {
   const {
@@ -76,6 +77,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
               <div>
                 <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5 flex-wrap">
                   <span>{lead.customer?.firstName} {lead.customer?.lastName}</span>
+                  <ClientPaymentStatusChip lead={lead} size="xs" />
                   {lead.customer?.visaType && (
                     <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                       {lead.customer.visaType}

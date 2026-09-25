@@ -1,16 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   FileText, 
   ShieldCheck, 
   UserCheck, 
-  Info,
   Calendar,
   Layers,
   Clock,
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { AppTabs } from '@/shared/components/AppTabs';
 import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
 import type { SalesLeadItem } from '../../types/sales.types';
 
@@ -19,7 +17,6 @@ interface PitchTaxDraftSummaryCardProps {
 }
 
 export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> = ({ lead }) => {
-  const [activeTab, setActiveTab] = useState<'SCHEDULES' | 'STATE' | 'QA_AUDIT'>('QA_AUDIT');
   const draft = lead.taxDraftSummary || {};
 
   /*
@@ -260,8 +257,8 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
       )}
       */}
 
-      {/* Tab 3: Preparer & QA Sign-Off Audit Stepper */}
-      {activeTab === 'QA_AUDIT' && (() => {
+      {/* Preparer & QA Sign-Off Audit Stepper */}
+      {(() => {
         const rawStage = String(lead.currentStage || draft.status || '');
         let qaStatus: 'Approved' | 'Changes Required' | 'Pending Review' = 'Approved';
         if (rawStage.includes('CORRECTION') || rawStage.includes('REVISION')) {

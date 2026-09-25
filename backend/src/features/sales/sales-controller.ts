@@ -4,15 +4,19 @@ import { SalesService } from './sales-service.js';
 export class SalesController {
   public static async getPipelineLeads(req: Request, res: Response) {
     try {
-      const result = await SalesService.getPipelineLeads({
-        stage: req.query.stage as string,
-        search: req.query.search as string,
-        salesAgentId: req.query.salesAgentId as string,
-        priority: req.query.priority as string,
-        isDualRole: req.query.isDualRole as string,
-        page: Number(req.query.page) || 1,
-        limit: Number(req.query.limit) || 100,
-      });
+      const result = await SalesService.getPipelineLeads(
+        {
+          stage: req.query.stage as string,
+          search: req.query.search as string,
+          salesAgentId: req.query.salesAgentId as string,
+          priority: req.query.priority as string,
+          isDualRole: req.query.isDualRole as string,
+          page: Number(req.query.page) || 1,
+          limit: Number(req.query.limit) || 100,
+        },
+        req.currentUser?.id,
+        req.currentUser?.role
+      );
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to fetch sales pipeline leads' });
@@ -22,7 +26,11 @@ export class SalesController {
   public static async getLeadById(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
-      const lead = await SalesService.getLeadById(id);
+      const lead = await SalesService.getLeadById(
+        id,
+        req.currentUser?.id,
+        req.currentUser?.role
+      );
       if (!lead) {
         return res.status(404).json({ message: 'Sales Lead not found' });
       }

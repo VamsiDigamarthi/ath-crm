@@ -108,7 +108,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                   {visaType}
                 </span>
-                <PrepComplexityBadge complexity={lead.complexity} />
+                <PrepComplexityBadge complexity={lead.complexity || 'STANDARD'} />
                 <PrepStageBadge 
                   stage={lead.prepStage || lead.currentStage} 
                   assignedPreparerName={lead.assignedPreparer?.name}

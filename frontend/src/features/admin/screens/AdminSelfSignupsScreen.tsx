@@ -26,6 +26,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { generateTaxYears } from '@/features/auth/components/TaxpayerSignupForm';
 
 const VISA_OPTIONS = [
@@ -164,6 +165,7 @@ export const AdminSelfSignupsScreen: React.FC = () => {
                   <span>
                     {lead.customer?.firstName} {lead.customer?.lastName}
                   </span>
+                  <ClientPaymentStatusChip lead={lead} size="xs" />
                   {lead.customer?.visaType && (
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                       {lead.customer.visaType}

@@ -10,19 +10,10 @@ import type {
   CreateCouponFormData,
 } from '../types/coupon.types';
 import {
-  Tag,
   DollarSign,
   Percent,
   Sparkles,
   ShieldCheck,
-  Calendar,
-  Layers,
-  HelpCircle,
-  AlertCircle,
-  Zap,
-  Users,
-  Award,
-  FileText,
   Lock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';

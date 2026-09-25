@@ -14,9 +14,34 @@ export class FilingService {
   /**
    * Helper: Map Prisma TaxApplication to rich FilingLeadItem
    */
-  private static mapDbAppToFilingLead(app: any): FilingLeadItem {
+  private static mapDbAppToFilingLead(
+    app: any,
+    visibleApplications?: any[],
+    clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID'
+  ): FilingLeadItem {
     const draft = (app.taxDraftSummary as any) || {};
     const customer = app.customer || {};
+    const allCustomerApps = (customer as any)?.applications || [];
+
+    const isPaidClient = Boolean(
+      customer?.isConvertedCustomer ||
+      allCustomerApps.some((a: any) =>
+        a.currentStage === ApplicationStage.FILING_SUCCESS ||
+        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+        (a as any).taxDraftSummary?.paidAmount > 0
+      )
+    );
+
+    let effectivePaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = clientPaymentStatus || 'UNPAID';
+    if (!clientPaymentStatus) {
+      if (isPaidClient) {
+        effectivePaymentStatus = 'PAID';
+      } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+        effectivePaymentStatus = 'NEW';
+      } else {
+        effectivePaymentStatus = 'UNPAID';
+      }
+    }
 
     const firstName = customer.firstName || 'Taxpayer';
     const lastName = customer.lastName || 'Client';
@@ -125,6 +150,16 @@ export class FilingService {
       stateBalanceDue: stateDue,
       totalRefundOrDue,
       paymentStatus: draft.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID',
+      clientPaymentStatus: effectivePaymentStatus,
+      allApplications: visibleApplications ? visibleApplications.map((a: any) => ({
+        id: a.id,
+        taxYear: a.taxYear,
+        filingType: a.filingType,
+        currentStage: a.currentStage,
+        assignedFileOpId: a.assignedFileOpId,
+        assignedFileOp: a.assignedFileOp,
+      })) : undefined,
+      totalTaxYears: visibleApplications ? visibleApplications.length : undefined,
       serviceFeePaid,
       esignStatus: draft.esignStatus === 'SIGNED' ? 'SIGNED' : 'PENDING',
       esignCompletedAt: draft.esignCompletedAt || null,
@@ -222,14 +257,18 @@ export class FilingService {
   /**
    * Get Filing Pipeline Queue
    */
-  public static async getFilingQueue(filters?: {
-    stage?: string;
-    search?: string;
-    filingAgentId?: string;
-    priority?: string;
-    limit?: number;
-    offset?: number;
-  }) {
+  public static async getFilingQueue(
+    filters?: {
+      stage?: string;
+      search?: string;
+      filingAgentId?: string;
+      priority?: string;
+      limit?: number;
+      offset?: number;
+    },
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const limit = filters?.limit || 50;
     const offset = filters?.offset || 0;
 
@@ -296,31 +335,93 @@ export class FilingService {
       ];
     }
 
-    const [total, apps] = await Promise.all([
-      prisma.taxApplication.count({ where }),
-      prisma.taxApplication.findMany({
-        where,
-        include: {
-          customer: true,
-          assignedFileOp: true,
-          documents: true,
+    const apps = await prisma.taxApplication.findMany({
+      where,
+      include: {
+        customer: {
+          include: {
+            applications: {
+              select: {
+                id: true,
+                taxYear: true,
+                filingType: true,
+                currentStage: true,
+                assignedFileOpId: true,
+                assignedFileOp: {
+                  select: { id: true, firstName: true, lastName: true, email: true },
+                },
+                createdAt: true,
+                updatedAt: true,
+              },
+              orderBy: { taxYear: 'desc' },
+            },
+          },
         },
-        orderBy: { updatedAt: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
-    ]);
+        assignedFileOp: true,
+        documents: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    // Group applications by customerId so each customer appears as 1 unique row
+    const customerGroupsMap = new Map<string, typeof apps[0][]>();
+    for (const app of apps) {
+      const cId = app.customerId;
+      if (!customerGroupsMap.has(cId)) {
+        customerGroupsMap.set(cId, []);
+      }
+      customerGroupsMap.get(cId)!.push(app);
+    }
+
+    const groupedLeads: FilingLeadItem[] = [];
+    for (const [, appsList] of customerGroupsMap.entries()) {
+      const primaryApp = appsList[0];
+      const customer = primaryApp.customer;
+      const allCustomerApps = (customer as any)?.applications || [];
+
+      let visibleApplications = allCustomerApps;
+      if (currentUserRole === Role.FILE_OP_AGENT && currentUserId) {
+        visibleApplications = allCustomerApps.filter((a: any) => a.assignedFileOpId === currentUserId);
+      }
+
+      const isPaidClient = Boolean(
+        customer?.isConvertedCustomer ||
+        allCustomerApps.some((a: any) =>
+          a.currentStage === ApplicationStage.FILING_SUCCESS ||
+          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+          (a as any).taxDraftSummary?.paidAmount > 0
+        )
+      );
+
+      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+      if (isPaidClient) {
+        clientPaymentStatus = 'PAID';
+      } else if (allCustomerApps.length <= 1 && (primaryApp.currentStage === ApplicationStage.RAW_PROSPECT || primaryApp.currentStage === ApplicationStage.DOC_OUTREACH)) {
+        clientPaymentStatus = 'NEW';
+      } else {
+        clientPaymentStatus = 'UNPAID';
+      }
+
+      groupedLeads.push(this.mapDbAppToFilingLead(primaryApp, visibleApplications, clientPaymentStatus));
+    }
+
+    const total = groupedLeads.length;
+    const paginatedLeads = groupedLeads.slice(offset, offset + limit);
 
     return {
       total,
-      leads: apps.map(this.mapDbAppToFilingLead),
+      leads: paginatedLeads,
     };
   }
 
   /**
    * Get Filing Lead by ID
    */
-  public static async getFilingLeadById(id: string): Promise<FilingLeadItem> {
+  public static async getFilingLeadById(
+    id: string,
+    currentUserId?: string,
+    currentUserRole?: string
+  ): Promise<FilingLeadItem> {
     const app = await prisma.taxApplication.findUnique({
       where: { id },
       include: {
@@ -345,7 +446,73 @@ export class FilingService {
       throw new Error('Filing return not found');
     }
 
-    return this.mapDbAppToFilingLead(app);
+    const allCustomerApps = await prisma.taxApplication.findMany({
+      where: { customerId: app.customerId },
+      select: {
+        id: true,
+        taxYear: true,
+        filingType: true,
+        currentStage: true,
+        assignedFileOpId: true,
+        assignedFileOp: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { taxYear: 'desc' },
+    });
+
+    let availableApplications = allCustomerApps;
+    if (currentUserRole === Role.FILE_OP_AGENT && currentUserId) {
+      availableApplications = allCustomerApps.filter((a) => a.assignedFileOpId === currentUserId);
+      if (!availableApplications.some((a) => a.id === app.id)) {
+        if (app.assignedFileOpId === currentUserId || !app.assignedFileOpId) {
+          availableApplications.push({
+            id: app.id,
+            taxYear: app.taxYear,
+            filingType: app.filingType,
+            currentStage: app.currentStage,
+            assignedFileOpId: app.assignedFileOpId,
+            assignedFileOp: app.assignedFileOp,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+          });
+        }
+      }
+    }
+
+    const customer = app.customer;
+    const isPaidClient = Boolean(
+      customer?.isConvertedCustomer ||
+      allCustomerApps.some((a: any) =>
+        a.currentStage === ApplicationStage.FILING_SUCCESS ||
+        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+        (a as any).taxDraftSummary?.paidAmount > 0
+      )
+    );
+
+    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+    if (isPaidClient) {
+      clientPaymentStatus = 'PAID';
+    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+      clientPaymentStatus = 'NEW';
+    } else {
+      clientPaymentStatus = 'UNPAID';
+    }
+
+    const item = this.mapDbAppToFilingLead(app, availableApplications, clientPaymentStatus);
+    item.availableApplications = availableApplications.map((a: any) => ({
+      id: a.id,
+      taxYear: a.taxYear,
+      filingType: a.filingType,
+      currentStage: a.currentStage,
+      assignedFileOpId: a.assignedFileOpId,
+      assignedFileOp: a.assignedFileOp,
+      createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
+      updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
+    }));
+    return item;
   }
 
   /**
