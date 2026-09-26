@@ -5,6 +5,12 @@ import {
   type CustomerDocumentItem,
 } from '../services/customer-api';
 import toast from 'react-hot-toast';
+import {
+  type DocumentTypeId,
+  getDocumentTypeForCategory,
+  detectCategoryForType,
+  getDefaultCategoryForType,
+} from '@/shared/constants/document-taxonomy';
 
 export interface StagedFileItem {
   id: string;
@@ -19,27 +25,13 @@ export const isDriveLinkDoc = (doc: CustomerDocumentItem): boolean => {
     doc.filePath?.startsWith('https://') ||
     doc.documentCategory === 'GOOGLE_DRIVE_LINK' ||
     doc.documentCategory === 'DRIVE_LINK' ||
+    doc.documentCategory === 'INDIVIDUAL_DRIVE_LINK' ||
+    doc.documentCategory === 'BUSINESS_DRIVE_LINK' ||
+    doc.documentCategory === 'FBAR_FATCA_DRIVE_LINK' ||
+    doc.documentCategory === 'AUDIT_DRIVE_LINK' ||
     doc.fileName?.toLowerCase().includes('drive.google.com') ||
     doc.fileName?.toLowerCase().includes('docs.google.com')
   );
-};
-
-export const detectCategoryFromFileName = (name: string): string => {
-  const lower = name.toLowerCase();
-  if (lower.includes('w-2') || lower.includes('w2') || lower.includes('wage')) return 'W2_WAGES';
-  if (lower.includes('1099-int') || lower.includes('1099int') || lower.includes('interest')) return '1099_INT';
-  if (lower.includes('1099-div') || lower.includes('1099div') || lower.includes('dividend')) return '1099_DIV';
-  if (lower.includes('1099-b') || lower.includes('1099b') || lower.includes('stock') || lower.includes('brokerage') || lower.includes('trade')) return '1099_BROKERAGE';
-  if (lower.includes('1098-t') || lower.includes('tuition')) return '1098_T_TUITION';
-  if (lower.includes('1098-e') || lower.includes('student')) return '1098_E_STUDENT_LOAN';
-  if (lower.includes('1098') || lower.includes('mortgage')) return 'MORTGAGE_1098';
-  if (lower.includes('fbar') || lower.includes('foreign') || lower.includes('nre') || lower.includes('nro')) return 'FBAR_FOREIGN';
-  if (lower.includes('passport') || lower.includes('visa') || lower.includes('i797') || lower.includes('i-797') || lower.includes('id_') || lower.includes('dl_')) return 'VISA_IDENTITY';
-  if (lower.includes('1040') || lower.includes('prior') || lower.includes('previous')) return 'PRIOR_YEAR_RETURN';
-  if (lower.includes('hsa') || lower.includes('1099-sa')) return '1099_SA_HSA';
-  if (lower.includes('1095')) return '1095_A_MARKETPLACE';
-  if (lower.includes('espp') || lower.includes('3921') || lower.includes('3922')) return 'STOCK_3921_3922';
-  return 'W2_WAGES';
 };
 
 export const useCustomerDocuments = (taxYearParam?: string) => {
@@ -50,7 +42,10 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Tab & Filtering state: 'ALL' | 'FILES' | 'LINKS'
+  // 4 Document Types Tab state: 'INDIVIDUAL' | 'BUSINESS' | 'TAX_COMPLIANCE' | 'TAX_AUDIT'
+  const [activeDocType, setActiveDocType] = useState<DocumentTypeId>('INDIVIDUAL');
+
+  // Vault Sub-Tab state: 'ALL' | 'FILES' | 'LINKS'
   const [activeVaultTab, setActiveVaultTab] = useState<'ALL' | 'FILES' | 'LINKS'>('ALL');
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
@@ -113,7 +108,7 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
     };
   }, [selectedYear, refreshKey]);
 
-  // Stage multiple files from input or drop
+  // Stage multiple files from input or drop, scoped to activeDocType
   const stageFiles = (files: FileList | File[]) => {
     const validFiles: StagedFileItem[] = [];
     const maxSizeBytes = 15 * 1024 * 1024; // 15MB per file
@@ -126,7 +121,7 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
       validFiles.push({
         id: `${file.name}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
         file,
-        category: detectCategoryFromFileName(file.name),
+        category: detectCategoryForType(file.name, activeDocType),
       });
     });
 
@@ -264,6 +259,22 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
   // Categorize documents: all, physical files, drive links
   const allDocuments = useMemo(() => data?.documents || [], [data?.documents]);
 
+  // Document Counts per Document Type (1: Individual, 2: Business, 3: Tax Compliance, 4: Tax Audit)
+  const docTypeCounts = useMemo<Record<DocumentTypeId, number>>(() => {
+    const counts: Record<DocumentTypeId, number> = {
+      INDIVIDUAL: 0,
+      BUSINESS: 0,
+      TAX_COMPLIANCE: 0,
+      TAX_AUDIT: 0,
+    };
+    allDocuments.forEach((doc) => {
+      const typeId = getDocumentTypeForCategory(doc.documentCategory);
+      counts[typeId] = (counts[typeId] || 0) + 1;
+    });
+    return counts;
+  }, [allDocuments]);
+
+  // Split all docs into physical files vs drive links
   const { physicalFiles, driveLinks } = useMemo(() => {
     const files: CustomerDocumentItem[] = [];
     const links: CustomerDocumentItem[] = [];
@@ -277,7 +288,7 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
     return { physicalFiles: files, driveLinks: links };
   }, [allDocuments]);
 
-  // Tab-filtered documents
+  // Tab-filtered documents across all categories for the selected tax year
   const tabFilteredDocs = useMemo(() => {
     if (activeVaultTab === 'FILES') return physicalFiles;
     if (activeVaultTab === 'LINKS') return driveLinks;
@@ -287,8 +298,17 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
   // Category-filtered documents
   const filteredDocs = useMemo(() => {
     if (filterCategory === 'ALL') return tabFilteredDocs;
+    if (filterCategory.startsWith('TYPE_')) {
+      const typeId = filterCategory.replace('TYPE_', '');
+      return tabFilteredDocs.filter((doc) => getDocumentTypeForCategory(doc.documentCategory) === typeId);
+    }
     return tabFilteredDocs.filter((doc) => doc.documentCategory === filterCategory);
   }, [tabFilteredDocs, filterCategory]);
+
+  const handleSelectDocType = useCallback((typeId: DocumentTypeId) => {
+    setActiveDocType(typeId);
+    setUploadCategory(getDefaultCategoryForType(typeId));
+  }, []);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -299,10 +319,14 @@ export const useCustomerDocuments = (taxYearParam?: string) => {
   };
 
   return {
+    allDocuments,
     documents: allDocuments,
     filteredDocs,
     physicalFiles,
     driveLinks,
+    docTypeCounts,
+    activeDocType,
+    setActiveDocType: handleSelectDocType,
     taxYear: data?.taxYear || 2025,
     isConvertedCustomer: data?.isConvertedCustomer || false,
     selectedYear,

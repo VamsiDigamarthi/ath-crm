@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
 import { AppSelect } from '@/shared/components/AppSelect';
@@ -9,7 +9,11 @@ import {
   Plus 
 } from 'lucide-react';
 import { type StagedFileItem } from '../../hooks/useCustomerDocuments';
-import { UPLOAD_CATEGORIES } from '../../constants/upload-categories';
+import { 
+  type DocumentTypeId, 
+  DOCUMENT_TYPES,
+  getCategoriesForType 
+} from '@/shared/constants/document-taxonomy';
 
 interface CustomerMultiUploadModalProps {
   isOpen: boolean;
@@ -25,6 +29,7 @@ interface CustomerMultiUploadModalProps {
   uploadProgress: number;
   formatFileSize: (bytes: number) => string;
   selectedTaxYear: string;
+  activeDocType?: DocumentTypeId;
 }
 
 export const CustomerMultiUploadModal: React.FC<CustomerMultiUploadModalProps> = ({
@@ -41,8 +46,20 @@ export const CustomerMultiUploadModal: React.FC<CustomerMultiUploadModalProps> =
   uploadProgress,
   formatFileSize,
   selectedTaxYear,
+  activeDocType = 'INDIVIDUAL',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const activeDocTypeDef = useMemo(() => {
+    return DOCUMENT_TYPES.find((dt) => dt.id === activeDocType) || DOCUMENT_TYPES[0];
+  }, [activeDocType]);
+
+  const categoryOptions = useMemo(() => {
+    return getCategoriesForType(activeDocType, false).map((c) => ({
+      label: c.label,
+      value: c.value,
+    }));
+  }, [activeDocType]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -62,8 +79,8 @@ export const CustomerMultiUploadModal: React.FC<CustomerMultiUploadModalProps> =
     <AppModal
       isOpen={isOpen}
       onClose={uploading ? () => {} : onClose}
-      title={`Upload Tax Documents (TY ${selectedTaxYear})`}
-      subtitle={`Review categories and upload ${stagedFiles.length} file(s) to your secure vault`}
+      title={`Upload ${activeDocTypeDef.label} Documents (TY ${selectedTaxYear})`}
+      subtitle={`Review categories and upload ${stagedFiles.length} file(s) under ${activeDocTypeDef.label}`}
       size="xl"
     >
       <div className="space-y-4">
@@ -71,11 +88,11 @@ export const CustomerMultiUploadModal: React.FC<CustomerMultiUploadModalProps> =
         <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="text-xs">
             <span className="font-bold text-slate-800">Apply category to all files:</span>
-            <p className="text-[11px] text-slate-400">Quickly tag all files if they share the same type</p>
+            <p className="text-[11px] text-slate-400">Quickly tag all files in this upload batch</p>
           </div>
           <div className="w-72">
             <AppSelect
-              options={[{ label: '-- Keep Individual Categories --', value: '' }, ...UPLOAD_CATEGORIES]}
+              options={[{ label: '-- Keep Individual Categories --', value: '' }, ...categoryOptions]}
               value={bulkCategory}
               onChange={(val) => onBulkCategoryChange(val || '')}
               placeholder="Select Bulk Category"
@@ -106,11 +123,11 @@ export const CustomerMultiUploadModal: React.FC<CustomerMultiUploadModalProps> =
 
               {/* Per-File Category Selector & Remove */}
               <div className="flex items-center gap-2 shrink-0">
-                <div className="w-56">
+                <div className="w-64">
                   <AppSelect
-                    options={UPLOAD_CATEGORIES}
+                    options={categoryOptions}
                     value={item.category}
-                    onChange={(val) => onUpdateCategory(item.id, val || 'W2_WAGES')}
+                    onChange={(val) => onUpdateCategory(item.id, val || categoryOptions[0]?.value || 'W2_WAGES')}
                     placeholder="Document Category"
                   />
                 </div>

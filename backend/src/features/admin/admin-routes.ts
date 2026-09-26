@@ -14,6 +14,11 @@ import {
   getReturnedLeads,
   assignReturnedLeadsBulk,
   autoRoundRobinReturnedLeads,
+  getSelfSignups,
+  assignSelfSignupsBulk,
+  autoRoundRobinSelfSignups,
+  getMasterTaxpayers,
+  getTaxpayerYearDetails,
 } from "./admin-controller.js";
 import { validateRequest } from "../../middlewares/validate-request.js";
 import {
@@ -132,6 +137,50 @@ router.post(
   requireAuth,
   authorize(Role.ADMIN),
   autoRoundRobinReturnedLeads
+);
+
+// Admin & Documenter Manager Direct / Online Self-Signups Management
+router.get(
+  "/self-signups",
+  requireAuth,
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
+  getSelfSignups
+);
+
+router.post(
+  "/self-signups/assign-bulk",
+  requireAuth,
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
+  assignSelfSignupsBulk
+);
+
+router.post(
+  "/self-signups/assign-round-robin",
+  requireAuth,
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
+  autoRoundRobinSelfSignups
+);
+
+// Master Taxpayers Registry & Multi-Year Details
+router.get(
+  "/master-taxpayers",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getMasterTaxpayers
+);
+
+router.get(
+  "/master-taxpayers/:id",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getTaxpayerYearDetails
+);
+
+router.get(
+  "/master-taxpayers/:id/year/:taxYear",
+  requireAuth,
+  authorize(Role.ADMIN),
+  getTaxpayerYearDetails
 );
 
 export { router as adminRouter };

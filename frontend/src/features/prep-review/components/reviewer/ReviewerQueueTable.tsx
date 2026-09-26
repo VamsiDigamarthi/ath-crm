@@ -3,6 +3,7 @@ import { ShieldCheck, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppEmptyState } from '@/shared/components/AppEmptyState';
 import { PrepStageBadge } from '../common/PrepStageBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import type { PrepReviewLead } from '../../types/prep-review.types';
 
 interface ReviewerQueueTableProps {
@@ -63,6 +64,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
               const preparerInitial = preparerName !== '-' ? preparerName[0].toUpperCase() : 'P';
               const verifiedDocs = item.verifiedDocumentsCount || 0;
               const totalDocs = item.documentsCount || 0;
+              const hasMultipleYears = Boolean(item.allApplications && item.allApplications.length > 1);
 
               // Parse Financial Calculations from Draft
               const draft: any = (item as any).taxDraftSummary || {};
@@ -85,11 +87,34 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
                         {taxpayerInitial}
                       </div>
                       <div>
-                        <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+                        <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5 flex-wrap">
                           <span>{taxpayerName}</span>
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                            TY {item.taxYear || 2025}
-                          </span>
+                          <ClientPaymentStatusChip lead={item} size="xs" />
+                          {hasMultipleYears ? (
+                            <div className="inline-flex items-center gap-1">
+                              {item.allApplications?.map((app) => (
+                                <button
+                                  key={app.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenAudit(app.id);
+                                  }}
+                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
+                                    app.id === (item.id || item.applicationId)
+                                      ? 'bg-purple-50 text-purple-800 border-purple-300 ring-1 ring-purple-500/20'
+                                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                                  }`}
+                                  title={`Switch to TY ${app.taxYear} (${app.filingType || 'INDIVIDUAL'})`}
+                                >
+                                  TY {app.taxYear}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                              TY {item.taxYear || 2025}
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-slate-500 font-medium mt-0.5">
                           {taxpayerEmail} {location !== '-' ? `• ${filingStatus}` : ''}

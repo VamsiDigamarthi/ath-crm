@@ -21,10 +21,22 @@ export interface PrepReviewLead {
   visaType: string;
   maritalStatus: string;
   stateOfResidence: string;
-  complexity: ReturnComplexity;
+  complexity?: ReturnComplexity;
   currentStage: string;
   prepStage?: PrepReviewStage;
   priority?: string;
+  clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
+  totalTaxYears?: number;
+  allApplications?: Array<{
+    id: string;
+    taxYear: number;
+    filingType?: string;
+    currentStage: string;
+    assignedPrepAgentId?: string | null;
+    assignedReviewAgentId?: string | null;
+    assignedPrepAgent?: { id: string; firstName?: string; lastName?: string; email?: string } | null;
+    assignedReviewAgent?: { id: string; firstName?: string; lastName?: string; email?: string } | null;
+  }>;
 
   // Assigned Staff Across Entire Lifecycle
   assignedDocAgent?: {

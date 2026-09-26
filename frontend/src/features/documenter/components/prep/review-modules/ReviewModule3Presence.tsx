@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Calendar, MapPin } from 'lucide-react';
+import { Clock, Calendar, MapPin, Building2 } from 'lucide-react';
 
 interface ReviewModule3PresenceProps {
   m3: any;
@@ -13,6 +13,7 @@ export const ReviewModule3Presence: React.FC<ReviewModule3PresenceProps> = ({
   isSubmitted = false,
 }) => {
   const historyList = m3.statesResidedHistory || [];
+  const rentalList = m3.rentalProperties || [];
 
   const valDays = (days: any) => {
     if (days === null || days === undefined || days === '') return '-';
@@ -22,6 +23,11 @@ export const ReviewModule3Presence: React.FC<ReviewModule3PresenceProps> = ({
   const val = (v: any) => {
     if (v === null || v === undefined || v === '') return '-';
     return String(v).trim() || '-';
+  };
+
+  const valCurrency = (num: any) => {
+    if (num === null || num === undefined || num === '' || isNaN(Number(num))) return '-';
+    return `$${Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const currentYearDays = m3[`days${selectedTaxYear}`] !== undefined 
@@ -44,7 +50,7 @@ export const ReviewModule3Presence: React.FC<ReviewModule3PresenceProps> = ({
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              <strong>Draft Stage:</strong> Taxpayer has not submitted Module 03 (Substantial Presence &amp; Multi-State) yet.
+              <strong>Draft Stage:</strong> Taxpayer has not submitted Module 03 (State of Residency &amp; Multi-State) yet.
             </span>
           </div>
           <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-200/70 text-amber-800 border border-amber-300 whitespace-nowrap">
@@ -132,6 +138,65 @@ export const ReviewModule3Presence: React.FC<ReviewModule3PresenceProps> = ({
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Schedule E Rental Properties Section */}
+      <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3 shadow-2xs">
+        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
+          <Building2 className="w-4 h-4 text-indigo-600" />
+          <span>Rental Real Estate Income &amp; Expenses (Schedule E) ({selectedTaxYear})</span>
+        </h5>
+
+        {rentalList.length === 0 ? (
+          <div className="p-4 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-400 italic">
+            No rental properties reported by taxpayer for tax year {selectedTaxYear}.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border border-slate-200 rounded-lg overflow-hidden bg-white">
+              <thead className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                <tr>
+                  <th className="p-2.5">#</th>
+                  <th className="p-2.5">Property Location / Address</th>
+                  <th className="p-2.5">Type</th>
+                  <th className="p-2.5">Ownership</th>
+                  <th className="p-2.5">Purchase Date</th>
+                  <th className="p-2.5">Rented Date</th>
+                  <th className="p-2.5">Months Rented</th>
+                  <th className="p-2.5">Gross Income</th>
+                  <th className="p-2.5">Expenses</th>
+                  <th className="p-2.5">Net Profit / (Loss)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rentalList.map((prop: any, idx: number) => {
+                  const income = Number(prop.totalRentalIncome || 0);
+                  const expenses = Number(prop.rentalExpenses || 0);
+                  const net = income - expenses;
+
+                  return (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="p-2.5 font-bold text-slate-500">{idx + 1}</td>
+                      <td className="p-2.5 font-semibold text-slate-900 max-w-[200px] truncate" title={prop.address}>
+                        {val(prop.address)}
+                      </td>
+                      <td className="p-2.5 font-medium text-slate-700">{val(prop.propertyType)}</td>
+                      <td className="p-2.5 text-slate-600">{val(prop.ownership)}</td>
+                      <td className="p-2.5 text-slate-600 whitespace-nowrap">{val(prop.purchaseDate)}</td>
+                      <td className="p-2.5 text-slate-600 whitespace-nowrap">{val(prop.rentedDate)}</td>
+                      <td className="p-2.5 font-mono text-slate-700">{prop.monthsRented2025 ?? 12} Mos</td>
+                      <td className="p-2.5 font-bold text-emerald-700">{valCurrency(income)}</td>
+                      <td className="p-2.5 font-bold text-rose-700">{valCurrency(expenses)}</td>
+                      <td className={`p-2.5 font-extrabold ${net >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {valCurrency(net)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

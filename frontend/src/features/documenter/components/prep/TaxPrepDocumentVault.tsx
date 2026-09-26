@@ -20,10 +20,23 @@ import {
   Link2,
   ExternalLink,
   Copy,
-  Globe
+  Globe,
+  Bell
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '@/lib/api-client';
+import { AppSelect } from '@/shared/components/AppSelect';
+import { RequestMissingDocumentsModal } from './RequestMissingDocumentsModal';
+import {
+  type DocumentTypeId,
+  DOCUMENT_TYPES,
+  getDocumentTypeForCategory,
+  ALL_DOCUMENT_CATEGORIES,
+  getCategoryBadgeInfo,
+  getCategoriesForType,
+  detectCategoryForType,
+  getDefaultDriveLinkForType,
+} from '@/shared/constants/document-taxonomy';
 
 export interface DocumentItem {
   id: string;
@@ -38,6 +51,7 @@ interface TaxPrepDocumentVaultProps {
   leadId?: string;
   applicationId?: string;
   customerName: string;
+  customerEmail?: string;
   documents?: DocumentItem[];
   onDocumentVerified?: (docId: string) => void;
   onDocumentUploaded?: () => void;
@@ -55,50 +69,13 @@ export const isDriveLinkDoc = (doc: DocumentItem): boolean => {
     doc.filePath?.startsWith('https://') ||
     doc.documentCategory === 'GOOGLE_DRIVE_LINK' ||
     doc.documentCategory === 'DRIVE_LINK' ||
+    doc.documentCategory === 'INDIVIDUAL_DRIVE_LINK' ||
+    doc.documentCategory === 'BUSINESS_DRIVE_LINK' ||
+    doc.documentCategory === 'FBAR_FATCA_DRIVE_LINK' ||
+    doc.documentCategory === 'AUDIT_DRIVE_LINK' ||
     doc.fileName?.toLowerCase().includes('drive.google.com') ||
     doc.fileName?.toLowerCase().includes('docs.google.com')
   );
-};
-
-const DRIVE_LINK_CATEGORIES = [
-  { label: 'Google Drive / Cloud Folder (All Documents)', value: 'GOOGLE_DRIVE_LINK' },
-  { label: 'W-2 Wage Statement (Employer)', value: 'W2_WAGES' },
-  { label: '1099-INT Bank Interest Statement', value: '1099_INT' },
-  { label: '1099-DIV Dividend & Distribution', value: '1099_DIV' },
-  { label: '1099-B Brokerage & Stock Sales', value: '1099_B' },
-  { label: '1098 Mortgage Interest Statement', value: '1098_MORTGAGE' },
-  { label: 'FBAR / Foreign Indian Bank Summary', value: 'FBAR_FOREIGN' },
-  { label: 'Taxpayer ID / Passport / Visa Copy', value: 'ID_PASSPORT_VISA' },
-  { label: 'Prior Year 1040 Tax Return', value: 'PREVIOUS_1040' },
-  { label: 'Form 8879 E-Sign Signature Form', value: 'FORM_8879' },
-  { label: 'Other Tax Form / Drive Link', value: 'OTHER_DOCUMENT' },
-];
-
-const DOCUMENT_CATEGORIES = [
-  { label: 'W-2 Wage Statement (Employer)', value: 'W2_WAGES' },
-  { label: '1099-INT Bank Interest Statement', value: '1099_INT' },
-  { label: '1099-DIV Dividend & Distribution', value: '1099_DIV' },
-  { label: '1099-B Brokerage & Stock Sales', value: '1099_B' },
-  { label: '1098 Mortgage Interest Statement', value: '1098_MORTGAGE' },
-  { label: 'FBAR / Foreign Indian Bank Summary', value: 'FBAR_FOREIGN' },
-  { label: 'Taxpayer ID / Passport / Visa Copy', value: 'ID_PASSPORT_VISA' },
-  { label: 'Prior Year 1040 Tax Return', value: 'PREVIOUS_1040' },
-  { label: 'Form 8879 E-Sign Signature Form', value: 'FORM_8879' },
-  { label: 'Other Tax Form / Expense Receipt', value: 'OTHER_DOCUMENT' },
-];
-
-const detectCategoryFromFileName = (name: string): string => {
-  const lower = name.toLowerCase();
-  if (lower.includes('w-2') || lower.includes('w2') || lower.includes('wage')) return 'W2_WAGES';
-  if (lower.includes('1099-int') || lower.includes('1099int') || lower.includes('interest')) return '1099_INT';
-  if (lower.includes('1099-div') || lower.includes('1099div') || lower.includes('dividend')) return '1099_DIV';
-  if (lower.includes('1099-b') || lower.includes('1099b') || lower.includes('stock') || lower.includes('trade')) return '1099_B';
-  if (lower.includes('1098') || lower.includes('mortgage')) return '1098_MORTGAGE';
-  if (lower.includes('fbar') || lower.includes('foreign') || lower.includes('nre') || lower.includes('nro')) return 'FBAR_FOREIGN';
-  if (lower.includes('passport') || lower.includes('visa') || lower.includes('i797') || lower.includes('i-797') || lower.includes('id_') || lower.includes('dl_')) return 'ID_PASSPORT_VISA';
-  if (lower.includes('1040') || lower.includes('prior') || lower.includes('previous')) return 'PREVIOUS_1040';
-  if (lower.includes('8879') || lower.includes('esign') || lower.includes('sign')) return 'FORM_8879';
-  return 'W2_WAGES';
 };
 
 const formatFileSize = (bytes: number): string => {
@@ -109,19 +86,29 @@ const formatFileSize = (bytes: number): string => {
 
 export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
   leadId,
+  applicationId,
   customerName,
+  customerEmail,
   documents: initialDocuments = [],
   onDocumentVerified,
   onDocumentUploaded,
 }) => {
   const [docList, setDocList] = useState<DocumentItem[]>(initialDocuments);
   const [previewDoc, setPreviewDoc] = useState<DocumentItem | null>(null);
+
+  // 4 Document Types Tab state: 'INDIVIDUAL' | 'BUSINESS' | 'TAX_COMPLIANCE' | 'TAX_AUDIT'
+  const [activeDocType, setActiveDocType] = useState<DocumentTypeId>('INDIVIDUAL');
   
-  // Vault Tab Switcher State: 'ALL' | 'FILES' | 'LINKS'
+  // Vault Sub-Tab Switcher State: 'ALL' | 'FILES' | 'LINKS'
   const [activeVaultTab, setActiveVaultTab] = useState<'ALL' | 'FILES' | 'LINKS'>('ALL');
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
+
+  // Request Missing Documents Modal State
+  const [isRequestDocsModalOpen, setIsRequestDocsModalOpen] = useState(false);
 
   // Agent Multi-Upload Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadModalDocType, setUploadModalDocType] = useState<DocumentTypeId>('INDIVIDUAL');
   const [stagedFiles, setStagedFiles] = useState<StagedFileItem[]>([]);
   const [bulkCategory, setBulkCategory] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
@@ -129,9 +116,10 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
 
   // Agent Drive Link Modal State
   const [isDriveLinkModalOpen, setIsDriveLinkModalOpen] = useState(false);
+  const [driveModalDocType, setDriveModalDocType] = useState<DocumentTypeId>('INDIVIDUAL');
   const [driveLinkUrl, setDriveLinkUrl] = useState('');
   const [driveLinkTitle, setDriveLinkTitle] = useState('');
-  const [driveLinkCategory, setDriveLinkCategory] = useState('GOOGLE_DRIVE_LINK');
+  const [driveLinkCategory, setDriveLinkCategory] = useState('INDIVIDUAL_DRIVE_LINK');
   const [driveLinkRemarks, setDriveLinkRemarks] = useState('');
   const [isSubmittingLink, setIsSubmittingLink] = useState(false);
 
@@ -143,19 +131,91 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleOpenUploadModal = (typeId: DocumentTypeId = activeDocType) => {
+    setUploadModalDocType(typeId);
+    setStagedFiles([]);
+    setBulkCategory('');
+    setIsUploadModalOpen(true);
+  };
+
+  const handleOpenDriveLinkModal = (typeId: DocumentTypeId = activeDocType) => {
+    setDriveModalDocType(typeId);
+    setDriveLinkCategory(getDefaultDriveLinkForType(typeId));
+    setDriveLinkUrl('');
+    setDriveLinkTitle('');
+    setDriveLinkRemarks('');
+    setIsDriveLinkModalOpen(true);
+  };
+
+  const handleSelectUploadDocType = (typeId: DocumentTypeId) => {
+    setUploadModalDocType(typeId);
+    setBulkCategory('');
+    setStagedFiles((prev) =>
+      prev.map((item) => ({
+        ...item,
+        category: detectCategoryForType(item.file.name, typeId),
+      }))
+    );
+  };
+
+  const handleSelectDriveDocType = (typeId: DocumentTypeId) => {
+    setDriveModalDocType(typeId);
+    setDriveLinkCategory(getDefaultDriveLinkForType(typeId));
+  };
+
   useEffect(() => {
     setDocList(initialDocuments || []);
   }, [initialDocuments]);
 
-  // Separate physical files from Drive / Cloud links
+  // Document Counts per Document Type (1: Individual, 2: Business, 3: Tax Compliance, 4: Tax Audit)
+  const docTypeCounts = useMemo<Record<DocumentTypeId, number>>(() => {
+    const counts: Record<DocumentTypeId, number> = {
+      INDIVIDUAL: 0,
+      BUSINESS: 0,
+      TAX_COMPLIANCE: 0,
+      TAX_AUDIT: 0,
+    };
+    docList.forEach((doc) => {
+      const typeId = getDocumentTypeForCategory(doc.documentCategory);
+      counts[typeId] = (counts[typeId] || 0) + 1;
+    });
+    return counts;
+  }, [docList]);
+
+  // Separate physical files from Drive / Cloud links across all documents
   const fileDocs = useMemo(() => docList.filter((d) => !isDriveLinkDoc(d)), [docList]);
   const linkDocs = useMemo(() => docList.filter((d) => isDriveLinkDoc(d)), [docList]);
 
-  const filteredDocs = useMemo(() => {
+  // Tab-filtered documents across all categories
+  const tabFilteredDocs = useMemo(() => {
     if (activeVaultTab === 'FILES') return fileDocs;
     if (activeVaultTab === 'LINKS') return linkDocs;
     return docList;
   }, [activeVaultTab, fileDocs, linkDocs, docList]);
+
+  // Category-filtered documents
+  const filteredDocs = useMemo(() => {
+    if (filterCategory === 'ALL') return tabFilteredDocs;
+    if (filterCategory.startsWith('TYPE_')) {
+      const typeId = filterCategory.replace('TYPE_', '');
+      return tabFilteredDocs.filter((doc) => getDocumentTypeForCategory(doc.documentCategory) === typeId);
+    }
+    return tabFilteredDocs.filter((doc) => doc.documentCategory === filterCategory);
+  }, [tabFilteredDocs, filterCategory]);
+
+  const categoryOptions = useMemo(() => {
+    return [
+      { label: 'All Categories (All Documents)', value: 'ALL' },
+      { label: 'All 1) Individual Documents', value: 'TYPE_INDIVIDUAL' },
+      { label: 'All 2) Business Documents', value: 'TYPE_BUSINESS' },
+      { label: 'All 3) Tax Compliance (FBAR/FATCA)', value: 'TYPE_TAX_COMPLIANCE' },
+      { label: 'All 4) Tax Audit & Notices', value: 'TYPE_TAX_AUDIT' },
+      ...ALL_DOCUMENT_CATEGORIES.map((c) => ({
+        label: `${c.shortLabel || c.label}`,
+        value: c.value,
+      })),
+    ];
+  }, []);
 
   const handleConfirmVerify = async () => {
     if (!docToVerify) return;
@@ -236,8 +296,8 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
       const rawTitle = driveLinkTitle.trim();
       let title = rawTitle;
       if (!title) {
-        const selectedCatObj = DRIVE_LINK_CATEGORIES.find((c) => c.value === driveLinkCategory);
-        if (driveLinkCategory === 'GOOGLE_DRIVE_LINK') {
+        const selectedCatObj = ALL_DOCUMENT_CATEGORIES.find((c) => c.value === driveLinkCategory);
+        if (driveLinkCategory === 'GOOGLE_DRIVE_LINK' || driveLinkCategory.includes('DRIVE')) {
           if (trimmedUrl.includes('onedrive') || trimmedUrl.includes('1drv.ms') || trimmedUrl.includes('sharepoint')) {
             title = 'OneDrive Cloud Folder';
           } else if (trimmedUrl.includes('dropbox')) {
@@ -245,7 +305,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
           } else if (trimmedUrl.includes('box.com')) {
             title = 'Box Cloud Folder';
           } else {
-            title = 'Google Drive Folder';
+            title = selectedCatObj ? selectedCatObj.label : 'Google Drive Folder';
           }
         } else {
           title = selectedCatObj ? `${selectedCatObj.label} Link` : 'Cloud Document Link';
@@ -266,7 +326,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
         setIsDriveLinkModalOpen(false);
         setDriveLinkUrl('');
         setDriveLinkTitle('');
-        setDriveLinkCategory('GOOGLE_DRIVE_LINK');
+        setDriveLinkCategory('INDIVIDUAL_DRIVE_LINK');
         setDriveLinkRemarks('');
         if (onDocumentUploaded) onDocumentUploaded();
       }
@@ -277,11 +337,11 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
     }
   };
 
-  const addFilesToStaging = (incomingFiles: FileList | File[]) => {
+  const addFilesToStaging = (incomingFiles: FileList | File[], targetType: DocumentTypeId = uploadModalDocType) => {
     const newItems: StagedFileItem[] = Array.from(incomingFiles).map((file) => ({
       id: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       file,
-      category: detectCategoryFromFileName(file.name),
+      category: detectCategoryForType(file.name, targetType),
     }));
     setStagedFiles((prev) => [...prev, ...newItems]);
   };
@@ -315,7 +375,8 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
     setBulkCategory(category);
     if (category) {
       setStagedFiles((prev) => prev.map((item) => ({ ...item, category })));
-      toast.success(`All ${stagedFiles.length} documents set to ${DOCUMENT_CATEGORIES.find(c => c.value === category)?.label || category}`);
+      const found = ALL_DOCUMENT_CATEGORIES.find((c) => c.value === category);
+      toast.success(`All ${stagedFiles.length} documents set to ${found?.label || category}`);
     }
   };
 
@@ -373,38 +434,12 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
   };
 
   const getCategoryBadge = (cat: string) => {
-    const upper = (cat || '').toUpperCase();
-    if (upper.includes('DRIVE') || upper.includes('GOOGLE') || upper.includes('CLOUD')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Google Drive</span>;
-    }
-    if (upper.includes('W2') || upper.includes('W-2')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">W-2 Wages</span>;
-    }
-    if (upper.includes('DIV') || upper.includes('DIVIDEND')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">1099-DIV Dividends</span>;
-    }
-    if (upper.includes('INT') || upper.includes('INTEREST')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">1099-INT Interest</span>;
-    }
-    if (upper.includes('BROKERAGE') || upper.includes('1099_B') || upper.includes('1099-B') || upper.includes('STOCK')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">1099-B Stocks</span>;
-    }
-    if (upper.includes('FBAR') || upper.includes('INDIAN') || upper.includes('FOREIGN')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">FBAR Indian</span>;
-    }
-    if (upper.includes('1098') || upper.includes('MORTGAGE')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">1098 Mortgage</span>;
-    }
-    if (upper.includes('PASSPORT') || upper.includes('VISA') || upper.includes('ID')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">ID / Visa Copy</span>;
-    }
-    if (upper.includes('1040') || upper.includes('PRIOR')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Prior 1040 Return</span>;
-    }
-    if (upper.includes('8879') || upper.includes('ESIGN')) {
-      return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200">Form 8879 E-Sign</span>;
-    }
-    return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">{cat || 'Tax Slip'}</span>;
+    const info = getCategoryBadgeInfo(cat);
+    return (
+      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${info.badgeBg} ${info.badgeText} border ${info.badgeBorder} inline-flex items-center gap-1`}>
+        {info.label}
+      </span>
+    );
   };
 
   const getFileIcon = (fileName: string) => {
@@ -459,12 +494,22 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300">
-            {fileDocs.length} Files • {linkDocs.length} Drive Links
+            {docList.length} Total Items
           </span>
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setIsDriveLinkModalOpen(true)}
+            onClick={() => setIsRequestDocsModalOpen(true)}
+            className="bg-white hover:bg-purple-50 text-purple-700 border-purple-300 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer h-7.5 px-3 rounded-lg"
+            title="Send in-app notification and email requesting missing documents from client"
+          >
+            <Bell className="w-3.5 h-3.5 text-purple-600" />
+            <span>Send Notification / Request Docs</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleOpenDriveLinkModal(activeDocType)}
             className="bg-white hover:bg-blue-50 text-blue-700 border-blue-300 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer h-7.5 px-3 rounded-lg"
           >
             <Link2 className="w-3.5 h-3.5 text-blue-600" />
@@ -472,10 +517,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
           </Button>
           <Button
             size="sm"
-            onClick={() => {
-              setStagedFiles([]);
-              setIsUploadModalOpen(true);
-            }}
+            onClick={() => handleOpenUploadModal(activeDocType)}
             className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer h-7.5 px-3 rounded-lg"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -484,11 +526,25 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
         </div>
       </div>
 
-      {/* Tab Switcher: All Items, Uploaded Documents, Drive & Cloud Links */}
+      {/* 4 DOCUMENT TYPES TABS (Small, Neat Switch Tabs) */}
       <div className="border-b border-slate-200 pb-1">
         <AppTabs
+          tabs={DOCUMENT_TYPES.map((dt) => ({
+            id: dt.id,
+            label: `${dt.number}) ${dt.label}`,
+            count: docTypeCounts[dt.id] || 0,
+          }))}
+          activeTab={activeDocType}
+          onChange={(tabId) => setActiveDocType(tabId as DocumentTypeId)}
+          size="sm"
+        />
+      </div>
+
+      {/* Tab Switcher: All Items, Uploaded Documents, Drive & Cloud Links + Category Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-2">
+        <AppTabs
           tabs={[
-            { id: 'ALL', label: 'All Items', count: docList.length },
+            { id: 'ALL', label: 'All Items in Vault', count: docList.length },
             { id: 'FILES', label: 'Uploaded Documents', count: fileDocs.length },
             { id: 'LINKS', label: 'Drive & Cloud Links', count: linkDocs.length },
           ]}
@@ -496,6 +552,15 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
           onChange={(tabId) => setActiveVaultTab(tabId as 'ALL' | 'FILES' | 'LINKS')}
           size="sm"
         />
+
+        <div className="w-64 sm:w-72">
+          <AppSelect
+            options={categoryOptions}
+            value={filterCategory}
+            onChange={(val) => setFilterCategory(val || 'ALL')}
+            placeholder="Filter by Category"
+          />
+        </div>
       </div>
 
       {/* Documents & Links List */}
@@ -517,15 +582,24 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
                 ? `No external Google Drive or Cloud links have been added for ${customerName}. You can paste and save drive links shared by the client using the button below.`
                 : activeVaultTab === 'FILES'
                 ? `No files are uploaded yet for ${customerName}. You can upload W-2s, 1099s, Word/Text documents, or ID proofs directly on behalf of the client.`
-                : `No files or drive links are recorded yet for ${customerName}. You can upload physical files or save shared Google Drive links using the buttons below.`}
+                : `No files or drive links are recorded yet for ${customerName}. You can upload physical files, save shared Google Drive links, or send a missing documents request to the client.`}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsRequestDocsModalOpen(true)}
+              className="bg-white hover:bg-purple-50 text-purple-700 border-purple-300 text-xs font-bold inline-flex items-center gap-1.5 shadow-xs cursor-pointer px-4 h-8"
+            >
+              <Bell className="w-3.5 h-3.5 text-purple-600" />
+              <span>Send Notification / Request Missing Docs</span>
+            </Button>
             {(activeVaultTab === 'LINKS' || activeVaultTab === 'ALL') && (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setIsDriveLinkModalOpen(true)}
+                onClick={() => handleOpenDriveLinkModal(activeDocType)}
                 className="bg-white hover:bg-blue-50 text-blue-700 border-blue-300 text-xs font-bold inline-flex items-center gap-1.5 shadow-xs cursor-pointer px-4 h-8"
               >
                 <Link2 className="w-3.5 h-3.5 text-blue-600" />
@@ -535,10 +609,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
             {(activeVaultTab === 'FILES' || activeVaultTab === 'ALL') && (
               <Button
                 size="sm"
-                onClick={() => {
-                  setStagedFiles([]);
-                  setIsUploadModalOpen(true);
-                }}
+                onClick={() => handleOpenUploadModal(activeDocType)}
                 className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-xs cursor-pointer px-4 h-8"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -705,11 +776,39 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
         width="680px"
       >
         <form onSubmit={handleAgentUploadSubmit} className="space-y-4 font-sans py-1 w-full max-w-full overflow-hidden">
+          {/* 1. Document Type Section Switcher Tabs */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              Select Document Section
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
+              {DOCUMENT_TYPES.map((dt) => {
+                const Icon = dt.icon;
+                const isActive = uploadModalDocType === dt.id;
+                return (
+                  <button
+                    key={dt.id}
+                    type="button"
+                    onClick={() => handleSelectUploadDocType(dt.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer truncate ${
+                      isActive
+                        ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#16A34A]' : 'text-slate-400'}`} />
+                    <span className="truncate">{dt.number}) {dt.shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Agent Assistance Banner */}
           <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2">
             <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <strong>Multi-Document Vault Upload:</strong> Select multiple tax slips, Word (.doc/.docx), text files (.txt/.rtf), ZIP archives (.zip), PDFs, and spreadsheets. Choose a category for each document below before securing to vault.
+              <strong>Multi-Document Vault Upload:</strong> Uploading under <strong>{DOCUMENT_TYPES.find(d => d.id === uploadModalDocType)?.label}</strong>. Select tax slips, Word (.docx), text (.txt), ZIP, PDFs, or spreadsheets.
             </div>
           </div>
 
@@ -768,10 +867,10 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
                     <select
                       value={bulkCategory}
                       onChange={(e) => handleApplyBulkCategory(e.target.value)}
-                      className="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-white text-slate-700 hover:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer max-w-[200px]"
+                      className="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-white text-slate-700 hover:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer max-w-[220px]"
                     >
                       <option value="">-- Apply to all --</option>
-                      {DOCUMENT_CATEGORIES.map((cat) => (
+                      {getCategoriesForType(uploadModalDocType, false).map((cat) => (
                         <option key={cat.value} value={cat.value}>
                           {cat.label}
                         </option>
@@ -808,13 +907,13 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
 
                     {/* Right: Individual Category Dropdown & Remove Button */}
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <div className="w-48 sm:w-52">
+                      <div className="w-56 sm:w-64">
                         <select
                           value={item.category}
                           onChange={(e) => updateStagedCategory(item.id, e.target.value)}
                           className="w-full text-xs font-medium border border-slate-300 rounded-lg px-2 py-1.5 bg-white text-slate-800 hover:border-emerald-500 focus:outline-none focus:ring-1.5 focus:ring-emerald-500 transition-all cursor-pointer shadow-2xs"
                         >
-                          {DOCUMENT_CATEGORIES.map((cat) => (
+                          {getCategoriesForType(uploadModalDocType, false).map((cat) => (
                             <option key={cat.value} value={cat.value}>
                               {cat.label}
                             </option>
@@ -891,18 +990,46 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
           setIsDriveLinkModalOpen(false);
           setDriveLinkUrl('');
           setDriveLinkTitle('');
-          setDriveLinkCategory('GOOGLE_DRIVE_LINK');
+          setDriveLinkCategory(getDefaultDriveLinkForType('INDIVIDUAL'));
           setDriveLinkRemarks('');
         }}
         title={`Upload Google Drive / Cloud Link for ${customerName}`}
         width="620px"
       >
         <form onSubmit={handleDriveLinkSubmit} className="space-y-4 font-sans py-1">
+          {/* 1. Document Type Switcher Tabs */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              Select Document Section
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200">
+              {DOCUMENT_TYPES.map((dt) => {
+                const Icon = dt.icon;
+                const isActive = driveModalDocType === dt.id;
+                return (
+                  <button
+                    key={dt.id}
+                    type="button"
+                    onClick={() => handleSelectDriveDocType(dt.id)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer truncate ${
+                      isActive
+                        ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span className="truncate">{dt.number}) {dt.shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Banner */}
           <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-900 flex items-start gap-2">
             <Globe className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <strong>Attach Cloud Document / Drive Link:</strong> Paste a Google Drive, OneDrive, Dropbox, or Box link shared by the client. The URL will be saved to the taxpayer's vault and accessible to the preparation &amp; audit teams.
+              <strong>Attach Cloud Document / Drive Link:</strong> Attaching link under <strong>{DOCUMENT_TYPES.find(d => d.id === driveModalDocType)?.label}</strong>. Paste a Google Drive, OneDrive, Dropbox, or Box link shared by the client.
             </div>
           </div>
 
@@ -927,6 +1054,24 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
             </p>
           </div>
 
+          {/* Category Dropdown (Filtered to Selected Tab) */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-800">
+              Document Category for {DOCUMENT_TYPES.find((d) => d.id === driveModalDocType)?.label}
+            </label>
+            <select
+              value={driveLinkCategory}
+              onChange={(e) => setDriveLinkCategory(e.target.value)}
+              className="w-full text-xs font-medium border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-800 hover:border-blue-500 focus:outline-none focus:ring-1.5 focus:ring-blue-500 transition-all cursor-pointer shadow-2xs"
+            >
+              {getCategoriesForType(driveModalDocType, true).map((cat) => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Title / Name Input */}
           <div className="space-y-1">
             <label className="block text-xs font-bold text-slate-800">
@@ -936,27 +1081,9 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
               type="text"
               value={driveLinkTitle}
               onChange={(e) => setDriveLinkTitle(e.target.value)}
-              placeholder="Optional, e.g. 2024 W-2s & 1099s Google Drive Folder"
+              placeholder={`Optional, e.g. 2025 ${DOCUMENT_TYPES.find((d) => d.id === driveModalDocType)?.shortLabel} Statements Folder`}
               className="w-full text-xs font-medium border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-800 hover:border-blue-500 focus:outline-none focus:ring-1.5 focus:ring-blue-500 transition-all placeholder:text-slate-400"
             />
-          </div>
-
-          {/* Category Dropdown */}
-          <div className="space-y-1">
-            <label className="block text-xs font-bold text-slate-800">
-              Document Category
-            </label>
-            <select
-              value={driveLinkCategory}
-              onChange={(e) => setDriveLinkCategory(e.target.value)}
-              className="w-full text-xs font-medium border border-slate-300 rounded-lg px-3 py-2 bg-white text-slate-800 hover:border-blue-500 focus:outline-none focus:ring-1.5 focus:ring-blue-500 transition-all cursor-pointer shadow-2xs"
-            >
-              {DRIVE_LINK_CATEGORIES.map((cat) => (
-                <option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* Optional Remarks */}
@@ -983,7 +1110,7 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
                 setIsDriveLinkModalOpen(false);
                 setDriveLinkUrl('');
                 setDriveLinkTitle('');
-                setDriveLinkCategory('GOOGLE_DRIVE_LINK');
+                setDriveLinkCategory(getDefaultDriveLinkForType('INDIVIDUAL'));
                 setDriveLinkRemarks('');
               }}
               className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
@@ -1136,6 +1263,19 @@ export const TaxPrepDocumentVault: React.FC<TaxPrepDocumentVaultProps> = ({
           isLoading={isDeleting}
         />
       )}
+
+      {/* Request Missing Documents Modal */}
+      <RequestMissingDocumentsModal
+        isOpen={isRequestDocsModalOpen}
+        onClose={() => setIsRequestDocsModalOpen(false)}
+        leadId={leadId}
+        applicationId={applicationId}
+        customerName={customerName}
+        customerEmail={customerEmail}
+        onRequestSent={() => {
+          if (onDocumentUploaded) onDocumentUploaded();
+        }}
+      />
     </div>
   );
 };

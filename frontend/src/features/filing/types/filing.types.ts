@@ -65,6 +65,24 @@ export interface FilingLeadItem extends Record<string, unknown> {
   stateBalanceDue: number;
   totalRefundOrDue: number;
   paymentStatus: 'PAID' | 'UNPAID';
+  clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
+  totalTaxYears?: number;
+  allApplications?: Array<{
+    id: string;
+    taxYear: number;
+    filingType?: string;
+    currentStage: string;
+    assignedFileOpId?: string | null;
+    assignedFileOp?: { id: string; firstName?: string; lastName?: string; email?: string } | null;
+  }>;
+  availableApplications?: Array<{
+    id: string;
+    taxYear: number;
+    filingType?: string;
+    currentStage: string;
+    assignedFileOpId?: string | null;
+    assignedFileOp?: { id: string; firstName?: string; lastName?: string; email?: string } | null;
+  }>;
   serviceFeePaid: number;
   esignStatus: 'SIGNED' | 'PENDING';
   esignCompletedAt?: string | null;
@@ -167,5 +185,11 @@ export interface FilingManagerStats {
   rejectedToday: number;
   totalDepartmentLeads: number;
   acceptanceRatePct: number;
-  efinGatewayStatus: string;
+  efinGatewayStatus?: string;
+  inProgressCount?: number;
+  acceptedCount?: number;
+  rejectedCount?: number;
+  acceptanceRate?: string;
+  avgTransmissionMinutes?: number;
+  periodSuffix?: string;
 }

@@ -3,10 +3,12 @@ import { PhoneCall, DollarSign, CheckCircle2, Clock, Flame, RotateCcw } from 'lu
 import type { SalesAgentStats } from '../../types/sales.types';
 
 interface SalesAgentStatsCardsProps {
-  stats: SalesAgentStats;
+  stats: SalesAgentStats & { periodSuffix?: string };
 }
 
 export const SalesAgentStatsCards: React.FC<SalesAgentStatsCardsProps> = ({ stats }) => {
+  const periodLabel = stats.periodSuffix || 'Today';
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
       {/* Card 1: Assigned Leads */}
@@ -71,11 +73,11 @@ export const SalesAgentStatsCards: React.FC<SalesAgentStatsCardsProps> = ({ stat
         </div>
       </div>
 
-      {/* Card 4: Deals Closed & Paid Today */}
+      {/* Card 4: Deals Closed & Paid in Period */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
-            Deals Closed Today
+            Deals Closed {periodLabel}
           </span>
           <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
             <CheckCircle2 className="w-4 h-4" />
@@ -92,11 +94,11 @@ export const SalesAgentStatsCards: React.FC<SalesAgentStatsCardsProps> = ({ stat
         </div>
       </div>
 
-      {/* Card 5: My Revenue Generated Today */}
+      {/* Card 5: My Revenue Generated in Period */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
-            My Revenue Today
+            My Revenue {periodLabel}
           </span>
           <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
             <DollarSign className="w-4 h-4" />

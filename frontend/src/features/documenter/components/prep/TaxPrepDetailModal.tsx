@@ -133,7 +133,7 @@ export const TaxPrepDetailModal: React.FC<TaxPrepDetailModalProps> = ({
           tabs={[
             { id: 'CALCULATOR', label: 'Tax Draft Estimator' },
             { id: 'DOCUMENTS', label: 'Client Documents Vault' },
-            { id: 'ORGANIZER', label: '9-Module Intake Form' },
+            { id: 'ORGANIZER', label: 'Tax Organizer' },
           ]}
           activeTab={activeTab}
           onChange={(tab) => setActiveTab(tab as any)}
@@ -158,6 +158,7 @@ export const TaxPrepDetailModal: React.FC<TaxPrepDetailModalProps> = ({
             leadId={lead.id}
             applicationId={lead.id}
             customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+            customerEmail={customer.email || (lead as any).taxpayerEmail}
             documents={(lead as any).documents || []}
           />
         )}

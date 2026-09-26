@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { AppSidebar } from '@/shared/components/AppSidebar';
 import { Button } from '@/shared/components/Button';
-import { AppSelect } from '@/shared/components/AppSelect';
+import { CustomerTaxYearDropdown } from '../components/CustomerTaxYearDropdown';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -13,7 +13,7 @@ import {
   Bell,
   User,
   Clock,
-  CheckCircle2
+  CheckCircle2,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -30,17 +30,18 @@ export const CustomerLayout: React.FC = () => {
   const isConvertedCustomer = Boolean(customerProfile?.isConvertedCustomer);
 
   // Derive available multi-year filings from customerProfile applications
-  const applications = customerProfile?.applications || [];
-  const taxYearOptions = applications.length > 0
-    ? applications.map((app: any) => ({
-        label: `TY ${app.taxYear} (${app.currentStage === 'FILING_SUCCESS' ? 'Filed Form 1040' : 'Active Filing'})`,
-        value: app.taxYear.toString(),
-      }))
-    : [
-        { label: 'TY 2025 (Active Filing)', value: '2025' },
-        { label: 'TY 2024 (Filed Form 1040)', value: '2024' },
-        { label: 'TY 2023 (Filed Form 1040)', value: '2023' },
-      ];
+  const applications = useMemo(() => customerProfile?.applications || [], [customerProfile?.applications]);
+
+  // Set default selected tax year to the most recent application when user data loads
+  useEffect(() => {
+    if (applications.length > 0) {
+      const hasCurrent = applications.some((a: any) => a.taxYear.toString() === selectedTaxYear);
+      if (!hasCurrent) {
+        setSelectedTaxYear(applications[0].taxYear.toString());
+      }
+    }
+  }, [applications]);
+
 
   const taxpayerName = customerProfile?.firstName
     ? `${customerProfile.firstName} ${customerProfile.lastName || ''}`.trim()
@@ -74,7 +75,7 @@ export const CustomerLayout: React.FC = () => {
     },
     { 
       id: 'customer_organizer', 
-      label: '9-Module Organizer', 
+      label: 'Tax Organizer', 
       icon: CheckSquare, 
       section: 'Tax Filing Workspace', 
       badge: isConvertedCustomer ? '100%' : '85%', 
@@ -127,7 +128,7 @@ export const CustomerLayout: React.FC = () => {
   const getHeaderTitle = () => {
     switch (activeId) {
       case 'customer_organizer':
-        return '9-Module Comprehensive Tax Organizer';
+        return 'Tax Organizer';
       case 'customer_documents':
         return 'Multi-Year Tax Document Vault & Downloads';
       case 'customer_billing':
@@ -185,28 +186,13 @@ export const CustomerLayout: React.FC = () => {
           </div>
 
           {/* Center/Right: Tax Year Switcher & Global Actions */}
-          <div className="flex items-center gap-3">
-            {/* Scalable Tax Year Dropdown using reusable AppSelect */}
-            {isConvertedCustomer ? (
-              <div className="w-52">
-                <AppSelect
-                  options={taxYearOptions}
-                  value={selectedTaxYear}
-                  onChange={(val) => {
-                    if (val) {
-                      setSelectedTaxYear(val);
-                      toast.success(`Active Workspace: Tax Year ${val}`);
-                    }
-                  }}
-                  placeholder="Select Tax Year"
-                />
-              </div>
-            ) : (
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                <span>TY 2025 (Active Intake)</span>
-              </div>
-            )}
+          <div className="flex items-center gap-2.5">
+            {/* All-in-one Tax Year Dropdown with Top Add Year Field */}
+            <CustomerTaxYearDropdown
+              selectedTaxYear={selectedTaxYear}
+              onSelectTaxYear={setSelectedTaxYear}
+              applications={applications}
+            />
 
             <NotificationBellPopover />
 
@@ -217,7 +203,7 @@ export const CustomerLayout: React.FC = () => {
               className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-red-600 text-xs flex items-center gap-2 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Logout</span>
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </header>

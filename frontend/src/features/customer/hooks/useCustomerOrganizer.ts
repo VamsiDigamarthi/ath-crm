@@ -145,8 +145,8 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
       }
     }
 
-    if (selectedModId === 'm8') {
-      const errors = validateModule8(organizerData.m8_deductions, selectedTaxYear);
+    if (selectedModId === 'm9') {
+      const errors = validateModule9(organizerData.m9_directDeposit, selectedTaxYear);
       if (Object.keys(errors).length > 0) {
         setValidationErrors(errors);
         const errorFieldNames = Object.keys(errors);
@@ -155,12 +155,22 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
       }
     }
 
-    if (selectedModId === 'm9') {
-      const errors = validateModule9(organizerData.m9_directDeposit, selectedTaxYear);
-      if (Object.keys(errors).length > 0) {
-        setValidationErrors(errors);
-        const errorFieldNames = Object.keys(errors);
-        toast.error(`Please fix validation errors: ${errors[errorFieldNames[0]]}`);
+    if (
+      selectedModId === 'm_income_expenses' ||
+      selectedModId === 'm4' ||
+      selectedModId === 'm5' ||
+      selectedModId === 'm6' ||
+      selectedModId === 'm8'
+    ) {
+      const e4 = validateModule4(organizerData.m4_wages, selectedTaxYear);
+      const e5 = validateModule5(organizerData.m5_interest, selectedTaxYear);
+      const e6 = validateModule6(organizerData.m6_stocks, selectedTaxYear);
+      const e8 = validateModule8(organizerData.m8_deductions, selectedTaxYear);
+      const allErrors = { ...e4, ...e5, ...e6, ...e8 };
+      if (Object.keys(allErrors).length > 0) {
+        setValidationErrors(allErrors);
+        const errorFieldNames = Object.keys(allErrors);
+        toast.error(`Please fix validation errors: ${allErrors[errorFieldNames[0]]}`);
         return false;
       }
     }
@@ -181,8 +191,9 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
 
     try {
       setSaving(true);
+      const extraKeys = selectedModId === 'm_income_expenses' ? ['m4', 'm5', 'm6', 'm8', 'm_income_expenses'] : [selectedModId];
       const updatedSubmitted = Array.from(
-        new Set([...(organizerData.submittedModules || []), selectedModId])
+        new Set([...(organizerData.submittedModules || []), ...extraKeys])
       );
       const dataToSave: OrganizerData = {
         ...organizerData,
@@ -211,7 +222,7 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
   };
 
   // Navigation handlers
-  const moduleIds = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'];
+  const moduleIds = ['m1', 'm2', 'm3', 'm7', 'm9', 'm_income_expenses'];
   const currentModIndex = moduleIds.indexOf(selectedModId);
 
   const handleNext = async () => {
@@ -224,7 +235,7 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
     if (currentModIndex < moduleIds.length - 1) {
       setSelectedModId(moduleIds[currentModIndex + 1]);
     } else {
-      toast.success('All 9 intake modules reviewed! Ready for CPA return preparation.');
+      toast.success('All intake sections reviewed! Ready for CPA return preparation.');
     }
   };
 

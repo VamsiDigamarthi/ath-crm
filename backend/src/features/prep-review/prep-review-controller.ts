@@ -9,7 +9,11 @@ export const getPrepReviewStaff = async (req: Request, res: Response) => {
 };
 
 export const getPrepReviewLeads = async (req: Request, res: Response) => {
-  const result = await PrepReviewService.listPipelineLeads(req.query);
+  const result = await PrepReviewService.listPipelineLeads(
+    req.query,
+    req.currentUser?.id,
+    req.currentUser?.role
+  );
   return SuccessHandler.handle(res, 'Tax Prep & Review pipeline leads retrieved successfully', result, 200);
 };
 
@@ -33,7 +37,11 @@ export const getPrepReviewDashboardStats = async (req: Request, res: Response) =
 
 export const getPrepReviewWorkspaceDetails = async (req: Request, res: Response) => {
   const id = String(req.params.id);
-  const data = await PrepReviewService.getWorkspaceDetails(id);
+  const data = await PrepReviewService.getWorkspaceDetails(
+    id,
+    req.currentUser?.id,
+    req.currentUser?.role
+  );
   return SuccessHandler.handle(res, 'Workspace details retrieved successfully', data, 200);
 };
 
@@ -41,6 +49,28 @@ export const savePrepReviewWorkspaceDraft = async (req: Request, res: Response) 
   const id = String(req.params.id);
   const data = await PrepReviewService.saveWorkspaceDraft(id, req.body);
   return SuccessHandler.handle(res, 'Form 1040 draft saved successfully', data, 200);
+};
+
+export const uploadDrakeTaxFile = async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const userId = req.currentUser?.id || 'SYSTEM';
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).json({ success: false, message: 'No file was uploaded' });
+  }
+
+  const result = await PrepReviewService.uploadDrakeTaxFile(id, userId, file);
+  return SuccessHandler.handle(res, 'Drake Tax calculation file uploaded successfully', result, 201);
+};
+
+export const deleteDrakeTaxFile = async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const docId = String(req.params.docId || req.body?.documentId || '');
+  const userId = req.currentUser?.id || 'SYSTEM';
+
+  const result = await PrepReviewService.deleteDrakeTaxFile(id, docId, userId);
+  return SuccessHandler.handle(res, 'Drake Tax calculation file removed successfully', result, 200);
 };
 
 export const submitPrepReviewWorkspaceToQA = async (req: Request, res: Response) => {

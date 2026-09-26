@@ -2,14 +2,19 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './guards/ProtectedRoute';
 import { PublicRoute } from './guards/PublicRoute';
 import { LoginScreen } from '@/features/auth/screens/LoginScreen';
+import { SignupScreen } from '@/features/auth/screens/SignupScreen';
 import { DashboardScreen } from '@/features/dashboard/screens/DashboardScreen';
 import { AdminLayout } from '@/features/admin/layouts/AdminLayout';
 import { AdminOverviewScreen } from '@/features/admin/screens/AdminOverviewScreen';
 import { BulkLeadImportScreen } from '@/features/admin/screens/BulkLeadImportScreen';
 import { EmployeeManagementScreen } from '@/features/admin/screens/EmployeeManagementScreen';
 import { AdminCustomerDirectoryScreen } from '@/features/admin/screens/AdminCustomerDirectoryScreen';
+import { AdminMasterTaxpayerDirectoryScreen } from '@/features/admin/screens/AdminMasterTaxpayerDirectoryScreen';
+import { AdminTaxpayerDetailScreen } from '@/features/admin/screens/AdminTaxpayerDetailScreen';
+import { AdminCouponsScreen } from '@/features/coupons/screens/AdminCouponsScreen';
 import { AdminEmailTemplatesScreen } from '@/features/admin/screens/AdminEmailTemplatesScreen';
 import { AdminReturnedLeadsScreen } from '@/features/admin/screens/AdminReturnedLeadsScreen';
+import { AdminSelfSignupsScreen } from '@/features/admin/screens/AdminSelfSignupsScreen';
 import { DocumenterDepartmentScreen } from '@/features/documenter/screens/DocumenterDepartmentScreen';
 import { DocumenterManagerDashboardScreen } from '@/features/documenter/screens/DocumenterManagerDashboardScreen';
 import { ManagerScorecardsScreen } from '@/features/documenter/screens/ManagerScorecardsScreen';
@@ -34,6 +39,7 @@ import { SalesLayout } from '@/features/sales/layouts/SalesLayout';
 import { SalesDepartmentScreen } from '@/features/sales/screens/SalesDepartmentScreen';
 import { SalesManagerDashboardScreen } from '@/features/sales/screens/SalesManagerDashboardScreen';
 import { SalesManagerQueueScreen } from '@/features/sales/screens/SalesManagerQueueScreen';
+import { SalesManagerDualRoleScreen } from '@/features/sales/screens/SalesManagerDualRoleScreen';
 import { SalesTeamScorecardsScreen } from '@/features/sales/screens/SalesTeamScorecardsScreen';
 import { SalesAgentDashboardScreen } from '@/features/sales/screens/SalesAgentDashboardScreen';
 import { SalesAgentQueueScreen } from '@/features/sales/screens/SalesAgentQueueScreen';
@@ -115,6 +121,14 @@ export const router = createBrowserRouter([
         path: '/login',
         element: <LoginScreen />,
       },
+      {
+        path: '/signup',
+        element: <SignupScreen />,
+      },
+      {
+        path: '/register',
+        element: <SignupScreen />,
+      },
     ],
   },
 
@@ -129,6 +143,18 @@ export const router = createBrowserRouter([
       {
         path: '/notifications',
         element: <NotificationRedirect />,
+      },
+      {
+        path: '/coupons',
+        element: <Navigate to="/admin/coupons" replace />,
+      },
+      {
+        path: '/coupon',
+        element: <Navigate to="/admin/coupons" replace />,
+      },
+      {
+        path: '/discount-coupons',
+        element: <Navigate to="/admin/coupons" replace />,
       },
     ],
   },
@@ -154,12 +180,36 @@ export const router = createBrowserRouter([
             element: <BulkLeadImportScreen />,
           },
           {
+            path: 'self-signups',
+            element: <AdminSelfSignupsScreen />,
+          },
+          {
             path: 'returned-leads',
             element: <AdminReturnedLeadsScreen />,
           },
           {
             path: 'customers',
             element: <AdminCustomerDirectoryScreen />,
+          },
+          {
+            path: 'all-taxpayers',
+            element: <AdminMasterTaxpayerDirectoryScreen />,
+          },
+          {
+            path: 'all-taxpayers/:id',
+            element: <AdminTaxpayerDetailScreen />,
+          },
+          {
+            path: 'coupons',
+            element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'coupon',
+            element: <Navigate to="/admin/coupons" replace />,
+          },
+          {
+            path: 'discount-coupons',
+            element: <Navigate to="/admin/coupons" replace />,
           },
           {
             path: 'employees',
@@ -223,6 +273,10 @@ export const router = createBrowserRouter([
           {
             path: 'manager',
             element: <DocumenterManagerDashboardScreen />,
+          },
+          {
+            path: 'manager/self-signups',
+            element: <AdminSelfSignupsScreen />,
           },
           {
             path: 'manager/scorecards',
@@ -382,8 +436,32 @@ export const router = createBrowserRouter([
             element: <SalesManagerQueueScreen />,
           },
           {
+            path: 'manager/pitch/:id',
+            element: <SalesPitchWorkspaceScreen />,
+          },
+          {
+            path: 'manager/dual-role',
+            element: <SalesManagerDualRoleScreen />,
+          },
+          {
             path: 'manager/team',
             element: <SalesTeamScorecardsScreen />,
+          },
+          {
+            path: 'coupons',
+            element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'manager/coupons',
+            element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'coupon',
+            element: <Navigate to="/sales/coupons" replace />,
+          },
+          {
+            path: 'discount-coupons',
+            element: <Navigate to="/sales/coupons" replace />,
           },
           // Agent / Closer Routes
           {
@@ -513,6 +591,14 @@ export const router = createBrowserRouter([
   },
 
   // 6. Common & Fallback Routes
+  {
+    path: '/portal/vault',
+    element: <Navigate to="/customer/documents" replace />,
+  },
+  {
+    path: '/portal/documents',
+    element: <Navigate to="/customer/documents" replace />,
+  },
   {
     path: '/unauthorized',
     element: <UnauthorizedScreen />,

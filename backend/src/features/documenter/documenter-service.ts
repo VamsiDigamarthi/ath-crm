@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { StorageService } from '../../utils/storage-service.js';
+import { EmailService } from '../../utils/email-service.js';
 import { sanitizeObject } from '../customer/customer-validator.js';
 
 export interface DocumenterLeadQuery {
@@ -28,9 +29,13 @@ export interface DocumenterLeadQuery {
 export class DocumenterService {
   /**
    * Fetch full 360 case details for a single application including ALL historical call logs,
-   * stage history, and uploaded documents
+   * stage history, and uploaded documents, along with authorized multi-year applications
    */
-  public static async getLeadDetails(applicationId: string) {
+  public static async getLeadDetails(
+    applicationId: string,
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const app = await prisma.taxApplication.findUnique({
       where: { id: applicationId },
       include: {
@@ -112,6 +117,61 @@ export class DocumenterService {
       throw new NotFoundError('Tax Application not found');
     }
 
+    // Fetch all tax year applications for this customer profile
+    const allCustomerApps = await prisma.taxApplication.findMany({
+      where: { customerId: app.customerId },
+      select: {
+        id: true,
+        taxYear: true,
+        filingType: true,
+        currentStage: true,
+        taxDraftSummary: true,
+        quotes: {
+          select: {
+            status: true,
+          },
+        },
+        assignedDocAgentId: true,
+        assignedDocAgent: {
+          select: {
+            id: true,
+            email: true,
+            mobile: true,
+            role: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { taxYear: 'desc' },
+    });
+
+    // Scoping check for DOC_AGENT:
+    // If regular calling agent, filter available applications to only those assigned to them.
+    let availableApplications = allCustomerApps;
+    if (currentUserRole === Role.DOC_AGENT && currentUserId) {
+      availableApplications = allCustomerApps.filter(
+        (a) => a.assignedDocAgentId === currentUserId
+      );
+      // Ensure the current app is present if assigned or unassigned
+      if (!availableApplications.some((a) => a.id === app.id)) {
+        if (app.assignedDocAgentId === currentUserId || !app.assignedDocAgentId) {
+          availableApplications.push({
+            id: app.id,
+            taxYear: app.taxYear,
+            filingType: app.filingType,
+            currentStage: app.currentStage,
+            assignedDocAgentId: app.assignedDocAgentId,
+            assignedDocAgent: app.assignedDocAgent,
+            taxDraftSummary: (app as any).taxDraftSummary || null,
+            quotes: (app as any).quotes || [],
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+          });
+        }
+      }
+    }
+
     const formattedCallLogs = app.callLogs.map((c) => ({
       id: c.id,
       applicationId: c.applicationId,
@@ -178,11 +238,43 @@ export class DocumenterService {
       };
     });
 
+    const isPaidClient = Boolean(
+      app.customer?.isConvertedCustomer ||
+      allCustomerApps.some((a: any) =>
+        a.currentStage === ApplicationStage.FILING_SUCCESS ||
+        a.currentStage === ApplicationStage.FILING_QUEUE ||
+        a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+        a.quotes?.some((q: any) => q.status === 'PAID') ||
+        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+        (a as any).taxDraftSummary?.paidAmount > 0
+      )
+    );
+
+    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+    if (isPaidClient) {
+      clientPaymentStatus = 'PAID';
+    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+      clientPaymentStatus = 'NEW';
+    } else {
+      clientPaymentStatus = 'UNPAID';
+    }
+
     return {
       ...app,
+      clientPaymentStatus,
       callLogs: formattedCallLogs,
       stageHistories: formattedStageHistories,
       auditLogs: formattedAuditLogs,
+      availableApplications: availableApplications.map((a) => ({
+        id: a.id,
+        taxYear: a.taxYear,
+        filingType: a.filingType,
+        currentStage: a.currentStage,
+        assignedDocAgentId: a.assignedDocAgentId,
+        assignedDocAgent: a.assignedDocAgent,
+        createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
+        updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
+      })),
     };
   }
 
@@ -327,11 +419,41 @@ export class DocumenterService {
     ] = await Promise.all([
       prisma.taxApplication.findMany({
         where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { taxYear: 'desc' },
+          { createdAt: 'desc' },
+        ],
         include: {
-          customer: true,
+          customer: {
+            include: {
+              applications: {
+                select: {
+                  id: true,
+                  taxYear: true,
+                  filingType: true,
+                  currentStage: true,
+                  taxDraftSummary: true,
+                  quotes: {
+                    select: {
+                      status: true,
+                    },
+                  },
+                  assignedDocAgentId: true,
+                  assignedDocAgent: {
+                    select: {
+                      id: true,
+                      email: true,
+                      mobile: true,
+                      role: true,
+                    },
+                  },
+                  createdAt: true,
+                  updatedAt: true,
+                },
+                orderBy: { taxYear: 'desc' },
+              },
+            },
+          },
           assignedDocAgent: {
             select: {
               id: true,
@@ -431,7 +553,6 @@ export class DocumenterService {
       }),
     ]);
 
-    const totalPages = Math.ceil(totalItems / limit) || 1;
     const contactRatePct = todayDialsCount > 0 
       ? Number(((todayConnectedCount / todayDialsCount) * 100).toFixed(1)) 
       : 0;
@@ -533,17 +654,106 @@ export class DocumenterService {
       };
     });
 
-    const mappedLeads = leads.map((app) => ({
-      ...app,
-      lastCallLog: app.callLogs?.[0] || null,
-    }));
+    // Group matching applications by customerId so each customer appears as exactly 1 row
+    const customerGroupsMap = new Map<string, typeof leads[0][]>();
+    for (const app of leads) {
+      const cId = app.customerId;
+      if (!customerGroupsMap.has(cId)) {
+        customerGroupsMap.set(cId, []);
+      }
+      customerGroupsMap.get(cId)!.push(app);
+    }
+
+    const groupedLeads: any[] = [];
+    for (const [, appsList] of customerGroupsMap.entries()) {
+      // Pick primary/representative application:
+      // If tab is UNASSIGNED, pick the unassigned application
+      // Otherwise pick the most actionable application or highest tax year
+      let primaryApp = appsList[0];
+      if (tab === 'UNASSIGNED') {
+        const unassigned = appsList.find((a) => !a.assignedDocAgentId);
+        if (unassigned) primaryApp = unassigned;
+      } else {
+        const activeStageApp = appsList.find(
+          (a) => a.currentStage === ApplicationStage.DOC_OUTREACH || a.currentStage === ApplicationStage.DOC_PREP
+        );
+        if (activeStageApp) primaryApp = activeStageApp;
+      }
+
+      const customer = primaryApp.customer;
+      const allCustomerApps = (customer as any)?.applications || [];
+
+      // Find previous doc agent from any other applications for this customer
+      let previousDocAgent: { id: string; email: string; name?: string; taxYear?: number } | null = null;
+      const priorAppWithAgent = allCustomerApps.find(
+        (a: any) => a.assignedDocAgent && a.assignedDocAgentId !== primaryApp.assignedDocAgentId
+      );
+      if (priorAppWithAgent && priorAppWithAgent.assignedDocAgent) {
+        const email = priorAppWithAgent.assignedDocAgent.email || '';
+        const rawName = email.split('@')[0].replace('.', ' ');
+        const name = rawName.split(' ').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        previousDocAgent = {
+          id: priorAppWithAgent.assignedDocAgent.id,
+          email: priorAppWithAgent.assignedDocAgent.email,
+          name,
+          taxYear: priorAppWithAgent.taxYear,
+        };
+      }
+
+      // If current user is DOC_AGENT, filter visibleApplications to only those assigned to this agent
+      let visibleApplications = allCustomerApps;
+      if (currentUserRole === Role.DOC_AGENT && currentUserId) {
+        visibleApplications = allCustomerApps.filter((a: any) => a.assignedDocAgentId === currentUserId);
+      }
+
+      const isPaidClient = Boolean(
+        customer?.isConvertedCustomer ||
+        allCustomerApps.some((a: any) =>
+          a.currentStage === ApplicationStage.FILING_SUCCESS ||
+          a.currentStage === ApplicationStage.FILING_QUEUE ||
+          a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+          a.quotes?.some((q: any) => q.status === 'PAID') ||
+          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+          (a as any).taxDraftSummary?.paidAmount > 0
+        )
+      );
+
+      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+      if (isPaidClient) {
+        clientPaymentStatus = 'PAID';
+      } else if (allCustomerApps.length <= 1 && (primaryApp.currentStage === ApplicationStage.RAW_PROSPECT || primaryApp.currentStage === ApplicationStage.DOC_OUTREACH)) {
+        clientPaymentStatus = 'NEW';
+      } else {
+        clientPaymentStatus = 'UNPAID';
+      }
+
+      groupedLeads.push({
+        ...primaryApp,
+        lastCallLog: primaryApp.callLogs?.[0] || null,
+        clientPaymentStatus,
+        allApplications: visibleApplications.map((a: any) => ({
+          id: a.id,
+          taxYear: a.taxYear,
+          filingType: a.filingType,
+          currentStage: a.currentStage,
+          assignedDocAgentId: a.assignedDocAgentId,
+          assignedDocAgent: a.assignedDocAgent,
+        })),
+        previousDocAgent,
+        totalTaxYears: visibleApplications.length,
+      });
+    }
+
+    const totalGroupedItems = groupedLeads.length;
+    const totalPages = Math.ceil(totalGroupedItems / limit) || 1;
+    const paginatedLeads = groupedLeads.slice(skip, skip + limit);
 
     return {
-      leads: mappedLeads,
+      leads: paginatedLeads,
       pagination: {
         currentPage: page,
         totalPages,
-        totalItems,
+        totalItems: totalGroupedItems,
         itemsPerPage: limit,
       },
       stats: {
@@ -812,8 +1022,9 @@ export class DocumenterService {
     applicationIds: string[];
     targetAgentId: string;
     assignedByUserId: string;
+    alsoAssignAsSales?: boolean;
   }) {
-    const { applicationIds, targetAgentId, assignedByUserId } = options;
+    const { applicationIds, targetAgentId, assignedByUserId, alsoAssignAsSales = false } = options;
 
     if (!applicationIds || applicationIds.length === 0) {
       throw new Error('No leads selected for assignment');
@@ -853,6 +1064,8 @@ export class DocumenterService {
           id: true, 
           currentStage: true, 
           assignedDocAgentId: true,
+          assignedSalesAgentId: true,
+          isDualDocSalesRole: true,
           taxDraftSummary: true,
           customer: {
             select: { firstName: true, lastName: true }
@@ -873,24 +1086,36 @@ export class DocumenterService {
           agentEmail: targetAgent.email,
           role: targetAgent.role,
           action: 'ASSIGNED',
+          isDualDocSalesRole: Boolean(alsoAssignAsSales),
           assignedAt: nowIso,
           assignedByUserId,
           assignedByUserName: assignerName,
           assignedByUserRole: assignedByUser?.role || 'ADMIN',
         };
 
+        const updatedSummary = {
+          ...prevSummary,
+          assignmentHistory: [...prevHistory, newHistoryEntry],
+          isReturnedToPool: false,
+          isDualDocSalesRole: Boolean(alsoAssignAsSales),
+          dualRoleAssigned: Boolean(alsoAssignAsSales),
+          dualRoleAssignedAt: alsoAssignAsSales ? nowIso : undefined,
+        };
+
         await tx.taxApplication.update({
           where: { id: app.id },
           data: {
             assignedDocAgentId: targetAgentId,
+            ...(alsoAssignAsSales ? { assignedSalesAgentId: targetAgentId } : {}),
+            isDualDocSalesRole: Boolean(alsoAssignAsSales),
             currentStage: ApplicationStage.DOC_OUTREACH,
-            taxDraftSummary: {
-              ...prevSummary,
-              assignmentHistory: [...prevHistory, newHistoryEntry],
-              isReturnedToPool: false,
-            },
+            taxDraftSummary: updatedSummary,
           },
         });
+
+        const roleRemark = alsoAssignAsSales 
+          ? `directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}) as DUAL-ROLE (Documenter Intake + Sales Closer).`
+          : `directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}).`;
 
         await tx.stageHistory.create({
           data: {
@@ -898,7 +1123,7 @@ export class DocumenterService {
             fromStage: app.currentStage,
             toStage: ApplicationStage.DOC_OUTREACH,
             movedByUserId: assignedByUserId,
-            remarks: `${assignerRoleTitle} ${assignerName} (${assignedByUser?.email || 'admin'}) directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}). Stage progressed from ${app.currentStage} → DOC_OUTREACH. Lead placed in agent calling queue.`,
+            remarks: `${assignerRoleTitle} ${assignerName} (${assignedByUser?.email || 'admin'}) ${roleRemark} Stage progressed from ${app.currentStage} → DOC_OUTREACH. Lead placed in agent calling queue.`,
           },
         });
 
@@ -917,6 +1142,7 @@ export class DocumenterService {
               targetAgentName,
               targetAgentEmail: targetAgent.email,
               actionType: 'DIRECT_ASSIGNMENT',
+              isDualDocSalesRole: Boolean(alsoAssignAsSales),
               timestamp: nowIso,
             },
           },
@@ -928,9 +1154,11 @@ export class DocumenterService {
         data: {
           recipientUserId: targetAgent.id,
           title: apps.length === 1 
-            ? `1 New Lead Assigned to Your Calling Queue` 
-            : `${apps.length} New Leads Assigned to Your Calling Queue`,
-          message: `${assignerName} directly assigned ${apps.length} tax intake lead${apps.length > 1 ? 's' : ''} to your queue. Ready for taxpayer outreach!`,
+            ? (alsoAssignAsSales ? `1 Dual-Role Lead Assigned (Doc + Sales)` : `1 New Lead Assigned to Your Calling Queue`)
+            : (alsoAssignAsSales ? `${apps.length} Dual-Role Leads Assigned (Doc + Sales)` : `${apps.length} New Leads Assigned to Your Calling Queue`),
+          message: alsoAssignAsSales
+            ? `${assignerName} assigned ${apps.length} lead${apps.length > 1 ? 's' : ''} to you with Dual-Role responsibility (Documenter Intake + Downstream Sales Closer).`
+            : `${assignerName} directly assigned ${apps.length} tax intake lead${apps.length > 1 ? 's' : ''} to your queue. Ready for taxpayer outreach!`,
           category: 'DOCUMENTER',
           priority: 'HIGH',
           actionUrl: '/documenter/agent/queue',
@@ -944,6 +1172,7 @@ export class DocumenterService {
 
       return {
         assignedCount: apps.length,
+        isDualDocSalesRole: Boolean(alsoAssignAsSales),
         targetAgent: {
           id: targetAgent.id,
           email: targetAgent.email,
@@ -1106,7 +1335,7 @@ export class DocumenterService {
           targetStage = ApplicationStage.DOC_OUTREACH;
           auditRemark = subDisposition
             ? `Lead agreed & interested in filing (${subDisposition}). Provisioned Client Portal access for taxpayer.`
-            : `Lead agreed & interested in filing. Provisioned Client Portal access for taxpayer (9-Module Organizer & Document Vault).`;
+            : `Lead agreed & interested in filing. Provisioned Client Portal access for taxpayer (Tax Organizer & Document Vault).`;
 
           // Lazy Taxpayer User Provisioning
           if (!app.customer.userId && (app.customer.email || app.customer.phone)) {
@@ -1984,5 +2213,244 @@ export class DocumenterService {
     });
 
     return updated;
+  }
+
+  /**
+   * Send notification / email to client requesting specific missing document categories
+   */
+  public static async requestMissingDocuments(
+    leadOrAppId: string,
+    agentUserId: string,
+    payload: {
+      documentCategories: string[];
+      customNotes?: string;
+      sendInApp: boolean;
+      sendEmail: boolean;
+    }
+  ) {
+    const { documentCategories = [], customNotes = '', sendInApp = true, sendEmail = false } = payload;
+    if (documentCategories.length === 0 && !customNotes?.trim()) {
+      throw new Error('Please select at least one document category or enter a custom note.');
+    }
+    if (!sendInApp && !sendEmail) {
+      throw new Error('Please select at least one delivery channel (Notification or Email).');
+    }
+
+    // Find lead/application
+    const app = await prisma.taxApplication.findFirst({
+      where: {
+        OR: [{ id: leadOrAppId }, { customerId: leadOrAppId }],
+      },
+      include: {
+        customer: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const agentUser = await prisma.user.findUnique({
+      where: { id: agentUserId },
+      select: { id: true, firstName: true, lastName: true, email: true, role: true },
+    });
+    const actorName = agentUser ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email : 'Operations Staff';
+
+    const customerUser = app.customer.user;
+    const customerEmail = app.customer.email || customerUser?.email;
+    const customerName = `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || 'Taxpayer';
+
+    const categoryListFormatted = documentCategories.map((c) => `• ${c}`).join('\n');
+    const noteFormatted = customNotes?.trim() ? `\n\nStaff Note:\n"${customNotes.trim()}"` : '';
+
+    let inAppDelivered = false;
+    let emailDelivered = false;
+    let docAgentNotified = false;
+
+    // 1. In-App Notification to Customer
+    if (sendInApp && customerUser?.id) {
+      await prisma.notification.create({
+        data: {
+          recipientUserId: customerUser.id,
+          applicationId: app.id,
+          title: 'Action Required: Missing Tax Documents Requested',
+          message: `Your tax agent (${actorName}) requested the following document(s):\n${categoryListFormatted}${noteFormatted}`,
+          category: NotificationCategory.DOCUMENTER,
+          priority: NotificationPriority.HIGH,
+          actionUrl: '/customer/documents',
+          actionLabel: 'Upload to Document Vault',
+          relatedLeadName: customerName,
+        },
+      });
+      inAppDelivered = true;
+    }
+
+    // 2. Email Dispatch to Customer
+    if (sendEmail && customerEmail) {
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 18px; border-radius: 8px; text-align: center; color: white; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 20px;">Tax Documentation Required</h2>
+            <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Tax Year ${app.taxYear} Preparation</p>
+          </div>
+          <p>Dear <strong>${customerName}</strong>,</p>
+          <p>Our tax operations team is reviewing your <strong>Tax Year ${app.taxYear}</strong> return. To ensure accurate calculations, maximize your tax deductions, and avoid filing delays, please upload the following missing document(s) to your secure portal:</p>
+          <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #16a34a; margin: 16px 0;">
+            <h4 style="margin: 0 0 10px 0; color: #0f172a; font-size: 14px;">Requested Documents:</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${documentCategories.map((c) => `<li style="margin-bottom: 6px; font-weight: bold; color: #334155;">${c}</li>`).join('')}
+            </ul>
+            ${customNotes?.trim() ? `<p style="margin-top: 12px; font-style: italic; color: #64748b; font-size: 13px;"><strong>Agent Note:</strong> ${customNotes.trim()}</p>` : ''}
+          </div>
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${process.env.APP_URL || 'http://localhost:5173'}/customer/documents" style="background-color: #16a34a; color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px;">Upload Missing Documents</a>
+          </div>
+          <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 24px;">
+            Requested by: <strong>${actorName}</strong> (${agentUser?.role || 'Tax Operations Team'})<br/>
+            TaxCRM Client Secure Vault
+          </p>
+        </div>
+      `;
+
+      await EmailService.sendEmail({
+        to: customerEmail,
+        subject: `[Action Required] Missing Tax Documents Needed for TY${app.taxYear} - ${customerName}`,
+        text: `Dear ${customerName},\n\nPlease upload the following missing document(s) for your TY${app.taxYear} return:\n${categoryListFormatted}${noteFormatted}\n\nUpload link: ${process.env.APP_URL || 'http://localhost:5173'}/customer/documents`,
+        html: emailHtml,
+      });
+      emailDelivered = true;
+    }
+
+    // 3. In-App Notification & Email to the Document Agent who handled/verified this lead
+    let docAgentUser = app.assignedDocAgentId 
+      ? await prisma.user.findUnique({ where: { id: app.assignedDocAgentId }, select: { id: true, firstName: true, lastName: true, email: true, role: true } })
+      : null;
+
+    if (!docAgentUser) {
+      const docHistory = await prisma.stageHistory.findFirst({
+        where: {
+          applicationId: app.id,
+          movedByUser: {
+            role: { in: [Role.DOC_AGENT, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD] },
+          },
+        },
+        include: {
+          movedByUser: {
+            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (docHistory?.movedByUser) {
+        docAgentUser = docHistory.movedByUser;
+      }
+    }
+
+    if (docAgentUser && docAgentUser.id !== agentUserId) {
+      const docAgentName = `${docAgentUser.firstName || ''} ${docAgentUser.lastName || ''}`.trim() || 'Document Agent';
+
+      // 3a. In-App Notification to Document Agent
+      await prisma.notification.create({
+        data: {
+          recipientUserId: docAgentUser.id,
+          applicationId: app.id,
+          title: `Missing Documents Requested: ${customerName}`,
+          message: `${actorName} (${agentUser?.role || 'Tax Operations'}) requested missing documents from client ${customerName} (TY${app.taxYear}):\n${categoryListFormatted}${noteFormatted}`,
+          category: NotificationCategory.DOCUMENTER,
+          priority: NotificationPriority.HIGH,
+          actionUrl: `/documenter?leadId=${app.id}`,
+          actionLabel: 'View Lead in Documenter',
+          relatedLeadName: customerName,
+        },
+      });
+
+      // 3b. Email to Document Agent
+      if (sendEmail && docAgentUser.email) {
+        const docAgentEmailHtml = `
+          <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <div style="background: linear-gradient(135deg, #7c3aed, #6d28d9); padding: 18px; border-radius: 8px; text-align: center; color: white; margin-bottom: 20px;">
+              <h2 style="margin: 0; font-size: 20px;">Missing Documents Alert</h2>
+              <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Client: ${customerName} • TY${app.taxYear}</p>
+            </div>
+            <p>Hello <strong>${docAgentName}</strong>,</p>
+            <p><strong>${actorName}</strong> (${agentUser?.role || 'Tax Operations'}) has requested additional missing documents from client <strong>${customerName}</strong>:</p>
+            <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #7c3aed; margin: 16px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #0f172a; font-size: 14px;">Requested Documents:</h4>
+              <ul style="margin: 0; padding-left: 20px;">
+                ${documentCategories.map((c) => `<li style="margin-bottom: 6px; font-weight: bold; color: #334155;">${c}</li>`).join('')}
+              </ul>
+              ${customNotes?.trim() ? `<p style="margin-top: 12px; font-style: italic; color: #64748b; font-size: 13px;"><strong>Staff Note:</strong> ${customNotes.trim()}</p>` : ''}
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 24px;">
+              TaxCRM Operations Workflow Dispatch
+            </p>
+          </div>
+        `;
+
+        await EmailService.sendEmail({
+          to: docAgentUser.email,
+          subject: `[Missing Documents Alert] ${actorName} requested documents for ${customerName}`,
+          text: `Hello ${docAgentName},\n\n${actorName} requested missing documents for ${customerName}:\n${categoryListFormatted}${noteFormatted}`,
+          html: docAgentEmailHtml,
+        });
+      }
+
+      docAgentNotified = true;
+    }
+
+    const channelsUsed = [
+      inAppDelivered && 'In-App Notification to Client',
+      emailDelivered && `Email to Client (${customerEmail})`,
+      docAgentNotified && 'Notification to Document Agent',
+    ].filter(Boolean).join(', ');
+
+    // 4. Record AuditLog
+    await prisma.auditLog.create({
+      data: {
+        applicationId: app.id,
+        actorId: agentUserId,
+        actorType: 'AGENT',
+        actorName,
+        actorRole: agentUser?.role || 'DOC_AGENT',
+        action: 'STAGE_CHANGE',
+        moduleKey: 'DOCUMENT_VAULT',
+        details: {
+          actionType: 'MISSING_DOCUMENTS_REQUESTED',
+          requestedCategories: documentCategories,
+          customNotes,
+          sendInApp,
+          sendEmail,
+          recipientEmail: customerEmail,
+          docAgentNotified,
+          timestamp: new Date().toISOString(),
+          remarks: `${actorName} requested missing documents (${documentCategories.join(', ')}) via ${channelsUsed || 'Portal'}.`,
+        },
+      },
+    });
+
+    // 5. Record StageHistory note
+    await prisma.stageHistory.create({
+      data: {
+        applicationId: app.id,
+        fromStage: app.currentStage,
+        toStage: app.currentStage,
+        remarks: `Requested missing documents: ${documentCategories.slice(0, 3).join(', ')}${documentCategories.length > 3 ? ` (+${documentCategories.length - 3} more)` : ''}. Dispatched to Client${docAgentNotified ? ' & Document Agent' : ''}.`,
+        movedByUserId: agentUserId,
+      },
+    });
+
+    return {
+      success: true,
+      documentCategories,
+      sendInApp: inAppDelivered,
+      sendEmail: emailDelivered,
+      docAgentNotified,
+      recipientEmail: customerEmail,
+      message: `Successfully sent missing documents request to ${customerName}${docAgentNotified ? ' and notified Document Agent' : ''}! 🚀`,
+    };
   }
 }

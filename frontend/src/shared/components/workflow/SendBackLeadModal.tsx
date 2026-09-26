@@ -4,6 +4,9 @@ import {
   X, 
   RotateCcw, 
   CheckCircle2, 
+  UploadCloud,
+  FileText,
+  Paperclip,
 } from 'lucide-react';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
@@ -36,7 +39,8 @@ export interface SendBackLeadModalProps {
 }
 
 const COMMON_REVERT_REASONS = [
-  { id: 'MISSING_DOCUMENTS', label: 'Missing Required Tax Documents', desc: 'W-2s, 1099s, or health coverage forms not uploaded' },
+  { id: 'MISSING_DOCUMENTS', label: 'Documents missed at Documents team / P-Team (W-2, 1099, Receipts)', desc: 'W-2s, 1099s, or receipts not uploaded or missed' },
+  { id: 'STATE_RETURN_ADDITION_CORRECTION', label: 'State Tax Return Addition / Correction', desc: 'Add new state return, update multi-state allocation, or adjust state withholdings' },
   { id: 'INCOMPLETE_ORGANIZER', label: 'Incomplete Tax Organizer', desc: 'Missing answers for residency, dependents, or foreign assets' },
   { id: 'DATA_DISCREPANCY', label: 'Data Discrepancy / Validation Error', desc: 'Uploaded documents mismatch entered figures or SSN' },
   { id: 'TAXPAYER_CLARIFICATION', label: 'Taxpayer Clarification Needed', desc: 'Need direct client confirmation on marital status or state residency' },
@@ -45,7 +49,8 @@ const COMMON_REVERT_REASONS = [
 
 const SALES_REVERT_REASONS = [
   { id: 'TAX_REDUCTION_REQUEST', label: 'Taxpayer Requested Lower Tax / Review Deductions', desc: 'Client requested CPA review deductions, credits or minimize balance due' },
-  { id: 'MISSING_DOCUMENTS', label: 'Client Uploading Additional Documents', desc: 'Client has additional W-2, 1099, 1098, or expense receipts to attach' },
+  { id: 'MISSING_DOCUMENTS', label: 'Documents missed at Documents team / P-Team (W-2, 1099, Receipts)', desc: 'Client or staff identified missing tax documents (W-2, 1099, Receipts)' },
+  { id: 'STATE_RETURN_ADDITION_CORRECTION', label: 'State Tax Return Addition / Correction', desc: 'Add new state return, update multi-state allocation, or adjust state withholdings' },
   { id: 'FILING_STATUS_CHANGE', label: 'Filing Status / Dependent Adjustment', desc: 'Client requested change to Single / Married Filing Jointly / Dependents' },
   { id: 'DATA_DISCREPANCY', label: 'Data Discrepancy / Calculation Adjustment', desc: 'Income or withholding figures need correction after client discussion' },
   { id: 'TAXPAYER_CLARIFICATION', label: 'Taxpayer Clarification / Policy Inquiry', desc: 'Need preparer or documenter to verify specific client rules' },
@@ -114,6 +119,7 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
   const [selectedDocTags, setSelectedDocTags] = useState<string[]>([]);
   const [customDocInput, setCustomDocInput] = useState<string>('');
   const [revertNotes, setRevertNotes] = useState<string>('');
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   React.useEffect(() => {
@@ -123,6 +129,7 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
       setSelectedDocTags([]);
       setCustomDocInput('');
       setRevertNotes('');
+      setUploadedFiles([]);
     }
   }, [isOpen, defaultTargetDepartment, currentDepartment]);
 
@@ -157,22 +164,42 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const payload = {
-        applicationId,
-        sourceDepartment: currentDepartment,
-        targetDepartment,
-        reasonCategory: selectedReason,
-        missingDocumentTypes: selectedDocTags,
-        revertNotes: revertNotes.trim(),
-      };
+      let response: any;
 
-      const response: any = await apiClient.post('/workflow/revert', payload);
+      if (uploadedFiles.length > 0) {
+        const formData = new FormData();
+        formData.append('applicationId', applicationId);
+        formData.append('sourceDepartment', currentDepartment);
+        formData.append('targetDepartment', targetDepartment);
+        formData.append('reasonCategory', selectedReason);
+        formData.append('missingDocumentTypes', JSON.stringify(selectedDocTags));
+        formData.append('revertNotes', revertNotes.trim());
+        uploadedFiles.forEach((file) => {
+          formData.append('files', file);
+        });
+
+        response = await apiClient.post('/workflow/revert', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        const payload = {
+          applicationId,
+          sourceDepartment: currentDepartment,
+          targetDepartment,
+          reasonCategory: selectedReason,
+          missingDocumentTypes: selectedDocTags,
+          revertNotes: revertNotes.trim(),
+        };
+
+        response = await apiClient.post('/workflow/revert', payload);
+      }
+
       const data = response?.data || response;
 
       toast.success(
         `Lead successfully reverted back to ${
           targetDepartment === 'DOCUMENTER' ? 'Documenter Department' : targetDepartment
-        }!`,
+        }!${uploadedFiles.length > 0 ? ` (${uploadedFiles.length} document${uploadedFiles.length > 1 ? 's' : ''} uploaded)` : ''}`,
         { duration: 4500 }
       );
 
@@ -194,7 +221,7 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
       isOpen={isOpen}
       onClose={() => !isSubmitting && onClose()}
       title="Send Back & Revert Return File"
-      width="840px"
+      size="xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 font-sans text-slate-800">
         {/* 1. Header Information Banner */}
@@ -431,7 +458,101 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
           </div>
         </div>
 
-        {/* 4. Footer Actions */}
+        {/* 4. Sales Direct Document Upload to P-Team / Recipient (Only for Sales Revert) */}
+        {currentDepartment === 'SALES' && (
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-50/70 to-indigo-50/40 border border-blue-200/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-2xs">
+                  <UploadCloud className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                    Upload Documents for {targetDepartment === 'PREPARATION' ? 'Tax Preparer (P-Team)' : 'Documenter'}
+                  </label>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Attach additional W-2, 1099, receipts, or files provided by client during the sales call.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
+                Sales to {targetDepartment === 'PREPARATION' ? 'Preparer' : 'Documenter'}
+              </span>
+            </div>
+
+            {/* Dropzone / File Picker */}
+            <div className="relative border-2 border-dashed border-blue-300 hover:border-blue-500 bg-white/90 hover:bg-blue-50/40 rounded-xl p-3 text-center transition-all cursor-pointer">
+              <input
+                type="file"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    const newFiles = Array.from(e.target.files);
+                    setUploadedFiles((prev) => [...prev, ...newFiles]);
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.csv,.txt"
+              />
+              <div className="flex items-center justify-center gap-2 text-slate-600">
+                <UploadCloud className="w-4 h-4 text-blue-600 shrink-0" />
+                <p className="text-xs font-semibold text-slate-800">
+                  <span className="text-blue-600 font-bold hover:underline">Click to browse files</span> or drag and drop here
+                </p>
+                <span className="text-[10px] text-slate-400 hidden sm:inline">(PDF, Images, Excel, Word up to 50MB)</span>
+              </div>
+            </div>
+
+            {/* List of Uploaded Files */}
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-1.5 pt-0.5">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                  <span className="flex items-center gap-1">
+                    <Paperclip className="w-3 h-3 text-blue-600" />
+                    <span>Attached Client Documents ({uploadedFiles.length}):</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setUploadedFiles([])}
+                    className="text-rose-600 hover:text-rose-800 text-[10px] font-semibold cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-32 overflow-y-auto pr-1">
+                  {uploadedFiles.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 shadow-2xs text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 truncate text-[11px]" title={file.name}>
+                            {file.name}
+                          </p>
+                          <p className="text-[9px] text-slate-400 font-medium">
+                            {(file.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUploadedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
+                        title="Remove file"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 5. Footer Actions */}
         <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
           <Button
             type="button"

@@ -463,35 +463,7 @@ export const validateModule3 = (
     }
   });
 
-  return errors;
-};
-
-/**
- * Validates Module 4: W-2 Wages & Rental Properties
- */
-export const validateModule4 = (
-  data?: OrganizerData['m4_wages'],
-  _selectedTaxYear: number = 2025
-): ValidationErrorMap => {
-  const errors: ValidationErrorMap = {};
-  if (!data) return errors;
-
-  // 1. Primary Employer Name
-  const empName = (data.employerName || '').trim();
-  if (!empName) {
-    errors.employerName = 'Primary Employer Name is required (as listed on Form W-2)';
-  } else if (empName.length < 2) {
-    errors.employerName = 'Employer name must be at least 2 characters';
-  }
-
-  // 2. Box 1 Estimated Total Wages
-  if (data.estimatedWages === undefined || data.estimatedWages === null) {
-    errors.estimatedWages = 'Box 1 Total Wages ($) is required (as listed on Form W-2)';
-  } else if (isNaN(data.estimatedWages) || data.estimatedWages <= 0) {
-    errors.estimatedWages = 'Total Wages must be greater than $0';
-  }
-
-  // 3. Rental Properties Validation
+  // 5. Rental Properties Validation
   const rentals = data.rentalProperties || [];
   rentals.forEach((prop, idx) => {
     const addr = (prop.address || '').trim();
@@ -533,6 +505,34 @@ export const validateModule4 = (
       }
     }
   });
+
+  return errors;
+};
+
+/**
+ * Validates Module 4: Form W-2 Wages
+ */
+export const validateModule4 = (
+  data?: OrganizerData['m4_wages'],
+  _selectedTaxYear: number = 2025
+): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) return errors;
+
+  // 1. Primary Employer Name
+  const empName = (data.employerName || '').trim();
+  if (!empName) {
+    errors.employerName = 'Primary Employer Name is required (as listed on Form W-2)';
+  } else if (empName.length < 2) {
+    errors.employerName = 'Employer name must be at least 2 characters';
+  }
+
+  // 2. Box 1 Estimated Total Wages
+  if (data.estimatedWages === undefined || data.estimatedWages === null) {
+    errors.estimatedWages = 'Box 1 Total Wages ($) is required (as listed on Form W-2)';
+  } else if (isNaN(data.estimatedWages) || data.estimatedWages <= 0) {
+    errors.estimatedWages = 'Total Wages must be greater than $0';
+  }
 
   return errors;
 };
@@ -872,7 +872,12 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
     }
     case 'm3': {
       const m3 = organizerData.m3_presence;
-      return Boolean(m3 && m3.days2025 !== undefined && m3.days2025 > 0);
+      return Boolean(
+        m3 &&
+        ((m3.days2025 !== undefined && m3.days2025 > 0) ||
+          (m3.rentalProperties && m3.rentalProperties.length > 0) ||
+          (m3.statesResidedHistory && m3.statesResidedHistory.length > 0))
+      );
     }
     case 'm4': {
       const m4 = organizerData.m4_wages;
@@ -927,6 +932,14 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
     case 'm9': {
       const m9 = organizerData.m9_directDeposit;
       return Boolean(m9 && m9.bankName && m9.routingNumber && m9.accountNumber && m9.accountOwnerName);
+    }
+    case 'm_income_expenses': {
+      return (
+        isModuleCompleted('m4', organizerData) ||
+        isModuleCompleted('m5', organizerData) ||
+        isModuleCompleted('m6', organizerData) ||
+        isModuleCompleted('m8', organizerData)
+      );
     }
     default:
       return false;

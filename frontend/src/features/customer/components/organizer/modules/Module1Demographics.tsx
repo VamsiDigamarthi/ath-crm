@@ -343,14 +343,18 @@ export const Module1Demographics: React.FC<Module1Props> = ({
           <AppSelect
             label="Filing / Marital Status *"
             options={[
-              { label: 'Single ($15,000 Standard Deduction)', value: 'Single' },
-              { label: 'Married Filing Jointly ($30,000 Deduction)', value: 'Married Filing Jointly' },
-              { label: 'Married Filing Separately ($15,000 Deduction)', value: 'Married Filing Separately' },
-              { label: 'Head of Household ($22,500 Deduction)', value: 'Head of Household' },
+              { label: 'Single', value: 'Single' },
+              { label: 'Married', value: 'Married' },
+              { label: 'Married Filing Separately', value: 'Married Filing Separately' },
+              { label: 'Head of Household', value: 'Head of Household' },
               { label: 'Widowed / Qualifying Surviving Spouse', value: 'Widowed' },
             ]}
             error={errors.maritalStatus}
-            value={d.maritalStatus === 'Married' ? 'Married Filing Jointly' : (d.maritalStatus || '')}
+            value={
+              d.maritalStatus === 'Married Filing Jointly' || d.maritalStatus === 'Married'
+                ? 'Married'
+                : (d.maritalStatus || '')
+            }
             onChange={(val) => {
               const selectedMarital = val || '';
               handleFieldChange('maritalStatus', selectedMarital);

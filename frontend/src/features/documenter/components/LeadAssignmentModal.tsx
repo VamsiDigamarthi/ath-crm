@@ -7,7 +7,9 @@ import {
   UserCheck, 
   Sparkles,
   Headphones,
-  Users
+  Users,
+  DollarSign,
+  Check
 } from 'lucide-react';
 import type { DocumenterAgentItem, DocumenterLeadItem } from '../types/documenter.types';
 
@@ -16,7 +18,7 @@ export interface LeadAssignmentModalProps {
   onClose: () => void;
   selectedLeads: DocumenterLeadItem[];
   agents: DocumenterAgentItem[];
-  onConfirmDirectAssign: (agentId: string) => void;
+  onConfirmDirectAssign: (agentId: string, options?: { alsoAssignAsSales?: boolean }) => void;
   onConfirmRoundRobin: () => void;
   isLoading?: boolean;
 }
@@ -32,6 +34,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
 }) => {
   const [assignmentMode, setAssignmentMode] = useState<'ROUND_ROBIN' | 'DIRECT'>('ROUND_ROBIN');
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+  const [alsoAssignAsSales, setAlsoAssignAsSales] = useState<boolean>(false);
   const [searchAgent, setSearchAgent] = useState<string>('');
 
   const leadCount = selectedLeads.length;
@@ -49,11 +52,16 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
     return ids;
   }, [selectedLeads]);
 
-  // Exclusively filter for frontline Documenter Calling Agents (DOC_AGENT)
-  // Managers (DOC_MANAGER) and Team Leads (DOC_TEAM_LEAD) are strictly excluded from lead intake queues
+  // Filter for frontline Documenter Calling Agents (DOC_AGENT) and Sales Closers (SALES_AGENT)
+  const hasSalesAgents = useMemo(() => agents.some((a) => a.role === 'SALES_AGENT'), [agents]);
+
   const callingAgents = useMemo(() => {
-    return agents.filter((a) => a.role === 'DOC_AGENT');
+    return agents.filter((a) => a.role === 'DOC_AGENT' || a.role === 'SALES_AGENT');
   }, [agents]);
+
+  const selectedAgent = useMemo(() => {
+    return callingAgents.find((a) => a.id === selectedAgentId);
+  }, [callingAgents, selectedAgentId]);
 
   // Filter calling agents for search queries in Direct Selection mode
   const filteredAgents = useMemo(() => {
@@ -72,7 +80,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
       onConfirmRoundRobin();
     } else {
       if (!selectedAgentId || currentlyAssignedAgentIds.has(selectedAgentId)) return;
-      onConfirmDirectAssign(selectedAgentId);
+      onConfirmDirectAssign(selectedAgentId, { alsoAssignAsSales });
     }
   };
 
@@ -86,11 +94,11 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <span>Distribute &amp; Assign Tax Leads</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              Calling Agents Only
+              {hasSalesAgents ? 'Calling Agents & Closers' : 'Calling Agents Only'}
             </span>
           </h3>
           <p className="text-xs text-slate-500 font-medium">
-            Assign {leadCount} selected {leadCount === 1 ? 'lead' : 'leads'} to Documenter Calling Agents
+            Assign {leadCount} selected {leadCount === 1 ? 'lead' : 'leads'} to {hasSalesAgents ? 'Calling Agents or Sales Closers' : 'Documenter Calling Agents'}
           </p>
         </div>
       }
@@ -101,6 +109,17 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
               <span className="flex items-center gap-1 text-emerald-700 font-bold">
                 <Sparkles className="w-3.5 h-3.5 text-[#16A34A]" />
                 Auto-balanced across {callingAgents.length} Calling Agents
+              </span>
+            ) : selectedAgent ? (
+              <span className="flex items-center gap-1.5 text-slate-700 font-bold flex-wrap">
+                <span className="text-slate-500 font-medium">Assigning to:</span>
+                <span className="text-emerald-700 font-bold">{selectedAgent.email}</span>
+                {alsoAssignAsSales && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1 animate-in fade-in">
+                    <Sparkles className="w-2.5 h-2.5 text-indigo-600" />
+                    + Sales Closer
+                  </span>
+                )}
               </span>
             ) : (
               <span>Select a calling agent to assign</span>
@@ -120,15 +139,53 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
               size="sm"
               onClick={handleConfirm}
               disabled={isLoading || (assignmentMode === 'DIRECT' && (!selectedAgentId || currentlyAssignedAgentIds.has(selectedAgentId)))}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs px-4 shadow-sm cursor-pointer"
+              className={`text-white font-bold text-xs px-4 shadow-sm cursor-pointer transition-all ${
+                alsoAssignAsSales && assignmentMode === 'DIRECT'
+                  ? 'bg-gradient-to-r from-[#16A34A] to-indigo-600 hover:from-[#15803D] hover:to-indigo-700'
+                  : 'bg-[#16A34A] hover:bg-[#15803D]'
+              }`}
             >
-              {isLoading ? 'Processing...' : 'Confirm Assignment'}
+              {isLoading 
+                ? 'Processing...' 
+                : alsoAssignAsSales && assignmentMode === 'DIRECT'
+                  ? 'Confirm Dual Assignment (Doc + Sales)'
+                  : 'Confirm Assignment'
+              }
             </Button>
           </div>
         </div>
       }
     >
       <div className="space-y-5 font-sans">
+        {/* Previous Agent Recommendation Banner */}
+        {selectedLeads.length === 1 && selectedLeads[0].previousDocAgent && (
+          <div className="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-800 font-bold flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="min-w-0">
+                <span className="font-bold text-slate-900 block truncate">
+                  Previous Tax Year (TY{selectedLeads[0].previousDocAgent.taxYear}) Handled by:
+                </span>
+                <span className="text-emerald-700 font-bold truncate block">
+                  {selectedLeads[0].previousDocAgent.name || (selectedLeads[0].previousDocAgent.firstName ? `${selectedLeads[0].previousDocAgent.firstName} ${selectedLeads[0].previousDocAgent.lastName || ''}`.trim() : selectedLeads[0].previousDocAgent.email)}
+                </span>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedAgentId(selectedLeads[0].previousDocAgent!.id);
+                setAssignmentMode('DIRECT');
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shrink-0 cursor-pointer shadow-2xs"
+            >
+              Assign to {(selectedLeads[0].previousDocAgent.name || selectedLeads[0].previousDocAgent.firstName)?.split(' ')[0] || 'Previous Agent'}
+            </Button>
+          </div>
+        )}
+
         {/* Mode Selector Tabs */}
         <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
           <button
@@ -194,8 +251,12 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                       <div>
                         <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
                           <span>{agent.email}</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-                            Calling Agent
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            agent.role === 'SALES_AGENT'
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-emerald-50 text-[#16A34A] border border-emerald-200'
+                          }`}>
+                            {agent.role === 'SALES_AGENT' ? 'Sales Closer' : 'Calling Agent'}
                           </span>
                         </div>
                         <div className="text-[10px] text-slate-400 font-medium">
@@ -217,7 +278,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
 
         {/* Mode 2: Direct Calling Agent Selection (DOC_AGENT Only) */}
         {assignmentMode === 'DIRECT' && (
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {/* Search Input using shared AppSearchInput */}
             <AppSearchInput
               value={searchAgent}
@@ -238,7 +299,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
             </div>
 
             {/* Calling Agents List */}
-            <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+            <div className="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {filteredAgents.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                   No calling agents match your search
@@ -254,17 +315,17 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                         if (isCurrentlyAssigned) return;
                         setSelectedAgentId(agent.id);
                       }}
-                      className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl border transition-all ${
                         isCurrentlyAssigned
                           ? 'opacity-40 bg-slate-100/80 border-slate-200 cursor-not-allowed select-none'
                           : isSelected
-                          ? 'bg-emerald-50/80 border-[#16A34A] shadow-xs cursor-pointer'
-                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60 cursor-pointer'
+                          ? 'bg-emerald-50/90 border-[#16A34A] ring-2 ring-[#16A34A]/20 shadow-xs cursor-pointer'
+                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 cursor-pointer'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                         <div
-                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
                             isCurrentlyAssigned
                               ? 'border-slate-300 bg-slate-200'
                               : isSelected
@@ -272,20 +333,30 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                               : 'border-slate-300 bg-white'
                           }`}
                         >
-                          {isSelected && !isCurrentlyAssigned && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          {isSelected && !isCurrentlyAssigned && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-emerald-100/60 border border-emerald-200 text-[#16A34A] font-bold text-xs flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100/80 border border-emerald-200 text-[#16A34A] font-bold text-xs flex items-center justify-center shrink-0">
                           {agent.email[0].toUpperCase()}
                         </div>
-                        <div>
-                          <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
-                            <span>{agent.email}</span>
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-                              Calling Agent
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5 flex-wrap">
+                            <span className="truncate max-w-[150px] sm:max-w-[200px]">{agent.email}</span>
+                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border shrink-0 ${
+                              agent.role === 'SALES_AGENT'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-emerald-50 text-[#16A34A] border border-emerald-200'
+                            }`}>
+                              {agent.role === 'SALES_AGENT' ? 'Sales Closer' : 'Calling Agent'}
                             </span>
                             {isCurrentlyAssigned && (
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-600 border border-slate-300">
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-600 border border-slate-300 shrink-0">
                                 Current Owner
+                              </span>
+                            )}
+                            {isSelected && alsoAssignAsSales && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-0.5 shrink-0 animate-in fade-in">
+                                <DollarSign className="w-2.5 h-2.5" />
+                                Dual Doc + Sales
                               </span>
                             )}
                           </div>
@@ -295,7 +366,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="text-right shrink-0 ml-2">
                         <span className="inline-block text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                           {agent.activeLoad} leads
                         </span>
@@ -308,6 +379,66 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
                 })
               )}
             </div>
+
+            {/* DUAL-ROLE OPTION (Documenter Agent + Sales Agent Option) */}
+            {selectedAgentId && (
+              <div 
+                onClick={() => setAlsoAssignAsSales(!alsoAssignAsSales)}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer select-none animate-in fade-in slide-in-from-top-1 duration-200 ${
+                  alsoAssignAsSales
+                    ? 'bg-gradient-to-r from-indigo-50/90 via-emerald-50/40 to-indigo-50/60 border-indigo-300 ring-2 ring-indigo-200 shadow-xs'
+                    : 'bg-slate-50/90 border-slate-200 hover:border-slate-300 hover:bg-slate-100/60'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <div className="pt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={alsoAssignAsSales}
+                        onChange={(e) => setAlsoAssignAsSales(e.target.checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-slate-900">
+                          Also Assign as Sales Closer (Dual-Role)?
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border transition-colors ${
+                          alsoAssignAsSales 
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
+                            : 'bg-slate-200 text-slate-600 border-slate-300'
+                        }`}>
+                          Doc + Sales
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                        Assign <strong>{selectedAgent?.email || 'this agent'}</strong> as both the <strong>Documenter Intake Agent</strong> and <strong>Sales Closer</strong> for {leadCount === 1 ? 'this lead' : `these ${leadCount} leads`}.
+                      </p>
+                      {alsoAssignAsSales && (
+                        <div className="mt-2 pt-2 border-t border-indigo-100/80 flex items-center gap-1.5 text-[11px] text-indigo-900 font-semibold">
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                          <span>Lead will stay assigned to {selectedAgent?.email} when progressing to Sales Pitch Queue.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Visual Toggle Switch */}
+                  <div className="shrink-0 pt-0.5">
+                    <div 
+                      className={`w-9 h-5 rounded-full transition-colors flex items-center p-0.5 cursor-pointer ${
+                        alsoAssignAsSales ? 'bg-indigo-600 justify-end' : 'bg-slate-300 justify-start'
+                      }`}
+                    >
+                      <div className="w-4 h-4 rounded-full bg-white shadow-sm transition-all" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

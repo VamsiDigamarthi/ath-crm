@@ -123,7 +123,7 @@ export const CustomerStageStepper: React.FC<CustomerStageStepperProps> = ({
       return 'Your return is certified and transmitted to the IRS. Payout scheduled to your bank account.';
     }
     if (activeStepId === 1) {
-      return 'Please complete your 9-module tax organizer and upload wage slips (W-2, 1099s).';
+      return 'Please complete your tax organizer and upload wage slips (W-2, 1099s).';
     }
     if (activeStepId === 2) {
       return 'Our Tax Preparation team is calculating your deductions and drafting your Form 1040.';

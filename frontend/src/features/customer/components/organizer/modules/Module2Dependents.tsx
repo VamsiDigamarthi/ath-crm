@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   HelpCircle, 
   User, 
@@ -10,7 +10,8 @@ import {
   Phone, 
   CreditCard,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppInput } from '@/shared/components/AppInput';
@@ -57,7 +58,10 @@ export const Module2Dependents: React.FC<Module2Props> = ({
         relationship: d.spouseRelationship || 'Spouse',
       };
 
-  const isMarried = maritalStatus?.includes('Married');
+  const isMarried = Boolean(maritalStatus?.includes('Married'));
+  const [isOpenSpouse, setIsOpenSpouse] = useState<boolean>(false);
+  const [isOpenDependents, setIsOpenDependents] = useState<boolean>(false);
+  const [isOpenDaycare, setIsOpenDaycare] = useState<boolean>(false);
 
   const handleFieldChange = <K extends keyof OrganizerData['m2_dependents']>(
     field: K,
@@ -110,6 +114,25 @@ export const Module2Dependents: React.FC<Module2Props> = ({
     }
   };
 
+  const handleRemoveSpouse = () => {
+    setIsOpenSpouse(false);
+    updateField('hasSpouse', false);
+    updateField('spouseList', []);
+    updateField('spouseFirstName', '');
+    updateField('spouseMiddleName', '');
+    updateField('spouseLastName', '');
+    updateField('spouseName', '');
+    updateField('spouseDob', '');
+    updateField('spouseSsn', '');
+    updateField('spouseOccupation', '');
+    updateField('spouseVisaType', '');
+    updateField('spouseWorkPhone', '');
+    updateField('spouseEmail', '');
+    if (clearError) {
+      clearError('spouse_general');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Notice Banner */}
@@ -128,160 +151,260 @@ export const Module2Dependents: React.FC<Module2Props> = ({
         </div>
       )}
 
-      {/* Single Spouse / Joint Filer Details Card */}
-      <div className={`p-4 sm:p-5 rounded-xl border bg-white space-y-4 ${
-        errors.spouse_general && isMarried ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200'
-      }`}>
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <User className="w-4 h-4 text-indigo-600" />
-              <span>Spouse / Joint Filer Details</span>
-              {isMarried ? (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
-                  Required for {maritalStatus}
+      {/* 1. Spouse / Joint Filer Details Card */}
+      {!isOpenSpouse ? (
+        /* Collapsed Spouse State (Default) */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <User className="w-4 h-4 text-indigo-600" />
+                <span>Spouse / Joint Filer Details</span>
+                {spouse.firstName && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                    Added: {spouse.firstName} {spouse.lastName || ''}
+                  </span>
+                )}
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Spouse legal name, DOB, SSN, occupation and visa status (if filing jointly)</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsOpenSpouse(true);
+                updateField('hasSpouse', true);
+              }}
+              className="text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1 cursor-pointer shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{spouse.firstName ? 'View / Edit Spouse Details' : 'Add Spouse Details'}</span>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* Open Spouse Form (When User clicks Add / Edit Spouse) */
+        <div className={`p-4 sm:p-5 rounded-xl border bg-white space-y-4 shadow-2xs ${
+          errors.spouse_general && isMarried ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200'
+        }`}>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <User className="w-4 h-4 text-indigo-600" />
+                <span>Spouse / Joint Filer Details</span>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Spouse legal name, DOB, SSN, occupation and visa status</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsOpenSpouse(false)}
+                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveSpouse}
+                className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Remove Spouse</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Row 1: First Name, Middle Name, Last Name */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <AppInput
+                label="Spouse First Name (as per SSN) *"
+                placeholder="e.g. Priya"
+                error={errors['spouse_0_firstName'] || errors.spouseFirstName}
+                value={spouse.firstName || ''}
+                onChange={(e) => handleSpouseChange('firstName', e.target.value, 'spouse_0_firstName')}
+              />
+
+              <AppInput
+                label="Spouse Middle Name"
+                placeholder="e.g. Lakshmi"
+                value={spouse.middleName || ''}
+                onChange={(e) => handleSpouseChange('middleName', e.target.value)}
+              />
+
+              <AppInput
+                label={`Spouse Last Name (as per SSN) ${isMarried ? '*' : ''}`}
+                placeholder="e.g. Varma"
+                error={errors['spouse_0_lastName'] || errors.spouseLastName}
+                value={spouse.lastName !== undefined ? spouse.lastName : (primaryTaxpayerLastName || '')}
+                onChange={(e) => handleSpouseChange('lastName', e.target.value, 'spouse_0_lastName')}
+              />
+            </div>
+
+            {/* Row 2: DOB, SSN/ITIN, Visa Type */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <AppDatePicker
+                label={`Spouse Date of Birth (MM/DD/YYYY) ${isMarried ? '*' : ''}`}
+                placeholder="MM/DD/YYYY"
+                format="MM/dd/yyyy"
+                accentColor="#16A34A"
+                maxDate={new Date()}
+                error={errors['spouse_0_dob'] || errors.spouseDob}
+                value={parseUsDate(spouse.dob)}
+                onChange={(dVal) => handleSpouseChange('dob', formatUsDate(dVal), 'spouse_0_dob')}
+              />
+
+              <AppInput
+                label={`Spouse SSN / ITIN (Editable) ${isMarried ? '*' : ''}`}
+                type="password"
+                placeholder="982-14-9812"
+                leftIcon={<CreditCard className="w-4 h-4" />}
+                error={errors['spouse_0_ssn'] || errors.spouseSsn}
+                value={spouse.ssn || ''}
+                onChange={(e) => handleSpouseChange('ssn', e.target.value, 'spouse_0_ssn')}
+              />
+
+              <AppSelect
+                label={`Spouse VISA Type as of 12/31/${selectedTaxYear}`}
+                options={[
+                  { label: 'H-4 EAD (Work Authorized)', value: 'H-4 EAD' },
+                  { label: 'H-1B (Specialty Worker)', value: 'H-1B' },
+                  { label: 'L-2 / L-2 EAD (Dependent)', value: 'L-2' },
+                  { label: 'F-1 OPT (Student)', value: 'F-1 OPT' },
+                  { label: 'Green Card / Citizen', value: 'GREEN_CARD' },
+                  { label: 'B-2 / Other Visa', value: 'OTHER' },
+                ]}
+                value={spouse.visaType || 'H-4 EAD'}
+                onChange={(val) => handleSpouseChange('visaType', val || 'H-4 EAD')}
+              />
+            </div>
+
+            {/* Row 3: Occupation & Work Phone */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <AppInput
+                label={`Spouse Occupation ${isMarried ? '*' : ''}`}
+                placeholder="e.g. Financial Analyst or Homemaker"
+                leftIcon={<Briefcase className="w-4 h-4" />}
+                error={errors['spouse_0_occupation'] || errors.spouseOccupation}
+                value={spouse.occupation || ''}
+                onChange={(e) => handleSpouseChange('occupation', e.target.value, 'spouse_0_occupation')}
+              />
+
+              <AppInput
+                label="Spouse Work / Mobile Phone"
+                placeholder="+1 (713) 555-0921"
+                leftIcon={<Phone className="w-4 h-4" />}
+                value={spouse.workPhone || ''}
+                onChange={(e) => handleSpouseChange('workPhone', e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Qualifying Children & Dependents */}
+      {!isOpenDependents ? (
+        /* Collapsed State (Default): Heading at left, Add Button at right */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-emerald-600" />
+                <span>Qualifying Children &amp; Dependents</span>
+                {(d.dependentsList || []).length > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    {(d.dependentsList || []).length} Added
+                  </span>
+                )}
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Child 1, Child 2, and other elderly dependent family members</p>
+            </div>
+
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsOpenDependents(true);
+                if ((d.dependentsList || []).length === 0) {
+                  const updated = [
+                    {
+                      firstName: '',
+                      middleName: '',
+                      lastName: primaryTaxpayerLastName,
+                      name: '',
+                      dob: '',
+                      ssn: '',
+                      relationship: 'Son',
+                      monthsInHome: 12,
+                    },
+                  ];
+                  handleFieldChange('dependentsList', updated);
+                  handleFieldChange('childCount', 1);
+                }
+              }}
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{(d.dependentsList || []).length > 0 ? 'View / Edit Dependents' : 'Add Child / Dependent'}</span>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* Open State: Header with Count + Add Button, List of Dependents */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-emerald-600" />
+                <span>Qualifying Children &amp; Dependents</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  {(d.dependentsList || []).length} Added
                 </span>
-              ) : (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold border border-slate-200">
-                  Optional (Single / Not Married)
-                </span>
-              )}
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">Spouse legal name, DOB, SSN, occupation and visa status</p>
-          </div>
-        </div>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Child 1, Child 2, and other elderly dependent family members</p>
+            </div>
 
-        <div className="space-y-4">
-          {/* Row 1: First Name, Middle Name, Last Name */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <AppInput
-              label={`Spouse First Name (as per SSN) ${isMarried ? '*' : ''}`}
-              placeholder="e.g. Priya"
-              error={errors['spouse_0_firstName'] || errors.spouseFirstName}
-              value={spouse.firstName || ''}
-              onChange={(e) => handleSpouseChange('firstName', e.target.value, 'spouse_0_firstName')}
-            />
-
-            <AppInput
-              label="Spouse Middle Name"
-              placeholder="e.g. Lakshmi"
-              value={spouse.middleName || ''}
-              onChange={(e) => handleSpouseChange('middleName', e.target.value)}
-            />
-
-            <AppInput
-              label={`Spouse Last Name (as per SSN) ${isMarried ? '*' : ''}`}
-              placeholder="e.g. Varma"
-              error={errors['spouse_0_lastName'] || errors.spouseLastName}
-              value={spouse.lastName !== undefined ? spouse.lastName : (primaryTaxpayerLastName || '')}
-              onChange={(e) => handleSpouseChange('lastName', e.target.value, 'spouse_0_lastName')}
-            />
-          </div>
-
-          {/* Row 2: DOB, SSN/ITIN, Visa Type */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <AppDatePicker
-              label={`Spouse Date of Birth (MM/DD/YYYY) ${isMarried ? '*' : ''}`}
-              placeholder="MM/DD/YYYY"
-              format="MM/dd/yyyy"
-              accentColor="#16A34A"
-              maxDate={new Date()}
-              error={errors['spouse_0_dob'] || errors.spouseDob}
-              value={parseUsDate(spouse.dob)}
-              onChange={(d) => handleSpouseChange('dob', formatUsDate(d), 'spouse_0_dob')}
-            />
-
-            <AppInput
-              label={`Spouse SSN / ITIN (Editable) ${isMarried ? '*' : ''}`}
-              type="password"
-              placeholder="982-14-9812"
-              leftIcon={<CreditCard className="w-4 h-4" />}
-              error={errors['spouse_0_ssn'] || errors.spouseSsn}
-              value={spouse.ssn || ''}
-              onChange={(e) => handleSpouseChange('ssn', e.target.value, 'spouse_0_ssn')}
-            />
-
-            <AppSelect
-              label={`Spouse VISA Type as of 12/31/${selectedTaxYear}`}
-              options={[
-                { label: 'H-4 EAD (Work Authorized)', value: 'H-4 EAD' },
-                { label: 'H-1B (Specialty Worker)', value: 'H-1B' },
-                { label: 'L-2 / L-2 EAD (Dependent)', value: 'L-2' },
-                { label: 'F-1 OPT (Student)', value: 'F-1 OPT' },
-                { label: 'Green Card / Citizen', value: 'GREEN_CARD' },
-                { label: 'B-2 / Other Visa', value: 'OTHER' },
-              ]}
-              value={spouse.visaType || 'H-4 EAD'}
-              onChange={(val) => handleSpouseChange('visaType', val || 'H-4 EAD')}
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  const currentList = d.dependentsList || [];
+                  const updated = [
+                    ...currentList,
+                    {
+                      firstName: '',
+                      middleName: '',
+                      lastName: primaryTaxpayerLastName,
+                      name: '',
+                      dob: '',
+                      ssn: '',
+                      relationship: 'Son',
+                      monthsInHome: 12,
+                    },
+                  ];
+                  handleFieldChange('dependentsList', updated);
+                  handleFieldChange('childCount', updated.length);
+                }}
+                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Dependent</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => setIsOpenDependents(false)}
+                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+              >
+                Close
+              </button>
+            </div>
           </div>
 
-          {/* Row 3: Occupation & Work Phone */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <AppInput
-              label={`Spouse Occupation ${isMarried ? '*' : ''}`}
-              placeholder="e.g. Financial Analyst or Homemaker"
-              leftIcon={<Briefcase className="w-4 h-4" />}
-              error={errors['spouse_0_occupation'] || errors.spouseOccupation}
-              value={spouse.occupation || ''}
-              onChange={(e) => handleSpouseChange('occupation', e.target.value, 'spouse_0_occupation')}
-            />
-
-            <AppInput
-              label="Spouse Work / Mobile Phone"
-              placeholder="+1 (713) 555-0921"
-              leftIcon={<Phone className="w-4 h-4" />}
-              value={spouse.workPhone || ''}
-              onChange={(e) => handleSpouseChange('workPhone', e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Qualifying Children & Dependents Table */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-emerald-600" />
-              <span>Qualifying Children &amp; Dependents</span>
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">Child 1, Child 2, and other elderly dependent family members</p>
-          </div>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              const currentList = d.dependentsList || [];
-              const updated = [
-                ...currentList,
-                {
-                  firstName: '',
-                  middleName: '',
-                  lastName: primaryTaxpayerLastName,
-                  name: '',
-                  dob: '',
-                  ssn: '',
-                  relationship: 'Son',
-                  monthsInHome: 12,
-                },
-              ];
-              handleFieldChange('dependentsList', updated);
-              handleFieldChange('childCount', updated.length);
-            }}
-            className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Child / Dependent</span>
-          </Button>
-        </div>
-
-        {(d.dependentsList || []).length === 0 ? (
-          <div className="p-5 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500">
-            No children or dependents added yet. Click &quot;Add Child / Dependent&quot; to claim Child Tax Credits.
-          </div>
-        ) : (
           <div className="space-y-4">
             {(d.dependentsList || []).map((dep, idx) => (
               <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 shadow-2xs space-y-3">
@@ -293,6 +416,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                       const list = (d.dependentsList || []).filter((_, i) => i !== idx);
                       handleFieldChange('dependentsList', list);
                       handleFieldChange('childCount', list.length);
+                      if (list.length === 0) setIsOpenDependents(false);
                     }}
                     className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
                   >
@@ -406,49 +530,102 @@ export const Module2Dependents: React.FC<Module2Props> = ({
               </div>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* Child & Dependent Daycare Expenses Worksheet */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 className="w-4 h-4 text-purple-600" />
-              <span>Child &amp; Daycare Care Expenses Worksheet</span>
-            </h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">Daycare, preschool, or babysitter paid while parents worked</p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              const list = d.daycareList || [];
-              handleFieldChange('daycareList', [
-                ...list,
-                {
-                  dependentName: '',
-                  providerName: '',
-                  providerEinSsn: '',
-                  providerAddress: '',
-                  amountPaid: 0,
-                  employerReimbursed: 0,
-                },
-              ]);
-              handleFieldChange('daycareExpensesClaimed', true);
-            }}
-            className="text-xs font-bold border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Daycare Provider</span>
-          </Button>
         </div>
+      )}
 
-        {(d.daycareList || []).length === 0 ? (
-          <div className="p-5 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-500">
-            No daycare expenses claimed. Click &quot;Add Daycare Provider&quot; to claim Child &amp; Dependent Care Credit.
+      {/* 3. Child & Dependent Daycare Expenses Worksheet */}
+      {!isOpenDaycare ? (
+        /* Collapsed State (Default): Heading at left, Add Button at right */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-purple-600" />
+                <span>Child &amp; Daycare Care Expenses Worksheet</span>
+                {(d.daycareList || []).length > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-200">
+                    {(d.daycareList || []).length} Added
+                  </span>
+                )}
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Daycare, preschool, or babysitter paid while parents worked</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsOpenDaycare(true);
+                if ((d.daycareList || []).length === 0) {
+                  handleFieldChange('daycareList', [
+                    {
+                      dependentName: '',
+                      providerName: '',
+                      providerEinSsn: '',
+                      providerAddress: '',
+                      amountPaid: 0,
+                      employerReimbursed: 0,
+                    },
+                  ]);
+                  handleFieldChange('daycareExpensesClaimed', true);
+                }
+              }}
+              className="text-xs font-bold border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-1 cursor-pointer shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{(d.daycareList || []).length > 0 ? 'View / Edit Daycare' : 'Add Daycare Provider'}</span>
+            </Button>
           </div>
-        ) : (
+        </div>
+      ) : (
+        /* Open State: Header with Count + Add Button, List of Daycare Providers */
+        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-purple-600" />
+                <span>Child &amp; Daycare Care Expenses Worksheet</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-200">
+                  {(d.daycareList || []).length} Added
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">Daycare, preschool, or babysitter paid while parents worked</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  const list = d.daycareList || [];
+                  handleFieldChange('daycareList', [
+                    ...list,
+                    {
+                      dependentName: '',
+                      providerName: '',
+                      providerEinSsn: '',
+                      providerAddress: '',
+                      amountPaid: 0,
+                      employerReimbursed: 0,
+                    },
+                  ]);
+                  handleFieldChange('daycareExpensesClaimed', true);
+                }}
+                className="text-xs font-bold border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Provider</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => setIsOpenDaycare(false)}
+                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-4">
             {(d.daycareList || []).map((care, idx) => (
               <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 shadow-2xs space-y-3">
@@ -460,6 +637,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                       const list = (d.daycareList || []).filter((_, i) => i !== idx);
                       handleFieldChange('daycareList', list);
                       handleFieldChange('daycareExpensesClaimed', list.length > 0);
+                      if (list.length === 0) setIsOpenDaycare(false);
                     }}
                     className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
                   >
@@ -547,8 +725,8 @@ export const Module2Dependents: React.FC<Module2Props> = ({
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

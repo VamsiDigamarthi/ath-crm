@@ -4,13 +4,19 @@ import { SalesService } from './sales-service.js';
 export class SalesController {
   public static async getPipelineLeads(req: Request, res: Response) {
     try {
-      const result = await SalesService.getPipelineLeads({
-        stage: req.query.stage as string,
-        search: req.query.search as string,
-        salesAgentId: req.query.salesAgentId as string,
-        page: Number(req.query.page) || 1,
-        limit: Number(req.query.limit) || 100,
-      });
+      const result = await SalesService.getPipelineLeads(
+        {
+          stage: req.query.stage as string,
+          search: req.query.search as string,
+          salesAgentId: req.query.salesAgentId as string,
+          priority: req.query.priority as string,
+          isDualRole: req.query.isDualRole as string,
+          page: Number(req.query.page) || 1,
+          limit: Number(req.query.limit) || 100,
+        },
+        req.currentUser?.id,
+        req.currentUser?.role
+      );
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to fetch sales pipeline leads' });
@@ -20,7 +26,11 @@ export class SalesController {
   public static async getLeadById(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
-      const lead = await SalesService.getLeadById(id);
+      const lead = await SalesService.getLeadById(
+        id,
+        req.currentUser?.id,
+        req.currentUser?.role
+      );
       if (!lead) {
         return res.status(404).json({ message: 'Sales Lead not found' });
       }
@@ -94,10 +104,44 @@ export class SalesController {
     try {
       const id = req.params.id as string;
       const userId = req.currentUser?.id || (req as any).user?.id || '';
-      const result = await SalesService.dispatchToFiling(id, userId);
+      const notes = req.body.notes || req.body.closerCallNotes || '';
+      const result = await SalesService.dispatchToFiling(id, userId, notes);
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to dispatch to filing' });
+    }
+  }
+
+  public static async updatePitchNegotiation(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.updatePitchNegotiation(id, req.body, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to update pitch negotiation' });
+    }
+  }
+
+  public static async saveCloserNotes(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.saveCloserNotes(id, req.body, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to save closer call notes' });
+    }
+  }
+
+  public static async updateFeeBreakdown(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.updateFeeBreakdown(id, req.body.feeBreakdown, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to update fee breakdown' });
     }
   }
 
@@ -120,6 +164,47 @@ export class SalesController {
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to record Form 8879 authorization' });
+    }
+  }
+
+  public static async sendPaymentLink(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.sendPaymentLink(id, req.body, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to send payment link' });
+    }
+  }
+
+  public static async returnLeadToAdmin(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.returnLeadToAdmin({
+        applicationId: id,
+        returnedByUserId: userId,
+        reason: req.body?.reason,
+      });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to return sales lead to admin pool' });
+    }
+  }
+
+  public static async returnLeadsBulkToAdmin(req: Request, res: Response) {
+    try {
+      const applicationIds = req.body.applicationIds || [];
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.returnLeadsBulkToAdmin({
+        applicationIds,
+        returnedByUserId: userId,
+        reason: req.body?.reason,
+      });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to return sales leads to admin pool' });
     }
   }
 }

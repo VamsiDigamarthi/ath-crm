@@ -176,6 +176,11 @@ export const customerApi = {
     const res: any = await apiClient.put('/customer/organizer', { taxYear, organizerData });
     return res;
   },
+
+  startTaxYearReturn: async (taxYear: number): Promise<{ success: boolean; data: any; message: string }> => {
+    const res: any = await apiClient.post('/customer/tax-years', { taxYear });
+    return res;
+  },
 };
 
 export interface OrganizerData {
@@ -276,6 +281,19 @@ export interface OrganizerData {
       spouseToDate?: string;
     }>;
     cityCountyTaxesRequired: boolean;
+    hasRentalProperty?: boolean;
+    rentalProperties?: Array<{
+      propertyType: 'RESIDENTIAL' | 'COMMERCIAL' | string;
+      address: string;
+      monthsRented2025: number;
+      personalMonths2025: number;
+      ownership: 'TAXPAYER' | 'SPOUSE' | 'JOINT' | string;
+      purchaseDate: string;
+      rentedDate?: string;
+      costOfProperty: number;
+      totalRentalIncome: number;
+      rentalExpenses: number;
+    }>;
   };
   m4_wages: {
     hasW2: boolean;

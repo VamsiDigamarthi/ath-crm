@@ -4,7 +4,7 @@ import { Button } from '@/shared/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export interface AppEmptyStateProps {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
   description: string;
   className?: string;
@@ -20,7 +20,7 @@ export interface AppEmptyStateProps {
 }
 
 export const AppEmptyState: React.FC<AppEmptyStateProps> = ({
-  icon: IconComponent,
+  icon: IconComponent = Plus,
   title,
   description,
   className,

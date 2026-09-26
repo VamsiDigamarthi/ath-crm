@@ -147,10 +147,23 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         return;
       }
 
+      const isSelfSignup = s.remarks?.toLowerCase().includes('self-registered') ||
+                           s.remarks?.toLowerCase().includes('self-signup') ||
+                           s.remarks?.toLowerCase().includes('public client portal') ||
+                           s.remarks?.toLowerCase().includes('public sign-up');
+
+      const isSelfAddedYear = s.remarks?.toLowerCase().includes('self-initiated') ||
+                              s.remarks?.toLowerCase().includes('self-service portal') ||
+                              s.remarks?.toLowerCase().includes('self-added') ||
+                              s.remarks?.toLowerCase().includes('inbound lead in direct sign-ups queue');
+
       const isIngestion = (s.fromStage === 'RAW_PROSPECT' && s.toStage === 'RAW_PROSPECT') || 
+                          (!s.fromStage && s.toStage === 'RAW_PROSPECT') ||
                           s.remarks?.toLowerCase().includes('ingested') ||
                           s.remarks?.toLowerCase().includes('bulk ingestion') ||
-                          s.remarks?.toLowerCase().includes('bulk upload');
+                          s.remarks?.toLowerCase().includes('bulk upload') ||
+                          isSelfSignup ||
+                          isSelfAddedYear;
 
       const isPrepAssignment = s.remarks?.toLowerCase().includes('tax preparer') || 
                                s.remarks?.toLowerCase().includes('qa reviewer') ||
@@ -167,6 +180,14 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
                                  s.remarks?.toLowerCase().includes('sales agent') ||
                                  s.remarks?.toLowerCase().includes('closer (') ||
                                  (s.fromStage === 'SALES_PITCH_QUEUE' && s.toStage === 'SALES_PITCHING')) && !isAutoRoundRobin;
+
+      const isPitchNegotiation = s.remarks?.toLowerCase().includes('pitch negotiation') ||
+                                 s.remarks?.toLowerCase().includes('fee negotiation') ||
+                                 s.remarks?.toLowerCase().includes('negotiated counter-offer') ||
+                                 s.remarks?.toLowerCase().includes('closer updated negotiation');
+
+      const isPaymentLink = s.remarks?.toLowerCase().includes('payment link') ||
+                            s.remarks?.toLowerCase().includes('checkout link');
 
       const isFilingDispatch = s.remarks?.toLowerCase().includes('filing transmission') ||
                                s.remarks?.toLowerCase().includes('dispatched to irs') ||
@@ -206,13 +227,16 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
 
       const isClientStage = s.movedByRole === 'TAXPAYER_USER' || 
                             s.movedByRole === 'CLIENT' ||
-                            s.remarks?.toLowerCase().startsWith('taxpayer');
+                            isSelfSignup ||
+                            isSelfAddedYear ||
+                            s.remarks?.toLowerCase().startsWith('taxpayer') ||
+                            s.remarks?.toLowerCase().startsWith('client');
 
       let displayFromStage = s.fromStage;
       let displayToStage = s.toStage;
       let eventType: UnifiedTimelineEvent['type'] = 'STAGE_CHANGE';
-      let eventTitle = `Stage Transition: ${s.fromStage} → ${s.toStage}`;
-      let eventDescription = s.remarks || `Application stage transitioned from ${s.fromStage} to ${s.toStage}`;
+      let eventTitle = s.fromStage ? `Stage Transition: ${s.fromStage} → ${s.toStage}` : `Initial Intake Stage: ${s.toStage}`;
+      let eventDescription = s.remarks || `Application stage transitioned from ${s.fromStage || 'Intake'} to ${s.toStage}`;
 
       if (isLeadReturnToAdmin) {
         eventType = 'STAGE_CHANGE';
@@ -236,10 +260,28 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         } else if (s.remarks?.includes('QA_REVIEW → PREPARATION')) {
           eventTitle = 'Senior QA Auditor Reverted Return to Tax Preparer';
         }
+      } else if (isSelfSignup) {
+        eventType = 'INGESTION';
+        eventTitle = 'Direct Online Self-Registration (Public Portal)';
+        eventDescription = s.remarks || 'Taxpayer registered online via Public Client Portal.';
+      } else if (isSelfAddedYear) {
+        eventType = 'INGESTION';
+        eventTitle = 'Client Self-Initiated New Tax Year Filing';
+        eventDescription = s.remarks || 'Client self-initiated a new tax year filing via Client Portal.';
       } else if (isIngestion) {
         eventType = 'INGESTION';
         eventTitle = 'Raw Prospect Ingestion (Admin Bulk Import)';
-        eventDescription = `Admin uploaded raw prospect lead into TaxCRM Intake Pipeline via Excel/CSV bulk ingestion. Lead deduplicated by SSN/Email and queued in Documenter Department Unassigned Pool at RAW_PROSPECT stage for manager assignment.`;
+        eventDescription = s.remarks || `Admin uploaded raw prospect lead into TaxCRM Intake Pipeline via Excel/CSV bulk ingestion. Lead deduplicated by SSN/Email and queued in Documenter Department Unassigned Pool at RAW_PROSPECT stage for manager assignment.`;
+      } else if (isPaymentLink) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Stripe Self-Checkout Payment Link Dispatched';
+        displayFromStage = s.fromStage;
+        displayToStage = s.toStage;
+      } else if (isPitchNegotiation) {
+        eventType = 'STAGE_CHANGE';
+        eventTitle = 'Closer Pitch Status & Fee Negotiation Updated';
+        displayFromStage = s.fromStage;
+        displayToStage = s.toStage;
       } else if (isAutoRoundRobin) {
         eventType = 'ASSIGNMENT';
         eventTitle = '1-Click Auto Round-Robin Lead Allocation (Sales Manager)';
@@ -330,13 +372,15 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
 
     // 3. System Audits (Organizer, Document Vault, Tax Draft Calculations - Excluding duplicate call/stage events)
     auditLogs.forEach((a) => {
-      const isCallAction = a.action === 'DISPOSITION_LOG' || a.moduleKey === 'OUTREACH_CALL';
+      const isSalesPitch = a.moduleKey === 'SALES_PITCH' || a.moduleKey === 'SALES_NEGOTIATION' || a.moduleKey === 'SALES_NOTE';
+      const isPaymentLinkAudit = a.moduleKey === 'SALES_PAYMENT_LINK' || a.action === 'PAYMENT_LINK_SENT';
+      const isCallAction = (a.action === 'DISPOSITION_LOG' || a.moduleKey === 'OUTREACH_CALL') && !isSalesPitch;
       const isIngestionAction = a.moduleKey === 'ADMIN_BULK_IMPORT' || a.moduleKey === 'LEAD_INGESTION';
       const isAssignmentAction = a.moduleKey === 'LEAD_ASSIGNMENT' || a.moduleKey === 'AUTO_ROUND_ROBIN';
-      const isStageChange = a.action === 'STAGE_CHANGE';
+      const isStageChange = a.action === 'STAGE_CHANGE' && !isSalesPitch && !isPaymentLinkAudit;
 
-      // Skip records already cleanly represented by stageHistories or callLogs
-      if (isCallAction || isIngestionAction || isAssignmentAction || isStageChange) {
+      // Skip records already cleanly represented by stageHistories or callLogs (unless sales pitch or payment link audit)
+      if ((isCallAction || isIngestionAction || isAssignmentAction || isStageChange) && !isSalesPitch && !isPaymentLinkAudit) {
         return;
       }
 
@@ -356,10 +400,18 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
       const isSalesEsignUpload = a.moduleKey === 'SALES' && (isDocUpload || details?.fileName?.includes('8879') || details?.fileName?.includes('8878'));
 
       let eventTitle = `Audit Action: ${a.action.replace(/_/g, ' ')}`;
-      if (isSalesEsignUpload) {
+      if (isSalesPitch) {
+        eventTitle = `Closer Pitch Status & Fee Negotiation Updated`;
+      } else if (isPaymentLinkAudit) {
+        eventTitle = `Stripe Self-Checkout Payment Link Dispatched`;
+      } else if (isSalesEsignUpload) {
         eventTitle = `IRS Form 8879 E-Sign Authorized & Attached (PIN: ${details?.taxpayerPin || 'Authorized'})`;
+      } else if (a.moduleKey === 'AUTH_SIGNUP') {
+        eventTitle = 'Direct Online Self-Registration Ingested';
+      } else if (a.moduleKey === 'CLIENT_NEW_TAX_YEAR') {
+        eventTitle = `Taxpayer Self-Initiated Tax Year ${details?.taxYear || ''} Filing`;
       } else if (isOrganizer) {
-        eventTitle = `9-Module Tax Organizer Saved`;
+        eventTitle = `Tax Organizer Saved`;
       } else if (isDocUpload) {
         eventTitle = `Document Uploaded: ${details?.fileName || details?.categoryLabel || 'Tax Document'}`;
       } else if (isDocDelete) {
@@ -430,42 +482,45 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
       {/* 1. Header Bar */}
-      <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/50">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+      <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col gap-3 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
               <History className="w-4 h-4" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              Lead Audit Trail &amp; Lifecycle Activity
-            </h3>
-            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              {counts.all} Events Logged
-            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                Lead Audit Trail &amp; Lifecycle Activity
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                {counts.all} Events Logged
+              </span>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 font-medium ml-10">
-            Immutable audit record of all stage handoffs, agent allocations, calls, and data updates for <strong className="text-slate-700">{taxpayerName}</strong>
-            {currentStage && (
-              <span> • Stage: <strong className="text-indigo-600 font-bold">{currentStage}</strong></span>
-            )}.
-          </p>
+
+          {/* Search Input */}
+          <div className="relative w-full sm:w-64 shrink-0">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search audit trail by actor, action..."
+              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            />
+          </div>
         </div>
 
-        {/* Search Input */}
-        <div className="relative min-w-[240px]">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search audit trail by actor, action..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-          />
-        </div>
+        <p className="text-xs text-slate-500 font-medium">
+          Immutable audit record of all stage handoffs, agent allocations, calls, and data updates for <strong className="text-slate-700">{taxpayerName}</strong>
+          {currentStage && (
+            <span> • Stage: <strong className="text-indigo-600 font-bold">{currentStage}</strong></span>
+          )}.
+        </p>
       </div>
 
       {/* 2. Filter Pills */}
-      <div className="px-5 sm:px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2 overflow-x-auto">
+      <div className="px-4 sm:px-5 py-2.5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2 overflow-x-auto scrollbar-none flex-wrap">
         <button
           onClick={() => setFilter('ALL')}
           className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${

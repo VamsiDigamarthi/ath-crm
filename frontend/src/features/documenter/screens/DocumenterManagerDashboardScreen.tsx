@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { Button } from '@/shared/components/Button';
+import { DashboardDateFilter } from '@/shared/components/DashboardDateFilter';
 import { 
   Users, 
   PhoneCall, 
@@ -40,6 +41,9 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
   const {
     timeRange,
     setTimeRange,
+    customStartDate,
+    customEndDate,
+    handleCustomDateChange,
     agents,
     stats,
     isLoading,
@@ -146,22 +150,13 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Time Range Pills */}
-          <div className="flex items-center bg-white p-1 rounded-lg border border-slate-200 text-xs font-bold shadow-2xs">
-            {(['TODAY', 'WEEK', 'SEASON'] as const).map((range) => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 rounded-md transition-all cursor-pointer ${
-                  timeRange === range
-                    ? 'bg-slate-100 text-[#16A34A] font-bold'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {range === 'TODAY' ? 'Today' : range === 'WEEK' ? 'This Week' : 'All-Time Season'}
-              </button>
-            ))}
-          </div>
+          <DashboardDateFilter
+            preset={timeRange}
+            onPresetChange={setTimeRange}
+            startDate={customStartDate}
+            endDate={customEndDate}
+            onCustomDateChange={handleCustomDateChange}
+          />
 
           <Button
             variant="outline"

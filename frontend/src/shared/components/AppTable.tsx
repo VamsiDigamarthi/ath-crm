@@ -43,6 +43,8 @@ export interface AppTableProps<T extends Record<string, unknown>> {
   exportable?: boolean
   exportFilename?: string
   emptyText?: string
+  emptyMessage?: React.ReactNode
+  emptyContent?: React.ReactNode
   className?: string
   pagination?: TablePaginationProps
   rowClassName?: (item: T, index: number) => string | undefined
@@ -80,6 +82,8 @@ export function AppTable<T extends Record<string, unknown>>({
   exportable = false,
   exportFilename = 'export',
   emptyText = 'No data available.',
+  emptyMessage,
+  emptyContent,
   className,
   pagination,
   rowClassName,
@@ -292,8 +296,8 @@ export function AppTable<T extends Record<string, unknown>>({
               ))
             ) : displayData.length === 0 ? (
               <tr>
-                <td colSpan={totalCols} className="px-6 py-12 text-center text-gray-400">
-                  {emptyText}
+                <td colSpan={totalCols} className="px-6 py-8 text-center text-gray-400">
+                  {emptyMessage || emptyContent || emptyText}
                 </td>
               </tr>
             ) : (

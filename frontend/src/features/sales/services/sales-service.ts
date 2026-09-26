@@ -1,5 +1,5 @@
 import apiClient from '@/lib/api-client';
-import type { SalesLeadItem, SalesRepItem, SalesManagerStats, SalesAgentStats } from '../types/sales.types';
+import type { SalesLeadItem, SalesRepItem, SalesManagerStats, SalesAgentStats, SalesFeeBreakdown } from '../types/sales.types';
 
 export interface SalesPipelineResponse {
   leads: SalesLeadItem[];
@@ -22,6 +22,7 @@ export const salesService = {
     limit?: number;
     priority?: string;
     salesAgentId?: string;
+    isDualRole?: boolean | string;
   }): Promise<SalesPipelineResponse> {
     try {
       const response: any = await apiClient.get('/sales/leads', { params });
@@ -136,10 +137,43 @@ export const salesService = {
   },
 
   /**
-   * Dispatch paid & e-signed return to IRS Filing Queue
+   * Dispatch paid & e-signed return to IRS Filing Queue with optional notes
    */
-  async dispatchToFiling(id: string) {
-    return apiClient.post(`/sales/leads/${id}/dispatch-filing`);
+  async dispatchToFiling(id: string, payloadOrNotes?: string | { notes?: string }) {
+    const payload = typeof payloadOrNotes === 'string'
+      ? { notes: payloadOrNotes }
+      : (payloadOrNotes || {});
+    return apiClient.post(`/sales/leads/${id}/dispatch-filing`, payload);
+  },
+
+  /**
+   * Update and persist Pitch Negotiation Status, Original Fee & Negotiated Amount
+   */
+  async updatePitchNegotiation(id: string, payload: {
+    pitchStatus?: string;
+    originalFee?: number;
+    negotiatedAmount?: number | null;
+    comment?: string;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/pitch-negotiation`, payload);
+  },
+
+  /**
+   * Save closer call notes directly into database & CallLog
+   */
+  async saveCloserNotes(id: string, payload: {
+    notes: string;
+    disposition?: string;
+    callDuration?: number;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/notes`, payload);
+  },
+
+  /**
+   * Update and persist Fee Quotation Breakdown in database
+   */
+  async updateFeeBreakdown(id: string, feeBreakdown: SalesFeeBreakdown) {
+    return apiClient.post(`/sales/leads/${id}/fee-breakdown`, { feeBreakdown });
   },
 
   /**
@@ -147,6 +181,8 @@ export const salesService = {
    */
   async recordPayment(id: string, payload: {
     amount: number;
+    feeBreakdown?: SalesFeeBreakdown;
+    totalQuotedFee?: number;
     discountAmount?: number;
     paymentMethod?: string;
     transactionRef?: string;
@@ -166,5 +202,55 @@ export const salesService = {
     notes?: string;
   }) {
     return apiClient.post(`/sales/leads/${id}/record-esign`, payload);
+  },
+
+  /**
+   * Complete E-Sign alias
+   */
+  async completeEsign(payload: {
+    applicationId: string;
+    method?: string;
+    pin?: string;
+    taxpayerPin?: string;
+    fileName?: string;
+    notes?: string;
+  }) {
+    return this.recordEsign(payload.applicationId, {
+      esignMethod: payload.method,
+      taxpayerPin: payload.taxpayerPin || payload.pin,
+      fileName: payload.fileName,
+      notes: payload.notes,
+    });
+  },
+
+  /**
+   * Dispatch Stripe Self-Checkout Payment Link to Primary & optional Secondary Email
+   */
+  async sendPaymentLink(id: string, payload: {
+    amount: number;
+    primaryEmail?: string;
+    secondaryEmail?: string;
+    sendToPrimary?: boolean;
+    sendToSecondary?: boolean;
+    phone?: string;
+    notes?: string;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/send-payment-link`, payload);
+  },
+
+  /**
+   * Return a lead back to Admin / Unassigned Pool (when client does not convert or rejects fee)
+   */
+  async returnLeadToAdmin(id: string, reason?: string) {
+    const res: any = await apiClient.post(`/sales/leads/${id}/return-to-admin`, { reason });
+    return res?.data || res;
+  },
+
+  /**
+   * Bulk return multiple leads back to Admin Unassigned Pool
+   */
+  async returnLeadsBulkToAdmin(applicationIds: string[], reason?: string) {
+    const res: any = await apiClient.post('/sales/return-to-admin', { applicationIds, reason });
+    return res?.data || res;
   },
 };

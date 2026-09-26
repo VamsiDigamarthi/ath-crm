@@ -370,13 +370,15 @@ export const startNextYearApplication = async (req: Request, res: Response) => {
 };
 
 export const getReturnedLeads = async (req: Request, res: Response) => {
-  const { search, visaType, taxYear, page, limit } = req.query;
+  const { search, visaType, taxYear, priority, department, page, limit } = req.query;
 
   const { ReturnedLeadsService } = await import("./returned-leads-service.js");
   const result = await ReturnedLeadsService.getReturnedLeads({
     search: typeof search === 'string' ? search : undefined,
     visaType: typeof visaType === 'string' ? visaType : undefined,
     taxYear: taxYear ? Number(taxYear) : undefined,
+    priority: typeof priority === 'string' ? priority : undefined,
+    department: typeof department === 'string' ? department : undefined,
     page: page ? Number(page) : undefined,
     limit: limit ? Number(limit) : undefined,
   });
@@ -401,7 +403,7 @@ export const assignReturnedLeadsBulk = async (req: Request, res: Response) => {
 
   return SuccessHandler.handle(
     res,
-    `Successfully assigned ${result.assignedCount} lead(s) directly to Calling Agent ${result.targetAgent.email}`,
+    `Successfully assigned ${result.assignedCount} lead(s) to agent ${result.targetAgent.email || ''}`,
     result,
     200
   );
@@ -423,10 +425,109 @@ export const autoRoundRobinReturnedLeads = async (req: Request, res: Response) =
 
   return SuccessHandler.handle(
     res,
-    `Successfully distributed ${result.totalDistributed} lead(s) evenly across ${result.agentsCount} Calling Agent(s) via Round-Robin`,
+    result.message,
     result,
     200
   );
+};
+
+// Admin Self-Signups & Direct Web Registrations
+export const getSelfSignups = async (req: Request, res: Response) => {
+  const { search, visaType, taxYear, stage, priority, page, limit } = req.query;
+
+  const { SelfSignupsService } = await import("./self-signups-service.js");
+  const result = await SelfSignupsService.getSelfSignups({
+    search: typeof search === 'string' ? search : undefined,
+    visaType: typeof visaType === 'string' ? visaType : undefined,
+    taxYear: taxYear ? Number(taxYear) : undefined,
+    stage: typeof stage === 'string' ? stage : undefined,
+    priority: typeof priority === 'string' ? priority : undefined,
+    page: page ? Number(page) : undefined,
+    limit: limit ? Number(limit) : undefined,
+  });
+
+  return SuccessHandler.handle(res, "Self-registered leads fetched successfully", result, 200);
+};
+
+export const assignSelfSignupsBulk = async (req: Request, res: Response) => {
+  const { applicationIds, targetAgentId } = req.body;
+  const adminUserId = req.currentUser?.id;
+
+  if (!adminUserId) {
+    throw new BadRequestError("Authenticated Admin User ID is required");
+  }
+
+  const { SelfSignupsService } = await import("./self-signups-service.js");
+  const result = await SelfSignupsService.assignSelfSignupsBulk({
+    applicationIds,
+    targetAgentId,
+    adminUserId,
+  });
+
+  return SuccessHandler.handle(
+    res,
+    `Successfully assigned ${result.assignedCount} direct online lead(s) to Calling Agent ${result.targetAgent.email}`,
+    result,
+    200
+  );
+};
+
+export const autoRoundRobinSelfSignups = async (req: Request, res: Response) => {
+  const { applicationIds } = req.body;
+  const adminUserId = req.currentUser?.id;
+
+  if (!adminUserId) {
+    throw new BadRequestError("Authenticated Admin User ID is required");
+  }
+
+  const { SelfSignupsService } = await import("./self-signups-service.js");
+  const result = await SelfSignupsService.autoRoundRobinSelfSignups({
+    applicationIds,
+    adminUserId,
+  });
+
+  return SuccessHandler.handle(
+    res,
+    `Successfully distributed ${result.totalDistributed} online lead(s) evenly across ${result.agentsCount} Calling Agent(s) via Round-Robin`,
+    result,
+    200
+  );
+};
+
+// Master Taxpayer Registry (All Ingested Records & Lifecycle Funnel)
+export const getMasterTaxpayers = async (req: Request, res: Response) => {
+  const { search, stage, source, lifecycle, taxYear, visa, priority, page, limit } = req.query;
+
+  const { MasterTaxpayersService } = await import("./master-taxpayers-service.js");
+  const result = await MasterTaxpayersService.getMasterTaxpayers({
+    search: typeof search === 'string' ? search : undefined,
+    stage: typeof stage === 'string' ? stage : undefined,
+    source: typeof source === 'string' ? source : undefined,
+    lifecycle: typeof lifecycle === 'string' ? lifecycle : undefined,
+    taxYear: taxYear ? Number(taxYear) : undefined,
+    visa: typeof visa === 'string' ? visa : undefined,
+    priority: typeof priority === 'string' ? priority : undefined,
+    page: page ? Number(page) : undefined,
+    limit: limit ? Number(limit) : undefined,
+  });
+
+  return SuccessHandler.handle(res, "Master taxpayers retrieved successfully", result, 200);
+};
+
+export const getTaxpayerYearDetails = async (req: Request, res: Response) => {
+  const { id, taxYear } = req.params;
+  const queryTaxYear = req.query.taxYear;
+
+  if (!id) {
+    throw new BadRequestError("Taxpayer ID is required");
+  }
+
+  const selectedYear = taxYear ? Number(taxYear) : queryTaxYear ? Number(queryTaxYear) : undefined;
+
+  const { MasterTaxpayersService } = await import("./master-taxpayers-service.js");
+  const result = await MasterTaxpayersService.getTaxpayerYearDetails(String(id), selectedYear);
+
+  return SuccessHandler.handle(res, "Taxpayer year details retrieved successfully", result, 200);
 };
 
 

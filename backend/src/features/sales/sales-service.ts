@@ -1,18 +1,52 @@
 import { prisma } from "../../config/db.js";
-import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType } from "@prisma/client";
+import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType, CouponStatus, Prisma } from "@prisma/client";
 
 export class SalesService {
   /**
+   * Helper to dynamically compute return complexity based on documents, schedules, deductions, and foreign reporting
+   */
+  public static computeReturnComplexity(app: any): 'STANDARD' | 'INVESTMENTS_1099B' | 'FOREIGN_FBAR' | 'SCHEDULE_C' {
+    const draft = app.taxDraftSummary || {};
+    const feeBreakdown = draft.feeBreakdown || {};
+    const documents: any[] = Array.isArray(app.documents) ? app.documents : [];
+    const docText = [
+      ...documents.map((d: any) => `${d.documentCategory || ''} ${d.fileName || ''} ${d.documentType || ''}`),
+      draft.notes || '',
+      draft.remarks || '',
+    ].join(' ').toUpperCase();
+
+    const selectedStates = Array.isArray(feeBreakdown.selectedStates) ? feeBreakdown.selectedStates : [];
+    const fbarFee = Number(feeBreakdown.fbarFee || draft.fbarFee || 0);
+    const fatcaFee = Number(feeBreakdown.fatcaFee || draft.fatcaFee || 0);
+
+    if (fbarFee > 0 || fatcaFee > 0 || docText.includes('FBAR') || docText.includes('FATCA') || docText.includes('8938') || docText.includes('NRE') || docText.includes('NRO') || docText.includes('FOREIGN') || docText.includes('PFIC') || docText.includes('8621')) {
+      return 'FOREIGN_FBAR';
+    }
+    if (docText.includes('SCHEDULE C') || docText.includes('1099-NEC') || docText.includes('SELF-EMPLOYED') || docText.includes('BUSINESS') || docText.includes('RENTAL') || docText.includes('SCHEDULE E') || selectedStates.length >= 2 || docText.includes('K-1') || docText.includes('PARTNERSHIP')) {
+      return 'SCHEDULE_C';
+    }
+    if (docText.includes('1099-B') || docText.includes('STOCK') || docText.includes('CRYPTO') || docText.includes('BROKERAGE') || docText.includes('INVESTMENT') || docText.includes('1099-INT') || docText.includes('1099-DIV') || docText.includes('ITEMIZED') || docText.includes('SCHEDULE A')) {
+      return 'INVESTMENTS_1099B';
+    }
+    return 'STANDARD';
+  }
+
+  /**
    * List all QA-Approved pipeline leads eligible for Sales Pitch & Fee Quotation
    */
-  public static async getPipelineLeads(query: {
-    stage?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-    salesAgentId?: string;
-    priority?: string;
-  }) {
+  public static async getPipelineLeads(
+    query: {
+      stage?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+      salesAgentId?: string;
+      priority?: string;
+      isDualRole?: string | boolean;
+    },
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
     const skip = (page - 1) * limit;
@@ -48,6 +82,15 @@ export class SalesService {
       ],
     };
 
+    if (query.isDualRole !== undefined) {
+      const isDual = String(query.isDualRole) === 'true';
+      if (isDual) {
+        baseWhere.isDualDocSalesRole = true;
+      } else {
+        baseWhere.isDualDocSalesRole = false;
+      }
+    }
+
     if (query.priority && query.priority !== 'ALL') {
       baseWhere.priority = query.priority as any;
     }
@@ -79,38 +122,97 @@ export class SalesService {
       };
     }
 
-    const [totalCount, applications] = await Promise.all([
-      prisma.taxApplication.count({ where: baseWhere }),
-      prisma.taxApplication.findMany({
-        where: baseWhere,
-        include: {
-          customer: true,
-          documents: true,
-          assignedDocAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          assignedPrepAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          assignedReviewAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          assignedSalesAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true, role: true },
-          },
-          quotes: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
+    const applications = await prisma.taxApplication.findMany({
+      where: baseWhere,
+      include: {
+        customer: {
+          include: {
+            applications: {
+              select: {
+                id: true,
+                taxYear: true,
+                filingType: true,
+                currentStage: true,
+                taxDraftSummary: true,
+                quotes: {
+                  select: {
+                    status: true,
+                  },
+                },
+                assignedSalesAgentId: true,
+                assignedSalesAgent: {
+                  select: { id: true, firstName: true, lastName: true, email: true },
+                },
+                createdAt: true,
+                updatedAt: true,
+              },
+              orderBy: { taxYear: 'desc' },
+            },
           },
         },
-        orderBy: { updatedAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-    ]);
+        documents: true,
+        assignedDocAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedPrepAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedReviewAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedSalesAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+        },
+        quotes: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
 
-    const formattedLeads = applications.map((app: any) => {
+    // Group applications by customerId so each customer appears as 1 unique row
+    const customerGroupsMap = new Map<string, typeof applications[0][]>();
+    for (const app of applications) {
+      const cId = app.customerId;
+      if (!customerGroupsMap.has(cId)) {
+        customerGroupsMap.set(cId, []);
+      }
+      customerGroupsMap.get(cId)!.push(app);
+    }
+
+    const formattedLeads: any[] = [];
+    for (const [, appsList] of customerGroupsMap.entries()) {
+      let app = appsList[0];
       const customer = app.customer;
+      const allCustomerApps = (customer as any)?.applications || [];
+
+      let visibleApplications = allCustomerApps;
+      if (currentUserRole === Role.SALES_AGENT && currentUserId) {
+        visibleApplications = allCustomerApps.filter((a: any) => a.assignedSalesAgentId === currentUserId);
+      }
+
+      const isPaidClient = Boolean(
+        customer?.isConvertedCustomer ||
+        allCustomerApps.some((a: any) =>
+          a.currentStage === ApplicationStage.FILING_SUCCESS ||
+          a.currentStage === ApplicationStage.FILING_QUEUE ||
+          a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+          a.quotes?.some((q: any) => q.status === 'PAID') ||
+          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+          (a as any).taxDraftSummary?.paidAmount > 0
+        )
+      );
+
+      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+      if (isPaidClient) {
+        clientPaymentStatus = 'PAID';
+      } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+        clientPaymentStatus = 'NEW';
+      } else {
+        clientPaymentStatus = 'UNPAID';
+      }
+
       const fullName = customer
         ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'
         : '-';
@@ -128,31 +230,49 @@ export class SalesService {
       const grossIncome = Number(draft.grossIncome) || computedGross;
       const validFedRefund = hasDraftData ? fedRefund : (Number(draft.estimatedRefund) || 0);
       const validStateRefund = hasDraftData ? stateRefund : (Number(draft.estimatedStateRefund) || 0);
-      const stdDeduction = Number(draft.standardDeduction) || (customer?.maritalStatus?.includes('Joint') ? 29200 : 14600);
+      const isMarriedJoint = customer?.maritalStatus?.includes('Joint') || customer?.maritalStatus === 'Married' || (customer?.maritalStatus?.includes('Married') && !customer?.maritalStatus?.includes('Separately'));
+      const stdDeduction = Number(draft.standardDeduction) || (isMarriedJoint ? 29200 : 14600);
       const validTaxable = Number(draft.taxableIncome) || Math.max(0, grossIncome - stdDeduction);
       const validTax = Number(draft.taxLiability) || 0;
       const validWithholding = Number(draft.fedWithheld) || (validFedRefund > 0 ? (validTax + validFedRefund) : Math.max(0, validTax - balanceDue));
 
-      // Fee Breakdown from real quotes or dynamic baseline based on taxpayer state
+      // Fee Breakdown from saved draft, real quotes or dynamic baseline based on taxpayer state
       const hasQuote = Boolean(latestQuote);
-      const quoteAmount = hasQuote ? Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount || 0) : 0;
-      const baseFee = 149;
-      const stateFee = customer?.state ? 49 : 0;
-      const auditDefenseAmount = 29;
+      const savedFeeBreakdown = draft.feeBreakdown;
+      const baseFee = savedFeeBreakdown?.fed1040PrepFee !== undefined ? Number(savedFeeBreakdown.fed1040PrepFee) : 149;
+      const selectedStates = Array.isArray(savedFeeBreakdown?.selectedStates) && savedFeeBreakdown.selectedStates.length > 0
+        ? savedFeeBreakdown.selectedStates
+        : (customer?.state ? [customer.state] : ['IL']);
+      const stateFee = savedFeeBreakdown?.statePrepFee !== undefined
+        ? Number(savedFeeBreakdown.statePrepFee)
+        : (selectedStates.length * 49);
+      const auditDefenseAmount = savedFeeBreakdown?.auditDefenseFee !== undefined ? Number(savedFeeBreakdown.auditDefenseFee) : 29;
+      const hasAuditDefense = savedFeeBreakdown?.hasAuditDefense !== undefined ? Boolean(savedFeeBreakdown.hasAuditDefense) : true;
+      const fatcaFee = Number(savedFeeBreakdown?.fatcaFee || 0);
+      const fbarFee = Number(savedFeeBreakdown?.fbarFee || 0);
+      const discountAmount = savedFeeBreakdown?.discountAmount !== undefined ? Number(savedFeeBreakdown.discountAmount) : (hasQuote ? Number(latestQuote.discountAmount || 0) : 0);
+      const discountCode = savedFeeBreakdown?.discountCode || (latestQuote as any)?.discountCode || '';
 
-      const totalServiceFee = hasQuote ? quoteAmount : (baseFee + stateFee + auditDefenseAmount);
+      const calculatedTotal = baseFee + stateFee + (hasAuditDefense ? auditDefenseAmount : 0) + fbarFee + fatcaFee - discountAmount;
+      const totalServiceFee = Number(
+        draft.totalQuotedFee ||
+        savedFeeBreakdown?.totalServiceFee ||
+        calculatedTotal
+      );
 
       const feeBreakdown = {
         fed1040PrepFee: baseFee,
         statePrepFee: stateFee,
-        selectedStates: customer?.state ? [customer.state] : [],
-        fbarFee: 0,
+        selectedStates,
+        fbarFee,
+        fatcaFee,
+        hasFatca: fatcaFee > 0 || Boolean(savedFeeBreakdown?.hasFatca),
         auditDefenseFee: auditDefenseAmount,
-        hasAuditDefense: true,
-        discountAmount: hasQuote ? Number(latestQuote.discountAmount || 0) : 0,
-        discountCode: latestQuote?.discountCode || '',
+        hasAuditDefense,
+        discountAmount,
+        discountCode,
         totalServiceFee,
-        isQuoted: hasQuote,
+        isQuoted: Boolean(savedFeeBreakdown?.isQuoted || hasQuote),
       };
 
       // Reviewer Name
@@ -160,12 +280,21 @@ export class SalesService {
         ? `${app.assignedReviewAgent.firstName || ''} ${app.assignedReviewAgent.lastName || ''}`.trim() || app.assignedReviewAgent.email || '-'
         : '-';
 
-      // Payment Status
-      let paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED' = 'UNPAID';
-      if (app.currentStage === ApplicationStage.FILING_QUEUE || app.currentStage === ApplicationStage.FILING_IN_PROGRESS || app.currentStage === ApplicationStage.FILING_SUCCESS) {
+      // Payment Status & History
+      const paidAmount = Number(draft.paidAmount || (latestQuote?.status === 'PAID' ? (Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount || 0)) : 0));
+      const remainingBalance = draft.remainingBalance !== undefined
+        ? Number(draft.remainingBalance)
+        : Math.max(0, totalServiceFee - paidAmount);
+
+      let paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED' = 'UNPAID';
+      if (draft.paymentStatus) {
+        paymentStatus = draft.paymentStatus;
+      } else if (app.currentStage === ApplicationStage.FILING_QUEUE || app.currentStage === ApplicationStage.FILING_IN_PROGRESS || app.currentStage === ApplicationStage.FILING_SUCCESS) {
         paymentStatus = 'PAID';
-      } else if (latestQuote?.status === 'PAID') {
+      } else if (latestQuote?.status === 'PAID' || (paidAmount >= totalServiceFee && totalServiceFee > 0)) {
         paymentStatus = 'PAID';
+      } else if (paidAmount > 0) {
+        paymentStatus = 'PARTIALLY_PAID';
       } else if (latestQuote?.status === 'SENT') {
         paymentStatus = 'PAYMENT_LINK_SENT';
       }
@@ -183,26 +312,13 @@ export class SalesService {
       // Map Sales Stage (Preserve reverted stages CORRECTION_NEEDED, DOC_OUTREACH, DOC_PREP)
       let currentStage: string = app.currentStage;
       if (
-        app.currentStage === ApplicationStage.CORRECTION_NEEDED ||
-        app.currentStage === ApplicationStage.DOC_OUTREACH ||
-        app.currentStage === ApplicationStage.DOC_PREP
+        app.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
+        app.currentStage === ApplicationStage.SALES_PITCHING
       ) {
         currentStage = app.currentStage;
-      } else if (
-        draft?.status === 'REVERTED_TO_SALES' ||
-        (draft?.lastRevert && !draft?.lastRevert?.resolved && draft?.lastRevert?.targetDepartment === 'SALES') ||
-        app.currentStage === ApplicationStage.SALES_PITCH_QUEUE
-      ) {
-        currentStage = app.assignedSalesAgentId ? 'SALES_PITCHING' : 'SALES_PITCH_QUEUE';
-      } else if (app.currentStage === ApplicationStage.SALES_PITCHING) {
-        currentStage = 'SALES_PITCHING';
-      } else if (paymentStatus === 'PAID' && esignStatus === 'SIGNED') {
-        currentStage = app.currentStage === ApplicationStage.FILING_QUEUE ? 'FILING_QUEUE' : 'PAID_AND_AUTHORIZED';
-      } else if (paymentStatus === 'PAYMENT_LINK_SENT') {
-        currentStage = 'QUOTATION_SENT';
       }
 
-      return {
+      formattedLeads.push({
         id: app.id,
         applicationId: app.id,
         taxpayerId: customer?.id || '',
@@ -213,8 +329,18 @@ export class SalesService {
         visaType: customer?.visaType || '-',
         maritalStatus: customer?.maritalStatus || 'Single',
         stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
-        complexity: 'STANDARD',
+        complexity: SalesService.computeReturnComplexity(app),
         currentStage,
+        clientPaymentStatus,
+        allApplications: visibleApplications.map((a: any) => ({
+          id: a.id,
+          taxYear: a.taxYear,
+          filingType: a.filingType,
+          currentStage: a.currentStage,
+          assignedSalesAgentId: a.assignedSalesAgentId,
+          assignedSalesAgent: a.assignedSalesAgent,
+        })),
+        totalTaxYears: visibleApplications.length,
         priority: app.priority,
         grossIncome,
         federalRefund: validFedRefund,
@@ -223,6 +349,12 @@ export class SalesService {
         qaAuditorName: qaAuditor,
         qaAuditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
         qaApprovedAt: draft.qaApprovedAt || app.updatedAt.toISOString(),
+        isDualDocSalesRole: Boolean(app.isDualDocSalesRole || draft?.isDualDocSalesRole),
+        assignedDocAgent: app.assignedDocAgent ? {
+          id: app.assignedDocAgent.id,
+          name: `${app.assignedDocAgent.firstName || ''} ${app.assignedDocAgent.lastName || ''}`.trim() || app.assignedDocAgent.email || 'Calling Agent',
+          email: app.assignedDocAgent.email || '-',
+        } : null,
         assignedPrepAgent: app.assignedPrepAgent ? {
           id: app.assignedPrepAgent.id,
           name: `${app.assignedPrepAgent.firstName || ''} ${app.assignedPrepAgent.lastName || ''}`.trim() || app.assignedPrepAgent.email || 'Senior Preparer',
@@ -243,7 +375,7 @@ export class SalesService {
           capitalGains: Number(draft.capitalGains) || 0,
           otherIncome: Number(draft.otherIncome) || 0,
           grossIncome,
-          deductionType: draft.deductionType || (customer?.maritalStatus?.includes('Joint') ? 'STANDARD (MFJ)' : 'STANDARD (Single)'),
+          deductionType: draft.deductionType || (isMarriedJoint ? 'STANDARD (MFJ)' : 'STANDARD (Single)'),
           standardDeduction: stdDeduction,
           effectiveDeduction: Number(draft.effectiveDeduction) || stdDeduction,
           taxableIncome: validTaxable,
@@ -260,17 +392,27 @@ export class SalesService {
           preparerNotes: draft.preparerNotes || draft.prepNotes || '',
           auditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
           targetDueDate: draft.targetDueDate || '',
+          paidAmount,
+          totalQuotedFee: totalServiceFee,
+          remainingBalance,
+          paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
         },
         feeBreakdown,
         paymentStatus,
+        paidAmount,
+        remainingBalance,
+        paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
         esignStatus,
         createdAt: app.createdAt.toISOString(),
         updatedAt: app.updatedAt.toISOString(),
-      };
-    });
+      });
+    }
+
+    const totalCount = formattedLeads.length;
+    const paginatedLeads = formattedLeads.slice(skip, skip + limit);
 
     return {
-      leads: formattedLeads,
+      leads: paginatedLeads,
       pagination: {
         total: totalCount,
         page,
@@ -468,6 +610,38 @@ export class SalesService {
           : balDue > 0
           ? `$${balDue.toLocaleString()} Balance Due`
           : 'Form 1040 QA Approved';
+
+      // Update taxDraftSummary to mark lead as no longer returned to pool
+      try {
+        const prevHistory: any[] = Array.isArray(draft.assignmentHistory) ? draft.assignmentHistory : [];
+        const updatedSummary = {
+          ...draft,
+          isReturnedToPool: false,
+          returnedDepartment: null,
+          returnedReason: null,
+          assignmentHistory: [
+            ...prevHistory,
+            {
+              action: 'ASSIGNED_TO_SALES_CLOSER',
+              department: 'SALES',
+              role: 'SALES_AGENT',
+              agentId: salesAgentId,
+              agentName,
+              assignedByUserId: effectiveManagerId,
+              assignedByUserName: managerName,
+              assignedAt: new Date().toISOString(),
+            },
+          ],
+        };
+        await prisma.taxApplication.update({
+          where: { id: app.id },
+          data: {
+            taxDraftSummary: updatedSummary,
+          },
+        });
+      } catch (sumErr) {
+        console.error('Failed to update taxDraftSummary on sales assign:', sumErr);
+      }
 
       // A. StageHistory Audit Trail
       if (effectiveManagerId) {
@@ -686,7 +860,11 @@ export class SalesService {
   /**
    * Get single Sales Lead by ID for Pitch Workspace
    */
-  public static async getLeadById(applicationId: string) {
+  public static async getLeadById(
+    applicationId: string,
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const [app, auditLogs] = await Promise.all([
       prisma.taxApplication.findUnique({
         where: { id: applicationId },
@@ -740,7 +918,62 @@ export class SalesService {
 
     if (!app) return null;
 
+    // Query sibling applications for multi-tax-year switcher
+    const allCustomerApps = await prisma.taxApplication.findMany({
+      where: { customerId: app.customerId },
+      select: {
+        id: true,
+        taxYear: true,
+        filingType: true,
+        currentStage: true,
+        assignedSalesAgentId: true,
+        assignedSalesAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { taxYear: 'desc' },
+    });
+
+    let availableApplications = allCustomerApps;
+    if (currentUserRole === Role.SALES_AGENT && currentUserId) {
+      availableApplications = allCustomerApps.filter((a) => a.assignedSalesAgentId === currentUserId);
+      if (!availableApplications.some((a) => a.id === app.id)) {
+        if (app.assignedSalesAgentId === currentUserId || !app.assignedSalesAgentId) {
+          availableApplications.push({
+            id: app.id,
+            taxYear: app.taxYear,
+            filingType: app.filingType,
+            currentStage: app.currentStage,
+            assignedSalesAgentId: app.assignedSalesAgentId,
+            assignedSalesAgent: app.assignedSalesAgent,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+          });
+        }
+      }
+    }
+
     const customer = app.customer;
+    const isPaidClient = Boolean(
+      customer?.isConvertedCustomer ||
+      allCustomerApps.some((a: any) =>
+        a.currentStage === ApplicationStage.FILING_SUCCESS ||
+        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+        (a as any).taxDraftSummary?.paidAmount > 0
+      )
+    );
+
+    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+    if (isPaidClient) {
+      clientPaymentStatus = 'PAID';
+    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+      clientPaymentStatus = 'NEW';
+    } else {
+      clientPaymentStatus = 'UNPAID';
+    }
+
     const fullName = customer
       ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'
       : '-';
@@ -757,31 +990,49 @@ export class SalesService {
     const grossIncome = Number(draft.grossIncome) || computedGross;
     const validFedRefund = hasDraftData ? fedRefund : (Number(draft.estimatedRefund) || 0);
     const validStateRefund = hasDraftData ? stateRefund : (Number(draft.estimatedStateRefund) || 0);
-    const stdDeduction = Number(draft.standardDeduction) || (customer?.maritalStatus?.includes('Joint') ? 29200 : 14600);
+    const isMarriedJoint = customer?.maritalStatus?.includes('Joint') || customer?.maritalStatus === 'Married' || (customer?.maritalStatus?.includes('Married') && !customer?.maritalStatus?.includes('Separately'));
+    const stdDeduction = Number(draft.standardDeduction) || (isMarriedJoint ? 29200 : 14600);
     const validTaxable = Number(draft.taxableIncome) || Math.max(0, grossIncome - stdDeduction);
     const validTax = Number(draft.taxLiability) || 0;
     const validWithholding = Number(draft.fedWithheld) || (validFedRefund > 0 ? (validTax + validFedRefund) : Math.max(0, validTax - balanceDue));
 
-    // Fee Breakdown from real quotes or dynamic baseline based on taxpayer state
+    // Fee Breakdown from saved draft, real quotes or dynamic baseline based on taxpayer state
     const hasQuote = Boolean(latestQuote);
-    const quoteAmount = hasQuote ? Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount || 0) : 0;
-    const baseFee = 149;
-    const stateFee = customer?.state ? 49 : 0;
-    const auditDefenseAmount = 29;
+    const savedFeeBreakdown = draft.feeBreakdown;
+    const baseFee = savedFeeBreakdown?.fed1040PrepFee !== undefined ? Number(savedFeeBreakdown.fed1040PrepFee) : 149;
+    const selectedStates = Array.isArray(savedFeeBreakdown?.selectedStates) && savedFeeBreakdown.selectedStates.length > 0
+      ? savedFeeBreakdown.selectedStates
+      : (customer?.state ? [customer.state] : ['IL']);
+    const stateFee = savedFeeBreakdown?.statePrepFee !== undefined
+      ? Number(savedFeeBreakdown.statePrepFee)
+      : (selectedStates.length * 49);
+    const auditDefenseAmount = savedFeeBreakdown?.auditDefenseFee !== undefined ? Number(savedFeeBreakdown.auditDefenseFee) : 29;
+    const hasAuditDefense = savedFeeBreakdown?.hasAuditDefense !== undefined ? Boolean(savedFeeBreakdown.hasAuditDefense) : true;
+    const fatcaFee = Number(savedFeeBreakdown?.fatcaFee || 0);
+    const fbarFee = Number(savedFeeBreakdown?.fbarFee || 0);
+    const discountAmount = savedFeeBreakdown?.discountAmount !== undefined ? Number(savedFeeBreakdown.discountAmount) : (hasQuote ? Number(latestQuote.discountAmount || 0) : 0);
+    const discountCode = savedFeeBreakdown?.discountCode || (latestQuote as any)?.discountCode || '';
 
-    const totalServiceFee = hasQuote ? quoteAmount : (baseFee + stateFee + auditDefenseAmount);
+    const calculatedTotal = baseFee + stateFee + (hasAuditDefense ? auditDefenseAmount : 0) + fbarFee + fatcaFee - discountAmount;
+    const totalServiceFee = Number(
+      draft.totalQuotedFee ||
+      savedFeeBreakdown?.totalServiceFee ||
+      calculatedTotal
+    );
 
     const feeBreakdown = {
       fed1040PrepFee: baseFee,
       statePrepFee: stateFee,
-      selectedStates: customer?.state ? [customer.state] : [],
-      fbarFee: 0,
+      selectedStates,
+      fbarFee,
+      fatcaFee,
+      hasFatca: fatcaFee > 0 || Boolean(savedFeeBreakdown?.hasFatca),
       auditDefenseFee: auditDefenseAmount,
-      hasAuditDefense: true,
-      discountAmount: hasQuote ? Number(latestQuote.discountAmount || 0) : 0,
-      discountCode: (latestQuote as any)?.discountCode || '',
+      hasAuditDefense,
+      discountAmount,
+      discountCode,
       totalServiceFee,
-      isQuoted: hasQuote,
+      isQuoted: Boolean(savedFeeBreakdown?.isQuoted || hasQuote),
     };
 
     // Reviewer Name
@@ -794,14 +1045,24 @@ export class SalesService {
       (d: any) => d.documentCategory === 'FORM_8879' || d.fileName?.toLowerCase().includes('8879')
     );
 
-    // Payment Status (Strictly checks payment records, NOT e-sign)
-    let paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED' = 'UNPAID';
-    if (draft.paymentStatus === 'PAID' || latestQuote?.status === 'PAID') {
-      paymentStatus = 'PAID';
-    } else if (draft.paymentStatus === 'PAYMENT_LINK_SENT' || latestQuote?.status === 'SENT') {
-      paymentStatus = 'PAYMENT_LINK_SENT';
+    // Payment Status & History (Supports Partial Payments)
+    const paidAmount = Number(draft.paidAmount || (latestQuote?.status === 'PAID' ? (Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount || 0)) : 0));
+    const totalFeeResolved = draft.totalQuotedFee || draft.feeBreakdown?.totalServiceFee || totalServiceFee;
+    const remainingBalance = draft.remainingBalance !== undefined
+      ? Number(draft.remainingBalance)
+      : Math.max(0, totalFeeResolved - paidAmount);
+
+    let paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED' = 'UNPAID';
+    if (draft.paymentStatus) {
+      paymentStatus = draft.paymentStatus;
     } else if (app.currentStage === ApplicationStage.FILING_QUEUE || app.currentStage === ApplicationStage.FILING_IN_PROGRESS || app.currentStage === ApplicationStage.FILING_SUCCESS) {
       paymentStatus = 'PAID';
+    } else if (latestQuote?.status === 'PAID' || (paidAmount >= totalFeeResolved && totalFeeResolved > 0)) {
+      paymentStatus = 'PAID';
+    } else if (paidAmount > 0) {
+      paymentStatus = 'PARTIALLY_PAID';
+    } else if (latestQuote?.status === 'SENT') {
+      paymentStatus = 'PAYMENT_LINK_SENT';
     }
 
     // E-Sign Status (Strictly Form 8879, independent from payment quote!)
@@ -825,7 +1086,7 @@ export class SalesService {
       visaType: customer?.visaType || '-',
       maritalStatus: customer?.maritalStatus || 'Single',
       stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
-      complexity: 'STANDARD',
+      complexity: SalesService.computeReturnComplexity(app),
       currentStage: app.currentStage,
       grossIncome,
       federalRefund: validFedRefund,
@@ -854,7 +1115,7 @@ export class SalesService {
         capitalGains: Number(draft.capitalGains) || 0,
         otherIncome: Number(draft.otherIncome) || 0,
         grossIncome,
-        deductionType: draft.deductionType || (customer?.maritalStatus?.includes('Joint') ? 'STANDARD (MFJ)' : 'STANDARD (Single)'),
+        deductionType: draft.deductionType || (isMarriedJoint ? 'STANDARD (MFJ)' : 'STANDARD (Single)'),
         standardDeduction: stdDeduction,
         effectiveDeduction: Number(draft.effectiveDeduction) || stdDeduction,
         taxableIncome: validTaxable,
@@ -871,10 +1132,21 @@ export class SalesService {
         preparerNotes: draft.preparerNotes || draft.prepNotes || '',
         auditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
         targetDueDate: draft.targetDueDate || '',
+        paidAmount,
+        totalQuotedFee: totalFeeResolved,
+        remainingBalance,
+        paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
+        closerCallNotes: draft.closerCallNotes || draft.notes || '',
+        closerNotesHistory: Array.isArray(draft.closerNotesHistory) ? draft.closerNotesHistory : [],
       },
       feeBreakdown,
       paymentStatus,
+      paidAmount,
+      remainingBalance,
+      paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
       esignStatus,
+      closerCallNotes: draft.closerCallNotes || draft.notes || '',
+      closerNotesHistory: Array.isArray(draft.closerNotesHistory) ? draft.closerNotesHistory : [],
       paidAt: draft.paidAt || (latestQuote?.status === 'PAID' ? latestQuote.createdAt.toISOString() : null),
       esignCompletedAt: draft.esignCompletedAt || null,
       stageHistories: (app.stageHistories || []).map((s: any) => {
@@ -925,6 +1197,27 @@ export class SalesService {
           createdAt: a.createdAt?.toISOString ? a.createdAt.toISOString() : a.createdAt,
         };
       }),
+      notes: draft.closerCallNotes || draft.notes || latestQuote?.userFeedback || '',
+      salesPitch: draft.salesPitch || {
+        pitchStatus: draft.pitchStatus || 'NEED_TIME',
+        originalFee: draft.originalFee || totalFeeResolved,
+        negotiatedAmount: draft.negotiatedAmount ?? null,
+        comment: draft.closerCallNotes || '',
+      },
+      pitchStatus: draft.salesPitch?.pitchStatus || draft.pitchStatus || 'NEED_TIME',
+      negotiatedAmount: draft.salesPitch?.negotiatedAmount ?? draft.negotiatedAmount ?? null,
+      originalFee: draft.salesPitch?.originalFee || draft.originalFee || totalFeeResolved,
+      clientPaymentStatus,
+      availableApplications: availableApplications.map((a: any) => ({
+        id: a.id,
+        taxYear: a.taxYear,
+        filingType: a.filingType,
+        currentStage: a.currentStage,
+        assignedSalesAgentId: a.assignedSalesAgentId,
+        assignedSalesAgent: a.assignedSalesAgent,
+        createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
+        updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
+      })),
       createdAt: app.createdAt.toISOString(),
       updatedAt: app.updatedAt.toISOString(),
     };
@@ -1002,7 +1295,10 @@ export class SalesService {
   /**
    * Dispatch paid & e-signed return to IRS Filing Queue
    */
-  public static async dispatchToFiling(applicationId: string, userId: string) {
+  /**
+   * Dispatch paid & e-signed return to IRS Filing Queue with optional closer notes
+   */
+  public static async dispatchToFiling(applicationId: string, userId: string, notes?: string) {
     const app = await prisma.taxApplication.findUnique({
       where: { id: applicationId },
       include: { customer: true },
@@ -1061,9 +1357,12 @@ export class SalesService {
       };
     }
 
+    const updatedNotes = notes?.trim() || currentDraft.closerCallNotes || '';
     const updatedDraftSummary = {
       ...currentDraft,
       status: 'QA_APPROVED',
+      closerCallNotes: updatedNotes,
+      lastCallNoteAt: notes?.trim() ? new Date().toISOString() : currentDraft.lastCallNoteAt,
       revertsByTarget: resolvedRevertsByTarget,
       lastRevert: currentDraft.lastRevert ? {
         ...currentDraft.lastRevert,
@@ -1091,11 +1390,27 @@ export class SalesService {
             fromStage: ApplicationStage.SALES_PITCHING,
             toStage: ApplicationStage.FILING_QUEUE,
             movedByUserId: effectiveActorId,
-            remarks: `Form 1040 certified return for ${clientName} authorized & dispatched to IRS E-Filing Queue by ${actorName}`,
+            remarks: `Form 1040 certified return for ${clientName} authorized & dispatched to IRS E-Filing Queue by ${actorName}${updatedNotes ? ` • Notes: "${updatedNotes}"` : ''}`,
           },
         });
       } catch (err) {
         console.error('Failed to create stage history on filing dispatch:', err);
+      }
+    }
+
+    // 1.1 Optional CallLog if notes provided
+    if (effectiveActorId && updatedNotes) {
+      try {
+        await prisma.callLog.create({
+          data: {
+            applicationId,
+            agentId: effectiveActorId,
+            disposition: 'DISPATCHED_TO_IRS_FILING',
+            callSummary: updatedNotes,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create call log on dispatch:', err);
       }
     }
 
@@ -1114,7 +1429,8 @@ export class SalesService {
             fromStage: ApplicationStage.SALES_PITCHING,
             toStage: ApplicationStage.FILING_QUEUE,
             actionDescription: `Form 1040 certified return for ${clientName} dispatched to IRS E-Filing Queue by ${actorName}`,
-            remarks: `Fee payment verified ($${draft.paidAmount || 227}) and Form 8879 authorized with PIN (${draft.taxpayerPin || '84920'}). Dispatched to IRS Modernized e-File Queue.`,
+            closerCallNotes: updatedNotes,
+            remarks: `Fee payment verified ($${draft.paidAmount || 227}) and Form 8879 authorized with PIN (${draft.taxpayerPin || '84920'}). Dispatched to IRS Modernized e-File Queue.${updatedNotes ? ` Closer Notes: "${updatedNotes}"` : ''}`,
             taxYear: app.taxYear || 2025,
             clientName,
           },
@@ -1162,12 +1478,312 @@ export class SalesService {
   }
 
   /**
+   * Update and persist Pitch Negotiation Status, Original Fee & Negotiated Amount
+   */
+  public static async updatePitchNegotiation(
+    applicationId: string,
+    payload: {
+      pitchStatus?: string;
+      originalFee?: number;
+      negotiatedAmount?: number | null;
+      comment?: string;
+    },
+    userId: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true, quotes: { orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const currentFeeBreakdown = currentDraft.feeBreakdown || {};
+    const origFee = payload.originalFee !== undefined && payload.originalFee !== null
+      ? Number(payload.originalFee)
+      : Number(currentFeeBreakdown.basePrepFee || currentFeeBreakdown.totalServiceFee || currentDraft.totalQuotedFee || 247);
+
+    const negAmount = payload.negotiatedAmount !== undefined && payload.negotiatedAmount !== null && !isNaN(Number(payload.negotiatedAmount))
+      ? Number(payload.negotiatedAmount)
+      : null;
+
+    const pitchStatus = payload.pitchStatus || currentDraft.salesPitch?.pitchStatus || currentDraft.pitchStatus || 'NEED_TIME';
+    const comment = payload.comment !== undefined ? payload.comment.trim() : (currentDraft.salesPitch?.comment || '');
+
+    const salesPitch = {
+      pitchStatus,
+      originalFee: origFee,
+      negotiatedAmount: negAmount,
+      comment,
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: userId,
+    };
+
+    const updatedDraft = {
+      ...currentDraft,
+      salesPitch,
+      pitchStatus,
+      negotiatedAmount: negAmount,
+      originalFee: origFee,
+      closerCallNotes: comment || currentDraft.closerCallNotes,
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedDraft,
+      },
+    });
+
+    // Safely resolve actor details
+    let effectiveUserId = userId;
+    const user = effectiveUserId && effectiveUserId !== 'SYSTEM'
+      ? await prisma.user.findUnique({ where: { id: effectiveUserId } })
+      : null;
+
+    if (!user && app.assignedSalesAgentId) {
+      effectiveUserId = app.assignedSalesAgentId;
+    }
+
+    const actorUser = user || (effectiveUserId ? await prisma.user.findUnique({ where: { id: effectiveUserId } }) : null);
+    const actorName = actorUser
+      ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email || 'Sales Closer'
+      : 'Sales Closer';
+    const actorRole = actorUser?.role || 'SALES_AGENT';
+
+    const PITCH_STATUS_MAP: Record<string, string> = {
+      NEED_TIME: 'Need time (Client needs time to think/review before closing)',
+      PRICING_ISSUE: 'Pricing issue (Client feels the price is high / asking for discount)',
+      FILING_WITH_OTHERS: 'Filing with others (Client decided to file with local CPA or other software)',
+      NEED_CALL_WITH_CPA: 'Need call with CPA (Client requires technical tax consultation before paying)',
+      OTHER_COMMENT: 'Other comment (Custom note entry)',
+    };
+
+    const statusLabel = PITCH_STATUS_MAP[pitchStatus] || pitchStatus;
+    const formattedRemarks = `Pitch Negotiation: Status="${statusLabel}" | Original Fee=$${origFee.toFixed(2)}${negAmount !== null ? ` | Negotiated Counter-Offer=$${negAmount.toFixed(2)}` : ''}${comment ? ` | Closer Note: "${comment}"` : ''}`;
+
+    // 1. Create StageHistory record for the lead lifecycle audit
+    if (effectiveUserId) {
+      try {
+        await prisma.stageHistory.create({
+          data: {
+            applicationId,
+            fromStage: app.currentStage,
+            toStage: app.currentStage,
+            movedByUserId: effectiveUserId,
+            remarks: formattedRemarks,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create stage history for pitch negotiation:', err);
+      }
+    }
+
+    // 2. Create AuditLog record
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: effectiveUserId || null,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole,
+          action: AuditActionType.TAX_DRAFT_SAVE,
+          moduleKey: 'SALES_PITCH',
+          details: {
+            actionDescription: `Pitch negotiation status updated: ${statusLabel}`,
+            pitchStatus,
+            statusLabel,
+            originalFee: origFee,
+            negotiatedAmount: negAmount,
+            comment,
+            remarks: formattedRemarks,
+          },
+        },
+      });
+    } catch (err) {
+      console.error('Failed to create audit log for negotiation update:', err);
+    }
+
+    // 3. If a custom comment was entered, also log to CallLog
+    if (effectiveUserId && comment) {
+      try {
+        await prisma.callLog.create({
+          data: {
+            applicationId,
+            agentId: effectiveUserId,
+            disposition: pitchStatus,
+            callSummary: comment,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create call log in updatePitchNegotiation:', err);
+      }
+    }
+
+    return { success: true, salesPitch, application: updatedApp };
+  }
+
+  /**
+   * Save closer call notes directly into database & CallLog
+   */
+  public static async saveCloserNotes(
+    applicationId: string,
+    payload: {
+      notes: string;
+      disposition?: string;
+      callDuration?: number;
+    },
+    userId: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+    if (!app) {
+      throw new Error('Application not found');
+    }
+    const currentDraft: any = app.taxDraftSummary || {};
+    const notes = (payload.notes || '').trim();
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Sales Closer';
+
+    const existingHistory: any[] = Array.isArray(currentDraft.closerNotesHistory)
+      ? currentDraft.closerNotesHistory
+      : [];
+
+    const newNoteRecord = {
+      id: `note_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      note: notes,
+      authorId: user?.id || userId,
+      authorName: actorName,
+      authorEmail: user?.email || '',
+      authorRole: user?.role || 'SALES_AGENT',
+      disposition: payload.disposition || 'NOTE_RECORDED',
+      callDuration: payload.callDuration || 0,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedHistory = [newNoteRecord, ...existingHistory];
+
+    const updatedDraft = {
+      ...currentDraft,
+      closerCallNotes: notes,
+      notes,
+      closerNotesHistory: updatedHistory,
+      lastCallNoteAt: new Date().toISOString(),
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedDraft,
+      },
+    });
+
+    if (userId && notes) {
+      try {
+        await prisma.callLog.create({
+          data: {
+            applicationId,
+            agentId: userId,
+            disposition: payload.disposition || 'SALES_CALL_LOGGED',
+            callSummary: notes,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create call log in saveCloserNotes:', err);
+      }
+
+      try {
+        await prisma.auditLog.create({
+          data: {
+            applicationId,
+            actorId: userId,
+            actorType: AuditActorType.AGENT,
+            actorName,
+            actorRole: user?.role || 'SALES_AGENT',
+            action: AuditActionType.DISPOSITION_LOG,
+            moduleKey: 'SALES',
+            details: {
+              notes,
+              disposition: payload.disposition || 'SALES_CALL_LOGGED',
+              callDuration: payload.callDuration || 0,
+              remarks: `Closer call note logged by ${actorName}: "${notes}"`,
+            },
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create audit log in saveCloserNotes:', err);
+      }
+    }
+
+    return { success: true, notes, application: updatedApp };
+  }
+
+  /**
+   * Update fee quote & breakdown directly in database
+   */
+  public static async updateFeeBreakdown(
+    applicationId: string,
+    feeBreakdown: any,
+    _userId?: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true, quotes: { orderBy: { createdAt: 'desc' }, take: 1 } },
+    });
+    if (!app) {
+      throw new Error('Tax Application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const paidAmount = Number(currentDraft.paidAmount || 0);
+    const isPaid = currentDraft.paymentStatus === 'PAID' || (paidAmount > 0 && paidAmount >= Number(currentDraft.totalQuotedFee || 0));
+    if (isPaid) {
+      throw new Error('Fee quotation is locked and cannot be modified because payment has already been verified.');
+    }
+
+    const totalServiceFee = Number(feeBreakdown?.totalServiceFee || currentDraft.totalQuotedFee || 247);
+    const remainingBalance = Math.max(0, totalServiceFee - paidAmount);
+
+    let paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' = currentDraft.paymentStatus || 'UNPAID';
+    if (paidAmount >= totalServiceFee && totalServiceFee > 0) {
+      paymentStatus = 'PAID';
+    } else if (paidAmount > 0) {
+      paymentStatus = 'PARTIALLY_PAID';
+    }
+
+    const updatedDraft = {
+      ...currentDraft,
+      feeBreakdown,
+      totalQuotedFee: totalServiceFee,
+      paidAmount,
+      remainingBalance,
+      paymentStatus,
+    };
+
+    const updated = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedDraft,
+      },
+    });
+
+    return { success: true, feeBreakdown, application: updated };
+  }
+
+  /**
    * Record customer service fee payment into database (SalesQuote & TaxApplication)
+   * Supports Full & Partial Installment Payments with Complete History Ledger
    */
   public static async recordPayment(
     applicationId: string,
     data: {
       amount: number;
+      feeBreakdown?: any;
+      totalQuotedFee?: number;
       discountAmount?: number;
       paymentMethod?: string;
       transactionRef?: string;
@@ -1177,20 +1793,41 @@ export class SalesService {
   ) {
     const app = await prisma.taxApplication.findUnique({
       where: { id: applicationId },
+      include: {
+        customer: true,
+        assignedSalesAgent: true,
+        quotes: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
     });
     if (!app) {
       throw new Error('Application not found');
     }
 
     const currentDraft: any = app.taxDraftSummary || {};
-    const updatedDraft = {
-      ...currentDraft,
-      paymentStatus: 'PAID',
-      paidAt: new Date().toISOString(),
-      paymentMethod: data.paymentMethod || 'STRIPE_CARD',
-      transactionRef: data.transactionRef || `tx_card_${Date.now()}`,
-      paidAmount: Number(data.amount) || 0,
-    };
+    const installmentAmount = Math.max(0, Number(data.amount) || 0);
+    const prevPaidAmount = Number(currentDraft.paidAmount || 0);
+    const newCumulativePaid = prevPaidAmount + installmentAmount;
+
+    // Merge provided feeBreakdown or fallback to existing draft feeBreakdown
+    const mergedFeeBreakdown = data.feeBreakdown || currentDraft.feeBreakdown || null;
+
+    // Determine total fee
+    const totalFee = Number(
+      data.totalQuotedFee ||
+      mergedFeeBreakdown?.totalServiceFee ||
+      currentDraft.totalQuotedFee ||
+      app.quotes?.[0]?.quoteAmount ||
+      247
+    );
+    const remainingBalance = Math.max(0, totalFee - newCumulativePaid);
+
+    // Determine payment status
+    let paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' = 'UNPAID';
+    if (newCumulativePaid >= totalFee && totalFee > 0) {
+      paymentStatus = 'PAID';
+    } else if (newCumulativePaid > 0) {
+      paymentStatus = 'PARTIALLY_PAID';
+    }
 
     // Safely resolve valid agentId for SalesQuote User foreign key
     let validAgentId = app.assignedSalesAgentId || userId;
@@ -1199,9 +1836,49 @@ export class SalesService {
       : null;
 
     if (!agentExists) {
-      const fallbackUser = await prisma.user.findFirst({ select: { id: true } });
+      const fallbackUser = await prisma.user.findFirst({ select: { id: true, firstName: true, lastName: true, email: true, role: true } });
       validAgentId = fallbackUser?.id || '';
     }
+
+    const agentName = agentExists
+      ? `${agentExists.firstName || ''} ${agentExists.lastName || ''}`.trim() || agentExists.email || 'Sales Closer'
+      : 'Sales Closer';
+    const agentRole = agentExists?.role || 'SALES_AGENT';
+
+    // New Payment History Ledger Item
+    const historyItem = {
+      id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      amount: installmentAmount,
+      totalQuotedFee: totalFee,
+      cumulativePaid: newCumulativePaid,
+      remainingBalance,
+      paymentMethod: data.paymentMethod || 'STRIPE_CARD',
+      transactionRef: data.transactionRef || `tx_card_${Date.now()}`,
+      paidAt: new Date().toISOString(),
+      collectedBy: {
+        id: agentExists?.id || validAgentId,
+        name: agentName,
+        email: agentExists?.email,
+        role: agentRole,
+      },
+      notes: data.notes || (paymentStatus === 'PAID' ? 'Full fee payment cleared' : `Partial installment payment ($${installmentAmount})`),
+    };
+
+    const existingHistory = Array.isArray(currentDraft.paymentHistory) ? currentDraft.paymentHistory : [];
+    const paymentHistory = [historyItem, ...existingHistory];
+
+    const updatedDraft = {
+      ...currentDraft,
+      feeBreakdown: mergedFeeBreakdown || currentDraft.feeBreakdown,
+      paymentStatus,
+      paidAt: new Date().toISOString(),
+      paymentMethod: data.paymentMethod || 'STRIPE_CARD',
+      transactionRef: data.transactionRef || historyItem.transactionRef,
+      paidAmount: newCumulativePaid,
+      totalQuotedFee: totalFee,
+      remainingBalance,
+      paymentHistory,
+    };
 
     let quote = null;
     if (validAgentId) {
@@ -1210,14 +1887,66 @@ export class SalesService {
           data: {
             applicationId,
             salesAgentId: validAgentId,
-            quoteAmount: Number(data.amount) || 0,
-            discountAmount: Number(data.discountAmount || 0),
-            status: 'PAID',
-            userFeedback: data.notes || `Paid via ${data.paymentMethod || 'Card'} (${data.transactionRef || 'Direct'})`,
+            quoteAmount: totalFee,
+            discountAmount: Number(data.discountAmount || mergedFeeBreakdown?.discountAmount || 0),
+            status: paymentStatus === 'PAID' ? 'PAID' : 'PARTIALLY_PAID',
+            userFeedback: `${historyItem.notes} (Total Paid: $${newCumulativePaid}/$${totalFee}, Balance: $${remainingBalance})`,
           },
         });
       } catch (err) {
         console.error('Failed to create salesQuote record:', err);
+      }
+    }
+
+    // Automatically record CouponUsage redemption audit trail if an authorized promo code was applied
+    const appliedCode = mergedFeeBreakdown?.discountCode?.trim()?.toUpperCase();
+    const discountVal = Number(data.discountAmount || mergedFeeBreakdown?.discountAmount || 0);
+
+    if (appliedCode && discountVal > 0) {
+      try {
+        const coupon = await prisma.discountCoupon.findUnique({
+          where: { code: appliedCode },
+        });
+
+        if (coupon) {
+          const existingUsage = await prisma.couponUsage.findFirst({
+            where: {
+              couponId: coupon.id,
+              applicationId,
+            },
+          });
+
+          if (!existingUsage) {
+            await prisma.couponUsage.create({
+              data: {
+                couponId: coupon.id,
+                couponCode: coupon.code,
+                applicationId,
+                customerId: app.customerId || null,
+                appliedByUserId: validAgentId || userId,
+                originalFee: new Prisma.Decimal(totalFee + discountVal),
+                discountAmount: new Prisma.Decimal(discountVal),
+                finalFee: new Prisma.Decimal(totalFee),
+                justificationCategory: coupon.justificationCategory,
+                justificationNotes: coupon.justificationNotes,
+              },
+            });
+
+            const updatedCoupon = await prisma.discountCoupon.update({
+              where: { id: coupon.id },
+              data: { timesUsed: { increment: 1 } },
+            });
+
+            if (updatedCoupon.maxUsageLimit && updatedCoupon.timesUsed >= updatedCoupon.maxUsageLimit) {
+              await prisma.discountCoupon.update({
+                where: { id: coupon.id },
+                data: { status: CouponStatus.DEPLETED },
+              });
+            }
+          }
+        }
+      } catch (couponErr) {
+        console.error('Failed to log couponUsage during payment:', couponErr);
       }
     }
 
@@ -1228,12 +1957,8 @@ export class SalesService {
       },
     });
 
-    const agentName = agentExists
-      ? `${agentExists.firstName || ''} ${agentExists.lastName || ''}`.trim() || agentExists.email || 'Sales Closer'
-      : 'Sales Closer';
-    const agentRole = agentExists?.role || 'SALES_AGENT';
-
-    const formattedAmount = Number(data.amount || 0).toLocaleString();
+    const formattedAmount = installmentAmount.toLocaleString();
+    const formattedBalance = remainingBalance.toLocaleString();
 
     if (validAgentId) {
       try {
@@ -1243,7 +1968,9 @@ export class SalesService {
             fromStage: app.currentStage,
             toStage: app.currentStage,
             movedByUserId: validAgentId,
-            remarks: `Service fee payment of $${formattedAmount} collected via ${data.paymentMethod || 'Card'} (Ref: ${data.transactionRef || 'Direct'})`,
+            remarks: paymentStatus === 'PAID'
+              ? `Full service fee payment of $${formattedAmount} completed via ${data.paymentMethod || 'Card'} (Ref: ${historyItem.transactionRef})`
+              : `Partial payment installment of $${formattedAmount} collected via ${data.paymentMethod || 'Card'}. Remaining balance: $${formattedBalance}`,
           },
         });
       } catch {
@@ -1396,5 +2123,355 @@ export class SalesService {
     }
 
     return { success: true, document: doc, application: updatedApp };
+  }
+
+  /**
+   * Dispatch and record Stripe Self-Checkout Payment Link to Primary & optional Secondary Email
+   */
+  public static async sendPaymentLink(
+    applicationId: string,
+    payload: {
+      amount: number;
+      primaryEmail?: string;
+      secondaryEmail?: string;
+      sendToPrimary?: boolean;
+      sendToSecondary?: boolean;
+      phone?: string;
+      notes?: string;
+    },
+    userId: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: {
+        customer: true,
+        assignedSalesAgent: true,
+        quotes: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+    });
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const amount = Number(payload.amount) || Number(currentDraft.totalQuotedFee) || 247;
+    const clientName = app.customer
+      ? `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Client'
+      : 'Client';
+
+    const defaultPrimary = app.customer?.email || '';
+    const primaryEmail = (payload.primaryEmail || defaultPrimary).trim();
+    const secondaryEmail = (payload.secondaryEmail || '').trim();
+    const sendToPrimary = payload.sendToPrimary !== false;
+    const sendToSecondary = Boolean(secondaryEmail && payload.sendToSecondary !== false);
+
+    const recipientEmails: string[] = [];
+    if (sendToPrimary && primaryEmail) recipientEmails.push(primaryEmail);
+    if (sendToSecondary && secondaryEmail && !recipientEmails.includes(secondaryEmail)) {
+      recipientEmails.push(secondaryEmail);
+    }
+    if (recipientEmails.length === 0) {
+      if (primaryEmail) recipientEmails.push(primaryEmail);
+      else if (secondaryEmail) recipientEmails.push(secondaryEmail);
+      else recipientEmails.push(defaultPrimary);
+    }
+
+    const recipientSummary = recipientEmails.join(', ');
+
+    // Actor details
+    let validAgentId = app.assignedSalesAgentId || userId;
+    let agentUser = validAgentId && validAgentId !== 'SYSTEM'
+      ? await prisma.user.findUnique({ where: { id: validAgentId } })
+      : null;
+
+    if (!agentUser) {
+      agentUser = await prisma.user.findFirst({
+        where: { role: { in: [Role.SALES_AGENT, Role.SALES_MANAGER, Role.ADMIN] }, isActive: true },
+      });
+      if (agentUser) {
+        validAgentId = agentUser.id;
+      }
+    }
+
+    const actorName = agentUser
+      ? `${agentUser.firstName || ''} ${agentUser.lastName || ''}`.trim() || agentUser.email || 'Sales Closer'
+      : 'Sales Closer';
+    const actorRole = agentUser?.role || 'SALES_AGENT';
+
+    const paymentLinkRecord = {
+      id: `link_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      amount,
+      primaryEmail,
+      secondaryEmail: secondaryEmail || null,
+      recipients: recipientEmails,
+      phone: payload.phone || app.customer?.phone || '',
+      notes: payload.notes || '',
+      sentAt: new Date().toISOString(),
+      sentBy: {
+        id: validAgentId,
+        name: actorName,
+        email: agentUser?.email,
+        role: actorRole,
+      },
+    };
+
+    const existingLinks = Array.isArray(currentDraft.paymentLinkHistory) ? currentDraft.paymentLinkHistory : [];
+    const paymentLinkHistory = [paymentLinkRecord, ...existingLinks];
+
+    const updatedDraft = {
+      ...currentDraft,
+      paymentStatus: currentDraft.paymentStatus === 'PAID' ? 'PAID' : 'PAYMENT_LINK_SENT',
+      paymentLinkDetails: paymentLinkRecord,
+      secondaryEmail: secondaryEmail || currentDraft.secondaryEmail || null,
+      paymentLinkHistory,
+    };
+
+    // Record / Update SalesQuote status as SENT
+    if (validAgentId && agentUser) {
+      try {
+        await prisma.salesQuote.create({
+          data: {
+            applicationId,
+            salesAgentId: validAgentId,
+            quoteAmount: amount,
+            status: 'SENT',
+            userFeedback: `Checkout link ($${amount}) dispatched to: ${recipientSummary}${secondaryEmail ? ` (Secondary Email: ${secondaryEmail})` : ''}`,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create salesQuote for payment link:', err);
+      }
+    }
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedDraft,
+      },
+    });
+
+    const remarks = `Payment Link of $${amount.toLocaleString()} sent to ${recipientSummary}${secondaryEmail ? ` (Secondary Email: ${secondaryEmail})` : ''} by ${actorName}`;
+
+    // 1. StageHistory
+    if (validAgentId && agentUser) {
+      try {
+        await prisma.stageHistory.create({
+          data: {
+            applicationId,
+            fromStage: app.currentStage,
+            toStage: app.currentStage,
+            movedByUserId: validAgentId,
+            remarks,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to create stageHistory for payment link:', err);
+      }
+    }
+
+    // 2. AuditLog
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: agentUser?.id || null,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole,
+          action: AuditActionType.TAX_DRAFT_SAVE,
+          moduleKey: 'SALES_PAYMENT_LINK',
+          details: {
+            actionDescription: `Stripe checkout payment link ($${amount}) sent to ${recipientSummary}`,
+            amount,
+            primaryEmail,
+            secondaryEmail: secondaryEmail || null,
+            recipients: recipientEmails,
+            remarks,
+          },
+        },
+      });
+    } catch (err) {
+      console.error('Failed to create auditLog for payment link:', err);
+    }
+
+    // 3. SentEmail record for each destination email
+    if (agentUser?.id) {
+      const senderId = agentUser.id;
+      for (const email of recipientEmails) {
+        try {
+          await prisma.sentEmail.create({
+            data: {
+              applicationId,
+              senderUserId: senderId,
+              recipientEmail: email,
+              subject: `Secure Service Fee Checkout ($${amount}) - Form 1040 Tax Filing (${clientName})`,
+              body: `Dear ${clientName},\n\nPlease find your secure checkout link of $${amount} for Form 1040 tax preparation & filing service.\n\nSent by ${actorName} (${agentUser?.email || 'TaxCRM Sales Team'}).\n\nThank you,\nTaxCRM Team`,
+              status: 'SENT',
+            },
+          });
+        } catch (e) {
+          console.error('Failed to record sentEmail on payment link dispatch:', e);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      amount,
+      primaryEmail,
+      secondaryEmail: secondaryEmail || null,
+      recipients: recipientEmails,
+      paymentLinkRecord,
+      application: updatedApp,
+    };
+  }
+
+  /**
+   * Sales Closer returns / releases lead back to Admin Unassigned Pool
+   */
+  public static async returnLeadToAdmin(options: {
+    applicationId: string;
+    returnedByUserId: string;
+    reason?: string;
+  }) {
+    const { applicationId, returnedByUserId, reason = 'Client not converting / rejected fee quote - Released to Admin Pool' } = options;
+
+    const returnedByUser = await prisma.user.findUnique({
+      where: { id: returnedByUserId },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+    });
+    const returnerName = returnedByUser?.firstName
+      ? `${returnedByUser.firstName} ${returnedByUser.lastName || ''}`.trim()
+      : returnedByUser?.email || 'Sales Closer';
+
+    return await prisma.$transaction(async (tx) => {
+      const app = await tx.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: {
+          assignedSalesAgent: {
+            select: { id: true, email: true, firstName: true, lastName: true, role: true },
+          },
+          customer: {
+            select: { firstName: true, lastName: true, email: true },
+          },
+        },
+      });
+
+      if (!app) {
+        throw new Error('Tax Application not found');
+      }
+
+      const prevSummary = (app.taxDraftSummary as Record<string, any>) || {};
+      const prevHistory: any[] = Array.isArray(prevSummary.assignmentHistory) ? prevSummary.assignmentHistory : [];
+
+      const prevAgent = app.assignedSalesAgent;
+      const prevAgentName = prevAgent?.firstName
+        ? `${prevAgent.firstName} ${prevAgent.lastName || ''}`.trim()
+        : prevAgent?.email || 'Sales Closer';
+
+      const nowIso = new Date().toISOString();
+
+      const newHistoryEntry = {
+        agentId: prevAgent?.id || app.assignedSalesAgentId || 'unknown',
+        agentName: prevAgentName,
+        agentEmail: prevAgent?.email || '',
+        role: prevAgent?.role || 'SALES_AGENT',
+        action: 'RETURNED_TO_POOL',
+        department: 'SALES',
+        assignedAt: app.updatedAt?.toISOString() || app.createdAt.toISOString(),
+        returnedAt: nowIso,
+        returnedByUserId,
+        returnedByUserName: returnerName,
+        reason,
+      };
+
+      const updatedHistory = [...prevHistory, newHistoryEntry];
+      const updatedSummary = {
+        ...prevSummary,
+        assignmentHistory: updatedHistory,
+        isReturnedToPool: true,
+        returnedDepartment: 'SALES',
+        returnedAt: nowIso,
+        returnedBy: returnerName,
+        returnedReason: reason,
+      };
+
+      // Unassign sales agent and set currentStage to SALES_PITCH_QUEUE (ready for Admin or manager re-assignment)
+      const updatedApp = await tx.taxApplication.update({
+        where: { id: app.id },
+        data: {
+          assignedSalesAgentId: null,
+          currentStage: ApplicationStage.SALES_PITCH_QUEUE,
+          taxDraftSummary: updatedSummary,
+        },
+      });
+
+      const clientName = `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || 'Taxpayer';
+
+      // Stage history audit
+      await tx.stageHistory.create({
+        data: {
+          applicationId: app.id,
+          fromStage: app.currentStage,
+          toStage: ApplicationStage.SALES_PITCH_QUEUE,
+          movedByUserId: returnedByUserId,
+          remarks: `Sales Closer ${returnerName} (${returnedByUser?.email || 'agent'}) released lead back to Admin Unassigned Pool. Reason: ${reason}. Previous Closer: ${prevAgentName}.`,
+        },
+      });
+
+      // Audit log
+      await tx.auditLog.create({
+        data: {
+          applicationId: app.id,
+          actorId: returnedByUserId,
+          actorType: returnedByUser?.role === Role.ADMIN ? AuditActorType.ADMIN : AuditActorType.AGENT,
+          actorName: returnerName,
+          actorRole: returnedByUser?.role || 'SALES_AGENT',
+          action: AuditActionType.STAGE_CHANGE,
+          moduleKey: 'SALES_RETURN_TO_ADMIN',
+          details: {
+            actorEmail: returnedByUser?.email || '',
+            previousAgentId: prevAgent?.id,
+            previousAgentEmail: prevAgent?.email,
+            previousAgentName: prevAgentName,
+            returnedDepartment: 'SALES',
+            clientName,
+            reason,
+            actionDescription: `Lead released back to Admin pool by ${returnerName}`,
+          },
+        },
+      });
+
+      return {
+        success: true,
+        message: `Lead for ${clientName} successfully returned to Admin Unassigned Pool`,
+        application: updatedApp,
+      };
+    });
+  }
+
+  /**
+   * Bulk return multiple sales leads back to Admin Unassigned Pool
+   */
+  public static async returnLeadsBulkToAdmin(options: {
+    applicationIds: string[];
+    returnedByUserId: string;
+    reason?: string;
+  }) {
+    const { applicationIds, returnedByUserId, reason } = options;
+    const results = [];
+    for (const appId of applicationIds) {
+      try {
+        const res = await this.returnLeadToAdmin({ applicationId: appId, returnedByUserId, reason });
+        results.push(res);
+      } catch (err: any) {
+        console.error(`Failed to return lead ${appId}:`, err);
+      }
+    }
+    return {
+      success: true,
+      count: results.length,
+      message: `Successfully returned ${results.length} sales lead(s) to Admin Unassigned Pool`,
+    };
   }
 }

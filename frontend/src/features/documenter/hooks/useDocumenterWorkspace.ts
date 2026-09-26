@@ -10,13 +10,17 @@ import { documenterService } from '../services/documenter-service';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import toast from 'react-hot-toast';
 
+import type { DateFilterPreset } from '@/shared/utils/date-filters';
+
 export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   const { user } = useAuthStore();
   const isAgent = user?.role === 'DOC_AGENT';
   const isAdmin = user?.role === 'ADMIN';
 
   // 1. Filter & Pagination State
-  const [timeRange, setTimeRange] = useState<'TODAY' | 'WEEK' | 'SEASON'>('TODAY');
+  const [timeRange, setTimeRange] = useState<DateFilterPreset>('TODAY');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   const [activeTab, setActiveTab] = useState<DocumenterTab>(
     defaultTab || (isAgent ? 'ALL' : 'UNASSIGNED')
   );
@@ -155,7 +159,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   }, [selectedRows, activeLeadForAssign, fetchLeads, fetchAgents]);
 
   // Direct Staff Assignment
-  const handleDirectAssign = useCallback(async (agentId: string) => {
+  const handleDirectAssign = useCallback(async (agentId: string, options?: { alsoAssignAsSales?: boolean }) => {
     setIsActionLoading(true);
     try {
       const targetIds = selectedRows.length > 0
@@ -170,6 +174,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
       const res = await documenterService.assignBulk({
         applicationIds: targetIds,
         targetAgentId: agentId,
+        alsoAssignAsSales: options?.alsoAssignAsSales,
       });
 
       toast.success(
@@ -318,6 +323,12 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     handleCloseModals,
     timeRange,
     setTimeRange,
+    customStartDate,
+    customEndDate,
+    handleCustomDateChange: (start: string, end: string) => {
+      setCustomStartDate(start);
+      setCustomEndDate(end);
+    },
     handleSaveCallDisposition,
     refreshData: fetchLeads,
   };

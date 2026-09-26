@@ -20,8 +20,12 @@ export function useTaxReviewerAudit() {
   const [assignedReviewer, setAssignedReviewer] = useState<WorkspaceAssignedReviewer | null>(null);
   const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<WorkspaceDocument | null>(null);
+  const [drakeTaxFile, setDrakeTaxFile] = useState<any | null>(null);
   const [prepNotes, setPrepNotes] = useState<string>('');
+  const [priority, setPriority] = useState<string>('MEDIUM');
   const [taxDraftSummary, setTaxDraftSummary] = useState<any>(null);
+  const [clientPaymentStatus, setClientPaymentStatus] = useState<'PAID' | 'NEW' | 'UNPAID'>('UNPAID');
+  const [availableApplications, setAvailableApplications] = useState<any[]>([]);
   const [stageHistories, setStageHistories] = useState<any[]>([]);
   const [callLogs, setCallLogs] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -77,6 +81,17 @@ export function useTaxReviewerAudit() {
       setDocuments(data.documents || []);
       setPrepNotes(data.prepNotes || '');
       setTaxDraftSummary(data.taxDraftSummary || {});
+      if (data.priority) setPriority(data.priority);
+      if (data.clientPaymentStatus) setClientPaymentStatus(data.clientPaymentStatus);
+      if (data.availableApplications) setAvailableApplications(data.availableApplications);
+
+      const drakeFile = data.taxDraftSummary?.drakeTaxFile || (data.documents || []).find((d: any) => d.category === 'DRAKE_TAX_CALCULATION' || d.category === 'DRAKE_TAX_FILE');
+      if (drakeFile) {
+        setDrakeTaxFile(drakeFile);
+      } else {
+        setDrakeTaxFile(null);
+      }
+
       if (data.stageHistories) setStageHistories(data.stageHistories);
       if (data.callLogs) setCallLogs(data.callLogs);
       if (data.auditLogs) setAuditLogs(data.auditLogs);
@@ -146,12 +161,14 @@ export function useTaxReviewerAudit() {
     applicationId,
     taxYear,
     currentStage,
+    priority,
     taxpayer,
     assignedPreparer,
     assignedReviewer,
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
+    drakeTaxFile,
     prepNotes,
     taxDraftSummary,
     checks,
@@ -171,6 +188,8 @@ export function useTaxReviewerAudit() {
     stageHistories,
     callLogs,
     auditLogs,
+    clientPaymentStatus,
+    availableApplications,
     handleConfirmApprove,
     handleConfirmRevision,
   };

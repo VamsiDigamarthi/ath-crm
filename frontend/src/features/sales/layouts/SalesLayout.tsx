@@ -11,6 +11,8 @@ import {
   Users,
   LogOut,
   Bell,
+  Sparkles,
+  Tag,
 } from 'lucide-react';
 import { salesService } from '../services/sales-service';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
@@ -35,14 +37,20 @@ export const SalesLayout: React.FC = () => {
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
 
   const [queueBadgeCount, setQueueBadgeCount] = React.useState<number | null>(null);
+  const [dualBadgeCount, setDualBadgeCount] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     async function loadBadge() {
       try {
-        const res = await salesService.getPipelineLeads({ limit: 100 });
+        const res = await salesService.getPipelineLeads({ limit: 150 });
         const all = res.leads || [];
+        const dualLeads = all.filter((l) => Boolean(l.isDualDocSalesRole || (l.taxDraftSummary as any)?.isDualDocSalesRole));
+        const regularLeads = all.filter((l) => !Boolean(l.isDualDocSalesRole || (l.taxDraftSummary as any)?.isDualDocSalesRole));
+
+        setDualBadgeCount(dualLeads.length);
+
         if (isManager) {
-          setQueueBadgeCount(all.length);
+          setQueueBadgeCount(regularLeads.length);
         } else {
           const myId = user?.id;
           const myEmail = user?.email?.toLowerCase().trim();
@@ -67,7 +75,9 @@ export const SalesLayout: React.FC = () => {
     ? [
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/sales/manager' },
         { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/manager/queue' },
+        { id: 'dual_role', label: 'Dual Doc + Sales', icon: Sparkles, section: 'Operations', badge: dualBadgeCount !== null ? String(dualBadgeCount) : undefined, path: '/sales/manager/dual-role' },
         { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/sales/manager/team' },
+        { id: 'coupons', label: 'Discount Coupons', icon: Tag, section: 'Management', path: '/sales/coupons' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
       ]
     : [
@@ -79,9 +89,11 @@ export const SalesLayout: React.FC = () => {
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/sales/notifications')) return 'notifications';
+    if (currentPath.includes('/sales/coupons')) return 'coupons';
+    if (currentPath.includes('/sales/manager/dual-role')) return 'dual_role';
     if (currentPath.includes('/sales/manager/team')) return 'team';
-    if (currentPath.includes('/sales/manager/queue')) return 'pipeline';
-    if (currentPath.includes('/sales/manager')) return 'dashboard';
+    if (currentPath.includes('/sales/manager/pitch') || currentPath.includes('/sales/manager/queue')) return 'pipeline';
+    if (currentPath === '/sales/manager' || currentPath === '/sales/manager/') return 'dashboard';
     if (isManager && (currentPath.includes('/sales/agent/pitch') || currentPath.includes('/sales/pitch') || currentPath.includes('/sales/agent/queue'))) return 'pipeline';
     if (currentPath.includes('/sales/agent/queue') || currentPath.includes('/sales/agent/pitch')) return 'pitch_queue';
     if (currentPath.includes('/sales/agent')) return 'agent_hub';
@@ -106,7 +118,9 @@ export const SalesLayout: React.FC = () => {
 
   const getHeaderTitle = () => {
     if (activeId === 'notifications') return 'Sales Department Notifications Hub';
+    if (activeId === 'coupons') return 'Manager-Approved Discount Coupons & Justification Control';
     if (activeId === 'team') return 'Sales Closers Staff Matrix & Capacity';
+    if (currentPath.includes('/pitch/')) return 'Sales Closer Pitch & Revenue Workbench';
     if (activeId === 'pipeline') return 'Sales & Fee Quotation Department Queue';
     if (activeId === 'dashboard') return 'Sales Revenue & Closers Command Center';
     if (activeId === 'agent_hub') return 'Sales Closer Daily Operations Hub';

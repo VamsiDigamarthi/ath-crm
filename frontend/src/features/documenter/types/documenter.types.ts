@@ -91,6 +91,23 @@ export interface DocumenterLeadCustomer {
   zipCode?: string | null;
 }
 
+export interface DocumenterTaxYearSummary {
+  id: string;
+  taxYear: number;
+  filingType?: string;
+  currentStage: string;
+  irsStatus?: string;
+  assignedDocAgentId?: string | null;
+  assignedDocAgent?: {
+    id: string;
+    email: string;
+    mobile?: string;
+    role?: string;
+  } | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface DocumenterLeadItem extends Record<string, unknown> {
   id: string;
   customerId: string;
@@ -105,6 +122,14 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
     mobile: string;
     role: string;
   } | null;
+  assignedSalesAgentId?: string | null;
+  assignedSalesAgent?: {
+    id: string;
+    email: string;
+    mobile: string;
+    role: string;
+  } | null;
+  isDualDocSalesRole?: boolean;
   lastCallLog?: {
     disposition: string;
     callSummary?: string | null;
@@ -117,6 +142,19 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
   stageHistories?: StageHistoryItem[];
   auditLogs?: AuditLogItem[];
   taxDraftSummary?: Record<string, unknown> | null;
+  allApplications?: DocumenterTaxYearSummary[];
+  availableApplications?: DocumenterTaxYearSummary[];
+  previousDocAgent?: {
+    id: string;
+    email: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    taxYear?: number;
+  } | null;
+  clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
+  totalTaxYears?: number;
   createdAt: string;
   updatedAt: string;
 }

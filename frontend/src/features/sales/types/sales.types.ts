@@ -5,26 +5,74 @@ export type SalesLeadStage =
   | 'SALES_PITCHING'        // Agent actively calling/pitching client
   | 'QUOTATION_SENT'        // Fee quote generated & sent to client
   | 'PAYMENT_PENDING'       // Client agreed, awaiting card swipe/link payment
+  | 'SALES_PAYMENT_PENDING'
+  | 'SALES_ESIGN_PENDING'
   | 'PAID_AND_AUTHORIZED'   // Payment verified & Form 8879 E-Signed
   | 'FILING_QUEUE'          // Transferred to Filing Operations
   | 'FILING_IN_PROGRESS'    // Filing currently active
   | 'FILING_SUCCESS'        // Successfully accepted by IRS
   | 'CORRECTION_NEEDED'     // Reverted to Tax Preparer for calculations revision
+  | 'QA_REVISION_REQUESTED'
+  | 'QA_APPROVED'
   | 'DOC_OUTREACH'          // Reverted to Documenter for missing paperwork
   | 'DOC_PREP'              // Resumed Tax Preparation
-  | 'PITCH_REJECTED';       // Client declined / dropped
+  | 'COMPLETED'
+  | (string & {});
+export type PitchNegotiationStatus = 
+  | 'NEED_TIME'           // Need time (Client needs time to think/review before closing)
+  | 'PRICING_ISSUE'        // Pricing issue (Client feels the price is high / asking for discount)
+  | 'FILING_WITH_OTHERS'   // Filing with others (Client decided to file with local CPA or other software)
+  | 'NEED_CALL_WITH_CPA'   // Need call with CPA (Client requires technical tax consultation before paying)
+  | 'OTHER_COMMENT';       // Other comment (Custom note entry)
 
 export interface SalesFeeBreakdown {
   fed1040PrepFee: number;
   statePrepFee: number;
   selectedStates: string[];
   fbarFee: number;
+  fatcaFee?: number;
+  hasFatca?: boolean;
   auditDefenseFee: number;
   hasAuditDefense: boolean;
   discountAmount: number;
   discountCode: string;
+  justificationCategory?: string;
+  justificationNotes?: string;
+  approvedByName?: string;
   totalServiceFee: number;
   isQuoted?: boolean;
+}
+
+export type SalesPaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED';
+
+export interface PaymentHistoryItem {
+  id: string;
+  amount: number;
+  totalQuotedFee: number;
+  cumulativePaid: number;
+  remainingBalance: number;
+  paymentMethod: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER' | 'ZELLE' | 'CASH';
+  transactionRef?: string;
+  paidAt: string;
+  collectedBy?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    role?: string;
+  };
+  notes?: string;
+}
+
+export interface CloserNoteItem {
+  id: string;
+  note: string;
+  authorId?: string;
+  authorName: string;
+  authorEmail?: string;
+  authorRole?: string;
+  disposition?: string;
+  callDuration?: number;
+  createdAt: string;
 }
 
 export interface SalesLeadItem extends Record<string, unknown> {
@@ -41,6 +89,24 @@ export interface SalesLeadItem extends Record<string, unknown> {
   priority?: string;
   complexity: 'STANDARD' | 'INVESTMENTS_1099B' | 'FOREIGN_FBAR' | 'SCHEDULE_C';
   currentStage: SalesLeadStage;
+  clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
+  totalTaxYears?: number;
+  allApplications?: Array<{
+    id: string;
+    taxYear: number;
+    filingType?: string;
+    currentStage: string;
+    assignedSalesAgentId?: string | null;
+    assignedSalesAgent?: { id: string; firstName?: string; lastName?: string; email?: string } | null;
+  }>;
+  availableApplications?: Array<{
+    id: string;
+    taxYear: number;
+    filingType?: string;
+    currentStage: string;
+    assignedSalesAgentId?: string | null;
+    assignedSalesAgent?: { id: string; firstName?: string; lastName?: string; email?: string } | null;
+  }>;
   
   // Tax Return Financials from QA Sign-Off
   grossIncome: number;
@@ -52,6 +118,12 @@ export interface SalesLeadItem extends Record<string, unknown> {
   qaApprovedAt: string;
 
   // Assignment & Sales Info
+  isDualDocSalesRole?: boolean;
+  assignedDocAgent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   assignedPrepAgent?: {
     id: string;
     name: string;
@@ -89,6 +161,10 @@ export interface SalesLeadItem extends Record<string, unknown> {
     preparerNotes?: string;
     auditorRemarks?: string;
     targetDueDate?: string;
+    paidAmount?: number;
+    totalQuotedFee?: number;
+    remainingBalance?: number;
+    paymentHistory?: PaymentHistoryItem[];
     lastRevert?: {
       sourceDepartment: string;
       targetDepartment: string;
@@ -107,12 +183,29 @@ export interface SalesLeadItem extends Record<string, unknown> {
 
   // Pricing & Payment Status
   feeBreakdown: SalesFeeBreakdown;
-  paymentStatus: 'UNPAID' | 'PAYMENT_LINK_SENT' | 'PAID' | 'REFUNDED';
-  paymentMethod?: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER' | 'ZELLE';
+  paymentStatus: SalesPaymentStatus;
+  paidAmount?: number;
+  remainingBalance?: number;
+  paymentHistory?: PaymentHistoryItem[];
+  paymentMethod?: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER' | 'ZELLE' | 'CASH';
   paidAt?: string;
   transactionRef?: string;
   esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';
   esignCompletedAt?: string;
+
+  // Negotiation & Closer Outreach Status
+  salesPitch?: {
+    pitchStatus?: PitchNegotiationStatus | string;
+    originalFee?: number;
+    negotiatedAmount?: number | null;
+    comment?: string;
+    updatedAt?: string;
+  };
+  pitchStatus?: PitchNegotiationStatus | string;
+  negotiatedAmount?: number | null;
+  originalFee?: number;
+  closerCallNotes?: string;
+  closerNotesHistory?: CloserNoteItem[];
 
   lastContactedAt?: string;
   callDisposition?: string;

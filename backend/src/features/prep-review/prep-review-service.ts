@@ -112,16 +112,20 @@ export class PrepReviewService {
   /**
    * Fetch Tax Preparation & QA Review Pipeline Leads from database
    */
-  public static async listPipelineLeads(query: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    tab?: string;
-    staffId?: string;
-    preparerId?: string;
-    reviewerId?: string;
-    priority?: string;
-  }) {
+  public static async listPipelineLeads(
+    query: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      tab?: string;
+      staffId?: string;
+      preparerId?: string;
+      reviewerId?: string;
+      priority?: string;
+    },
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
     const skip = (page - 1) * limit;
@@ -206,11 +210,39 @@ export class PrepReviewService {
       return 'DOC_PREP_COMPLETE';
     };
 
-    // Fetch all pipeline returns matching base criteria
+    // Fetch all pipeline returns matching base criteria with sibling customer applications
     const allApplications = await prisma.taxApplication.findMany({
       where,
       include: {
-        customer: true,
+        customer: {
+          include: {
+            applications: {
+              select: {
+                id: true,
+                taxYear: true,
+                filingType: true,
+                currentStage: true,
+                taxDraftSummary: true,
+                quotes: {
+                  select: {
+                    status: true,
+                  },
+                },
+                assignedPrepAgentId: true,
+                assignedReviewAgentId: true,
+                assignedPrepAgent: {
+                  select: { id: true, firstName: true, lastName: true, email: true },
+                },
+                assignedReviewAgent: {
+                  select: { id: true, firstName: true, lastName: true, email: true },
+                },
+                createdAt: true,
+                updatedAt: true,
+              },
+              orderBy: { taxYear: 'desc' },
+            },
+          },
+        },
         documents: true,
         assignedDocAgent: {
           select: { id: true, firstName: true, lastName: true, email: true },
@@ -262,20 +294,59 @@ export class PrepReviewService {
       return true;
     });
 
-    const totalItems = filteredApps.length;
-    const paginatedApps = filteredApps.slice(skip, skip + limit);
+    // Group filtered applications by customerId so each customer appears as 1 unique row
+    const customerGroupsMap = new Map<string, typeof filteredApps[0][]>();
+    for (const app of filteredApps) {
+      const cId = app.customerId;
+      if (!customerGroupsMap.has(cId)) {
+        customerGroupsMap.set(cId, []);
+      }
+      customerGroupsMap.get(cId)!.push(app);
+    }
 
-    const mappedLeads = paginatedApps.map((app, idx) => {
-      const profile = app.customer;
+    const groupedLeads: any[] = [];
+    for (const [, appsList] of customerGroupsMap.entries()) {
+      let primaryApp = appsList[0];
+      const profile = primaryApp.customer;
+      const allCustomerApps = (profile as any)?.applications || [];
+
+      let visibleApplications = allCustomerApps;
+      if (currentUserRole === Role.TAX_PREPARER && currentUserId) {
+        visibleApplications = allCustomerApps.filter((a: any) => a.assignedPrepAgentId === currentUserId);
+      } else if (currentUserRole === Role.TAX_REVIEWER && currentUserId) {
+        visibleApplications = allCustomerApps.filter((a: any) => a.assignedReviewAgentId === currentUserId);
+      }
+
+      const isPaidClient = Boolean(
+        profile?.isConvertedCustomer ||
+        allCustomerApps.some((a: any) =>
+          a.currentStage === ApplicationStage.FILING_SUCCESS ||
+          a.currentStage === ApplicationStage.FILING_QUEUE ||
+          a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+          a.quotes?.some((q: any) => q.status === 'PAID') ||
+          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+          (a as any).taxDraftSummary?.paidAmount > 0
+        )
+      );
+
+      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+      if (isPaidClient) {
+        clientPaymentStatus = 'PAID';
+      } else if (allCustomerApps.length <= 1 && (primaryApp.currentStage === ApplicationStage.RAW_PROSPECT || primaryApp.currentStage === ApplicationStage.DOC_OUTREACH)) {
+        clientPaymentStatus = 'NEW';
+      } else {
+        clientPaymentStatus = 'UNPAID';
+      }
+
       const taxpayerName = profile
-        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || `Taxpayer #${idx + 1}`
-        : `Taxpayer #${idx + 1}`;
+        ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer'
+        : 'Taxpayer';
 
-      const stage = determineStage(app);
+      const stage = determineStage(primaryApp);
 
       // Compute Complexity Dynamically from DB Documents & Category
       let complexity: 'STANDARD' | 'INVESTMENTS_1099B' | 'FOREIGN_FBAR' | 'SCHEDULE_C' = 'STANDARD';
-      const docNames = (app.documents || []).map((d) => `${d.documentCategory || ''} ${d.fileName || ''}`.toUpperCase()).join(' ');
+      const docNames = (primaryApp.documents || []).map((d) => `${d.documentCategory || ''} ${d.fileName || ''}`.toUpperCase()).join(' ');
       if (docNames.includes('1099-B') || docNames.includes('STOCK') || docNames.includes('INVESTMENT') || docNames.includes('BROKERAGE') || docNames.includes('CRYPTO')) {
         complexity = 'INVESTMENTS_1099B';
       } else if (docNames.includes('FBAR') || docNames.includes('FOREIGN') || docNames.includes('NRE') || docNames.includes('8938')) {
@@ -288,66 +359,82 @@ export class PrepReviewService {
         ? `${profile.city ? `${profile.city}, ` : ''}${profile.state}`
         : profile?.city || 'State Not Set';
 
-      return {
-        id: app.id,
-        applicationId: app.id,
-        taxpayerId: profile?.id || `usr-${idx + 1}`,
+      groupedLeads.push({
+        id: primaryApp.id,
+        applicationId: primaryApp.id,
+        taxpayerId: profile?.id,
         taxpayerName,
         taxpayerEmail: profile?.email || 'taxpayer@client.com',
         taxpayerPhone: profile?.phone || 'Not Provided',
-        taxYear: app.taxYear || 2025,
+        taxYear: primaryApp.taxYear || 2025,
+        filingType: primaryApp.filingType || 'INDIVIDUAL',
         visaType: profile?.visaType || 'H-1B (Specialty Worker)',
         maritalStatus: profile?.maritalStatus || 'Single',
         stateOfResidence,
         complexity,
-        currentStage: app.currentStage,
+        clientPaymentStatus,
+        allApplications: visibleApplications.map((a: any) => ({
+          id: a.id,
+          taxYear: a.taxYear,
+          filingType: a.filingType,
+          currentStage: a.currentStage,
+          assignedPrepAgentId: a.assignedPrepAgentId,
+          assignedReviewAgentId: a.assignedReviewAgentId,
+          assignedPrepAgent: a.assignedPrepAgent,
+          assignedReviewAgent: a.assignedReviewAgent,
+        })),
+        totalTaxYears: visibleApplications.length,
+        currentStage: primaryApp.currentStage,
         prepStage: stage,
-        priority: app.priority,
-        assignedDocAgent: app.assignedDocAgent ? {
-          id: app.assignedDocAgent.id,
-          name: `${app.assignedDocAgent.firstName || ''} ${app.assignedDocAgent.lastName || ''}`.trim() || app.assignedDocAgent.email || 'Doc Agent',
-          email: app.assignedDocAgent.email || '',
+        priority: primaryApp.priority,
+        assignedDocAgent: primaryApp.assignedDocAgent ? {
+          id: primaryApp.assignedDocAgent.id,
+          name: `${primaryApp.assignedDocAgent.firstName || ''} ${primaryApp.assignedDocAgent.lastName || ''}`.trim() || primaryApp.assignedDocAgent.email || 'Doc Agent',
+          email: primaryApp.assignedDocAgent.email || '',
         } : undefined,
-        assignedPreparer: app.assignedPrepAgent ? {
-          id: app.assignedPrepAgent.id,
-          name: `${app.assignedPrepAgent.firstName || ''} ${app.assignedPrepAgent.lastName || ''}`.trim() || app.assignedPrepAgent.email || 'Preparer',
-          email: app.assignedPrepAgent.email || '',
+        assignedPreparer: primaryApp.assignedPrepAgent ? {
+          id: primaryApp.assignedPrepAgent.id,
+          name: `${primaryApp.assignedPrepAgent.firstName || ''} ${primaryApp.assignedPrepAgent.lastName || ''}`.trim() || primaryApp.assignedPrepAgent.email || 'Preparer',
+          email: primaryApp.assignedPrepAgent.email || '',
         } : null,
-        assignedReviewer: app.assignedReviewAgent ? {
-          id: app.assignedReviewAgent.id,
-          name: `${app.assignedReviewAgent.firstName || ''} ${app.assignedReviewAgent.lastName || ''}`.trim() || app.assignedReviewAgent.email || 'Reviewer',
-          email: app.assignedReviewAgent.email || '',
+        assignedReviewer: primaryApp.assignedReviewAgent ? {
+          id: primaryApp.assignedReviewAgent.id,
+          name: `${primaryApp.assignedReviewAgent.firstName || ''} ${primaryApp.assignedReviewAgent.lastName || ''}`.trim() || primaryApp.assignedReviewAgent.email || 'Reviewer',
+          email: primaryApp.assignedReviewAgent.email || '',
         } : null,
-        assignedSalesAgent: app.assignedSalesAgent ? {
-          id: app.assignedSalesAgent.id,
-          name: `${app.assignedSalesAgent.firstName || ''} ${app.assignedSalesAgent.lastName || ''}`.trim() || app.assignedSalesAgent.email || 'Sales Closer',
-          email: app.assignedSalesAgent.email || '',
+        assignedSalesAgent: primaryApp.assignedSalesAgent ? {
+          id: primaryApp.assignedSalesAgent.id,
+          name: `${primaryApp.assignedSalesAgent.firstName || ''} ${primaryApp.assignedSalesAgent.lastName || ''}`.trim() || primaryApp.assignedSalesAgent.email || 'Sales Closer',
+          email: primaryApp.assignedSalesAgent.email || '',
         } : null,
-        assignedFileOp: app.assignedFileOp ? {
-          id: app.assignedFileOp.id,
-          name: `${app.assignedFileOp.firstName || ''} ${app.assignedFileOp.lastName || ''}`.trim() || app.assignedFileOp.email || 'File Operator',
-          email: app.assignedFileOp.email || '',
+        assignedFileOp: primaryApp.assignedFileOp ? {
+          id: primaryApp.assignedFileOp.id,
+          name: `${primaryApp.assignedFileOp.firstName || ''} ${primaryApp.assignedFileOp.lastName || ''}`.trim() || primaryApp.assignedFileOp.email || 'File Operator',
+          email: primaryApp.assignedFileOp.email || '',
         } : null,
-        documentsCount: app.documents?.length || 0,
-        verifiedDocumentsCount: app.documents?.filter((d) => d.verificationStatus === 'VERIFIED').length || 0,
-        targetDueDate: (app.taxDraftSummary as any)?.targetDueDate || null,
-        prepNotes: (app.taxDraftSummary as any)?.preparerNotes || (app.taxDraftSummary as any)?.prepNotes || '',
-        taxDraftSummary: app.taxDraftSummary || null,
+        documentsCount: primaryApp.documents?.length || 0,
+        verifiedDocumentsCount: primaryApp.documents?.filter((d) => d.verificationStatus === 'VERIFIED').length || 0,
+        targetDueDate: (primaryApp.taxDraftSummary as any)?.targetDueDate || null,
+        prepNotes: (primaryApp.taxDraftSummary as any)?.preparerNotes || (primaryApp.taxDraftSummary as any)?.prepNotes || '',
+        taxDraftSummary: primaryApp.taxDraftSummary || null,
         organizerPercent: 100,
-        estimatedWages: (app.taxDraftSummary as any)?.grossIncome || 0,
-        estimatedRefund: (app.taxDraftSummary as any)?.federalRefund || 0,
-        estimatedBalanceDue: (app.taxDraftSummary as any)?.balanceDue || 0,
-        createdAt: app.createdAt,
-        updatedAt: app.updatedAt,
-        submittedAt: (app.taxDraftSummary as any)?.submittedAt || null,
-        signedOffAt: (app.taxDraftSummary as any)?.signedOffAt || null,
-        intakeCompletedAt: app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Today',
-        lastUpdated: app.updatedAt ? new Date(app.updatedAt).toLocaleDateString() : 'Just now',
-      };
-    });
+        estimatedWages: (primaryApp.taxDraftSummary as any)?.grossIncome || 0,
+        estimatedRefund: (primaryApp.taxDraftSummary as any)?.federalRefund || 0,
+        estimatedBalanceDue: (primaryApp.taxDraftSummary as any)?.balanceDue || 0,
+        createdAt: primaryApp.createdAt,
+        updatedAt: primaryApp.updatedAt,
+        submittedAt: (primaryApp.taxDraftSummary as any)?.submittedAt || null,
+        signedOffAt: (primaryApp.taxDraftSummary as any)?.signedOffAt || null,
+        intakeCompletedAt: primaryApp.createdAt ? new Date(primaryApp.createdAt).toLocaleDateString() : 'Today',
+        lastUpdated: primaryApp.updatedAt ? new Date(primaryApp.updatedAt).toLocaleDateString() : 'Just now',
+      });
+    }
+
+    const totalItems = groupedLeads.length;
+    const paginatedApps = groupedLeads.slice(skip, skip + limit);
 
     return {
-      leads: mappedLeads,
+      leads: paginatedApps,
       stats: {
         all: allApplications.length,
         unassigned: unassignedCount,
@@ -700,10 +787,11 @@ export class PrepReviewService {
     };
   }
 
-  /**
-   * Fetch 100% Real Tax Application & Documents for Form 1040 Workspace
-   */
-  public static async getWorkspaceDetails(applicationId: string) {
+  public static async getWorkspaceDetails(
+    applicationId: string,
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const [app, auditLogs] = await Promise.all([
       prisma.taxApplication.findUnique({
         where: { id: applicationId },
@@ -747,6 +835,85 @@ export class PrepReviewService {
 
     if (!app) {
       throw new Error('Tax application not found');
+    }
+
+    // Query sibling applications for multi-tax-year switcher
+    const allCustomerApps = await prisma.taxApplication.findMany({
+      where: { customerId: app.customerId },
+      select: {
+        id: true,
+        taxYear: true,
+        filingType: true,
+        currentStage: true,
+        assignedPrepAgentId: true,
+        assignedReviewAgentId: true,
+        assignedPrepAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedReviewAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { taxYear: 'desc' },
+    });
+
+    let availableApplications = allCustomerApps;
+    if (currentUserRole === Role.TAX_PREPARER && currentUserId) {
+      availableApplications = allCustomerApps.filter((a) => a.assignedPrepAgentId === currentUserId);
+      if (!availableApplications.some((a) => a.id === app.id)) {
+        if (app.assignedPrepAgentId === currentUserId || !app.assignedPrepAgentId) {
+          availableApplications.push({
+            id: app.id,
+            taxYear: app.taxYear,
+            filingType: app.filingType,
+            currentStage: app.currentStage,
+            assignedPrepAgentId: app.assignedPrepAgentId,
+            assignedReviewAgentId: app.assignedReviewAgentId,
+            assignedPrepAgent: app.assignedPrepAgent,
+            assignedReviewAgent: app.assignedReviewAgent,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+          });
+        }
+      }
+    } else if (currentUserRole === Role.TAX_REVIEWER && currentUserId) {
+      availableApplications = allCustomerApps.filter((a) => a.assignedReviewAgentId === currentUserId);
+      if (!availableApplications.some((a) => a.id === app.id)) {
+        if (app.assignedReviewAgentId === currentUserId || !app.assignedReviewAgentId) {
+          availableApplications.push({
+            id: app.id,
+            taxYear: app.taxYear,
+            filingType: app.filingType,
+            currentStage: app.currentStage,
+            assignedPrepAgentId: app.assignedPrepAgentId,
+            assignedReviewAgentId: app.assignedReviewAgentId,
+            assignedPrepAgent: app.assignedPrepAgent,
+            assignedReviewAgent: app.assignedReviewAgent,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+          });
+        }
+      }
+    }
+
+    const isPaidClient = Boolean(
+      app.customer?.isConvertedCustomer ||
+      allCustomerApps.some((a: any) =>
+        a.currentStage === ApplicationStage.FILING_SUCCESS ||
+        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+        (a as any).taxDraftSummary?.paidAmount > 0
+      )
+    );
+
+    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+    if (isPaidClient) {
+      clientPaymentStatus = 'PAID';
+    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+      clientPaymentStatus = 'NEW';
+    } else {
+      clientPaymentStatus = 'UNPAID';
     }
 
     const customer = app.customer;
@@ -876,6 +1043,19 @@ export class PrepReviewService {
           createdAt: a.createdAt,
         };
       }),
+      clientPaymentStatus,
+      availableApplications: availableApplications.map((a: any) => ({
+        id: a.id,
+        taxYear: a.taxYear,
+        filingType: a.filingType,
+        currentStage: a.currentStage,
+        assignedPrepAgentId: a.assignedPrepAgentId,
+        assignedReviewAgentId: a.assignedReviewAgentId,
+        assignedPrepAgent: a.assignedPrepAgent,
+        assignedReviewAgent: a.assignedReviewAgent,
+        createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
+        updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
+      })),
     };
   }
 
@@ -908,6 +1088,166 @@ export class PrepReviewService {
     return {
       applicationId: updated.id,
       taxDraftSummary: updated.taxDraftSummary,
+    };
+  }
+
+  /**
+   * Upload Drake Tax Calculation / Form 1040 Prepared File for Tax Preparer Workspace
+   */
+  public static async uploadDrakeTaxFile(applicationId: string, userId: string, file: Express.Multer.File) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Tax Preparer';
+
+    // Store file in storage
+    const storageResult = await StorageService.saveFile(
+      file,
+      `taxpayer_${app.customerId}_ty${app.taxYear || 2025}`
+    );
+
+    // Save document to TaxDocument table
+    const document = await prisma.taxDocument.create({
+      data: {
+        applicationId,
+        uploadedByUserId: userId,
+        fileName: file.originalname,
+        filePath: storageResult.filePath,
+        documentCategory: 'DRAKE_TAX_CALCULATION',
+        verificationStatus: 'VERIFIED',
+      },
+    });
+
+    const fileUrl = storageResult.fileUrl;
+
+    // Update taxDraftSummary with drakeTaxFile metadata
+    const currentDraft: any = app.taxDraftSummary || {};
+    const drakeTaxFile = {
+      id: document.id,
+      fileName: file.originalname,
+      fileUrl,
+      filePath: storageResult.filePath,
+      fileSize: storageResult.fileSize || file.size,
+      uploadedAt: new Date().toISOString(),
+      uploadedByUserId: userId,
+      uploadedByName: actorName,
+    };
+
+    const updatedSummary = {
+      ...currentDraft,
+      drakeTaxFile,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    // Create Audit Log
+    await prisma.auditLog.create({
+      data: {
+        applicationId,
+        actorId: userId,
+        actorType: 'AGENT',
+        actorName,
+        actorRole: user?.role || 'TAX_PREPARER',
+        action: 'DOCUMENT_UPLOAD',
+        moduleKey: 'PREPARATION_WORKSPACE',
+        details: {
+          documentId: document.id,
+          fileName: file.originalname,
+          documentCategory: 'DRAKE_TAX_CALCULATION',
+          fileSize: storageResult.fileSize || file.size,
+          source: 'PREPARER_WORKSPACE',
+          remarks: `Tax Preparer ${actorName} uploaded Drake Tax Calculation File: "${file.originalname}" (${((storageResult.fileSize || file.size) / 1024).toFixed(1)} KB).`,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      document: {
+        id: document.id,
+        fileName: document.fileName,
+        fileUrl,
+        filePath: document.filePath,
+        category: document.documentCategory,
+        verificationStatus: document.verificationStatus,
+        uploadedAt: document.createdAt,
+      },
+      drakeTaxFile,
+      taxDraftSummary: updatedSummary,
+    };
+  }
+
+  /**
+   * Delete / Remove Drake Tax File from Preparer Workspace
+   */
+  public static async deleteDrakeTaxFile(applicationId: string, documentId: string, userId: string) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Tax Preparer';
+
+    if (documentId) {
+      const doc = await prisma.taxDocument.findUnique({ where: { id: documentId } });
+      if (doc) {
+        await prisma.taxDocument.delete({ where: { id: documentId } });
+        await StorageService.deleteFile(doc.filePath).catch(() => {});
+      }
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const updatedSummary = {
+      ...currentDraft,
+      drakeTaxFile: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        applicationId,
+        actorId: userId,
+        actorType: 'AGENT',
+        actorName,
+        actorRole: user?.role || 'TAX_PREPARER',
+        action: 'DOCUMENT_DELETE',
+        moduleKey: 'PREPARATION_WORKSPACE',
+        details: {
+          documentId,
+          source: 'PREPARER_WORKSPACE',
+          remarks: `Tax Preparer ${actorName} removed Drake Tax Calculation File.`,
+          timestamp: new Date().toISOString(),
+        },
+      },
+    });
+
+    return {
+      success: true,
+      taxDraftSummary: updatedSummary,
     };
   }
 

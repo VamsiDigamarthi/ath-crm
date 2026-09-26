@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
-import { CheckCircle2, FileText, Download, ExternalLink, RefreshCw, Globe, Copy } from 'lucide-react';
+import { CheckCircle2, FileText, ExternalLink, RefreshCw, Globe, Copy } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import apiClient from '@/lib/api-client';
 import type { WorkspaceDocument } from '../../hooks/useTaxPreparerWorkspace';
@@ -76,21 +76,6 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     }
   };
 
-  const handleDownloadFile = () => {
-    if (!previewUrl) return;
-    if (isExternalLink) {
-      window.open(previewUrl, '_blank');
-      return;
-    }
-    const link = window.document.createElement('a');
-    link.href = previewUrl;
-    link.setAttribute('download', fileName);
-    window.document.body.appendChild(link);
-    link.click();
-    link.remove();
-    toast.success(`"${fileName}" downloaded successfully`);
-  };
-
   return (
     <AppModal
       isOpen={Boolean(document)}
@@ -126,24 +111,11 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
               size="sm"
               onClick={handleOpenInNewTab}
               disabled={!previewUrl || isLoadingFile}
-              className="border-slate-200 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs h-8"
+              className="border-slate-200 bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs h-8 px-3"
             >
               <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
               <span>{isExternalLink ? 'Open Drive Link' : 'Open in New Tab'}</span>
             </Button>
-
-            {!isExternalLink && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleDownloadFile}
-                disabled={!previewUrl || isLoadingFile}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer h-8"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download</span>
-              </Button>
-            )}
           </div>
         </div>
 
@@ -224,13 +196,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                   Category: <strong>{document.category}</strong>
                 </p>
               </div>
-              <Button
-                size="sm"
-                onClick={handleDownloadFile}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5 mr-1" /> Download Raw Document
-              </Button>
+              <p className="text-xs text-slate-400">Preview not supported for this file format.</p>
             </div>
           )}
         </div>

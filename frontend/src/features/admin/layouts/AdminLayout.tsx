@@ -18,6 +18,8 @@ import {
   LogOut,
   Bell,
   Mail,
+  Globe,
+  Tag,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -44,7 +46,10 @@ export const AdminLayout: React.FC = () => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Main', path: '/admin/dashboard' },
     { id: 'prospects', label: 'Bulk Lead Import', icon: FileSpreadsheet, section: 'Operations', path: '/admin/prospects' },
+    { id: 'self-signups', label: 'Direct Sign-ups', icon: Globe, section: 'Operations', path: '/admin/self-signups' },
     { id: 'returned-leads', label: 'Returned Leads', icon: RotateCcw, section: 'Operations', path: '/admin/returned-leads' },
+    { id: 'all-taxpayers', label: 'All Taxpayers Hub', icon: Users, section: 'Management', path: '/admin/all-taxpayers' },
+    { id: 'coupons', label: 'Discount Coupons', icon: Tag, section: 'Management', path: '/admin/coupons' },
     { id: 'customers', label: 'Client Directory', icon: UserCheck, section: 'Management', path: '/admin/customers' },
     { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', path: '/admin/employees' },
     { id: 'email-templates', label: 'Email Templates', icon: Mail, section: 'Management', path: '/admin/email-templates' },
@@ -60,6 +65,9 @@ export const AdminLayout: React.FC = () => {
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/admin/notifications')) return 'notifications';
+    if (currentPath.includes('/admin/coupons') || currentPath.includes('/admin/coupon') || currentPath.includes('/admin/discount-coupons')) return 'coupons';
+    if (currentPath.includes('/admin/all-taxpayers')) return 'all-taxpayers';
+    if (currentPath.includes('/admin/self-signups')) return 'self-signups';
     if (currentPath.includes('/admin/returned-leads')) return 'returned-leads';
     if (currentPath.includes('/admin/prospects') || currentPath.includes('/admin/leads')) return 'prospects';
     if (currentPath.includes('/admin/customers')) return 'customers';
@@ -79,6 +87,15 @@ export const AdminLayout: React.FC = () => {
     switch (activeId) {
       case 'notifications':
         return 'Department Notifications & Activity Hub';
+      case 'coupons':
+        return 'Manager-Approved Discount Coupons & Justification Control';
+      case 'all-taxpayers':
+        if (currentPath.match(/\/admin\/all-taxpayers\/.+/)) {
+          return 'Taxpayer 360 Full Profile & Multi-Year Filing Details';
+        }
+        return 'Master Taxpayer Registry & Lifecycle Funnel';
+      case 'self-signups':
+        return 'Direct Online Sign-ups & Self-Registration Pool';
       case 'returned-leads':
         return 'Returned & Unassigned Leads Pool';
       case 'customers':
@@ -106,6 +123,10 @@ export const AdminLayout: React.FC = () => {
   };
 
   const handleItemClick = (id: string) => {
+    if (id === 'coupons') {
+      navigate('/admin/coupons');
+      return;
+    }
     const item = navItems.find((n) => n.id === id);
     if (item?.path) {
       navigate(item.path);

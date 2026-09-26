@@ -15,11 +15,13 @@ import {
   Sparkles,
   AlertTriangle,
   Plus,
-  History
+  History,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSelect } from '@/shared/components/AppSelect';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { AppPagination } from '@/shared/components/AppPagination';
 import { AppEmptyState } from '@/shared/components/AppEmptyState';
 import { AppModal } from '@/shared/components/AppModal';
@@ -28,6 +30,7 @@ import { useCustomerDirectory } from '../hooks/useCustomerDirectory';
 import type { AdminCustomerItem } from '../types/customer-directory.types';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 
 export const AdminCustomerDirectoryScreen: React.FC = () => {
   const {
@@ -295,8 +298,9 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                             {c.firstName[0] || 'C'}{c.lastName?.[0] || ''}
                           </div>
                           <div>
-                            <div className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center gap-1.5">
+                            <div className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center gap-1.5 flex-wrap">
                               <span>{c.fullName}</span>
+                              <ClientPaymentStatusChip lead={c} size="xs" />
                               <span title="Verified Client">
                                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                               </span>
@@ -503,231 +507,417 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
         <AppModal
           isOpen={Boolean(selectedCustomer)}
           onClose={() => setSelectedCustomer(null)}
+          size="2xl"
+          className="max-w-5xl w-full"
           title={
-            <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shadow-xs text-white ${
-                selectedCustomer.activeApplication?.irsStatus === 'ACCEPTED'
-                  ? 'bg-emerald-500'
-                  : selectedCustomer.activeApplication?.irsStatus === 'REJECTED'
-                  ? 'bg-rose-500'
-                  : 'bg-slate-800'
-              }`}>
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white font-black text-sm flex items-center justify-center shadow-sm border border-emerald-400/30 shrink-0">
                 {selectedCustomer.firstName[0]}{selectedCustomer.lastName?.[0] || ''}
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-bold text-slate-900">{selectedCustomer.fullName}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                    {selectedCustomer.fullName}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-emerald-600" />
+                    <span>Converted Client</span>
+                  </span>
                   {selectedCustomer.activeApplication?.irsStatus === 'ACCEPTED' ? (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                       <span>IRS Accepted</span>
                     </span>
                   ) : selectedCustomer.activeApplication?.irsStatus === 'REJECTED' ? (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
-                      <XCircle className="w-3 h-3" />
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
+                      <XCircle className="w-3 h-3 text-rose-600" />
                       <span>IRS Rejected</span>
                     </span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
                       {selectedCustomer.activeApplication?.irsStatusLabel || 'In Pipeline'}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  SSN: {selectedCustomer.ssnMasked} • {selectedCustomer.visaType} ({selectedCustomer.filingStatus})
-                </p>
+                <div className="flex items-center gap-2 text-xs text-slate-500 font-medium mt-0.5 flex-wrap">
+                  <span className="flex items-center gap-1 font-mono">
+                    SSN: {selectedCustomer.ssnMasked}
+                  </span>
+                  <span>•</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    {selectedCustomer.visaType}
+                  </span>
+                  <span>•</span>
+                  <span>{selectedCustomer.filingStatus}</span>
+                  {selectedCustomer.city && (
+                    <>
+                      <span>•</span>
+                      <span>{selectedCustomer.city}, {selectedCustomer.state}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           }
-          width="680px"
           footer={
             <div className="flex items-center justify-between w-full">
               <Button
                 variant="primary"
-                size="sm"
+                size="md"
                 onClick={() => {
                   const target = selectedCustomer;
                   setSelectedCustomer(null);
                   setCustomerForNewTaxYear(target);
                 }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-xl shadow-xs"
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-xl shadow-xs"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4" />
                 <span>Start Next Tax Year Return</span>
               </Button>
 
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 onClick={() => setSelectedCustomer(null)}
-                className="border-slate-200 text-xs font-bold cursor-pointer rounded-xl"
+                className="border-slate-200 text-xs font-bold cursor-pointer rounded-xl hover:bg-slate-100"
               >
                 Close
               </Button>
             </div>
           }
         >
-          <div className="p-6 space-y-5 text-xs font-sans">
-            {/* Profile & Contact Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <span className="text-[11px] font-bold text-slate-500 block">
-                  Contact Coordinates
-                </span>
-                <div className="flex items-center gap-2 text-slate-800 font-medium">
-                  <Mail className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span>{selectedCustomer.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-800 font-medium">
-                  <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span>{selectedCustomer.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-800 font-medium">
-                  <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span>{selectedCustomer.city}, {selectedCustomer.state}</span>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                <span className="text-[11px] font-bold text-slate-500 block">
-                  Tax Profile Details
-                </span>
-                <div className="flex items-center justify-between text-slate-700">
-                  <span className="text-slate-500">Visa Classification:</span>
-                  <strong className="text-slate-900 font-bold">{selectedCustomer.visaType}</strong>
-                </div>
-                <div className="flex items-center justify-between text-slate-700">
-                  <span className="text-slate-500">Marital Status:</span>
-                  <strong className="text-slate-900 font-bold">{selectedCustomer.filingStatus}</strong>
-                </div>
-                <div className="flex items-center justify-between text-slate-700">
-                  <span className="text-slate-500">Client Since:</span>
-                  <strong className="text-slate-900 font-bold">{new Date(selectedCustomer.createdAt).toLocaleDateString()}</strong>
-                </div>
-              </div>
-            </div>
-
-            {/* Historical Multi-Year Filings List */}
-            {selectedCustomer.applications && selectedCustomer.applications.length > 0 && (
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                    <History className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Multi-Year Filing History ({selectedCustomer.applications.length} Returns)</span>
+          <div className="space-y-6 text-xs font-sans">
+            {/* 2-Column Responsive Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              
+              {/* Left Column: Demographics & Profile (5 cols) */}
+              <div className="lg:col-span-5 space-y-4">
+                
+                {/* Contact Coordinates */}
+                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-3">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Contact Coordinates
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const target = selectedCustomer;
-                      setSelectedCustomer(null);
-                      setCustomerForNewTaxYear(target);
-                    }}
-                    className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>+ File Another Year</span>
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {selectedCustomer.applications.map((app) => (
-                    <div key={app.id} className="p-2.5 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-slate-900">TY {app.taxYear}</span>
-                        <span className="text-[10px] text-slate-500">({app.filingType})</span>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                        app.irsStatus === 'ACCEPTED'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : app.irsStatus === 'REJECTED'
-                          ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : 'bg-slate-100 text-slate-700 border-slate-200'
-                      }`}>
-                        {app.irsStatusLabel || app.currentStage.replace(/_/g, ' ')}
-                      </span>
+                  
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white border border-slate-200/80">
+                    <div className="flex items-center gap-2 text-slate-800 font-semibold truncate min-w-0">
+                      <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span className="truncate">{selectedCustomer.email || 'No email provided'}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Active Tax Return Details */}
-            {selectedCustomer.activeApplication ? (
-              <div className="p-5 rounded-xl bg-slate-900 text-white space-y-4 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <FileCheck2 className="w-4 h-4 text-emerald-400" />
-                    <span className="font-bold text-sm">
-                      Tax Year {selectedCustomer.activeApplication.taxYear} Form 1040 Certified Filing
-                    </span>
-                  </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                    selectedCustomer.activeApplication.irsStatus === 'ACCEPTED'
-                      ? 'bg-emerald-400/20 text-emerald-300 border-emerald-400/30'
-                      : selectedCustomer.activeApplication.irsStatus === 'REJECTED'
-                      ? 'bg-rose-400/20 text-rose-300 border-rose-400/30'
-                      : 'bg-amber-400/20 text-amber-300 border-amber-400/30'
-                  }`}>
-                    {selectedCustomer.activeApplication.irsStatusLabel}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                  <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700">
-                    <span className="text-[10px] text-slate-400 block">Federal Due/Refund</span>
-                    <strong className={`text-sm font-bold mt-0.5 block ${selectedCustomer.activeApplication.fedDue > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                      {selectedCustomer.activeApplication.fedDue > 0 ? `-$${selectedCustomer.activeApplication.fedDue.toLocaleString()}` : `+$${selectedCustomer.activeApplication.fedRefund.toLocaleString()}`}
-                    </strong>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700">
-                    <span className="text-[10px] text-slate-400 block">State Due/Refund</span>
-                    <strong className={`text-sm font-bold mt-0.5 block ${selectedCustomer.activeApplication.stateDue > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                      {selectedCustomer.activeApplication.stateDue > 0 ? `-$${selectedCustomer.activeApplication.stateDue.toLocaleString()}` : `+$${selectedCustomer.activeApplication.stateRefund.toLocaleString()}`}
-                    </strong>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700">
-                    <span className="text-[10px] text-slate-400 block">Service Fee</span>
-                    <strong className="text-sm font-bold text-emerald-400 mt-0.5 block">
-                      ${selectedCustomer.activeApplication.paidAmount || 227} Paid
-                    </strong>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700">
-                    <span className="text-[10px] text-slate-400 block">Form 8879 PIN</span>
-                    <strong className="text-sm font-bold text-white mt-0.5 block">
-                      {selectedCustomer.activeApplication.taxpayerPin || '66666'}
-                    </strong>
-                  </div>
-                </div>
-
-                {/* Submission & Certificate or Rejection Details */}
-                {selectedCustomer.activeApplication.irsStatus === 'ACCEPTED' && selectedCustomer.activeApplication.submissionId && (
-                  <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 text-[11px] text-emerald-200">
-                    <span>IRS Submission ID: <strong className="text-white font-bold">{selectedCustomer.activeApplication.submissionId}</strong></span>
-                    {selectedCustomer.activeApplication.certificateId && (
-                      <span>Certificate: <strong className="text-emerald-300 font-bold">{selectedCustomer.activeApplication.certificateId}</strong></span>
+                    {selectedCustomer.email && (
+                      <AppCopyButton text={selectedCustomer.email} size="sm" />
                     )}
                   </div>
-                )}
 
-                {selectedCustomer.activeApplication.irsStatus === 'REJECTED' && (
-                  <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/30 space-y-1 text-[11px] text-rose-200">
-                    <div className="flex items-center gap-1.5 font-bold text-rose-300">
-                      <AlertTriangle className="w-4 h-4 text-rose-400" />
-                      <span>IRS Transmission Rejection (Error Code: {selectedCustomer.activeApplication.rejectionCode || 'R0000-900-01'})</span>
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white border border-slate-200/80">
+                    <div className="flex items-center gap-2 text-slate-800 font-semibold truncate min-w-0">
+                      <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>{selectedCustomer.phone || 'No phone provided'}</span>
                     </div>
-                    <p className="text-[11px] text-rose-300/80">
-                      {selectedCustomer.activeApplication.rejectionReason || 'Name and SSN control does not match IRS master file. Please review taxpayer demographics.'}
-                    </p>
+                    {selectedCustomer.phone && (
+                      <AppCopyButton text={selectedCustomer.phone} size="sm" />
+                    )}
+                  </div>
+
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-white border border-slate-200/80">
+                    <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-slate-800 font-semibold block">
+                        {selectedCustomer.city || 'N/A'}, {selectedCustomer.state || 'N/A'}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">Primary Tax Residence</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tax Profile Details */}
+                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2.5">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Tax Profile Details
+                  </span>
+                  
+                  <div className="flex items-center justify-between text-slate-700 py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-medium">Visa Classification:</span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      {selectedCustomer.visaType}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-700 py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-medium">Marital Status:</span>
+                    <strong className="text-slate-900 font-bold">{selectedCustomer.filingStatus}</strong>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-700 py-1 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-medium">Client Since:</span>
+                    <strong className="text-slate-900 font-bold">
+                      {new Date(selectedCustomer.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </strong>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-700 py-1">
+                    <span className="text-slate-500 font-medium">Total Returns:</span>
+                    <strong className="text-emerald-700 font-bold">
+                      {selectedCustomer.applications?.length || 1} Filing(s) on Record
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Assigned Staff Card (if available) */}
+                {selectedCustomer.activeApplication?.assignedTeam && (
+                  <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Assigned Filing Specialists
+                    </span>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                        <span className="text-slate-400 block text-[10px]">Doc Agent</span>
+                        <span className="font-bold text-slate-800 truncate block">
+                          {selectedCustomer.activeApplication.assignedTeam.docAgent || 'Unassigned'}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                        <span className="text-slate-400 block text-[10px]">Tax Preparer</span>
+                        <span className="font-bold text-slate-800 truncate block">
+                          {selectedCustomer.activeApplication.assignedTeam.prepAgent || 'Unassigned'}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                        <span className="text-slate-400 block text-[10px]">QA Reviewer</span>
+                        <span className="font-bold text-slate-800 truncate block">
+                          {selectedCustomer.activeApplication.assignedTeam.reviewAgent || 'Unassigned'}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                        <span className="text-slate-400 block text-[10px]">File Operator</span>
+                        <span className="font-bold text-slate-800 truncate block">
+                          {selectedCustomer.activeApplication.assignedTeam.fileOperator || 'Unassigned'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
+
               </div>
-            ) : (
-              <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
-                No active tax returns for this client
+
+              {/* Right Column: Multi-Year History & Certified Filing Card (7 cols) */}
+              <div className="lg:col-span-7 space-y-4">
+                
+                {/* Historical Multi-Year Filings List */}
+                {selectedCustomer.applications && selectedCustomer.applications.length > 0 && (
+                  <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <History className="w-4 h-4 text-slate-500" />
+                        <span>Multi-Year Filing History ({selectedCustomer.applications.length} Returns)</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = selectedCustomer;
+                          setSelectedCustomer(null);
+                          setCustomerForNewTaxYear(target);
+                        }}
+                        className="text-xs font-bold text-[#16A34A] hover:text-[#15803D] flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ File Another Year</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {selectedCustomer.applications.map((app) => (
+                        <div
+                          key={app.id}
+                          className="p-3 rounded-xl bg-white border border-slate-200 hover:border-emerald-300 transition-all shadow-2xs flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] font-bold text-xs flex items-center justify-center border border-emerald-100">
+                              {app.taxYear.toString().slice(-2)}
+                            </div>
+                            <div>
+                              <span className="font-bold text-xs text-slate-900 block">
+                                Tax Year {app.taxYear}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                Form 1040 ({app.filingType})
+                              </span>
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              app.irsStatus === 'ACCEPTED'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : app.irsStatus === 'REJECTED'
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            {app.irsStatusLabel || app.currentStage.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Tax Return Certified Summary Card */}
+                {selectedCustomer.activeApplication ? (
+                  <div className="p-5 rounded-2xl bg-slate-900 text-white space-y-4 shadow-xl border border-slate-800">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                          <FileCheck2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-white block">
+                            Tax Year {selectedCustomer.activeApplication.taxYear} Form 1040 Certified Filing
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Filing Type: {selectedCustomer.activeApplication.filingType} • Priority: {selectedCustomer.activeApplication.priority || 'STANDARD'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
+                          selectedCustomer.activeApplication.irsStatus === 'ACCEPTED'
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                            : selectedCustomer.activeApplication.irsStatus === 'REJECTED'
+                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                        }`}
+                      >
+                        {selectedCustomer.activeApplication.irsStatus === 'ACCEPTED' && (
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        )}
+                        <span>{selectedCustomer.activeApplication.irsStatusLabel}</span>
+                      </span>
+                    </div>
+
+                    {/* Financial Metrics Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                      <div className="p-3 rounded-xl bg-slate-800/90 border border-slate-700/80">
+                        <span className="text-[10px] font-medium text-slate-400 block">Federal Due/Refund</span>
+                        <strong
+                          className={`text-sm sm:text-base font-black mt-1 block tracking-tight ${
+                            selectedCustomer.activeApplication.fedDue > 0 ? 'text-rose-400' : 'text-emerald-400'
+                          }`}
+                        >
+                          {selectedCustomer.activeApplication.fedDue > 0
+                            ? `-$${selectedCustomer.activeApplication.fedDue.toLocaleString()}`
+                            : `+$${selectedCustomer.activeApplication.fedRefund.toLocaleString()}`}
+                        </strong>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-800/90 border border-slate-700/80">
+                        <span className="text-[10px] font-medium text-slate-400 block">State Due/Refund</span>
+                        <strong
+                          className={`text-sm sm:text-base font-black mt-1 block tracking-tight ${
+                            selectedCustomer.activeApplication.stateDue > 0 ? 'text-rose-400' : 'text-emerald-400'
+                          }`}
+                        >
+                          {selectedCustomer.activeApplication.stateDue > 0
+                            ? `-$${selectedCustomer.activeApplication.stateDue.toLocaleString()}`
+                            : `+$${selectedCustomer.activeApplication.stateRefund.toLocaleString()}`}
+                        </strong>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-800/90 border border-slate-700/80">
+                        <span className="text-[10px] font-medium text-slate-400 block">CPA Service Fee</span>
+                        <div className="flex items-center justify-center gap-1 mt-1">
+                          <strong className="text-sm sm:text-base font-black text-emerald-400 tracking-tight">
+                            ${selectedCustomer.activeApplication.paidAmount || 227}
+                          </strong>
+                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            Paid
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-800/90 border border-slate-700/80">
+                        <span className="text-[10px] font-medium text-slate-400 block">Form 8879 PIN</span>
+                        <div className="flex items-center justify-center gap-1.5 mt-1">
+                          <strong className="text-sm sm:text-base font-black text-white font-mono tracking-wider">
+                            {selectedCustomer.activeApplication.taxpayerPin || '66666'}
+                          </strong>
+                          {selectedCustomer.activeApplication.taxpayerPin && (
+                            <AppCopyButton
+                              text={selectedCustomer.activeApplication.taxpayerPin}
+                              size="sm"
+                              className="bg-slate-700 border-slate-600 text-slate-300 hover:text-white"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Submission & Certificate or Rejection Details */}
+                    {selectedCustomer.activeApplication.irsStatus === 'ACCEPTED' && selectedCustomer.activeApplication.submissionId && (
+                      <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3 text-xs text-emerald-200">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                          <span>
+                            IRS Submission ID:{' '}
+                            <strong className="text-white font-mono font-bold">
+                              {selectedCustomer.activeApplication.submissionId}
+                            </strong>
+                          </span>
+                          <AppCopyButton
+                            text={selectedCustomer.activeApplication.submissionId}
+                            size="sm"
+                            className="bg-emerald-900 border-emerald-700 text-emerald-200 hover:text-white"
+                          />
+                        </div>
+                        {selectedCustomer.activeApplication.certificateId && (
+                          <div className="flex items-center gap-2">
+                            <span>
+                              Certificate:{' '}
+                              <strong className="text-emerald-300 font-mono font-bold">
+                                {selectedCustomer.activeApplication.certificateId}
+                              </strong>
+                            </span>
+                            <AppCopyButton
+                              text={selectedCustomer.activeApplication.certificateId}
+                              size="sm"
+                              className="bg-emerald-900 border-emerald-700 text-emerald-200 hover:text-white"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedCustomer.activeApplication.irsStatus === 'REJECTED' && (
+                      <div className="p-3.5 rounded-xl bg-rose-950/50 border border-rose-500/30 space-y-1.5 text-xs text-rose-200">
+                        <div className="flex items-center gap-2 font-bold text-rose-300">
+                          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                          <span>
+                            IRS Transmission Rejection (Error Code:{' '}
+                            <span className="font-mono">{selectedCustomer.activeApplication.rejectionCode || 'R0000-900-01'}</span>)
+                          </span>
+                        </div>
+                        <p className="text-xs text-rose-300/90 leading-relaxed">
+                          {selectedCustomer.activeApplication.rejectionReason ||
+                            'Name and SSN control does not match IRS master file. Please review taxpayer demographics.'}
+                        </p>
+                      </div>
+                    )}
+
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                    <FileSpreadsheet className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="font-bold text-slate-700">No active tax returns for this client</p>
+                    <p className="text-xs text-slate-400 mt-1">Start a new tax return to begin filing.</p>
+                  </div>
+                )}
+
               </div>
-            )}
+
+            </div>
           </div>
         </AppModal>
       )}

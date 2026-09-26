@@ -48,7 +48,7 @@ export const CustomerDashboardScreen: React.FC = () => {
       return `Congratulations, ${taxpayerName}! Your TY ${selectedTaxYear || '2025'} Form 1040 has been certified and successfully e-filed with the IRS.`;
     }
     if (currentStage === 'RAW_PROSPECT' || currentStage === 'DOC_OUTREACH') {
-      return `Welcome back, ${taxpayerName}. Your TY ${selectedTaxYear || '2025'} file is in Document Intake. Please complete your 9-Module Organizer and upload your W-2 & 1099 slips.`;
+      return `Welcome back, ${taxpayerName}. Your TY ${selectedTaxYear || '2025'} file is in Document Intake. Please complete your Tax Organizer and upload your W-2 & 1099 slips.`;
     }
     if (currentStage === 'DOC_PREP') {
       return `Welcome back, ${taxpayerName}. Your TY ${selectedTaxYear || '2025'} return has been transferred to the Tax Preparation Department. Our CPA team is calculating your deductions.`;
@@ -133,15 +133,15 @@ export const CustomerDashboardScreen: React.FC = () => {
 
       {/* 4. Quick Action Cards (3-Column Grid) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: 9-Module Organizer Action */}
+        {/* Card 1: Tax Organizer Action */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-indigo-300 transition-all flex flex-col justify-between gap-4">
           <div className="space-y-2">
             <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold border border-indigo-100">
               <CheckSquare className="w-4 h-4" />
             </div>
-            <h4 className="text-sm font-bold text-slate-900">9-Module Tax Organizer</h4>
+            <h4 className="text-sm font-bold text-slate-900">Tax Organizer</h4>
             <p className="text-xs text-slate-500 leading-relaxed font-medium">
-              You are <strong>{organizerPercent}% complete</strong> ({organizerVerifiedCount} of 9 modules verified). Review stock trades & direct deposit routing.
+              You are <strong>{organizerPercent}% complete</strong> ({Math.min(organizerVerifiedCount, 6)} of 6 sections verified). Review income, deductions & direct deposit routing.
             </p>
           </div>
           <Button

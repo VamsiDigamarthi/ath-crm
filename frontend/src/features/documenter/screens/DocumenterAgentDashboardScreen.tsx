@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { Button } from '@/shared/components/Button';
+import { DashboardDateFilter } from '@/shared/components/DashboardDateFilter';
 import { PhoneCall } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AgentStatsCards } from '../components/dashboard/AgentStatsCards';
@@ -14,6 +15,11 @@ export const DocumenterAgentDashboardScreen: React.FC = () => {
   const {
     leads,
     stats,
+    timeRange,
+    setTimeRange,
+    customStartDate,
+    customEndDate,
+    handleCustomDateChange,
     isCallModalOpen,
     activeLeadForCall,
     handleOpenCallModal,
@@ -87,7 +93,15 @@ export const DocumenterAgentDashboardScreen: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <DashboardDateFilter
+            preset={timeRange}
+            onPresetChange={setTimeRange}
+            startDate={customStartDate}
+            endDate={customEndDate}
+            onCustomDateChange={handleCustomDateChange}
+          />
+
           <Button
             size="sm"
             onClick={() => navigate('/documenter/agent/queue')}

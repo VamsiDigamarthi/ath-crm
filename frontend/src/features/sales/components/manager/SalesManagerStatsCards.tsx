@@ -2,10 +2,12 @@ import { DollarSign, CheckCircle2, TrendingUp, Target } from 'lucide-react';
 import type { SalesManagerStats } from '../../types/sales.types';
 
 interface SalesManagerStatsCardsProps {
-  stats: SalesManagerStats;
+  stats: SalesManagerStats & { periodSuffix?: string };
 }
 
 export const SalesManagerStatsCards: React.FC<SalesManagerStatsCardsProps> = ({ stats }) => {
+  const periodLabel = stats.periodSuffix || 'This Month';
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. Total Pipeline Revenue Potential */}
@@ -28,11 +30,11 @@ export const SalesManagerStatsCards: React.FC<SalesManagerStatsCardsProps> = ({ 
         </div>
       </div>
 
-      {/* 2. Deals Closed & Paid Today */}
+      {/* 2. Deals Closed & Paid in Period */}
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
-            Deals Closed &amp; Paid (MTD)
+            Deals Closed &amp; Paid ({periodLabel})
           </span>
           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
             <CheckCircle2 className="w-4 h-4" />
@@ -53,7 +55,7 @@ export const SalesManagerStatsCards: React.FC<SalesManagerStatsCardsProps> = ({ 
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
-            Total Service Revenue (MTD)
+            Total Service Revenue ({periodLabel})
           </span>
           <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
             <DollarSign className="w-4 h-4" />

@@ -7,12 +7,9 @@ import { isModuleCompleted } from './utils/organizer-validation';
 import { Module1Demographics } from './modules/Module1Demographics';
 import { Module2Dependents } from './modules/Module2Dependents';
 import { Module3Presence } from './modules/Module3Presence';
-import { Module4Wages } from './modules/Module4Wages';
-import { Module5Interest } from './modules/Module5Interest';
-import { Module6Stocks } from './modules/Module6Stocks';
 import { Module7Foreign } from './modules/Module7Foreign';
-import { Module8Deductions } from './modules/Module8Deductions';
 import { Module9DirectDeposit } from './modules/Module9DirectDeposit';
+import { ModuleIncomeExpenses } from './modules/ModuleIncomeExpenses';
 
 interface OrganizerModuleContentProps {
   selectedModId: string;
@@ -120,36 +117,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData?.m3_presence || ({} as any)}
             updateField={(field, val) => updateModuleField('m3_presence', field, val)}
             selectedTaxYear={selectedTaxYear}
-            errors={errors}
-            clearError={clearError}
-          />
-        )}
-
-        {selectedModId === 'm4' && (
-          <Module4Wages
-            data={organizerData?.m4_wages || ({} as any)}
-            updateField={(field, val) => updateModuleField('m4_wages', field, val)}
-            selectedTaxYear={selectedTaxYear}
-            errors={errors}
-            clearError={clearError}
-          />
-        )}
-
-        {selectedModId === 'm5' && (
-          <Module5Interest
-            data={organizerData?.m5_interest || ({} as any)}
-            updateField={(field, val) => updateModuleField('m5_interest', field, val)}
-            selectedTaxYear={selectedTaxYear}
-            errors={errors}
-            clearError={clearError}
-          />
-        )}
-
-        {selectedModId === 'm6' && (
-          <Module6Stocks
-            data={organizerData?.m6_stocks || ({} as any)}
-            updateField={(field, val) => updateModuleField('m6_stocks', field, val)}
-            selectedTaxYear={selectedTaxYear}
+            organizerData={organizerData}
+            updateModuleField={updateModuleField}
             errors={errors}
             clearError={clearError}
           />
@@ -165,20 +134,20 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
           />
         )}
 
-        {selectedModId === 'm8' && (
-          <Module8Deductions
-            data={organizerData?.m8_deductions || ({} as any)}
-            updateField={(field, val) => updateModuleField('m8_deductions', field, val)}
+        {selectedModId === 'm9' && (
+          <Module9DirectDeposit
+            data={organizerData?.m9_directDeposit || ({} as any)}
+            updateField={(field, val) => updateModuleField('m9_directDeposit', field, val)}
             selectedTaxYear={selectedTaxYear}
             errors={errors}
             clearError={clearError}
           />
         )}
 
-        {selectedModId === 'm9' && (
-          <Module9DirectDeposit
-            data={organizerData?.m9_directDeposit || ({} as any)}
-            updateField={(field, val) => updateModuleField('m9_directDeposit', field, val)}
+        {(selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6' || selectedModId === 'm8') && (
+          <ModuleIncomeExpenses
+            organizerData={organizerData}
+            updateModuleField={updateModuleField}
             selectedTaxYear={selectedTaxYear}
             errors={errors}
             clearError={clearError}

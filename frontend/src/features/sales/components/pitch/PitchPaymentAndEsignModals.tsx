@@ -4,27 +4,48 @@ import {
   Send, 
   Lock, 
   FileText, 
-  Smartphone,
-  UploadCloud,
-  CheckCircle2,
-  PhoneCall,
-  ShieldCheck,
-  FileCheck,
-  AlertTriangle
+  Smartphone, 
+  UploadCloud, 
+  CheckCircle2, 
+  PhoneCall, 
+  ShieldCheck, 
+  FileCheck, 
+  AlertTriangle,
+  History,
+  Coins,
+  Receipt,
+  UserCheck,
+  Clock,
+  Plus,
+  X,
+  Tag
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import type { SalesLeadItem } from '../../types/sales.types';
+import { salesService } from '../../services/sales-service';
+import type { SalesLeadItem, PaymentHistoryItem } from '../../types/sales.types';
 import toast from 'react-hot-toast';
+
+const formatAmount = (val: number | string | undefined | null): string => {
+  const num = Number(val) || 0;
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: num % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+};
 
 interface PitchPaymentAndEsignModalsProps {
   lead: SalesLeadItem;
   isPaymentModalOpen: boolean;
   onClosePaymentModal: () => void;
-  onProcessPaymentSuccess: (method: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER') => void;
+  onProcessPaymentSuccess: (
+    method: 'STRIPE_CARD' | 'PAYPAL' | 'WIRE_TRANSFER',
+    details?: { amount?: number; notes?: string; transactionRef?: string }
+  ) => void;
   isEsignModalOpen: boolean;
   onCloseEsignModal: () => void;
   onEsignSuccess: (meta?: { file?: File; fileName?: string; method?: string; pin?: string }) => void;
   onDispatchToFiling?: () => void;
+  onPaymentLinkSent?: () => void;
 }
 
 export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProps> = ({
@@ -35,9 +56,62 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
   isEsignModalOpen,
   onCloseEsignModal,
   onEsignSuccess,
+  onPaymentLinkSent,
 }) => {
+  const [paymentView, setPaymentView] = useState<'PAY' | 'HISTORY'>('PAY');
   const [paymentTab, setPaymentTab] = useState<'CARD' | 'LINK'>('CARD');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Partial Payment States & Dynamic Discount Handling
+  const discountAmount = Number(lead.feeBreakdown?.discountAmount) || 0;
+  const discountCode = lead.feeBreakdown?.discountCode || '';
+  const totalQuotedFee = Number(lead.feeBreakdown?.totalServiceFee !== undefined ? lead.feeBreakdown.totalServiceFee : 247);
+  const currentPaidAmount = Number(lead.paidAmount) || 0;
+  const currentRemainingBalance = Math.max(0, totalQuotedFee - currentPaidAmount);
+
+  const [paymentType, setPaymentType] = useState<'FULL' | 'PARTIAL'>('FULL');
+  const [customAmount, setCustomAmount] = useState<string>(
+    currentRemainingBalance > 0 ? String(currentRemainingBalance) : String(totalQuotedFee)
+  );
+  const [paymentNotes, setPaymentNotes] = useState('');
+
+  // Checkout Link & Secondary Email States
+  const [primaryEmail, setPrimaryEmail] = useState(lead.taxpayerEmail || '');
+  const [sendToPrimary, setSendToPrimary] = useState(true);
+  const [isSecondaryEmailEnabled, setIsSecondaryEmailEnabled] = useState(
+    Boolean((lead.taxDraftSummary as any)?.secondaryEmail)
+  );
+  const [secondaryEmail, setSecondaryEmail] = useState(
+    (lead.taxDraftSummary as any)?.secondaryEmail || ''
+  );
+  const [sendToSecondary, setSendToSecondary] = useState(true);
+  const [paymentLinkNotes, setPaymentLinkNotes] = useState('');
+
+  React.useEffect(() => {
+    if (isPaymentModalOpen) {
+      setCustomAmount(currentRemainingBalance > 0 ? String(currentRemainingBalance) : String(totalQuotedFee));
+      setPaymentType('FULL');
+      setPaymentNotes('');
+      setPrimaryEmail(lead.taxpayerEmail || '');
+      setSendToPrimary(true);
+      const savedSec = (lead.taxDraftSummary as any)?.secondaryEmail || '';
+      setSecondaryEmail(savedSec);
+      setIsSecondaryEmailEnabled(Boolean(savedSec));
+      setSendToSecondary(true);
+      setPaymentLinkNotes('');
+    }
+  }, [isPaymentModalOpen, currentRemainingBalance, totalQuotedFee, lead.taxpayerEmail, lead.taxDraftSummary]);
+
+  // Comprehensive Amount Validation & Strict Max Capping
+  const parsedCustom = customAmount === '' ? 0 : Number(customAmount);
+  const isCustomExceeded = paymentType === 'PARTIAL' && parsedCustom > currentRemainingBalance;
+  const isCustomTooLow = paymentType === 'PARTIAL' && (parsedCustom <= 0 || isNaN(parsedCustom));
+  const isAmountInvalid = paymentType === 'PARTIAL' && (isCustomExceeded || isCustomTooLow);
+
+  // Effective payment amount to charge in this transaction
+  const effectiveChargeAmount = paymentType === 'FULL'
+    ? currentRemainingBalance
+    : parsedCustom;
   
   // E-Sign Tab: 3 Real Compliance Modes
   const [esignTab, setEsignTab] = useState<'EMAIL_LINK' | 'UPLOAD_PDF' | 'PHONE_PIN'>('EMAIL_LINK');
@@ -57,23 +131,104 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadPin, setUploadPin] = useState<string>(typeof lead.taxpayerPin === 'string' ? lead.taxpayerPin : '');
 
+  // Payment history items list
+  const historyItems: PaymentHistoryItem[] = Array.isArray(lead.paymentHistory) && lead.paymentHistory.length > 0
+    ? lead.paymentHistory
+    : Array.isArray((lead.taxDraftSummary as any)?.paymentHistory)
+    ? (lead.taxDraftSummary as any).paymentHistory
+    : [];
+
   const handleChargeCard = () => {
+    if (isAmountInvalid || effectiveChargeAmount <= 0) {
+      if (isCustomExceeded) {
+        toast.error(`Payment amount ($${parsedCustom}) exceeds the remaining balance of $${currentRemainingBalance}! Max allowed is $${currentRemainingBalance}. ⚠️`);
+      } else {
+        toast.error('Please enter a valid payment amount greater than $0');
+      }
+      return;
+    }
+    if (effectiveChargeAmount > currentRemainingBalance && currentRemainingBalance > 0) {
+      toast.error(`Payment amount ($${effectiveChargeAmount}) cannot exceed the remaining balance of $${currentRemainingBalance}! ⚠️`);
+      return;
+    }
+
     setIsProcessingPayment(true);
+    const txRef = `tx_card_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const isPartial = effectiveChargeAmount < currentRemainingBalance;
+    const finalNotes = paymentNotes.trim() || (isPartial ? `Partial payment installment ($${effectiveChargeAmount})` : 'Full balance payment');
+
     setTimeout(() => {
       setIsProcessingPayment(false);
-      onProcessPaymentSuccess('STRIPE_CARD');
+      onProcessPaymentSuccess('STRIPE_CARD', {
+        amount: effectiveChargeAmount,
+        notes: finalNotes,
+        transactionRef: txRef,
+      });
       onClosePaymentModal();
-      toast.success(`Payment of $${lead.feeBreakdown.totalServiceFee} successfully charged and recorded in database! 💳✨`);
+      toast.success(
+        isPartial
+          ? `Partial payment of $${effectiveChargeAmount} collected! Remaining balance: $${Math.max(0, currentRemainingBalance - effectiveChargeAmount)} 💳✅`
+          : `Full fee payment of $${effectiveChargeAmount} successfully charged and verified! 💳✨`
+      );
     }, 800);
   };
 
-  const handleSendPaymentLink = () => {
+  const handleSendPaymentLink = async () => {
+    if (isAmountInvalid || effectiveChargeAmount <= 0) {
+      if (isCustomExceeded) {
+        toast.error(`Payment amount ($${parsedCustom}) exceeds the remaining balance of $${currentRemainingBalance}! Max allowed is $${currentRemainingBalance}. ⚠️`);
+      } else {
+        toast.error('Please enter a valid payment amount greater than $0');
+      }
+      return;
+    }
+
+    if (!sendToPrimary && (!isSecondaryEmailEnabled || !sendToSecondary)) {
+      toast.error('Please select at least one recipient email (Primary or Secondary Email)');
+      return;
+    }
+
+    if (isSecondaryEmailEnabled && sendToSecondary) {
+      if (!secondaryEmail.trim()) {
+        toast.error('Please enter a valid secondary recipient email address');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondaryEmail.trim())) {
+        toast.error('Please enter a valid email format for the secondary email');
+        return;
+      }
+    }
+
     setIsProcessingPayment(true);
-    setTimeout(() => {
-      setIsProcessingPayment(false);
+    try {
+      const res: any = await salesService.sendPaymentLink(lead.id || lead.applicationId, {
+        amount: effectiveChargeAmount,
+        primaryEmail: primaryEmail.trim() || lead.taxpayerEmail,
+        secondaryEmail: isSecondaryEmailEnabled && secondaryEmail.trim() ? secondaryEmail.trim() : undefined,
+        sendToPrimary,
+        sendToSecondary: isSecondaryEmailEnabled && sendToSecondary,
+        phone: lead.taxpayerPhone,
+        notes: paymentLinkNotes || paymentNotes || undefined,
+      });
+
+      const recipientList = res?.recipients || [];
+      const recipientText = recipientList.length > 0
+        ? recipientList.join(' & ')
+        : isSecondaryEmailEnabled && secondaryEmail.trim()
+        ? `${lead.taxpayerEmail} & ${secondaryEmail.trim()}`
+        : lead.taxpayerEmail;
+
+      toast.success(`Stripe checkout link ($${effectiveChargeAmount}) sent to ${recipientText}! 📲✉️`);
+      if (onPaymentLinkSent) {
+        onPaymentLinkSent();
+      }
       onClosePaymentModal();
-      toast.success(`Stripe checkout link sent to ${lead.taxpayerEmail} & ${lead.taxpayerPhone}! 📲`);
-    }, 800);
+    } catch (err: any) {
+      console.error('Failed to send payment link:', err);
+      toast.error(err?.message || 'Failed to dispatch payment link to recipient emails');
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const handleSendEsignLink = () => {
@@ -127,7 +282,8 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
       {/* 1. Payment Gateway & Virtual Terminal Modal */}
       {isPaymentModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5">
+          <div className="bg-white rounded-2xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
+            {/* Header & Main Views */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center">
@@ -135,10 +291,10 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-slate-900">
-                    Collect Service Fee (${lead.feeBreakdown.totalServiceFee})
+                    Payment Collection &amp; Ledger
                   </h4>
                   <p className="text-xs text-slate-500 font-medium">
-                    Secure Stripe Virtual Terminal for {lead.taxpayerName}
+                    Taxpayer: {lead.taxpayerName}
                   </p>
                 </div>
               </div>
@@ -146,150 +302,582 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
               <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                 <button
                   type="button"
-                  onClick={() => setPaymentTab('CARD')}
+                  onClick={() => setPaymentView('PAY')}
                   className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                    paymentTab === 'CARD'
+                    paymentView === 'PAY'
                       ? 'bg-white text-slate-900 shadow-xs'
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
-                  Card Swipe
+                  Collect Payment
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPaymentTab('LINK')}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                    paymentTab === 'LINK'
+                  onClick={() => setPaymentView('HISTORY')}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer ${
+                    paymentView === 'HISTORY'
                       ? 'bg-white text-slate-900 shadow-xs'
                       : 'text-slate-500 hover:text-slate-900'
                   }`}
                 >
-                  Send Link
+                  <History className="w-3 h-3" />
+                  <span>Ledger ({historyItems.length})</span>
                 </button>
               </div>
             </div>
 
-            {paymentTab === 'CARD' ? (
+            {/* View 1: Collect Payment (Side-by-Side 2-Column Responsive Layout) */}
+            {paymentView === 'PAY' ? (
               <div className="space-y-4">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                  <span className="text-xs text-slate-500 font-medium">Total Due Today</span>
-                  <span className="text-xl font-extrabold text-slate-900">
-                    ${lead.feeBreakdown.totalServiceFee}.00 USD
-                  </span>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+                  {/* Left Column: Fee Summary & Amount Selector (5 Cols) */}
+                  <div className="md:col-span-5 space-y-3">
+                    {/* Balance Summary Card */}
+                    <div className="p-3.5 rounded-xl bg-slate-900 text-white space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          Quoted Total Fee
+                        </span>
+                        <span className="text-xs font-black text-white">
+                          ${formatAmount(totalQuotedFee)}
+                        </span>
+                      </div>
+
+                      {discountAmount > 0 && (
+                        <div className="flex items-center justify-between text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-1 rounded-lg">
+                          <span className="flex items-center gap-1">
+                            <Tag className="w-3 h-3 text-emerald-400 shrink-0" />
+                            <span>Coupon ({discountCode || 'Applied'}):</span>
+                          </span>
+                          <span>-${formatAmount(discountAmount)}</span>
+                        </div>
+                      )}
+
+                      <div className="pt-1 border-t border-slate-800 flex items-baseline justify-between">
+                        <div>
+                          <div className="text-[10px] text-emerald-400 font-bold">
+                            Paid: ${formatAmount(currentPaidAmount)}
+                          </div>
+                          <div className="text-sm font-black text-amber-300">
+                            {currentRemainingBalance > 0 ? `$${formatAmount(currentRemainingBalance)} Due` : 'Fully Paid'}
+                          </div>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-white/10 text-slate-300">
+                          TY {lead.taxYear}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Installment / Payment Amount Selector */}
+                    <div className="space-y-2.5 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                          <Coins className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Amount to Collect</span>
+                        </label>
+                        {isCustomExceeded ? (
+                          <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded border border-rose-300 animate-pulse">
+                            Max: ${formatAmount(currentRemainingBalance)}
+                          </span>
+                        ) : isCustomTooLow ? (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                            Min $1
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            ${formatAmount(effectiveChargeAmount)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPaymentType('FULL');
+                            setCustomAmount(String(currentRemainingBalance));
+                          }}
+                          className={`p-2 rounded-lg border text-xs font-bold text-left transition-all cursor-pointer ${
+                            paymentType === 'FULL'
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-400'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="text-[9px] text-slate-500 uppercase">Full Balance</div>
+                          <div className="text-xs font-black text-slate-900">${formatAmount(currentRemainingBalance)}</div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPaymentType('PARTIAL');
+                            if (Number(customAmount) > currentRemainingBalance || Number(customAmount) <= 0) {
+                              setCustomAmount(String(Math.min(100, currentRemainingBalance)));
+                            }
+                          }}
+                          className={`p-2 rounded-lg border text-xs font-bold text-left transition-all cursor-pointer ${
+                            paymentType === 'PARTIAL'
+                              ? 'border-blue-500 bg-blue-50 text-blue-900 ring-1 ring-blue-400'
+                              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="text-[9px] text-slate-500 uppercase">Installment</div>
+                          <div className="text-xs font-black text-blue-700">Custom ($)</div>
+                        </button>
+                      </div>
+
+                      {paymentType === 'PARTIAL' && (
+                        <div className="space-y-2 pt-1.5 border-t border-slate-200 animate-in fade-in duration-150">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {[50, 75, 100, 150]
+                              .filter((pill) => pill <= currentRemainingBalance)
+                              .map((pill) => (
+                                <button
+                                  key={pill}
+                                  type="button"
+                                  onClick={() => setCustomAmount(String(pill))}
+                                  className="px-2 py-0.5 text-[10px] font-bold bg-white border border-slate-200 hover:border-blue-400 hover:bg-blue-50 rounded text-slate-700 transition-colors cursor-pointer"
+                                >
+                                  ${pill}
+                                </button>
+                              ))}
+                            <button
+                              type="button"
+                              onClick={() => setCustomAmount(String(currentRemainingBalance))}
+                              className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded text-emerald-800 transition-colors cursor-pointer"
+                            >
+                              Max (${formatAmount(currentRemainingBalance)})
+                            </button>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-slate-500">$</span>
+                              <input
+                                type="number"
+                                min={1}
+                                max={currentRemainingBalance}
+                                value={customAmount}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                                  setCustomAmount(val);
+                                }}
+                                placeholder={`Max allowable: $${formatAmount(currentRemainingBalance)}`}
+                                className={`w-full px-2.5 py-1 text-xs font-bold rounded-lg border transition-all focus:outline-none ${
+                                  isCustomExceeded
+                                    ? 'border-rose-500 bg-rose-50/60 text-rose-900 focus:ring-2 focus:ring-rose-400'
+                                    : isCustomTooLow
+                                    ? 'border-amber-400 bg-amber-50/40 text-amber-900 focus:ring-2 focus:ring-amber-400'
+                                    : 'border-slate-200 bg-white focus:ring-2 focus:ring-blue-500'
+                                }`}
+                              />
+                            </div>
+
+                            {/* Live Validation Feedback Alerts */}
+                            {isCustomExceeded && (
+                              <div className="p-2 rounded-lg bg-rose-50 border border-rose-300 text-rose-900 text-[10px] font-bold flex items-center justify-between gap-1 shadow-2xs">
+                                <span className="flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                                  <span>Exceeds max remaining balance (${formatAmount(currentRemainingBalance)})</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setCustomAmount(String(currentRemainingBalance))}
+                                  className="text-[10px] bg-rose-200 hover:bg-rose-300 text-rose-950 px-1.5 py-0.5 rounded font-extrabold cursor-pointer whitespace-nowrap"
+                                >
+                                  Cap to Max
+                                </button>
+                              </div>
+                            )}
+
+                            {isCustomTooLow && (
+                              <div className="p-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-bold flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span>Please enter a payment amount greater than $0</span>
+                              </div>
+                            )}
+
+                            {!isAmountInvalid && parsedCustom > 0 && parsedCustom < currentRemainingBalance && (
+                              <div className="text-[10px] font-medium text-slate-600 flex items-center justify-between pt-0.5">
+                                <span>Bal after payment:</span>
+                                <strong className="text-emerald-700 font-bold">
+                                  ${formatAmount(currentRemainingBalance - parsedCustom)} USD
+                                </strong>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Terminal Inputs (7 Cols) */}
+                  <div className="md:col-span-7 space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <span className="text-xs font-bold text-slate-700">Payment Gateway:</span>
+                      <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentTab('CARD')}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
+                            paymentTab === 'CARD' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+                          }`}
+                        >
+                          Card Terminal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentTab('LINK')}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-colors cursor-pointer ${
+                            paymentTab === 'LINK' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+                          }`}
+                        >
+                          Checkout Link
+                        </button>
+                      </div>
+                    </div>
+
+                    {paymentTab === 'CARD' ? (
+                      <div className="space-y-2.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-0.5">
+                              Cardholder Name
+                            </label>
+                            <input
+                              type="text"
+                              defaultValue={lead.taxpayerName}
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50 font-medium focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-0.5">
+                              Card Number
+                            </label>
+                            <input
+                              type="text"
+                              value={cardNumber}
+                              onChange={(e) => setCardNumber(e.target.value)}
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 font-mono tracking-wider focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-0.5">
+                              Expiry (MM/YY)
+                            </label>
+                            <input
+                              type="text"
+                              value={cardExp}
+                              onChange={(e) => setCardExp(e.target.value)}
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 font-mono focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-0.5">
+                              CVC / CVV
+                            </label>
+                            <input
+                              type="text"
+                              value={cardCvc}
+                              onChange={(e) => setCardCvc(e.target.value)}
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 font-mono focus:outline-none focus:border-emerald-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-0.5">
+                            Payment Remarks / Notes (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={paymentNotes}
+                            onChange={(e) => setPaymentNotes(e.target.value)}
+                            placeholder="e.g. Installment 1 of 2 via phone authorization"
+                            className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 font-medium focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 pt-0.5">
+                          <Lock className="w-3 h-3 text-slate-400" />
+                          <span>256-bit encrypted PCI-DSS Level 1 compliant Stripe virtual terminal.</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 py-1 animate-in fade-in duration-150">
+                        <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200 space-y-1">
+                          <div className="font-bold text-blue-900 flex items-center gap-1.5 text-xs">
+                            <Smartphone className="w-4 h-4 text-blue-600" />
+                            <span>Instant Client Self-Checkout Link</span>
+                          </div>
+                          <p className="text-blue-800 text-[11px]">
+                            The client will receive an SMS and email with a secure Stripe payment checkout for <strong>${formatAmount(effectiveChargeAmount)} USD</strong>.
+                          </p>
+                        </div>
+
+                        {/* Recipient Destination Settings */}
+                        <div className="space-y-2.5">
+                          {/* 1. Primary Recipient Email */}
+                          <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={sendToPrimary}
+                                  onChange={(e) => setSendToPrimary(e.target.checked)}
+                                  className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                                />
+                                <span>Primary Recipient Email</span>
+                              </label>
+                              <span className="text-[10px] font-bold text-slate-400 bg-slate-200/60 px-1.5 py-0.5 rounded">
+                                Default Profile
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 pl-5">
+                              <input
+                                type="email"
+                                value={primaryEmail}
+                                onChange={(e) => setPrimaryEmail(e.target.value)}
+                                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+
+                          {/* 2. Secondary Recipient Email Option */}
+                          <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={isSecondaryEmailEnabled}
+                                  onChange={(e) => {
+                                    setIsSecondaryEmailEnabled(e.target.checked);
+                                    if (e.target.checked) setSendToSecondary(true);
+                                  }}
+                                  className="w-3.5 h-3.5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                                />
+                                <span>Secondary / Alternative Email</span>
+                              </label>
+                              {isSecondaryEmailEnabled ? (
+                                <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200">
+                                  Active Recipient
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsSecondaryEmailEnabled(true);
+                                    setSendToSecondary(true);
+                                  }}
+                                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>Add 2nd Email</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {isSecondaryEmailEnabled && (
+                              <div className="pl-5 space-y-1.5 animate-in fade-in duration-150">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="email"
+                                    value={secondaryEmail}
+                                    onChange={(e) => setSecondaryEmail(e.target.value)}
+                                    placeholder="Enter secondary email (e.g. spouse.tax@gmail.com, work@company.com)..."
+                                    className="flex-1 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                                    autoFocus
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIsSecondaryEmailEnabled(false);
+                                      setSecondaryEmail('');
+                                    }}
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer rounded-md hover:bg-slate-200/60"
+                                    title="Remove secondary email"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                                <p className="text-[10px] text-slate-500">
+                                  💡 The checkout link will be dispatched to this secondary address and recorded in audit logs.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 3. Recipient SMS */}
+                          <div className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs">
+                            <span className="text-slate-600 font-medium flex items-center gap-1.5">
+                              <Smartphone className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Recipient SMS:</span>
+                            </span>
+                            <span className="font-bold text-slate-900">{lead.taxpayerPhone || 'No Phone on File'}</span>
+                          </div>
+
+                          {/* 4. Link Remarks / Note */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                              Payment Link Message / Custom Note (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              value={paymentLinkNotes}
+                              onChange={(e) => setPaymentLinkNotes(e.target.value)}
+                              placeholder="e.g. Special client invoice for Form 1040 federal & state tax return"
+                              className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 font-medium focus:outline-none focus:border-blue-500 bg-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Cardholder Name
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={lead.taxpayerName}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 font-medium focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                {/* Modal Footer Actions */}
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onClosePaymentModal}
+                    disabled={isProcessingPayment}
+                    className="text-xs font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </Button>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      Card Number
-                    </label>
-                    <input
-                      type="text"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 font-mono tracking-wider focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Expiry (MM/YY)
-                      </label>
-                      <input
-                        type="text"
-                        value={cardExp}
-                        onChange={(e) => setCardExp(e.target.value)}
-                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 font-mono focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        CVC / CVV
-                      </label>
-                      <input
-                        type="text"
-                        value={cardCvc}
-                        onChange={(e) => setCardCvc(e.target.value)}
-                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 font-mono focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                  <Lock className="w-3 h-3 text-slate-400" />
-                  <span>256-bit encrypted PCI-DSS Level 1 compliant Stripe terminal.</span>
+                  {paymentTab === 'CARD' ? (
+                    <Button
+                      size="sm"
+                      onClick={handleChargeCard}
+                      disabled={isProcessingPayment || isAmountInvalid || effectiveChargeAmount <= 0}
+                      className={`text-xs font-bold flex items-center gap-1.5 shadow-md ${
+                        isAmountInvalid || effectiveChargeAmount <= 0
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 shadow-none'
+                          : 'bg-[#16A34A] hover:bg-[#15803D] text-white cursor-pointer'
+                      }`}
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>
+                        {isProcessingPayment
+                          ? 'Processing Charge...'
+                          : isCustomExceeded
+                          ? `Exceeds Max Balance ($${formatAmount(currentRemainingBalance)})`
+                          : isCustomTooLow
+                          ? 'Enter Valid Amount ($ > 0)'
+                          : paymentType === 'PARTIAL' && effectiveChargeAmount < currentRemainingBalance
+                          ? `Charge Installment ($${formatAmount(effectiveChargeAmount)})`
+                          : `Charge Full Balance ($${formatAmount(effectiveChargeAmount)})`}
+                      </span>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={handleSendPaymentLink}
+                      disabled={isProcessingPayment || isAmountInvalid || effectiveChargeAmount <= 0}
+                      className={`text-xs font-bold flex items-center gap-1.5 shadow-md ${
+                        isAmountInvalid || effectiveChargeAmount <= 0
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300 shadow-none'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                      }`}
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>
+                        {isProcessingPayment
+                          ? 'Sending...'
+                          : isCustomExceeded
+                          ? `Exceeds Max ($${formatAmount(currentRemainingBalance)})`
+                          : `Send Payment Link ($${formatAmount(effectiveChargeAmount)})`}
+                      </span>
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
-              <div className="space-y-4 py-2">
-                <div className="p-4 rounded-xl bg-blue-50/80 border border-blue-200 space-y-1">
-                  <div className="font-bold text-blue-900 flex items-center gap-1.5">
-                    <Smartphone className="w-4 h-4 text-blue-600" />
-                    <span>Instant Client Self-Checkout Link</span>
+              /* View 2: Complete Payment & Installment History Ledger */
+              <div className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Total Collected to Date</div>
+                    <div className="text-base font-black text-emerald-600">${formatAmount(currentPaidAmount)} USD</div>
                   </div>
-                  <p className="text-blue-800 text-[11px]">
-                    The client will receive an SMS and email with a 1-click Apple Pay, Google Pay, and Credit Card payment checkout for ${lead.feeBreakdown.totalServiceFee}.
-                  </p>
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-slate-900">Remaining Balance</div>
+                    <div className="text-base font-black text-amber-600">${formatAmount(currentRemainingBalance)} USD</div>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-slate-50">
-                    <span className="text-slate-600 font-medium">Recipient Email:</span>
-                    <span className="font-bold text-slate-900">{lead.taxpayerEmail}</span>
+                {historyItems.length === 0 ? (
+                  <div className="p-8 text-center rounded-xl border border-dashed border-slate-200 space-y-2">
+                    <Receipt className="w-8 h-8 text-slate-300 mx-auto" />
+                    <div className="text-xs font-bold text-slate-700">No Payment Installments Recorded Yet</div>
+                    <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                      All collected installments and partial fee payments for this taxpayer will be recorded and audited here.
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-slate-50">
-                    <span className="text-slate-600 font-medium">Recipient SMS:</span>
-                    <span className="font-bold text-slate-900">{lead.taxpayerPhone}</span>
+                ) : (
+                  <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                    {historyItems.map((item, idx) => (
+                      <div
+                        key={item.id || idx}
+                        className="p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 shadow-2xs space-y-1.5 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black flex items-center justify-center">
+                              #{historyItems.length - idx}
+                            </span>
+                            <span className="font-bold text-slate-900">
+                              +${item.amount.toLocaleString()} USD
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold bg-slate-100 text-slate-600">
+                              {item.paymentMethod || 'STRIPE_CARD'}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                            Bal after: ${item.remainingBalance !== undefined ? item.remainingBalance : '-'}
+                          </span>
+                        </div>
+
+                        {item.notes && (
+                          <div className="text-[11px] text-slate-600 bg-slate-50 p-1.5 rounded-lg font-medium">
+                            &quot;{item.notes}&quot;
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-slate-100">
+                          <div className="flex items-center gap-1">
+                            <UserCheck className="w-3 h-3 text-slate-400" />
+                            <span>
+                              {typeof item.collectedBy === 'object' ? item.collectedBy?.name : (item.collectedBy || 'Closer')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>{new Date(item.paidAt).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                  <Button
+                    size="sm"
+                    onClick={() => setPaymentView('PAY')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
+                  >
+                    + Collect New Payment
+                  </Button>
                 </div>
               </div>
             )}
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClosePaymentModal}
-                disabled={isProcessingPayment}
-                className="text-xs font-semibold cursor-pointer"
-              >
-                Cancel
-              </Button>
-
-              {paymentTab === 'CARD' ? (
-                <Button
-                  size="sm"
-                  onClick={handleChargeCard}
-                  disabled={isProcessingPayment}
-                  className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold cursor-pointer"
-                >
-                  {isProcessingPayment ? 'Processing Charge...' : `Charge $${lead.feeBreakdown.totalServiceFee}.00`}
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={handleSendPaymentLink}
-                  disabled={isProcessingPayment}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>{isProcessingPayment ? 'Sending...' : 'Send Payment Link'}</span>
-                </Button>
-              )}
-            </div>
           </div>
         </div>
       )}
@@ -546,3 +1134,4 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
     </>
   );
 };
+

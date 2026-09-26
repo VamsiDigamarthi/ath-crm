@@ -3,8 +3,9 @@ import { Save } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { useOutletContext } from 'react-router-dom';
 import { useCustomerOrganizer } from '../hooks/useCustomerOrganizer';
-import { OrganizerModuleSidebar } from './organizer/OrganizerModuleSidebar';
+import { OrganizerModuleSidebar, ORGANIZER_MODULES } from './organizer/OrganizerModuleSidebar';
 import { OrganizerModuleContent } from './organizer/OrganizerModuleContent';
+import { isModuleCompleted } from './organizer/utils/organizer-validation';
 
 export const CustomerOrganizerWizard: React.FC = () => {
   const { selectedTaxYear: contextTaxYear } = useOutletContext<{ selectedTaxYear?: string }>() || {};
@@ -35,20 +36,22 @@ export const CustomerOrganizerWizard: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              9-Module Comprehensive Tax Organizer
+              Tax Organizer
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
               {progressPercent}% Complete
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            ATH Tax Services IRS-compliant intake wizard. Complete all 9 sections to maximize your TY {selectedTaxYear || '2025'} deductions.
+            ATH Tax Services IRS-compliant intake wizard. Complete all 6 sections to maximize your TY {selectedTaxYear || '2025'} deductions.
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right hidden sm:block">
-            <span className="text-xs font-bold text-slate-800">{completedCount} of 9 Verified</span>
+            <span className="text-xs font-bold text-slate-800">
+              {ORGANIZER_MODULES.filter((m) => isModuleCompleted(m.id, organizerData)).length} of {ORGANIZER_MODULES.length} Verified
+            </span>
             <div className="w-32 bg-slate-100 rounded-full h-2 mt-1 overflow-hidden">
               <div 
                 className="bg-[#16A34A] h-full rounded-full transition-all duration-300" 

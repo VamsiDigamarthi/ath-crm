@@ -9,8 +9,11 @@ export interface ReturnedLeadItem extends Record<string, unknown> {
   filingType: string;
   currentStage: string;
   priority?: string;
+  department?: 'DOCUMENTER' | 'SALES';
   assignedDocAgentId?: string | null;
   assignedDocAgent?: any;
+  assignedSalesAgentId?: string | null;
+  assignedSalesAgent?: any;
   taxDraftSummary?: any;
   createdAt: string;
   updatedAt: string;
@@ -69,6 +72,7 @@ export const useReturnedLeads = () => {
   const [visaFilter, setVisaFilter] = useState<string>('ALL');
   const [taxYearFilter, setTaxYearFilter] = useState<number | undefined>(undefined);
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -93,6 +97,7 @@ export const useReturnedLeads = () => {
         visaType: visaFilter !== 'ALL' ? visaFilter : undefined,
         taxYear: taxYearFilter,
         priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
+        department: departmentFilter !== 'ALL' ? departmentFilter : undefined,
       });
 
       if (res?.data) {
@@ -114,7 +119,7 @@ export const useReturnedLeads = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, searchQuery, visaFilter, taxYearFilter, priorityFilter]);
+  }, [page, limit, searchQuery, visaFilter, taxYearFilter, priorityFilter, departmentFilter]);
 
   // Initial and reactive load
   useEffect(() => {
@@ -139,6 +144,11 @@ export const useReturnedLeads = () => {
 
   const handlePriorityChange = useCallback((priority: string) => {
     setPriorityFilter(priority);
+    setPage(1);
+  }, []);
+
+  const handleDepartmentChange = useCallback((dept: string) => {
+    setDepartmentFilter(dept);
     setPage(1);
   }, []);
 
@@ -188,7 +198,7 @@ export const useReturnedLeads = () => {
           targetAgentId,
         });
 
-        toast.success(res?.message || `Successfully assigned ${applicationIds.length} lead(s) to Calling Agent!`);
+        toast.success(res?.message || `Successfully assigned ${applicationIds.length} lead(s) to staff!`);
         setIsAssignModalOpen(false);
         setSelectedRows([]);
         fetchReturnedLeads();
@@ -234,6 +244,7 @@ export const useReturnedLeads = () => {
     visaFilter,
     taxYearFilter,
     priorityFilter,
+    departmentFilter,
     page,
     limit,
     totalPages,
@@ -247,6 +258,7 @@ export const useReturnedLeads = () => {
     handleVisaChange,
     handleTaxYearChange,
     handlePriorityChange,
+    handleDepartmentChange,
     handlePageChange,
     handleLimitChange,
     handleOpenAssignModal,

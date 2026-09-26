@@ -7,12 +7,14 @@ export interface AppCopyButtonProps {
   text: string;
   className?: string;
   size?: 'sm' | 'md';
+  tooltip?: string;
 }
 
 export const AppCopyButton: React.FC<AppCopyButtonProps> = ({
   text,
   className,
   size = 'md',
+  tooltip,
 }) => {
   const [isCopied, copy] = useCopyToClipboard();
 
@@ -32,7 +34,7 @@ export const AppCopyButton: React.FC<AppCopyButtonProps> = ({
         isCopied ? "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200" : "",
         className
       )}
-      title="Copy to clipboard"
+      title={tooltip || "Copy to clipboard"}
     >
       {isCopied ? (
         <Check className={cn(iconSize, "animate-in zoom-in duration-200")} />

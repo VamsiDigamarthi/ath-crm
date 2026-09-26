@@ -15,7 +15,13 @@ router.get('/agent-stats', SalesController.getAgentStats);
 router.post('/assign', SalesController.assignLead);
 router.post('/auto-round-robin', SalesController.autoRoundRobin);
 router.post('/leads/:id/dispatch-filing', SalesController.dispatchToFiling);
+router.post('/leads/:id/pitch-negotiation', SalesController.updatePitchNegotiation);
+router.post('/leads/:id/notes', SalesController.saveCloserNotes);
+router.post('/leads/:id/fee-breakdown', SalesController.updateFeeBreakdown);
 router.post('/leads/:id/record-payment', SalesController.recordPayment);
 router.post('/leads/:id/record-esign', SalesController.recordEsign);
+router.post('/leads/:id/send-payment-link', SalesController.sendPaymentLink);
+router.post('/leads/:id/return-to-admin', SalesController.returnLeadToAdmin);
+router.post('/return-to-admin', SalesController.returnLeadsBulkToAdmin);
 
 export { router as salesRouter };

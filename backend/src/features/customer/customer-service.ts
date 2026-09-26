@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db.js';
+import { ApplicationStage, ApplicationPriority, AuditActorType, AuditActionType, Role, NotificationCategory, NotificationPriority } from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { BadRequestError } from '../../errors/bad-request-error.js';
 import { StorageService } from '../../utils/storage-service.js';
@@ -796,9 +797,18 @@ export class CustomerService {
       },
     };
 
-    // Calculate real completion progress strictly based on actual submitted modules
-    const completedCount = submittedModules.length;
-    const progressPercent = Math.round((completedCount / 9) * 100);
+    // Calculate real completion strictly based on 6 unified sections
+    const effectiveCompletedSet = new Set<string>();
+    submittedModules.forEach((m) => {
+      if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
+        effectiveCompletedSet.add(m);
+      }
+      if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
+        effectiveCompletedSet.add('m_income_expenses');
+      }
+    });
+    const completedCount = effectiveCompletedSet.size;
+    const progressPercent = Math.min(100, Math.round((completedCount / 6) * 100));
 
     return {
       taxYear: activeApp.taxYear,
@@ -806,7 +816,7 @@ export class CustomerService {
       organizer: defaultOrganizer,
       progressPercent,
       completedCount,
-      totalModules: 9,
+      totalModules: 6,
     };
   }
 
@@ -884,8 +894,17 @@ export class CustomerService {
     const submittedModules = Array.from(new Set(newSubmitted));
 
     cleanOrganizerData.submittedModules = submittedModules;
-    const completedCount = submittedModules.length;
-    const progressPercent = Math.round((completedCount / 9) * 100);
+    const effectiveSavedSet = new Set<string>();
+    submittedModules.forEach((m) => {
+      if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
+        effectiveSavedSet.add(m);
+      }
+      if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
+        effectiveSavedSet.add('m_income_expenses');
+      }
+    });
+    const completedCount = effectiveSavedSet.size;
+    const progressPercent = Math.min(100, Math.round((completedCount / 6) * 100));
 
     const updatedSummary = {
       ...currentDraft,
@@ -903,15 +922,16 @@ export class CustomerService {
     });
 
     const moduleNamesMap: Record<string, string> = {
-      m1: 'Module 01 (Personal Info & Demographics)',
-      m2: 'Module 02 (Spouse & Dependents)',
-      m3: 'Module 03 (Substantial Presence & Multi-State)',
-      m4: 'Module 04 (W-2 Wages & Rental Properties)',
-      m5: 'Module 05 (1099-INT / DIV / OID Interest)',
-      m6: 'Module 06 (1099-B Stock & Crypto Capital Gains)',
-      m7: 'Module 07 (Foreign Assets & FBAR)',
-      m8: 'Module 08 (Itemized Deductions & HSA)',
-      m9: 'Module 09 (Direct Deposit Bank Details)',
+      m1: 'Section 01 (Personal Info & Demographics)',
+      m2: 'Section 02 (Spouse & Dependents)',
+      m3: 'Section 03 (Substantial Presence & Multi-State)',
+      m7: 'Section 04 (Foreign Assets & FBAR)',
+      m9: 'Section 05 (Direct Deposit Bank Details)',
+      m_income_expenses: 'Section 06 (Income and Expenses)',
+      m4: 'Section 06 (W-2 Wages & Rental Income)',
+      m5: 'Section 06 (1099 Interest & Dividends)',
+      m6: 'Section 06 (1099-B Stock & Crypto Gains)',
+      m8: 'Section 06 (Itemized Deductions & Expenses)',
     };
     const latestModuleKey = submittedModules[submittedModules.length - 1] || 'm1';
     const latestModuleName = moduleNamesMap[latestModuleKey] || `Section ${latestModuleKey.toUpperCase()}`;
@@ -932,7 +952,7 @@ export class CustomerService {
           progressPercent,
           completedCount,
           source: 'TAXPAYER_CLIENT_PORTAL',
-          remarks: `Taxpayer saved ${latestModuleName} in 9-Module Organizer (${completedCount}/9 verified, ${progressPercent}% complete).`,
+          remarks: `Taxpayer saved ${latestModuleName} in Tax Organizer (${completedCount}/6 verified, ${progressPercent}% complete).`,
           clientEmail: profile.email,
           clientName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email,
           timestamp: new Date().toISOString(),
@@ -949,4 +969,146 @@ export class CustomerService {
       message: 'Organizer saved successfully to your tax filing file',
     };
   }
+
+  /**
+   * Client-initiated: Start a new Tax Year return directly from client portal
+   */
+  static async startTaxYearReturn(userId: string, taxYearInput: number | string) {
+    const taxYear = parseInt(taxYearInput.toString(), 10);
+    if (isNaN(taxYear) || taxYear < 2000 || taxYear > 2100) {
+      throw new BadRequestError('Please provide a valid 4-digit Tax Year (between 2000 and 2100)');
+    }
+
+    const profile = await prisma.customerProfile.findFirst({
+      where: { userId },
+      include: {
+        applications: {
+          orderBy: { taxYear: 'desc' },
+        },
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundError('Taxpayer customer profile not found');
+    }
+
+    // Check if an application for this tax year already exists
+    const existing = profile.applications.find((a) => a.taxYear === taxYear);
+    if (existing) {
+      throw new BadRequestError(`A filing application for Tax Year ${taxYear} already exists in your account.`);
+    }
+
+    // Carry forward basic demographics from prior application or profile
+    const priorApp = profile.applications[0];
+    const priorDraft = (priorApp?.taxDraftSummary as any) || {};
+
+    const initialTaxDraftSummary = {
+      leadSource: 'SELF_SIGNUP',
+      source: 'SELF_SIGNUP',
+      signupMethod: 'ONLINE_PORTAL',
+      isSelfRegistered: true,
+      isRetainedClient: true,
+      registrationChannel: 'SELF_SERVICE_PORTAL_ADD_YEAR',
+      registeredAt: new Date().toISOString(),
+      firstName: profile.firstName || priorDraft.firstName,
+      lastName: profile.lastName || priorDraft.lastName,
+      email: profile.email || priorDraft.email,
+      phone: profile.phone || priorDraft.phone,
+      ssnTin: profile.ssnTin || priorDraft.ssnTin,
+      dob: profile.dob || priorDraft.dob,
+      visaType: profile.visaType || priorDraft.visaType || 'Standard',
+      maritalStatus: profile.maritalStatus || priorDraft.maritalStatus || 'Single',
+      bankDetails: priorDraft.bankDetails || null,
+      notes: `Taxpayer client self-initiated new Tax Year ${taxYear} filing via client portal. Awaiting Admin assignment.`,
+    };
+
+    const newApplication = await prisma.taxApplication.create({
+      data: {
+        customerId: profile.id,
+        taxYear,
+        filingType: 'INDIVIDUAL',
+        currentStage: ApplicationStage.RAW_PROSPECT,
+        priority: ApplicationPriority.HIGH,
+        assignedDocAgentId: null,
+        taxDraftSummary: initialTaxDraftSummary,
+        stageHistories: {
+          create: {
+            fromStage: null,
+            toStage: ApplicationStage.RAW_PROSPECT,
+            movedByUserId: userId,
+            remarks: `Client self-initiated Tax Year ${taxYear} filing via Client Portal. Inbound lead in Direct Sign-ups queue.`,
+          },
+        },
+        auditLogs: {
+          create: {
+            actorId: userId,
+            actorType: AuditActorType.CLIENT,
+            actorName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client',
+            actorRole: 'TAXPAYER_USER',
+            action: AuditActionType.ORGANIZER_UPDATE,
+            moduleKey: 'CLIENT_NEW_TAX_YEAR',
+            details: {
+              taxYear,
+              channel: 'SELF_SERVICE_PORTAL',
+              source: 'SELF_SIGNUP',
+              isRetainedClient: true,
+            },
+          },
+        },
+      },
+    });
+
+    // Notify DOC_MANAGER & ADMIN of client's new year return
+    try {
+      await prisma.notification.create({
+        data: {
+          targetRole: Role.ADMIN,
+          applicationId: newApplication.id,
+          title: `Client Self-Added Tax Year ${taxYear}`,
+          message: `${profile.firstName} ${profile.lastName} (${profile.phone}) started a new Tax Year ${taxYear} filing. Ready in Direct Sign-ups queue for agent assignment.`,
+          category: NotificationCategory.DOCUMENTER,
+          priority: NotificationPriority.HIGH,
+          actionUrl: '/admin/self-signups',
+          actionLabel: 'Assign Lead in Direct Sign-ups',
+          relatedLeadName: `${profile.firstName} ${profile.lastName}`.trim(),
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          targetRole: Role.DOC_MANAGER,
+          applicationId: newApplication.id,
+          title: `New Return: ${profile.firstName} ${profile.lastName} (TY ${taxYear})`,
+          message: `Taxpayer initiated Tax Year ${taxYear} return. Waiting for Admin lead assignment in Direct Sign-ups.`,
+          category: NotificationCategory.DOCUMENTER,
+          priority: NotificationPriority.NORMAL,
+          actionUrl: '/admin/self-signups',
+          actionLabel: 'Direct Sign-ups',
+          relatedLeadName: `${profile.firstName} ${profile.lastName}`.trim(),
+        },
+      });
+    } catch (notifErr) {
+      console.error('Failed to create notification for self-added tax year:', notifErr);
+    }
+
+    // Fetch updated applications list for this customer
+    const updatedApplications = await prisma.taxApplication.findMany({
+      where: { customerId: profile.id },
+      select: {
+        id: true,
+        taxYear: true,
+        currentStage: true,
+        filingType: true,
+      },
+      orderBy: { taxYear: 'desc' },
+    });
+
+    return {
+      application: newApplication,
+      applications: updatedApplications,
+      taxYear: newApplication.taxYear,
+      message: `Tax Year ${taxYear} return initiated! Admin has been notified to assign your Documenter agent.`,
+    };
+  }
 }
+
