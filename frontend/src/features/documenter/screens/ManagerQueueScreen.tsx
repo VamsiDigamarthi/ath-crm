@@ -4,6 +4,7 @@ import { DocumenterMetrics } from '../components/DocumenterMetrics';
 import { FloatingActionBar } from '../components/FloatingActionBar';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { CallOutreachModal } from '../components/CallOutreachModal';
+import { StartFilingModal } from '../components/StartFilingModal';
 import { getDocumenterColumns } from '../columns/documenter-columns';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
@@ -19,12 +20,14 @@ import {
   Globe,
   UserCheck,
   ShieldCheck,
-  UserX
+  UserX,
+  UserPlus
 } from 'lucide-react';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
 
 export const ManagerQueueScreen: React.FC = () => {
   const {
+    isAgent,
     activeTab,
     handleTabChange,
     searchQuery,
@@ -48,10 +51,13 @@ export const ManagerQueueScreen: React.FC = () => {
     handleDirectAssign,
     isAssignModalOpen,
     isCallModalOpen,
+    isStartFilingModalOpen,
     activeLeadForCall,
     activeLeadForAssign,
+    activeLeadForStartFiling,
     handleOpenCallModal,
     handleOpenAssignModal,
+    handleStartFiling,
     handleCloseModals,
     handleSaveCallDisposition,
     refreshData,
@@ -62,12 +68,15 @@ export const ManagerQueueScreen: React.FC = () => {
       getDocumenterColumns({
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
+        isManagerView: true,
+        isAdmin: true,
       }),
     [handleOpenCallModal, handleOpenAssignModal]
   );
 
   const tabs = [
     { id: 'MY_LEADS' as DocumenterTab, label: 'My Assigned Leads', count: stats.myLeads || 0, icon: UserCheck },
+    { id: 'RAW_PROSPECTS' as DocumenterTab, label: 'Raw Ingested Leads', count: stats.rawProspects || 0, icon: UserPlus },
     { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
     { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
     { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
@@ -222,7 +231,9 @@ export const ManagerQueueScreen: React.FC = () => {
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}
         emptyText={
-          activeTab === 'UNASSIGNED'
+          activeTab === 'RAW_PROSPECTS'
+            ? 'No raw ingested leads awaiting tax filing intake.'
+            : activeTab === 'UNASSIGNED'
             ? 'All leads have been distributed to staff, or no new bulk leads are unassigned.'
             : 'No leads match the selected filter criteria.'
         }
@@ -262,9 +273,22 @@ export const ManagerQueueScreen: React.FC = () => {
         isOpen={isCallModalOpen}
         onClose={handleCloseModals}
         lead={activeLeadForCall}
+        agents={agents}
+        isManager={!isAgent}
         onSaveDisposition={handleSaveCallDisposition}
+        isLoading={isActionLoading}
+      />
+
+      {/* Start Tax Filing Modal */}
+      <StartFilingModal
+        isOpen={isStartFilingModalOpen}
+        onClose={handleCloseModals}
+        lead={activeLeadForStartFiling}
+        agents={agents}
+        onConfirmStartFiling={handleStartFiling}
         isLoading={isActionLoading}
       />
     </div>
   );
 };
+

@@ -130,24 +130,31 @@ export const useBulkImport = () => {
 
     try {
       const validRows = rows.filter((r) => r.validationStatus === 'VALID');
-      const payloadLeads = validRows.map((r) => ({
-        firstName: r.firstName,
-        middleName: r.middleName || null,
-        lastName: r.lastName,
-        email: r.email || null,
-        phone: r.phone,
-        ssnTin: r.ssnTin || null,
-        dob: r.dob || null,
-        occupation: r.occupation || null,
-        visaType: r.visaType || null,
-        maritalStatus: r.maritalStatus || null,
-        filingType: r.filingType,
-        addressLine1: r.addressLine1 || null,
-        city: r.city || null,
-        state: r.state || null,
-        zipCode: r.zipCode || null,
-        priority: r.priority || 'NO_PRIORITY',
-      }));
+      const payloadLeads = validRows.map((r) => {
+        const rawName = (r.fullName || `${r.firstName || ''} ${r.lastName || ''}`).trim();
+        const parts = rawName.split(/\s+/);
+        const firstName = r.firstName?.trim() || parts[0] || rawName || 'Taxpayer';
+        const lastName = r.lastName?.trim() || parts.slice(1).join(' ') || '';
+
+        return {
+          firstName,
+          middleName: r.middleName || null,
+          lastName,
+          email: r.email || null,
+          phone: r.phone,
+          ssnTin: r.ssnTin || null,
+          dob: r.dob || null,
+          occupation: r.occupation || null,
+          visaType: r.visaType || null,
+          maritalStatus: r.maritalStatus || null,
+          filingType: r.filingType || 'INDIVIDUAL',
+          addressLine1: r.addressLine1 || null,
+          city: r.city || null,
+          state: r.state || null,
+          zipCode: r.zipCode || null,
+          priority: r.priority || 'NO_PRIORITY',
+        };
+      });
 
       const res = await adminService.bulkImportLeads({
         taxYear,

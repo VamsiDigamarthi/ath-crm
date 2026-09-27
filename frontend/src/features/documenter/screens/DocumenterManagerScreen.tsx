@@ -28,6 +28,7 @@ import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.type
 
 export const DocumenterManagerScreen: React.FC = () => {
   const {
+    isAgent,
     activeTab,
     handleTabChange,
     searchQuery,
@@ -80,6 +81,8 @@ export const DocumenterManagerScreen: React.FC = () => {
       getDocumenterColumns({
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
+        isManagerView: true,
+        isAdmin: true,
       }),
     [handleOpenCallModal, handleOpenAssignModal]
   );
@@ -431,6 +434,8 @@ export const DocumenterManagerScreen: React.FC = () => {
         isOpen={isCallModalOpen}
         onClose={handleCloseModals}
         lead={activeLeadForCall}
+        agents={agents}
+        isManager={!isAgent}
         onSaveDisposition={handleSaveCallDisposition}
         isLoading={isActionLoading}
       />

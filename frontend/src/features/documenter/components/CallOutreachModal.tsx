@@ -16,14 +16,18 @@ import {
   Clock,
   History,
   Check,
-  PhoneCall
+  PhoneCall,
+  FileText,
+  UserCheck
 } from 'lucide-react';
-import type { DocumenterLeadItem, CallDisposition } from '../types/documenter.types';
+import type { DocumenterLeadItem, CallDisposition, DocumenterAgentItem } from '../types/documenter.types';
 
 export interface CallOutreachModalProps {
   isOpen: boolean;
   onClose: () => void;
   lead: DocumenterLeadItem | null;
+  agents?: DocumenterAgentItem[];
+  isManager?: boolean;
   onSaveDisposition: (payload: {
     applicationId: string;
     disposition: CallDisposition;
@@ -31,6 +35,9 @@ export interface CallOutreachModalProps {
     callSummary?: string;
     callbackDate?: string;
     callbackTimezone?: string;
+    taxYear?: number;
+    filingType?: string;
+    assignedDocAgentId?: string;
   }) => void;
   isLoading?: boolean;
 }
@@ -181,6 +188,8 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
   isOpen,
   onClose,
   lead,
+  agents = [],
+  isManager = false,
   onSaveDisposition,
   isLoading = false,
 }) => {
@@ -191,9 +200,20 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
   const [callbackTimezone, setCallbackTimezone] = useState<string>('Eastern');
   const [isPreviousSummaryExpanded, setIsPreviousSummaryExpanded] = useState<boolean>(false);
 
+  // Tax return intake fields (starts unselected with strict validation)
+  const [taxYear, setTaxYear] = useState<number | ''>('');
+  const [filingType, setFilingType] = useState<string>('');
+  const [assignedDocAgentId, setAssignedDocAgentId] = useState<string>('');
+  const [validationErrors, setValidationErrors] = useState<{ taxYear?: string; filingType?: string } | null>(null);
+
   // Auto-bind / pre-fill previous call notes & callback time when modal opens
   useEffect(() => {
     if (lead && isOpen) {
+      setTaxYear('');
+      setFilingType('');
+      setAssignedDocAgentId(lead.assignedDocAgentId || '');
+      setValidationErrors(null);
+
       const log = lead.lastCallLog || (lead as any).callLogs?.[0];
       if (log) {
         setSelectedDisposition((log.disposition as CallDisposition) || 'CONNECTED_INTERESTED');
@@ -223,6 +243,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
 
   if (!lead) return null;
 
+  const isRaw = Boolean(lead.isRawProspect || lead.id?.startsWith('raw-') || lead.totalTaxYears === 0);
   const customer = lead.customer;
   const previousLog = lead.lastCallLog || (lead as any).callLogs?.[0];
 
@@ -232,6 +253,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
     if (config && !config.subOptions.includes(selectedSubDisposition)) {
       setSelectedSubDisposition('');
     }
+    setValidationErrors(null);
   };
 
   const handleSubOptionClick = (sub: string) => {
@@ -246,6 +268,22 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (selectedDisposition === 'CONNECTED_INTERESTED') {
+      const errors: { taxYear?: string; filingType?: string } = {};
+      if (!taxYear) {
+        errors.taxYear = 'Please select a Tax Filing Year';
+      }
+      if (!filingType) {
+        errors.filingType = 'Please select a Filing / Return Type';
+      }
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        return;
+      }
+    }
+    setValidationErrors(null);
+
     onSaveDisposition({
       applicationId: lead.id,
       disposition: selectedDisposition,
@@ -253,6 +291,9 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
       callSummary,
       callbackDate: isCallbackRequired ? callbackDate : undefined,
       callbackTimezone: isCallbackRequired ? callbackTimezone : undefined,
+      taxYear: selectedDisposition === 'CONNECTED_INTERESTED' && taxYear ? Number(taxYear) : undefined,
+      filingType: selectedDisposition === 'CONNECTED_INTERESTED' ? filingType : undefined,
+      assignedDocAgentId: isManager && selectedDisposition === 'CONNECTED_INTERESTED' ? (assignedDocAgentId || undefined) : undefined,
     });
   };
 
@@ -268,12 +309,17 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-base font-bold text-slate-900">
-              Outreach Call & Disposition Logger
+              Outreach Call &amp; Disposition Logger
             </h3>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 shadow-2xs">
               <PhoneCall className="w-3 h-3 text-[#16A34A]" />
               Attempt #{attemptNumber}
             </span>
+            {isRaw && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+                Raw Prospect Intake
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             Conduct phone call with {customer.firstName} {customer.lastName} and log outcome
@@ -305,7 +351,11 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
               disabled={isLoading || (isCallbackRequired && !callbackDate)}
               className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold px-4 cursor-pointer"
             >
-              {isLoading ? 'Saving...' : 'Save Disposition & Update'}
+              {isLoading
+                ? 'Saving...'
+                : selectedDisposition === 'CONNECTED_INTERESTED'
+                ? `Confirm ${taxYear ? `TY ${taxYear}` : ''} Filing & Open Case`
+                : 'Save Disposition & Update'}
             </Button>
           </div>
         </div>
@@ -330,7 +380,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
               <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
                 <MapPin className="w-3 h-3 text-slate-500" />
                 <span>{customer.city ? `${customer.city}, ` : ''}{customer.state || 'US'} {customer.zipCode || ''}</span>
-                <span>• TY {lead.taxYear}</span>
+                <span>• {isRaw ? 'Filing Not Started' : `TY ${lead.taxYear}`}</span>
               </div>
             </div>
           </div>
@@ -477,6 +527,107 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
             })}
           </div>
         </div>
+
+        {/* Initiate Tax Filing Year & Return Type for Interested Call */}
+        {selectedDisposition === 'CONNECTED_INTERESTED' && (
+          <div className="p-4 rounded-xl bg-emerald-50/80 border border-emerald-300 animate-in fade-in duration-150 space-y-3.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-900">
+                <FileText className="w-4 h-4 text-emerald-600" />
+                <span>Confirm Tax Filing Year &amp; Return Type</span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#16A34A] border border-emerald-300">
+                Qualifies Return &amp; Opens 360 View
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-emerald-900 mb-1">
+                  Tax Filing Year <span className="text-rose-600">*</span>
+                </label>
+                <select
+                  value={taxYear}
+                  onChange={(e) => {
+                    setTaxYear(e.target.value ? Number(e.target.value) : '');
+                    if (validationErrors?.taxYear) {
+                      setValidationErrors((prev) => (prev ? { ...prev, taxYear: undefined } : null));
+                    }
+                  }}
+                  className={`w-full px-3 py-2 text-xs rounded-xl border bg-white focus:outline-none focus:ring-2 font-bold text-slate-800 shadow-2xs cursor-pointer transition-all ${
+                    validationErrors?.taxYear
+                      ? 'border-rose-500 focus:ring-rose-400 bg-rose-50/40 text-rose-900 ring-1 ring-rose-500'
+                      : 'border-emerald-300 focus:ring-emerald-500'
+                  }`}
+                >
+                  <option value="">-- Select Tax Year --</option>
+                  <option value={2025}>TY 2025 (Current Filing Season)</option>
+                  <option value={2024}>TY 2024 (Prior Tax Year)</option>
+                  <option value={2023}>TY 2023</option>
+                  <option value={2022}>TY 2022</option>
+                  <option value={2021}>TY 2021</option>
+                  <option value={2020}>TY 2020</option>
+                </select>
+                {validationErrors?.taxYear && (
+                  <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1 animate-in fade-in duration-150">
+                    <span>⚠️</span> {validationErrors.taxYear}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-emerald-900 mb-1">
+                  Filing / Return Type <span className="text-rose-600">*</span>
+                </label>
+                <select
+                  value={filingType}
+                  onChange={(e) => {
+                    setFilingType(e.target.value);
+                    if (validationErrors?.filingType) {
+                      setValidationErrors((prev) => (prev ? { ...prev, filingType: undefined } : null));
+                    }
+                  }}
+                  className={`w-full px-3 py-2 text-xs rounded-xl border bg-white focus:outline-none focus:ring-2 font-bold text-slate-800 shadow-2xs cursor-pointer transition-all ${
+                    validationErrors?.filingType
+                      ? 'border-rose-500 focus:ring-rose-400 bg-rose-50/40 text-rose-900 ring-1 ring-rose-500'
+                      : 'border-emerald-300 focus:ring-emerald-500'
+                  }`}
+                >
+                  <option value="">-- Select Return Type --</option>
+                  <option value="INDIVIDUAL">Individual</option>
+                  <option value="BUSINESS">Business</option>
+                </select>
+                {validationErrors?.filingType && (
+                  <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1 animate-in fade-in duration-150">
+                    <span>⚠️</span> {validationErrors.filingType}
+                  </p>
+                )}
+              </div>
+
+              {/* Manager/Admin gets to select Assign Agent */}
+              {isManager && agents && agents.length > 0 && (
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-bold text-emerald-900 mb-1 flex items-center gap-1">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Assign Calling / Document Agent</span>
+                  </label>
+                  <select
+                    value={assignedDocAgentId}
+                    onChange={(e) => setAssignedDocAgentId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-emerald-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium text-slate-800 shadow-2xs cursor-pointer"
+                  >
+                    <option value="">Leave Unassigned / Current User</option>
+                    {agents.map((ag) => (
+                      <option key={ag.id} value={ag.id}>
+                        {ag.email} ({ag.role.replace('DOC_', '')}) — Active Leads: {ag.activeLoad ?? 0}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Callback Date, Time & Timezone Scheduler */}
         {isCallbackRequired && (

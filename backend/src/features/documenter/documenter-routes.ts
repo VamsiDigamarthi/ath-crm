@@ -17,6 +17,7 @@ import {
   saveLeadOrganizer,
   updateLeadPriority,
   requestMissingDocuments,
+  startFiling,
 } from './documenter-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
@@ -186,5 +187,14 @@ router.post(
   requestMissingDocuments
 );
 
+// 15. Start Filing for Raw Prospect / Ingested Profile
+router.post(
+  '/leads/start-filing',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  startFiling
+);
+
 export { router as documenterRouter };
+
 

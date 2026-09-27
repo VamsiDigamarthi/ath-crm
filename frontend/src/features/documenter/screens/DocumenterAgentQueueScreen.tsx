@@ -13,7 +13,6 @@ import {
   Globe,
   CheckCircle2,
   Clock,
-  FileCheck2,
   UserX,
   RotateCcw
 } from 'lucide-react';
@@ -227,7 +226,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
               }`}
             >
               <PhoneOutgoing className="w-3.5 h-3.5 text-blue-600" />
-              <span>Not Called Yet ({stats.uncontacted ?? 0})</span>
+              <span>New Leads ({stats.uncontacted ?? 0})</span>
             </button>
 
             <button
@@ -254,19 +253,6 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
             >
               <Clock className="w-3.5 h-3.5" />
               <span>Scheduled Callbacks ({stats.callbacks})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTabChange('PREP')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'PREP'
-                  ? 'bg-white text-[#16A34A] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <FileCheck2 className="w-3.5 h-3.5" />
-              <span>Tax Prep Active ({stats.inPrep})</span>
             </button>
 
             <button
@@ -367,6 +353,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         isOpen={isCallModalOpen}
         onClose={handleCloseModals}
         lead={activeLeadForCall}
+        isManager={false}
         onSaveDisposition={handleSaveCallDisposition}
         isLoading={isActionLoading}
       />

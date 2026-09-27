@@ -255,7 +255,7 @@ export async function parseExcelFileBuffer(
       fullName: [firstName, middleName, lastName].filter(Boolean).join(' ') || 'Unnamed Lead',
       email,
       phone,
-      ssnTin: ssnTin || 'N/A',
+      ssnTin: ssnTin || '',
       dob,
       occupation,
       visaType: valResult.normalizedVisa || visaType,

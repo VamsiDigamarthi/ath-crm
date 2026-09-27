@@ -50,7 +50,7 @@ export const DocumenterLayout: React.FC = () => {
         { id: 'agent_dashboard', label: 'Calling Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
         { id: 'agent_queue', label: 'My Calling Queue', icon: PhoneCall, section: 'Calling Workspace', badge: '20', path: '/documenter/agent/queue' },
         { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', badge: '3', path: '/documenter/agent/callbacks' },
-        { id: 'agent_prep', label: 'Tax Prep Active', icon: FileCheck2, section: 'Intake Pipeline', badge: '4', path: '/documenter/agent/prep' },
+        { id: 'agent_documents', label: 'My Documents', icon: FileCheck2, section: 'Intake Pipeline', badge: '4', path: '/documenter/agent/documents' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Calling Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
       ];
 
@@ -63,7 +63,7 @@ export const DocumenterLayout: React.FC = () => {
     if (currentPath.includes('/documenter/manager')) return 'dashboard';
     if (currentPath.includes('/documenter/agent/queue')) return 'agent_queue';
     if (currentPath.includes('/documenter/agent/callbacks')) return 'agent_callbacks';
-    if (currentPath.includes('/documenter/agent/prep')) return 'agent_prep';
+    if (currentPath.includes('/documenter/agent/documents') || currentPath.includes('/documenter/agent/prep')) return 'agent_documents';
     if (currentPath.includes('/documenter/agent')) return 'agent_dashboard';
     return 'agent_dashboard';
   };

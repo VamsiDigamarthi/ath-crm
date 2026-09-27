@@ -48,6 +48,13 @@ export interface BulkImportResult {
   processingTimeMs: number;
 }
 
+const isCleanSsn = (val?: string | null): boolean => {
+  if (!val) return false;
+  const s = val.trim().toUpperCase();
+  if (s === 'N/A' || s === 'NA' || s === 'NONE' || s === 'UNKNOWN' || s.includes('XXX')) return false;
+  return s.replace(/\D/g, '').length >= 4;
+};
+
 const BATCH_SIZE = 500;
 
 export class LeadIngestionService {
@@ -83,10 +90,10 @@ export class LeadIngestionService {
     // Filter valid rows vs invalid format rows
     const cleanedLeads: typeof rawIndexedLeads = [];
     for (const l of rawIndexedLeads) {
+      const rawName = `${l.firstName || ''} ${l.lastName || ''}`.trim();
       const isValid = Boolean(
         l &&
-        l.firstName?.trim() && l.firstName.trim().length >= 2 &&
-        l.lastName?.trim() && l.lastName.trim().length >= 2 &&
+        rawName.length >= 2 &&
         l.phone?.trim() && l.phone.trim().length >= 7
       );
 
@@ -94,15 +101,19 @@ export class LeadIngestionService {
         duplicatesSkipped++;
         skippedLeads.push({
           rowNumber: l.originalRowNumber,
-          taxpayerName: `${l.firstName || ''} ${l.lastName || ''}`.trim() || 'Incomplete Lead',
+          taxpayerName: rawName || 'Incomplete Lead',
           email: l.email || null,
           phone: l.phone || '-',
           ssnTin: l.ssnTin || null,
-          reason: 'Invalid Lead Record: First name, last name (min 2 chars), and phone number (min 7 digits) are strictly required.',
+          reason: 'Invalid Lead Record: Name (min 2 chars) and phone number (min 7 digits) are strictly required.',
           reasonCategory: 'INVALID_DATA',
         });
       } else {
-        cleanedLeads.push(l);
+        cleanedLeads.push({
+          ...l,
+          firstName: l.firstName?.trim() || rawName.split(/\s+/)[0] || 'Taxpayer',
+          lastName: l.lastName?.trim() || rawName.split(/\s+/).slice(1).join(' ') || '',
+        });
       }
     }
 
@@ -116,7 +127,7 @@ export class LeadIngestionService {
           const ssns = Array.from(
             new Set(
               chunk
-                .map((l) => l.ssnTin?.trim())
+                .map((l) => (isCleanSsn(l.ssnTin) ? l.ssnTin!.trim() : null))
                 .filter((s): s is string => Boolean(s && s.length > 0))
             )
           );
@@ -191,7 +202,8 @@ export class LeadIngestionService {
           const seenPhonesInChunk = new Set<string>();
 
           for (const lead of chunk) {
-            const ssn = lead.ssnTin?.trim() || null;
+            const rawSsn = lead.ssnTin?.trim();
+            const ssn = isCleanSsn(rawSsn) ? rawSsn : null;
             const email = lead.email?.trim().toLowerCase() || null;
             const phone = lead.phone.trim();
             const firstName = lead.firstName.trim();
@@ -343,6 +355,9 @@ export class LeadIngestionService {
             if (email) profileByEmail.set(email, { ...newProfile, applications: [], user: null } as any);
             if (phone) profileByPhone.set(phone, { ...newProfile, applications: [], user: null } as any);
 
+            /* =========================================================================
+             * OPTION 1 (COMMENTED OUT): Auto-create TaxApplication & StageHistory on Ingest
+             * =========================================================================
             const newApp = await tx.taxApplication.create({
               data: {
                 customerId: newProfile.id,
@@ -364,6 +379,10 @@ export class LeadIngestionService {
                 },
               });
             }
+            ========================================================================= */
+
+            // OPTION 2 (ACTIVE): Only CustomerProfile is created on bulk upload.
+            // TaxApplication will be created dynamically when Documenter Agent contacts client and confirms tax year(s).
 
             newProfilesCreated++;
             validProcessed++;

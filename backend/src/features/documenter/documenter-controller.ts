@@ -134,7 +134,17 @@ export const logCallDisposition = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { applicationIds, disposition, subDisposition, callSummary, callbackDate, callbackTimezone } = req.body;
+    const {
+      applicationIds,
+      disposition,
+      subDisposition,
+      callSummary,
+      callbackDate,
+      callbackTimezone,
+      taxYear,
+      filingType,
+      assignedDocAgentId,
+    } = req.body;
 
     const result = await DocumenterService.logCallDisposition({
       applicationIds,
@@ -143,7 +153,11 @@ export const logCallDisposition = async (
       callSummary,
       callbackDate,
       callbackTimezone,
+      taxYear: taxYear ? Number(taxYear) : undefined,
+      filingType,
+      assignedDocAgentId,
       agentUserId: req.currentUser?.id || 'SYSTEM',
+      userRole: req.currentUser?.role,
     });
 
     res.status(200).json({
@@ -486,5 +500,33 @@ export const requestMissingDocuments = async (
     next(error);
   }
 };
+
+export const startFiling = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { customerId, taxYear, filingType, assignedDocAgentId, remarks } = req.body;
+    const result = await DocumenterService.startFiling({
+      customerId,
+      taxYear: Number(taxYear),
+      filingType,
+      assignedDocAgentId,
+      remarks,
+      userId: req.currentUser!.id,
+      userRole: req.currentUser?.role,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Tax Year ${taxYear} filing created successfully!`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 

@@ -47,6 +47,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
   const {
     isAdmin,
+    isAgent,
+    agents,
     isLoading: isWorkspaceLoading,
     refreshData,
     handleSaveCallDisposition,
@@ -710,6 +712,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         isOpen={isCallModalOpen}
         onClose={() => setIsCallModalOpen(false)}
         lead={currentLead}
+        agents={agents}
+        isManager={isAdmin || !isAgent}
         onSaveDisposition={async (data) => {
           await handleSaveCallDisposition(data);
           await fetchLeadDetails();

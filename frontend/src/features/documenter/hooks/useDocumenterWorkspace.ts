@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { 
   DocumenterLeadItem, 
   DocumenterStats, 
@@ -13,9 +14,11 @@ import toast from 'react-hot-toast';
 import type { DateFilterPreset } from '@/shared/utils/date-filters';
 
 export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const isAgent = user?.role === 'DOC_AGENT';
-  const isAdmin = user?.role === 'ADMIN';
+  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || isManager;
 
   // 1. Filter & Pagination State
   const [timeRange, setTimeRange] = useState<DateFilterPreset>('TODAY');
@@ -50,8 +53,10 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   const [selectedRows, setSelectedRows] = useState<DocumenterLeadItem[]>([]);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState<boolean>(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState<boolean>(false);
+  const [isStartFilingModalOpen, setIsStartFilingModalOpen] = useState<boolean>(false);
   const [activeLeadForCall, setActiveLeadForCall] = useState<DocumenterLeadItem | null>(null);
   const [activeLeadForAssign, setActiveLeadForAssign] = useState<DocumenterLeadItem | null>(null);
+  const [activeLeadForStartFiling, setActiveLeadForStartFiling] = useState<DocumenterLeadItem | null>(null);
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
 
   // Debounce search query
@@ -202,6 +207,9 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     callSummary?: string;
     callbackDate?: string;
     callbackTimezone?: string;
+    taxYear?: number;
+    filingType?: string;
+    assignedDocAgentId?: string;
   }) => {
     setIsActionLoading(true);
     try {
@@ -212,18 +220,29 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
         callSummary: payload.callSummary,
         callbackDate: payload.callbackDate,
         callbackTimezone: payload.callbackTimezone,
+        taxYear: payload.taxYear,
+        filingType: payload.filingType,
+        assignedDocAgentId: payload.assignedDocAgentId,
       });
 
       toast.success(res?.message || 'Call outcome logged successfully!');
       setIsCallModalOpen(false);
       setActiveLeadForCall(null);
+
+      // If interested in filing and application ID returned, navigate to 360 detail screen immediately!
+      const createdAppId = res?.data?.createdApplicationId;
+      if (payload.disposition === 'CONNECTED_INTERESTED' && createdAppId) {
+        navigate(`/documenter/agent/lead/${createdAppId}`);
+        return;
+      }
+
       fetchLeads();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to log disposition');
     } finally {
       setIsActionLoading(false);
     }
-  }, [fetchLeads]);
+  }, [fetchLeads, navigate]);
 
   const handleOpenCallModal = useCallback((lead: DocumenterLeadItem) => {
     setActiveLeadForCall(lead);
@@ -278,16 +297,46 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     }
   }, [fetchLeads]);
 
+  const handleOpenStartFilingModal = useCallback((lead: DocumenterLeadItem) => {
+    setActiveLeadForStartFiling(lead);
+    setIsStartFilingModalOpen(true);
+  }, []);
+
+  const handleStartFiling = useCallback(async (payload: {
+    customerId: string;
+    taxYear: number;
+    filingType?: string;
+    assignedDocAgentId?: string | null;
+    remarks?: string;
+  }) => {
+    setIsActionLoading(true);
+    try {
+      const res = await documenterService.startFiling(payload);
+      toast.success(res?.message || `Tax Year ${payload.taxYear} filing created successfully!`);
+      setIsStartFilingModalOpen(false);
+      setActiveLeadForStartFiling(null);
+      fetchLeads();
+      fetchAgents();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to start tax filing');
+    } finally {
+      setIsActionLoading(false);
+    }
+  }, [fetchLeads, fetchAgents]);
+
   const handleCloseModals = useCallback(() => {
     setIsAssignModalOpen(false);
     setIsCallModalOpen(false);
+    setIsStartFilingModalOpen(false);
     setActiveLeadForCall(null);
     setActiveLeadForAssign(null);
+    setActiveLeadForStartFiling(null);
   }, []);
 
   return {
     user,
     isAgent,
+    isManager,
     isAdmin,
     activeTab,
     handleTabChange,
@@ -316,10 +365,14 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     handleReturnToAdminPool,
     isAssignModalOpen,
     isCallModalOpen,
+    isStartFilingModalOpen,
     activeLeadForCall,
     activeLeadForAssign,
+    activeLeadForStartFiling,
     handleOpenCallModal,
     handleOpenAssignModal,
+    handleOpenStartFilingModal,
+    handleStartFiling,
     handleCloseModals,
     timeRange,
     setTimeRange,
@@ -333,3 +386,4 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     refreshData: fetchLeads,
   };
 };
+

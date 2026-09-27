@@ -8,6 +8,7 @@ import {
   AuditActionType
 } from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
+import { BadRequestError } from '../../errors/bad-request-error.js';
 import { StorageService } from '../../utils/storage-service.js';
 import { EmailService } from '../../utils/email-service.js';
 import { sanitizeObject } from '../customer/customer-validator.js';
@@ -15,7 +16,7 @@ import { sanitizeObject } from '../customer/customer-validator.js';
 export interface DocumenterLeadQuery {
   page?: number;
   limit?: number;
-  tab?: 'UNASSIGNED' | 'NOT_CALLED' | 'UNCONTACTED' | 'OUTREACH' | 'PREP' | 'MY_LEADS' | 'CALLBACKS' | 'DROPPED' | 'NOT_INTERESTED' | 'ALL';
+  tab?: 'RAW_PROSPECTS' | 'UNASSIGNED' | 'NOT_CALLED' | 'UNCONTACTED' | 'OUTREACH' | 'PREP' | 'DOCUMENTS' | 'MY_DOCUMENTS' | 'MY_LEADS' | 'CALLBACKS' | 'DROPPED' | 'NOT_INTERESTED' | 'ALL';
   search?: string;
   agentId?: string;
   visaType?: string;
@@ -114,7 +115,55 @@ export class DocumenterService {
     });
 
     if (!app) {
-      throw new NotFoundError('Tax Application not found');
+      const rawCustomerId = applicationId.replace('raw-', '');
+      const rawCustomer = await prisma.customerProfile.findUnique({
+        where: { id: rawCustomerId },
+        include: {
+          applications: {
+            select: {
+              id: true,
+              taxYear: true,
+              filingType: true,
+              currentStage: true,
+              taxDraftSummary: true,
+              quotes: { select: { status: true } },
+              assignedDocAgentId: true,
+              assignedDocAgent: {
+                select: { id: true, email: true, mobile: true, role: true },
+              },
+              createdAt: true,
+              updatedAt: true,
+            },
+            orderBy: { taxYear: 'desc' },
+          },
+        },
+      });
+
+      if (!rawCustomer) {
+        throw new NotFoundError('Tax Application or Customer Profile not found');
+      }
+
+      return {
+        id: `raw-${rawCustomer.id}`,
+        customerId: rawCustomer.id,
+        taxYear: new Date().getFullYear(),
+        filingType: 'INDIVIDUAL',
+        currentStage: ApplicationStage.RAW_PROSPECT,
+        priority: 'NO_PRIORITY',
+        assignedDocAgentId: null,
+        assignedDocAgent: null,
+        assignedPrepAgent: null,
+        assignedSalesAgent: null,
+        customer: rawCustomer,
+        callLogs: [],
+        stageHistories: [],
+        auditLogs: [],
+        documents: [],
+        taxDraftSummary: null,
+        clientPaymentStatus: 'NEW' as const,
+        availableApplications: [],
+        isRawProspect: true,
+      };
     }
 
     // Fetch all tax year applications for this customer profile
@@ -321,6 +370,8 @@ export class DocumenterService {
         where.currentStage = ApplicationStage.DOC_OUTREACH;
         break;
       case 'PREP':
+      case 'DOCUMENTS':
+      case 'MY_DOCUMENTS':
         where.currentStage = {
           in: [
             ApplicationStage.DOC_PREP,
@@ -337,6 +388,9 @@ export class DocumenterService {
         if (currentUserId) {
           where.assignedDocAgentId = currentUserId;
         }
+        if (currentUserRole === Role.DOC_AGENT) {
+          where.currentStage = { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] };
+        }
         break;
       case 'CALLBACKS':
         where.callLogs = {
@@ -344,6 +398,7 @@ export class DocumenterService {
             callbackScheduledAt: { not: null },
           },
         };
+        where.currentStage = { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] };
         break;
       case 'DROPPED':
       case 'NOT_INTERESTED':
@@ -351,7 +406,10 @@ export class DocumenterService {
         break;
       case 'ALL':
       default:
-        // All Leads includes all stages and statuses
+        // Calling agents viewing ALL in Calling Queue only see calling/outreach leads
+        if (currentUserRole === Role.DOC_AGENT) {
+          where.currentStage = { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] };
+        }
         break;
     }
 
@@ -415,65 +473,68 @@ export class DocumenterService {
       notInterestedCount,
       todayDialsCount,
       todayConnectedCount,
-      upcomingCallback
+      upcomingCallback,
+      rawProspectsCount
     ] = await Promise.all([
-      prisma.taxApplication.findMany({
-        where,
-        orderBy: [
-          { taxYear: 'desc' },
-          { createdAt: 'desc' },
-        ],
-        include: {
-          customer: {
+      tab === 'RAW_PROSPECTS'
+        ? Promise.resolve([])
+        : prisma.taxApplication.findMany({
+            where,
+            orderBy: [
+              { taxYear: 'desc' },
+              { createdAt: 'desc' },
+            ],
             include: {
-              applications: {
-                select: {
-                  id: true,
-                  taxYear: true,
-                  filingType: true,
-                  currentStage: true,
-                  taxDraftSummary: true,
-                  quotes: {
-                    select: {
-                      status: true,
-                    },
-                  },
-                  assignedDocAgentId: true,
-                  assignedDocAgent: {
+              customer: {
+                include: {
+                  applications: {
                     select: {
                       id: true,
-                      email: true,
-                      mobile: true,
-                      role: true,
+                      taxYear: true,
+                      filingType: true,
+                      currentStage: true,
+                      taxDraftSummary: true,
+                      quotes: {
+                        select: {
+                          status: true,
+                        },
+                      },
+                      assignedDocAgentId: true,
+                      assignedDocAgent: {
+                        select: {
+                          id: true,
+                          email: true,
+                          mobile: true,
+                          role: true,
+                        },
+                      },
+                      createdAt: true,
+                      updatedAt: true,
                     },
+                    orderBy: { taxYear: 'desc' },
                   },
-                  createdAt: true,
-                  updatedAt: true,
                 },
-                orderBy: { taxYear: 'desc' },
               },
+              assignedDocAgent: {
+                select: {
+                  id: true,
+                  email: true,
+                  mobile: true,
+                  role: true,
+                },
+              },
+              callLogs: {
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
+              stageHistories: {
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
+              documents: true,
             },
-          },
-          assignedDocAgent: {
-            select: {
-              id: true,
-              email: true,
-              mobile: true,
-              role: true,
-            },
-          },
-          callLogs: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
-          stageHistories: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
-          documents: true,
-        },
-      }),
-      prisma.taxApplication.count({ where }),
+          }),
+      tab === 'RAW_PROSPECTS' ? Promise.resolve(0) : prisma.taxApplication.count({ where }),
       prisma.taxApplication.count({
         where: {
           assignedDocAgentId: null,
@@ -513,6 +574,7 @@ export class DocumenterService {
         ? prisma.taxApplication.count({
             where: { 
               assignedDocAgentId: currentUserId,
+              ...(currentUserRole === Role.DOC_AGENT ? { currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] } } : {}),
             },
           })
         : 0,
@@ -550,6 +612,11 @@ export class DocumenterService {
         },
         orderBy: { callbackScheduledAt: 'asc' },
         select: { callbackScheduledAt: true },
+      }),
+      prisma.customerProfile.count({
+        where: {
+          applications: { none: {} },
+        },
       }),
     ]);
 
@@ -654,6 +721,117 @@ export class DocumenterService {
       };
     });
 
+    const commonStats = {
+      rawProspects: rawProspectsCount,
+      unassigned: unassignedCount,
+      uncontacted: uncontactedCount,
+      activeOutreach: outreachCount,
+      inPrep: prepCount,
+      callbacks: callbacksCount,
+      myLeads: myLeadsCount,
+      notInterested: notInterestedCount,
+      dropped: notInterestedCount,
+      totalDepartment: unassignedCount + outreachCount + prepCount + notInterestedCount + rawProspectsCount,
+      todayDials: todayDialsCount,
+      todayConnected: todayConnectedCount,
+      contactRatePct,
+      nextCallbackAt: upcomingCallback?.callbackScheduledAt ? upcomingCallback.callbackScheduledAt.toISOString() : null,
+      hourlyBreakdown,
+      weeklyBreakdown,
+      visaDistribution,
+    };
+
+    // Dedicated RAW_PROSPECTS tab logic: query CustomerProfile directly without any applications
+    if (tab === 'RAW_PROSPECTS') {
+      const rawProfileWhere: any = {
+        applications: { none: {} },
+      };
+
+      if (search && search.trim()) {
+        const s = search.trim();
+        rawProfileWhere.OR = [
+          { firstName: { contains: s, mode: 'insensitive' } },
+          { lastName: { contains: s, mode: 'insensitive' } },
+          { email: { contains: s, mode: 'insensitive' } },
+          { phone: { contains: s } },
+          { ssnTin: { contains: s } },
+          { occupation: { contains: s, mode: 'insensitive' } },
+        ];
+      }
+
+      if (visaType && visaType.trim() && visaType !== 'ALL') {
+        rawProfileWhere.visaType = { equals: visaType.trim() };
+      }
+
+      const [rawProfiles, totalRawItems] = await Promise.all([
+        prisma.customerProfile.findMany({
+          where: rawProfileWhere,
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        prisma.customerProfile.count({
+          where: rawProfileWhere,
+        }),
+      ]);
+
+      const formattedRawLeads = rawProfiles.map((p) => ({
+        id: `raw-${p.id}`,
+        customerId: p.id,
+        taxYear: new Date().getFullYear(),
+        filingType: 'INDIVIDUAL',
+        currentStage: 'RAW_PROSPECT',
+        priority: 'NO_PRIORITY',
+        isRawProspect: true,
+        customer: {
+          id: p.id,
+          firstName: p.firstName,
+          middleName: p.middleName,
+          lastName: p.lastName,
+          fullName: `${p.firstName} ${p.middleName ? p.middleName + ' ' : ''}${p.lastName}`.trim(),
+          email: p.email,
+          phone: p.phone,
+          ssnTin: p.ssnTin,
+          dob: p.dob,
+          occupation: p.occupation,
+          visaType: p.visaType,
+          maritalStatus: p.maritalStatus,
+          addressLine1: p.addressLine1,
+          city: p.city,
+          state: p.state,
+          zipCode: p.zipCode,
+        },
+        assignedDocAgent: null,
+        assignedDocAgentId: null,
+        assignedSalesAgent: null,
+        isDualDocSalesRole: false,
+        lastCallLog: null,
+        callLogs: [],
+        documents: [],
+        stageHistories: [],
+        auditLogs: [],
+        taxDraftSummary: null,
+        allApplications: [],
+        availableApplications: [],
+        previousDocAgent: null,
+        clientPaymentStatus: 'NEW' as const,
+        totalTaxYears: 0,
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+      }));
+
+      return {
+        leads: formattedRawLeads,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalRawItems / limit) || 1,
+          totalItems: totalRawItems,
+          itemsPerPage: limit,
+        },
+        stats: commonStats,
+      };
+    }
+
     // Group matching applications by customerId so each customer appears as exactly 1 row
     const customerGroupsMap = new Map<string, typeof leads[0][]>();
     for (const app of leads) {
@@ -756,24 +934,7 @@ export class DocumenterService {
         totalItems: totalGroupedItems,
         itemsPerPage: limit,
       },
-      stats: {
-        unassigned: unassignedCount,
-        uncontacted: uncontactedCount,
-        activeOutreach: outreachCount,
-        inPrep: prepCount,
-        callbacks: callbacksCount,
-        myLeads: myLeadsCount,
-        notInterested: notInterestedCount,
-        dropped: notInterestedCount,
-        totalDepartment: unassignedCount + outreachCount + prepCount + notInterestedCount,
-        todayDials: todayDialsCount,
-        todayConnected: todayConnectedCount,
-        contactRatePct,
-        nextCallbackAt: upcomingCallback?.callbackScheduledAt ? upcomingCallback.callbackScheduledAt.toISOString() : null,
-        hourlyBreakdown,
-        weeklyBreakdown,
-        visaDistribution,
-      },
+      stats: commonStats,
     };
   }
 
@@ -1075,6 +1236,78 @@ export class DocumenterService {
 
       const nowIso = new Date().toISOString();
 
+      // Support assigning raw prospect profiles (raw-{customerId})
+      const rawProfileIds = applicationIds
+        .filter((id) => id.startsWith('raw-'))
+        .map((id) => id.replace('raw-', ''));
+
+      if (rawProfileIds.length > 0) {
+        const rawProfiles = await tx.customerProfile.findMany({
+          where: { id: { in: rawProfileIds } },
+        });
+
+        for (const p of rawProfiles) {
+          const newApp = await tx.taxApplication.create({
+            data: {
+              customerId: p.id,
+              taxYear: new Date().getFullYear(),
+              filingType: 'INDIVIDUAL',
+              currentStage: ApplicationStage.DOC_OUTREACH,
+              assignedDocAgentId: targetAgentId,
+              ...(alsoAssignAsSales ? { assignedSalesAgentId: targetAgentId } : {}),
+              isDualDocSalesRole: Boolean(alsoAssignAsSales),
+              taxDraftSummary: {
+                firstName: p.firstName,
+                lastName: p.lastName,
+                email: p.email,
+                phone: p.phone,
+                ssnTin: p.ssnTin,
+                dob: p.dob,
+                visaType: p.visaType || 'H-1B',
+                filingStatus: p.maritalStatus || 'Single',
+                addressLine1: p.addressLine1,
+                city: p.city,
+                state: p.state,
+                zipCode: p.zipCode,
+                paymentStatus: 'PENDING',
+                esignStatus: 'PENDING',
+                assignmentHistory: [
+                  {
+                    agentId: targetAgent.id,
+                    agentName: targetAgentName,
+                    agentEmail: targetAgent.email,
+                    role: targetAgent.role,
+                    action: 'ASSIGNED',
+                    isDualDocSalesRole: Boolean(alsoAssignAsSales),
+                    assignedAt: nowIso,
+                    assignedByUserId,
+                    assignedByUserName: assignerName,
+                    assignedByUserRole: assignedByUser?.role || 'ADMIN',
+                  },
+                ],
+              },
+              stageHistories: {
+                create: {
+                  fromStage: null,
+                  toStage: ApplicationStage.DOC_OUTREACH,
+                  movedByUserId: assignedByUserId,
+                  remarks: `${assignerRoleTitle} ${assignerName} assigned raw lead to Calling Agent ${targetAgent.email}.`,
+                },
+              },
+            },
+          });
+          apps.push({
+            id: newApp.id,
+            currentStage: newApp.currentStage,
+            assignedDocAgentId: newApp.assignedDocAgentId,
+            assignedSalesAgentId: newApp.assignedSalesAgentId,
+            isDualDocSalesRole: newApp.isDualDocSalesRole,
+            taxDraftSummary: newApp.taxDraftSummary,
+            customer: { firstName: p.firstName, lastName: p.lastName },
+          } as any);
+        }
+      }
+
       // 2. Update all selected applications and record assignment history
       for (const app of apps) {
         const prevSummary = (app.taxDraftSummary as Record<string, any>) || {};
@@ -1305,8 +1538,24 @@ export class DocumenterService {
     callbackDate?: string;
     callbackTimezone?: string;
     agentUserId: string;
+    taxYear?: number;
+    filingType?: string;
+    assignedDocAgentId?: string | null;
+    userRole?: string;
   }) {
-    const { applicationIds, disposition, subDisposition, callSummary, callbackDate, callbackTimezone, agentUserId } = options;
+    const { 
+      applicationIds, 
+      disposition, 
+      subDisposition, 
+      callSummary, 
+      callbackDate, 
+      callbackTimezone, 
+      agentUserId,
+      taxYear,
+      filingType,
+      assignedDocAgentId,
+      userRole
+    } = options;
 
     if (!applicationIds || applicationIds.length === 0) {
       throw new Error('No applications provided');
@@ -1316,26 +1565,99 @@ export class DocumenterService {
 
     return await prisma.$transaction(async (tx) => {
       const results = [];
+      let latestAppId: string | null = null;
 
       for (const appId of applicationIds) {
-        const app = await tx.taxApplication.findUnique({
+        let app = await tx.taxApplication.findUnique({
           where: { id: appId },
           include: { customer: true },
         });
 
-        if (!app) continue;
+        // If not found, check if it's a raw customer profile ID
+        if (!app) {
+          const rawCustomerId = appId.replace('raw-', '');
+          const customer = await tx.customerProfile.findUnique({
+            where: { id: rawCustomerId },
+          });
+
+          if (!customer) continue;
+
+          const targetTaxYear = taxYear ? Number(taxYear) : new Date().getFullYear();
+          const targetFilingType = filingType || 'INDIVIDUAL';
+          const targetDocAgentId = assignedDocAgentId || (userRole === Role.DOC_AGENT ? agentUserId : null);
+
+          let initialStage: ApplicationStage = ApplicationStage.DOC_OUTREACH;
+          if (disposition === 'CONNECTED_INTERESTED') {
+            initialStage = ApplicationStage.DOC_PREP;
+          } else if (disposition === 'CONNECTED_NOT_INTERESTED' || disposition === 'CLIENT_NOT_QUALIFIED') {
+            initialStage = ApplicationStage.DROPPED_CANCELLED;
+          } else if (disposition === 'INVALID_DISCONNECTED') {
+            initialStage = ApplicationStage.CORRECTION_NEEDED;
+          }
+
+          let yearApp = await tx.taxApplication.findUnique({
+            where: {
+              customerId_taxYear: {
+                customerId: customer.id,
+                taxYear: targetTaxYear,
+              },
+            },
+            include: { customer: true },
+          });
+
+          if (!yearApp) {
+            yearApp = await tx.taxApplication.create({
+              data: {
+                customerId: customer.id,
+                taxYear: targetTaxYear,
+                filingType: targetFilingType,
+                currentStage: initialStage,
+                assignedDocAgentId: targetDocAgentId,
+                taxDraftSummary: {
+                  firstName: customer.firstName,
+                  lastName: customer.lastName,
+                  email: customer.email,
+                  phone: customer.phone,
+                  ssnTin: customer.ssnTin,
+                  dob: customer.dob,
+                  visaType: customer.visaType || 'H-1B',
+                  filingStatus: customer.maritalStatus || 'Single',
+                  addressLine1: customer.addressLine1,
+                  city: customer.city,
+                  state: customer.state,
+                  zipCode: customer.zipCode,
+                  paymentStatus: 'PENDING',
+                  esignStatus: 'PENDING',
+                },
+                stageHistories: {
+                  create: {
+                    fromStage: null,
+                    toStage: initialStage,
+                    movedByUserId: agentUserId,
+                    remarks: `Tax Year ${targetTaxYear} filing initiated from Outreach Call (${disposition}).`,
+                  },
+                },
+              },
+              include: { customer: true },
+            });
+          }
+
+          app = yearApp;
+        }
+
+        latestAppId = app.id;
 
         let targetStage: ApplicationStage = app.currentStage;
         let auditRemark = subDisposition
           ? `Call outcome logged: ${disposition} (${subDisposition})`
           : `Call outcome logged: ${disposition}`;
 
-        // 1. Handle disposition transitions (CONNECTED_INTERESTED keeps lead in DOC_OUTREACH until agent manually verifies & moves to prep)
+        // 1. Handle disposition transitions
         if (disposition === 'CONNECTED_INTERESTED') {
-          targetStage = ApplicationStage.DOC_OUTREACH;
+          targetStage = ApplicationStage.DOC_PREP;
           auditRemark = subDisposition
-            ? `Lead agreed & interested in filing (${subDisposition}). Provisioned Client Portal access for taxpayer.`
-            : `Lead agreed & interested in filing. Provisioned Client Portal access for taxpayer (Tax Organizer & Document Vault).`;
+            ? `Lead agreed & interested in filing (${subDisposition}). Moved to DOC_PREP and provisioned Client Portal access.`
+            : `Lead agreed & interested in filing. Moved to DOC_PREP and provisioned Client Portal access for taxpayer (Tax Organizer & Document Vault).`;
 
           // Lazy Taxpayer User Provisioning
           if (!app.customer.userId && (app.customer.email || app.customer.phone)) {
@@ -1392,7 +1714,7 @@ export class DocumenterService {
             : `No answer / voicemail left. Retained in outreach.`;
         }
 
-        // 2. Create CallLog entry (Call History already tracks this cleanly)
+        // 2. Create CallLog entry
         const callLog = await tx.callLog.create({
           data: {
             applicationId: app.id,
@@ -1405,13 +1727,23 @@ export class DocumenterService {
           },
         });
 
-        // 3. Update application stage if stage changed
+        // 3. Update application stage, taxYear, filingType, and assigned agent
+        const updateData: any = {
+          currentStage: targetStage,
+          assignedDocAgentId: assignedDocAgentId || app.assignedDocAgentId || agentUserId,
+        };
+        if (disposition === 'CONNECTED_INTERESTED') {
+          if (taxYear) {
+            updateData.taxYear = Number(taxYear);
+          }
+          if (filingType) {
+            updateData.filingType = filingType;
+          }
+        }
+
         await tx.taxApplication.update({
           where: { id: app.id },
-          data: {
-            currentStage: targetStage,
-            assignedDocAgentId: app.assignedDocAgentId || agentUserId,
-          },
+          data: updateData,
         });
 
         // 4. Create StageHistory entry ONLY if actual stage transition occurred
@@ -1430,7 +1762,10 @@ export class DocumenterService {
         results.push({ applicationId: app.id, callLogId: callLog.id, stage: targetStage });
       }
 
-      return results;
+      return {
+        results,
+        createdApplicationId: latestAppId,
+      };
     });
   }
 
@@ -2452,5 +2787,113 @@ export class DocumenterService {
       recipientEmail: customerEmail,
       message: `Successfully sent missing documents request to ${customerName}${docAgentNotified ? ' and notified Document Agent' : ''}! 🚀`,
     };
+  }
+
+  /**
+   * Start a new Tax Application for a raw ingested Customer Profile or existing customer
+   */
+  public static async startFiling(payload: {
+    customerId: string;
+    taxYear: number;
+    filingType?: string;
+    assignedDocAgentId?: string | null;
+    remarks?: string;
+    userId: string;
+    userRole?: string;
+  }) {
+    const {
+      customerId,
+      taxYear,
+      filingType = 'INDIVIDUAL',
+      assignedDocAgentId = null,
+      remarks,
+      userId,
+      userRole,
+    } = payload;
+
+    const customer = await prisma.customerProfile.findUnique({
+      where: { id: customerId },
+    });
+
+    if (!customer) {
+      throw new NotFoundError('Customer profile not found');
+    }
+
+    const existingApp = await prisma.taxApplication.findUnique({
+      where: {
+        customerId_taxYear: {
+          customerId,
+          taxYear: Number(taxYear),
+        },
+      },
+    });
+
+    if (existingApp) {
+      throw new BadRequestError(`A Tax Application for TY ${taxYear} already exists for this client.`);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Staff Member';
+
+    const targetDocAgentId = assignedDocAgentId || (userRole === Role.DOC_AGENT ? userId : null);
+
+    const app = await prisma.taxApplication.create({
+      data: {
+        customerId,
+        taxYear: Number(taxYear),
+        filingType,
+        currentStage: ApplicationStage.DOC_OUTREACH,
+        assignedDocAgentId: targetDocAgentId,
+        taxDraftSummary: {
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+          phone: customer.phone,
+          ssnTin: customer.ssnTin,
+          dob: customer.dob,
+          visaType: customer.visaType || 'H-1B',
+          filingStatus: customer.maritalStatus || 'Single',
+          addressLine1: customer.addressLine1,
+          city: customer.city,
+          state: customer.state,
+          zipCode: customer.zipCode,
+          paymentStatus: 'PENDING',
+          esignStatus: 'PENDING',
+        },
+        stageHistories: {
+          create: {
+            fromStage: null,
+            toStage: ApplicationStage.DOC_OUTREACH,
+            movedByUserId: userId,
+            remarks: remarks || `Started Tax Year ${taxYear} filing from Raw Lead Ingestion.`,
+          },
+        },
+        auditLogs: {
+          create: {
+            actorId: userId,
+            actorType: 'AGENT',
+            actorName,
+            actorRole: userRole || 'DOC_MANAGER',
+            action: 'STAGE_CHANGE',
+            moduleKey: 'TAX_APPLICATION_CREATION',
+            details: {
+              taxYear,
+              filingType,
+              assignedDocAgentId: targetDocAgentId,
+              remarks: remarks || `Started Tax Year ${taxYear} filing from Raw Lead Ingestion.`,
+            },
+          },
+        },
+      },
+      include: {
+        customer: true,
+        assignedDocAgent: true,
+      },
+    });
+
+    return app;
   }
 }

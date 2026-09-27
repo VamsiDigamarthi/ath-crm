@@ -146,6 +146,7 @@ export const DocumenterAgentDashboardScreen: React.FC = () => {
         isOpen={isCallModalOpen}
         onClose={handleCloseModals}
         lead={activeLeadForCall}
+        isManager={false}
         onSaveDisposition={handleSaveCallDisposition}
         isLoading={isActionLoading}
       />

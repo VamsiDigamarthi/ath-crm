@@ -1,8 +1,11 @@
 export type DocumenterTab = 
+  | 'RAW_PROSPECTS'
   | 'UNASSIGNED'
   | 'NOT_CALLED'
   | 'OUTREACH'
   | 'PREP'
+  | 'DOCUMENTS'
+  | 'MY_DOCUMENTS'
   | 'MY_LEADS'
   | 'CALLBACKS'
   | 'DROPPED'
@@ -122,6 +125,7 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
     mobile: string;
     role: string;
   } | null;
+  assignedDocAgentId?: string | null;
   assignedSalesAgentId?: string | null;
   assignedSalesAgent?: {
     id: string;
@@ -130,6 +134,7 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
     role: string;
   } | null;
   isDualDocSalesRole?: boolean;
+  isRawProspect?: boolean;
   lastCallLog?: {
     disposition: string;
     callSummary?: string | null;
@@ -160,6 +165,7 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
 }
 
 export interface DocumenterStats {
+  rawProspects?: number;
   unassigned: number;
   uncontacted?: number;
   activeOutreach: number;

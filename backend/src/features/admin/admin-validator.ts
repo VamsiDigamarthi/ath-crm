@@ -75,14 +75,11 @@ const noObjectOrEmoji = (val: string) => {
 
 export const leadItemSchema = z.object({
   firstName: z.string().trim()
-    .min(2, "First name must be at least 2 characters")
-    .max(50, "First name must not exceed 50 characters")
-    .refine(noObjectOrEmoji, "First name contains invalid object reference or emojis"),
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name must not exceed 100 characters")
+    .refine(noObjectOrEmoji, "Name contains invalid object reference or emojis"),
   middleName: z.string().trim().max(50, "Middle name must not exceed 50 characters").optional().nullable().or(z.literal("")),
-  lastName: z.string().trim()
-    .min(2, "Last name must be at least 2 characters")
-    .max(50, "Last name must not exceed 50 characters")
-    .refine(noObjectOrEmoji, "Last name contains invalid object reference or emojis"),
+  lastName: z.string().trim().max(100).optional().nullable().or(z.literal("")).default(""),
   phone: z.string().trim()
     .min(7, "Valid phone number is required (min 7 digits)")
     .max(25, "Phone number too long")
@@ -91,9 +88,7 @@ export const leadItemSchema = z.object({
   ssnTin: z.string().trim().optional().nullable().or(z.literal("")),
   dob: z.string().trim().optional().nullable().or(z.literal("")),
   occupation: z.string().trim().max(100).optional().nullable().or(z.literal("")),
-  visaType: z.string().trim()
-    .min(1, "Visa type is required")
-    .refine(noObjectOrEmoji, "Visa type contains invalid object reference or emojis"),
+  visaType: z.string().trim().optional().nullable().or(z.literal("")),
   maritalStatus: z.string().trim().max(50).optional().nullable().or(z.literal("")),
   filingType: z.string().optional().default("INDIVIDUAL"),
   addressLine1: z.string().trim().max(200).optional().nullable().or(z.literal("")),

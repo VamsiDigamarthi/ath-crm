@@ -99,6 +99,9 @@ export const documenterService = {
     callSummary?: string;
     callbackDate?: string;
     callbackTimezone?: string;
+    taxYear?: number;
+    filingType?: string;
+    assignedDocAgentId?: string | null;
   }): Promise<any> {
     return apiClient.post('/documenter/dispositions', payload);
   },
@@ -137,4 +140,18 @@ export const documenterService = {
   async updatePriority(applicationId: string, priority: string): Promise<any> {
     return apiClient.patch(`/documenter/leads/${applicationId}/priority`, { priority });
   },
+
+  /**
+   * Start a new Tax Application for a raw ingested Customer Profile
+   */
+  async startFiling(payload: {
+    customerId: string;
+    taxYear: number;
+    filingType?: string;
+    assignedDocAgentId?: string | null;
+    remarks?: string;
+  }): Promise<any> {
+    return apiClient.post('/documenter/leads/start-filing', payload);
+  },
 };
+

@@ -2,13 +2,13 @@ import { Link } from 'react-router-dom';
 import type { ColumnDef } from '@/shared/components/AppTable';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
-import { 
-  PhoneCall, 
-  UserCheck, 
-  UserX, 
-  Globe, 
-  Clock, 
-  CheckCircle2, 
+import {
+  PhoneCall,
+  UserCheck,
+  UserX,
+  Globe,
+  Clock,
+  CheckCircle2,
   AlertCircle,
   Eye,
   Sparkles
@@ -117,6 +117,7 @@ export const renderStageBadge = (stage: string) => {
 export interface GetDocumenterColumnsProps {
   onOpenCallModal: (lead: DocumenterLeadItem) => void;
   onOpenAssignModal: (lead: DocumenterLeadItem) => void;
+  onOpenStartFilingModal?: (lead: DocumenterLeadItem) => void;
   onReassignLead?: (lead: DocumenterLeadItem) => void;
   onRevertLead?: (lead: DocumenterLeadItem) => void;
   hideAssignedStaff?: boolean;
@@ -124,9 +125,45 @@ export interface GetDocumenterColumnsProps {
   isAdmin?: boolean;
 }
 
+export const isLeadInCallingOnlyMode = (item: DocumenterLeadItem): boolean => {
+  // 1. Raw prospect
+  if (item.isRawProspect || item.id?.startsWith('raw-') || item.totalTaxYears === 0) {
+    return true;
+  }
+
+  // 2. If already progressed to Tax Prep, Sales, or IRS Filing, View is fully enabled
+  const advancedStages = [
+    'DOC_PREP',
+    'CORRECTION_NEEDED',
+    'SALES_PITCH_QUEUE',
+    'SALES_PITCHING',
+    'FILING_QUEUE',
+    'FILING_IN_PROGRESS',
+    'FILING_SUCCESS',
+  ];
+  if (advancedStages.includes(item.currentStage)) {
+    return false;
+  }
+
+  // 3. If paid client
+  if (item.clientPaymentStatus === 'PAID') {
+    return false;
+  }
+
+  // 4. In RAW_PROSPECT or DOC_OUTREACH: only enabled if an outreach call confirmed CONNECTED_INTERESTED
+  const log = item.lastCallLog || (item as any).callLogs?.[0];
+  if (log?.disposition === 'CONNECTED_INTERESTED') {
+    return false;
+  }
+
+  // Otherwise, outreach call is still pending / only calling is allowed
+  return true;
+};
+
 export const getDocumenterColumns = ({
   onOpenCallModal,
   onOpenAssignModal,
+  onOpenStartFilingModal: _onOpenStartFilingModal,
   onReassignLead: _onReassignLead,
   onRevertLead: _onRevertLead,
   hideAssignedStaff = false,
@@ -144,12 +181,10 @@ export const getDocumenterColumns = ({
       render: (item) => {
         const c = item.customer;
         const initial = c.firstName?.[0] || 'T';
-        return (
-          <Link
-            to={`/documenter/agent/lead/${item.id}`}
-            className="flex items-center gap-3 group text-left cursor-pointer min-w-0"
-            title="View Lead Details & Call History"
-          >
+        const isCallingOnly = isLeadInCallingOnlyMode(item);
+
+        const content = (
+          <>
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-emerald-100 group-hover:to-teal-200 border border-slate-200 group-hover:border-emerald-300 text-slate-700 group-hover:text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs transition-all">
               {initial}
             </div>
@@ -165,6 +200,24 @@ export const getDocumenterColumns = ({
                 {c.dob ? ` • DOB: ${c.dob}` : ''}
               </div>
             </div>
+          </>
+        );
+
+        if (isCallingOnly) {
+          return (
+            <div className="flex items-center gap-3 text-left min-w-0 select-none">
+              {content}
+            </div>
+          );
+        }
+
+        return (
+          <Link
+            to={`/documenter/agent/lead/${item.id}`}
+            className="flex items-center gap-3 group text-left cursor-pointer min-w-0"
+            title="View Lead Details & Call History"
+          >
+            {content}
           </Link>
         );
       },
@@ -188,6 +241,7 @@ export const getDocumenterColumns = ({
         </div>
       ),
     },
+    /*
     {
       header: 'Location & Year',
       accessorKey: 'customer.state',
@@ -195,6 +249,22 @@ export const getDocumenterColumns = ({
       headerClassName: 'min-w-[180px]',
       cellClassName: 'min-w-[180px]',
       render: (item) => {
+        const isRaw = item.isRawProspect || item.id?.startsWith('raw-') || item.totalTaxYears === 0;
+        if (isRaw) {
+          return (
+            <div className="text-xs text-slate-700">
+              <div className="font-semibold text-slate-800">
+                {item.customer.city ? `${item.customer.city}, ` : ''}{item.customer.state || 'N/A'} {item.customer.zipCode || ''}
+              </div>
+              <div className="mt-1 flex items-center gap-1">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  No Filing Started
+                </span>
+              </div>
+            </div>
+          );
+        }
+
         const hasMultipleYears = Boolean(item.allApplications && item.allApplications.length > 1);
         return (
           <div className="text-xs text-slate-700">
@@ -226,6 +296,7 @@ export const getDocumenterColumns = ({
         );
       },
     },
+    */
     {
       header: 'Priority',
       accessorKey: 'priority',
@@ -298,7 +369,17 @@ export const getDocumenterColumns = ({
       width: '140px',
       headerClassName: 'min-w-[140px]',
       cellClassName: 'min-w-[140px]',
-      render: (item) => renderStageBadge(item.currentStage),
+      render: (item) => {
+        if (item.isRawProspect || item.id?.startsWith('raw-')) {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+              <Clock className="w-3 h-3 text-blue-600" />
+              Raw Prospect
+            </span>
+          );
+        }
+        return renderStageBadge(item.currentStage);
+      },
     },
     {
       header: 'Last Call Status',
@@ -339,8 +420,8 @@ export const getDocumenterColumns = ({
         );
         const cleanSummary = log.callSummary
           ? (log.callSummary.startsWith('[') && log.callSummary.includes(']')
-              ? log.callSummary.replace(/^(\[[^\]]+\]\s*)+/, '').trim()
-              : log.callSummary)
+            ? log.callSummary.replace(/^(\[[^\]]+\]\s*)+/, '').trim()
+            : log.callSummary)
           : null;
 
         return (
@@ -375,60 +456,93 @@ export const getDocumenterColumns = ({
     {
       header: 'Actions',
       accessorKey: 'id',
-      width: '130px',
-      headerClassName: 'text-right min-w-[130px]',
-      cellClassName: 'text-right min-w-[130px]',
-      render: (item) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <Link
-            to={`/documenter/agent/lead/${item.id}`}
-            className="h-8 px-2.5 rounded-lg text-xs font-semibold border border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
-            title="View Lead Details & Call History"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">View</span>
-          </Link>
-          {!isAdmin && (
+      width: '180px',
+      headerClassName: 'text-right min-w-[180px]',
+      cellClassName: 'text-right min-w-[180px]',
+      render: (item) => {
+        const isCallingOnly = isLeadInCallingOnlyMode(item);
+
+        if (isCallingOnly) {
+          return (
+            <div className="flex items-center justify-end gap-1.5">
+              <Button
+                size="sm"
+                onClick={() => onOpenCallModal(item)}
+                className="h-8 px-3 rounded-lg text-xs font-bold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer whitespace-nowrap"
+                title="Call Prospect & Log Outcome"
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Call</span>
+              </Button>
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onOpenAssignModal(item)}
+                  className="h-8 px-2.5 rounded-lg text-xs font-bold border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
+                  title="Assign Lead to Agent"
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-[#16A34A]" />
+                  <span>Assign</span>
+                </Button>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            <Link
+              to={`/documenter/agent/lead/${item.id}`}
+              className="h-8 px-2.5 rounded-lg text-xs font-semibold border border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
+              title="View Lead Details & Call History"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">View</span>
+            </Link>
             <Button
               size="sm"
               onClick={() => onOpenCallModal(item)}
               className="h-8 px-3 rounded-lg text-xs font-bold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer whitespace-nowrap"
+              title="Call Lead"
             >
               <PhoneCall className="w-3.5 h-3.5" />
               <span>Call</span>
             </Button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => onOpenAssignModal(item)}
-              className="w-8 h-8 rounded-lg border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
-              title="Assign Lead to Agent"
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {!hideAssignedStaff && !isAdmin && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={Boolean(item.assignedDocAgent)}
-              onClick={() => !item.assignedDocAgent && onOpenAssignModal(item)}
-              className={`h-8 px-2.5 rounded-lg text-xs font-medium border-slate-200 ${
-                item.assignedDocAgent
+            {isAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onOpenAssignModal(item)}
+                className="h-8 px-2.5 rounded-lg text-xs font-bold border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
+                title="Assign Lead to Agent"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-[#16A34A]" />
+                <span>Assign</span>
+              </Button>
+            )}
+            {!hideAssignedStaff && !isAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={Boolean(item.assignedDocAgent)}
+                onClick={() => !item.assignedDocAgent && onOpenAssignModal(item)}
+                className={`h-8 px-2.5 rounded-lg text-xs font-medium border-slate-200 ${item.assignedDocAgent
                   ? 'opacity-30 cursor-not-allowed bg-slate-50 text-slate-400 pointer-events-none'
                   : 'hover:bg-slate-100 text-slate-700 cursor-pointer'
-              }`}
-              title={
-                item.assignedDocAgent
-                  ? `Already assigned to ${item.assignedDocAgent.email?.split('@')[0] || 'staff'}`
-                  : 'Assign Staff'
-              }
-            >
-              <UserCheck className="w-3.5 h-3.5 text-slate-600" />
-            </Button>
-          )}
-        </div>
-      ),
+                  }`}
+                title={
+                  item.assignedDocAgent
+                    ? `Already assigned to ${item.assignedDocAgent.email?.split('@')[0] || 'staff'}`
+                    : 'Assign Staff'
+                }
+              >
+                <UserCheck className="w-3.5 h-3.5 text-slate-600" />
+              </Button>
+            )}
+          </div>
+        );
+      },
     }
   );
 

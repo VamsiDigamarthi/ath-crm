@@ -4,6 +4,7 @@ import { DocumenterMetrics } from '../components/DocumenterMetrics';
 import { FloatingActionBar } from '../components/FloatingActionBar';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { CallOutreachModal } from '../components/CallOutreachModal';
+import { StartFilingModal } from '../components/StartFilingModal';
 import { getDocumenterColumns } from '../columns/documenter-columns';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
@@ -17,6 +18,7 @@ import {
   RefreshCw,
   Globe,
   UserX,
+  UserPlus,
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
@@ -48,10 +50,13 @@ export const DocumenterDepartmentScreen: React.FC = () => {
     handleDirectAssign,
     isAssignModalOpen,
     isCallModalOpen,
+    isStartFilingModalOpen,
     activeLeadForCall,
     activeLeadForAssign,
+    activeLeadForStartFiling,
     handleOpenCallModal,
     handleOpenAssignModal,
+    handleStartFiling,
     handleCloseModals,
     handleSaveCallDisposition,
     refreshData,
@@ -62,13 +67,15 @@ export const DocumenterDepartmentScreen: React.FC = () => {
       getDocumenterColumns({
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
-        isAdmin,
+        isAdmin: true,
+        isManagerView: true,
       }),
-    [handleOpenCallModal, handleOpenAssignModal, isAdmin]
+    [handleOpenCallModal, handleOpenAssignModal]
   );
 
   // Super Admin Department Supervision Tabs
   const tabs = [
+    { id: 'RAW_PROSPECTS' as DocumenterTab, label: 'Raw Ingested Leads', count: stats.rawProspects || 0, icon: UserPlus },
     { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
     { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
     { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
@@ -259,9 +266,22 @@ export const DocumenterDepartmentScreen: React.FC = () => {
         isOpen={isCallModalOpen}
         onClose={handleCloseModals}
         lead={activeLeadForCall}
+        agents={agents}
+        isManager={!isAgent}
         onSaveDisposition={handleSaveCallDisposition}
+        isLoading={isActionLoading}
+      />
+
+      {/* Start Tax Filing Modal */}
+      <StartFilingModal
+        isOpen={isStartFilingModalOpen}
+        onClose={handleCloseModals}
+        lead={activeLeadForStartFiling}
+        agents={agents}
+        onConfirmStartFiling={handleStartFiling}
         isLoading={isActionLoading}
       />
     </div>
   );
 };
+

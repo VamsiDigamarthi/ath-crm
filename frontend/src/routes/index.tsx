@@ -304,8 +304,12 @@ export const router = createBrowserRouter([
             element: <DocumenterAgentCallbacksScreen />,
           },
           {
-            path: 'agent/prep',
+            path: 'agent/documents',
             element: <DocumenterAgentPrepScreen />,
+          },
+          {
+            path: 'agent/prep',
+            element: <Navigate to="/documenter/agent/documents" replace />,
           },
           {
             path: 'agent/lead/:id',
