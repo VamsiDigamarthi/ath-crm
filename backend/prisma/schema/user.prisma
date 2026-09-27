@@ -46,6 +46,9 @@ model User {
   notifications  Notification[]  @relation("UserNotifications")
   emailTemplates EmailTemplate[]
   sentEmails     SentEmail[]
+  createdCoupons DiscountCoupon[] @relation("CreatedCoupons")
+  approvedCoupons DiscountCoupon[] @relation("ApprovedCoupons")
+  appliedCouponUsages CouponUsage[] @relation("AppliedCouponUsages")
 
   @@index([email])
   @@index([mobile])

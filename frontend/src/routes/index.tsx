@@ -9,6 +9,9 @@ import { AdminOverviewScreen } from '@/features/admin/screens/AdminOverviewScree
 import { BulkLeadImportScreen } from '@/features/admin/screens/BulkLeadImportScreen';
 import { EmployeeManagementScreen } from '@/features/admin/screens/EmployeeManagementScreen';
 import { AdminCustomerDirectoryScreen } from '@/features/admin/screens/AdminCustomerDirectoryScreen';
+import { AdminMasterTaxpayerDirectoryScreen } from '@/features/admin/screens/AdminMasterTaxpayerDirectoryScreen';
+import { AdminTaxpayerDetailScreen } from '@/features/admin/screens/AdminTaxpayerDetailScreen';
+import { AdminCouponsScreen } from '@/features/coupons/screens/AdminCouponsScreen';
 import { AdminEmailTemplatesScreen } from '@/features/admin/screens/AdminEmailTemplatesScreen';
 import { AdminReturnedLeadsScreen } from '@/features/admin/screens/AdminReturnedLeadsScreen';
 import { AdminSelfSignupsScreen } from '@/features/admin/screens/AdminSelfSignupsScreen';
@@ -141,6 +144,18 @@ export const router = createBrowserRouter([
         path: '/notifications',
         element: <NotificationRedirect />,
       },
+      {
+        path: '/coupons',
+        element: <Navigate to="/admin/coupons" replace />,
+      },
+      {
+        path: '/coupon',
+        element: <Navigate to="/admin/coupons" replace />,
+      },
+      {
+        path: '/discount-coupons',
+        element: <Navigate to="/admin/coupons" replace />,
+      },
     ],
   },
 
@@ -175,6 +190,26 @@ export const router = createBrowserRouter([
           {
             path: 'customers',
             element: <AdminCustomerDirectoryScreen />,
+          },
+          {
+            path: 'all-taxpayers',
+            element: <AdminMasterTaxpayerDirectoryScreen />,
+          },
+          {
+            path: 'all-taxpayers/:id',
+            element: <AdminTaxpayerDetailScreen />,
+          },
+          {
+            path: 'coupons',
+            element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'coupon',
+            element: <Navigate to="/admin/coupons" replace />,
+          },
+          {
+            path: 'discount-coupons',
+            element: <Navigate to="/admin/coupons" replace />,
           },
           {
             path: 'employees',
@@ -238,6 +273,10 @@ export const router = createBrowserRouter([
           {
             path: 'manager',
             element: <DocumenterManagerDashboardScreen />,
+          },
+          {
+            path: 'manager/self-signups',
+            element: <AdminSelfSignupsScreen />,
           },
           {
             path: 'manager/scorecards',
@@ -397,12 +436,32 @@ export const router = createBrowserRouter([
             element: <SalesManagerQueueScreen />,
           },
           {
+            path: 'manager/pitch/:id',
+            element: <SalesPitchWorkspaceScreen />,
+          },
+          {
             path: 'manager/dual-role',
             element: <SalesManagerDualRoleScreen />,
           },
           {
             path: 'manager/team',
             element: <SalesTeamScorecardsScreen />,
+          },
+          {
+            path: 'coupons',
+            element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'manager/coupons',
+            element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'coupon',
+            element: <Navigate to="/sales/coupons" replace />,
+          },
+          {
+            path: 'discount-coupons',
+            element: <Navigate to="/sales/coupons" replace />,
           },
           // Agent / Closer Routes
           {

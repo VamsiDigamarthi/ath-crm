@@ -15,7 +15,8 @@ import {
   CheckCircle2, 
   Rocket,
   CreditCard,
-  Scale
+  Scale,
+  Sparkles
 } from 'lucide-react';
 import type { SalesLeadItem } from '../types/sales.types';
 
@@ -34,6 +35,8 @@ export const SalesDepartmentScreen: React.FC = () => {
     setLiabilityFilter,
     visaFilter,
     setVisaFilter,
+    complexityFilter,
+    setComplexityFilter,
     refreshData,
   } = useSalesManagerQueue();
 
@@ -195,6 +198,23 @@ export const SalesDepartmentScreen: React.FC = () => {
                 <option value="H-4">H-4</option>
                 <option value="GREEN_CARD">Green Card</option>
                 <option value="US_CITIZEN">US Citizen</option>
+              </select>
+            </div>
+
+            {/* Return Complexity Filter */}
+            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Complexity:</span>
+              <select
+                value={complexityFilter}
+                onChange={(e) => setComplexityFilter(e.target.value as any)}
+                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
+              >
+                <option value="ALL">All Complexities</option>
+                <option value="BASIC">🟢 Basic (1/4)</option>
+                <option value="MODERATE">🟡 Moderate (2/4)</option>
+                <option value="COMPLEX">🟠 Complex (3/4)</option>
+                <option value="SPECIALIZED_REVIEW">🔴 Specialized (4/4)</option>
               </select>
             </div>
           </div>

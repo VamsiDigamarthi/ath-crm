@@ -191,10 +191,10 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
       </div>
 
       {/* 3. Search & Tab Filter Bar (Server-Side Dynamic Filtering) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
         {/* Left: Search & Tab Filter Pills */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
-          <div className="w-full sm:w-72">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 flex-1 min-w-0">
+          <div className="w-full md:w-64 lg:w-72 shrink-0">
             <AppSearchInput
               value={searchQuery}
               onChange={setSearchQuery}
@@ -204,7 +204,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
           </div>
 
           {/* Dynamic Tab Filter Pills */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto min-w-0">
             <button
               type="button"
               onClick={() => handleTabChange('ALL')}
@@ -284,8 +284,8 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Visa Filter & Action Buttons */}
-        <div className="flex items-center gap-3 w-full lg:w-auto shrink-0">
+        {/* Right: Visa Filter & Priority Filter */}
+        <div className="flex items-center gap-2.5 w-full xl:w-auto shrink-0 flex-wrap justify-between sm:justify-start">
           <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
             <Globe className="w-3.5 h-3.5 text-indigo-500" />
             <span>Visa:</span>
@@ -308,18 +308,6 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
             value={priorityFilter}
             onChange={handlePriorityChange}
           />
-
-          {activeTab === 'NOT_INTERESTED' && selectedRows.length > 0 && (
-            <Button
-              size="sm"
-              onClick={() => handleReturnToAdminPool()}
-              disabled={isActionLoading}
-              className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer px-3.5 animate-in fade-in duration-150"
-            >
-              <RotateCcw className={`w-3.5 h-3.5 ${isActionLoading ? 'animate-spin' : ''}`} />
-              <span>Return Selected ({selectedRows.length}) to Admin</span>
-            </Button>
-          )}
         </div>
       </div>
 

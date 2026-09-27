@@ -75,9 +75,9 @@ export const AppDrawer: React.FC<AppDrawerProps> = ({
       {/* Side-Sheet panel */}
       <div
         className={cn(
-          "absolute top-0 right-0 h-full w-full max-w-[90vw] sm:max-w-[460px] md:max-w-[500px] bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out transform",
+          "absolute top-0 right-0 h-full w-full max-w-[95vw] bg-white shadow-2xl flex flex-col transition-transform duration-300 ease-in-out transform",
           isAnimating ? "translate-x-0" : "translate-x-full",
-          className
+          className || "sm:max-w-[480px] md:max-w-[540px]"
         )}
       >
         {/* Drawer Header */}

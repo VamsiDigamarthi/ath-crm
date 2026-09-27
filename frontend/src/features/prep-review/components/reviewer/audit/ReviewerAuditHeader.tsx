@@ -2,11 +2,15 @@ import React from 'react';
 import { ArrowLeft, RotateCcw, CheckCircle2, Lock, Clock } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { PrepStageBadge } from '../../common/PrepStageBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import type { WorkspaceTaxpayer } from '../../../hooks/useTaxPreparerWorkspace';
 
 interface ReviewerAuditHeaderProps {
   taxpayer: WorkspaceTaxpayer | null;
   taxYear: number;
+  priority?: string;
+  lead?: any;
   assignedPreparer: { name: string; email: string } | null;
   currentStage?: string;
   taxDraftSummary?: any;
@@ -19,6 +23,8 @@ interface ReviewerAuditHeaderProps {
 export const ReviewerAuditHeader: React.FC<ReviewerAuditHeaderProps> = ({
   taxpayer,
   taxYear,
+  priority,
+  lead,
   assignedPreparer,
   currentStage = 'PREP_IN_PROGRESS',
   taxDraftSummary,
@@ -85,13 +91,15 @@ export const ReviewerAuditHeader: React.FC<ReviewerAuditHeaderProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-2 pt-0.5">
+          <div className="flex items-center gap-2 pt-0.5 flex-wrap">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {taxpayerName}
             </h2>
+            <ClientPaymentStatusChip lead={lead || { ...taxDraftSummary, currentStage, taxDraftSummary, taxYear }} scope="return" size="sm" />
             <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
               TY {taxYear} Form 1040
             </span>
+            <PriorityBadge priority={priority || 'NO_PRIORITY'} size="sm" />
           </div>
 
           <p className="text-xs text-slate-500 font-medium">

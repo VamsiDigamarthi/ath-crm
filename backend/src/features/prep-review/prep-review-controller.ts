@@ -9,7 +9,11 @@ export const getPrepReviewStaff = async (req: Request, res: Response) => {
 };
 
 export const getPrepReviewLeads = async (req: Request, res: Response) => {
-  const result = await PrepReviewService.listPipelineLeads(req.query);
+  const result = await PrepReviewService.listPipelineLeads(
+    req.query,
+    req.currentUser?.id,
+    req.currentUser?.role
+  );
   return SuccessHandler.handle(res, 'Tax Prep & Review pipeline leads retrieved successfully', result, 200);
 };
 
@@ -33,7 +37,11 @@ export const getPrepReviewDashboardStats = async (req: Request, res: Response) =
 
 export const getPrepReviewWorkspaceDetails = async (req: Request, res: Response) => {
   const id = String(req.params.id);
-  const data = await PrepReviewService.getWorkspaceDetails(id);
+  const data = await PrepReviewService.getWorkspaceDetails(
+    id,
+    req.currentUser?.id,
+    req.currentUser?.role
+  );
   return SuccessHandler.handle(res, 'Workspace details retrieved successfully', data, 200);
 };
 

@@ -1,5 +1,6 @@
 import { prisma } from '../../config/db.js';
 import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType } from '@prisma/client';
+import { StorageService } from '../../utils/storage-service.js';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { BadRequestError } from '../../errors/bad-request-error.js';
 
@@ -12,6 +13,7 @@ export interface RevertLeadPayload {
   missingDocumentTypes?: string[];
   revertNotes: string;
   userId: string;
+  files?: Express.Multer.File[];
 }
 
 export class WorkflowRevertService {
@@ -28,6 +30,7 @@ export class WorkflowRevertService {
       missingDocumentTypes = [],
       revertNotes,
       userId,
+      files = [],
     } = payload;
 
     if (!applicationId) {
@@ -132,6 +135,66 @@ export class WorkflowRevertService {
       ? ` Missing Document(s): ${missingDocumentTypes.join(', ')}.`
       : '';
 
+    // Process and persist any uploaded documents directly from Sales or reverting agent
+    const attachedDocuments: Array<{
+      id: string;
+      fileName: string;
+      filePath: string;
+      fileSize?: number;
+      mimeType?: string;
+      documentCategory?: string;
+      uploadedAt: string;
+    }> = [];
+
+    if (files && files.length > 0) {
+      // Determine valid user ID for TaxDocument foreign key relation
+      let docUploaderId = actorUser.id;
+      if (!docUploaderId || docUploaderId === 'SYSTEM') {
+        const fallbackUser = await prisma.user.findFirst({ select: { id: true } });
+        docUploaderId = app.assignedSalesAgentId || app.assignedPrepAgentId || app.assignedDocAgentId || fallbackUser?.id || '';
+      }
+
+      for (const file of files) {
+        try {
+          const storageResult = await StorageService.saveFile(
+            file,
+            `taxpayer_${app.customerId || app.id}_revert_ty${app.taxYear}`
+          );
+
+          let docCategory = 'CLIENT_ADDITIONAL_DOC';
+          const lowerName = file.originalname.toLowerCase();
+          if (lowerName.includes('w-2') || lowerName.includes('w2')) docCategory = 'W2_WAGES';
+          else if (lowerName.includes('1099')) docCategory = 'FORM_1099';
+          else if (lowerName.includes('1098')) docCategory = 'FORM_1098_MORTGAGE';
+          else if (lowerName.includes('1095')) docCategory = 'FORM_1095_HEALTH';
+          else if (lowerName.includes('passport') || lowerName.includes('visa')) docCategory = 'PASSPORT_VISA';
+
+          const newDoc = await prisma.taxDocument.create({
+            data: {
+              applicationId: app.id,
+              uploadedByUserId: docUploaderId,
+              fileName: file.originalname,
+              filePath: storageResult.filePath,
+              documentCategory: docCategory,
+              verificationStatus: 'PENDING',
+            },
+          });
+
+          attachedDocuments.push({
+            id: newDoc.id,
+            fileName: newDoc.fileName,
+            filePath: newDoc.filePath,
+            fileSize: file.size,
+            mimeType: file.mimetype,
+            documentCategory: docCategory,
+            uploadedAt: newDoc.createdAt.toISOString(),
+          });
+        } catch (fileErr) {
+          console.error('Failed to store revert attachment document:', fileErr);
+        }
+      }
+    }
+
     const currentDraft: any = (app.taxDraftSummary as any) || {};
     const existingHistory: any[] = Array.isArray(currentDraft.revertHistory)
       ? currentDraft.revertHistory
@@ -146,6 +209,7 @@ export class WorkflowRevertService {
       reasonCategory,
       missingDocumentTypes,
       revertNotes,
+      attachedDocuments,
       revertedAt: new Date().toISOString(),
       revertedByUserId: actorUser.id,
       revertedByName: actorName,
@@ -182,8 +246,12 @@ export class WorkflowRevertService {
 
     const customerName = `${app.customer.firstName} ${app.customer.lastName}`;
 
+    const docsNote = attachedDocuments.length > 0
+      ? ` [Attached ${attachedDocuments.length} Document(s): ${attachedDocuments.map(d => d.fileName).join(', ')}]`
+      : '';
+
     // 1. Stage History Record
-    const stageHistoryRemarks = `[Workflow Revert: ${sourceDepartment} → ${targetDepartment}] Reason: ${reasonCategory.replace(/_/g, ' ')}.${missingDocsStr} Revert Instructions: "${revertNotes}"`;
+    const stageHistoryRemarks = `[Workflow Revert: ${sourceDepartment} → ${targetDepartment}] Reason: ${reasonCategory.replace(/_/g, ' ')}.${missingDocsStr}${docsNote} Revert Instructions: "${revertNotes}"`;
 
     if (actorUser.id && actorUser.id !== 'SYSTEM') {
       try {
@@ -221,6 +289,8 @@ export class WorkflowRevertService {
             reasonCategory,
             missingDocumentTypes,
             revertNotes,
+            attachedDocumentsCount: attachedDocuments.length,
+            attachedDocuments: attachedDocuments.map(d => ({ id: d.id, fileName: d.fileName })),
           },
         },
       });
@@ -244,7 +314,7 @@ export class WorkflowRevertService {
             category: notifCategory,
             priority: NotificationPriority.HIGH,
             title: `Lead Reverted from ${sourceDepartment}: ${customerName}`,
-            message: `${actorName} (${actorUser.role}) returned ${customerName} to ${targetDepartment} [${reasonCategory.replace(/_/g, ' ')}]. "${revertNotes}"${missingDocsStr}`,
+            message: `${actorName} (${actorUser.role}) returned ${customerName} to ${targetDepartment} [${reasonCategory.replace(/_/g, ' ')}]. "${revertNotes}"${missingDocsStr}${attachedDocuments.length > 0 ? ` (${attachedDocuments.length} document(s) attached)` : ''}`,
             actionUrl: targetDepartment === 'DOCUMENTER'
               ? `/documenter/leads`
               : targetDepartment === 'PREPARATION'

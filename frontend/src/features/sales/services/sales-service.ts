@@ -237,4 +237,20 @@ export const salesService = {
   }) {
     return apiClient.post(`/sales/leads/${id}/send-payment-link`, payload);
   },
+
+  /**
+   * Return a lead back to Admin / Unassigned Pool (when client does not convert or rejects fee)
+   */
+  async returnLeadToAdmin(id: string, reason?: string) {
+    const res: any = await apiClient.post(`/sales/leads/${id}/return-to-admin`, { reason });
+    return res?.data || res;
+  },
+
+  /**
+   * Bulk return multiple leads back to Admin Unassigned Pool
+   */
+  async returnLeadsBulkToAdmin(applicationIds: string[], reason?: string) {
+    const res: any = await apiClient.post('/sales/return-to-admin', { applicationIds, reason });
+    return res?.data || res;
+  },
 };

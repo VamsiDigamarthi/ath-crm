@@ -5,13 +5,17 @@ export class FilingController {
   public static async getQueue(req: Request, res: Response) {
     try {
       const { stage, search, filingAgentId, limit, offset } = req.query;
-      const result = await FilingService.getFilingQueue({
-        stage: stage as string,
-        search: search as string,
-        filingAgentId: filingAgentId as string,
-        limit: limit ? Number(limit) : undefined,
-        offset: offset ? Number(offset) : undefined,
-      });
+      const result = await FilingService.getFilingQueue(
+        {
+          stage: stage as string,
+          search: search as string,
+          filingAgentId: filingAgentId as string,
+          limit: limit ? Number(limit) : undefined,
+          offset: offset ? Number(offset) : undefined,
+        },
+        req.currentUser?.id,
+        req.currentUser?.role
+      );
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch filing queue' });
@@ -21,7 +25,11 @@ export class FilingController {
   public static async getLeadById(req: Request, res: Response) {
     try {
       const id = String(req.params.id);
-      const lead = await FilingService.getFilingLeadById(id);
+      const lead = await FilingService.getFilingLeadById(
+        id,
+        req.currentUser?.id,
+        req.currentUser?.role
+      );
       res.json(lead);
     } catch (err: any) {
       res.status(404).json({ error: err.message || 'Filing lead not found' });

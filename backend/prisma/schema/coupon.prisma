@@ -1,0 +1,86 @@
+enum CouponDiscountType {
+  FLAT
+  PERCENTAGE
+}
+
+enum CouponJustificationCategory {
+  PRICING_CONCERN
+  INTERNAL_SERVICE_ISSUE
+  DOCUMENT_UPLOAD_FRICTION
+  IMMEDIATE_CLOSING_INCENTIVE
+  PROVIDED_REFERRALS
+  RETURNING_LOYALTY
+  OTHER
+}
+
+enum CouponStatus {
+  ACTIVE
+  EXPIRED
+  DISABLED
+  DEPLETED
+}
+
+model DiscountCoupon {
+  id                    String                      @id @default(uuid())
+  code                  String                      @unique
+  description           String?
+  discountType          CouponDiscountType          @default(FLAT)
+  discountValue         Decimal                     @db.Decimal(10, 2)
+  minServiceFee         Decimal?                    @db.Decimal(10, 2)
+  maxDiscountAmount     Decimal?                    @db.Decimal(10, 2)
+  
+  justificationCategory CouponJustificationCategory
+  justificationNotes    String
+  
+  createdById           String
+  createdBy             User                        @relation("CreatedCoupons", fields: [createdById], references: [id])
+  
+  approvedById          String
+  approvedBy            User                        @relation("ApprovedCoupons", fields: [approvedById], references: [id])
+  
+  validFrom             DateTime                    @default(now())
+  validUntil            DateTime?
+  maxUsageLimit         Int?                        @default(1)
+  timesUsed             Int                         @default(0)
+  status                CouponStatus                @default(ACTIVE)
+  isActive              Boolean                     @default(true)
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+
+  usages                CouponUsage[]
+
+  @@index([code])
+  @@index([status])
+  @@index([justificationCategory])
+  @@index([createdById])
+  @@index([approvedById])
+}
+
+model CouponUsage {
+  id                    String                      @id @default(uuid())
+  couponId              String
+  coupon                DiscountCoupon              @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  couponCode            String
+  applicationId         String?
+  taxApplication        TaxApplication?             @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  customerId            String?
+  customer              CustomerProfile?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  
+  appliedByUserId       String
+  appliedByUser         User                        @relation("AppliedCouponUsages", fields: [appliedByUserId], references: [id])
+  
+  originalFee           Decimal                     @db.Decimal(10, 2)
+  discountAmount        Decimal                     @db.Decimal(10, 2)
+  finalFee              Decimal                     @db.Decimal(10, 2)
+  
+  justificationCategory CouponJustificationCategory
+  justificationNotes    String
+  
+  appliedAt             DateTime                    @default(now())
+
+  @@index([couponId])
+  @@index([couponCode])
+  @@index([applicationId])
+  @@index([customerId])
+  @@index([appliedByUserId])
+}

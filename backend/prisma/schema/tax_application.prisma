@@ -58,6 +58,7 @@ model TaxApplication {
   auditLogs      AuditLog[]
   notifications  Notification[]
   sentEmails     SentEmail[]
+  couponUsages   CouponUsage[]
 
   @@unique([customerId, taxYear])
   @@index([currentStage])

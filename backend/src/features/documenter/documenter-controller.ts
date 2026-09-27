@@ -280,7 +280,11 @@ export const getLeadDetails = async (
 ): Promise<void> => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const data = await DocumenterService.getLeadDetails(id);
+    const data = await DocumenterService.getLeadDetails(
+      id,
+      req.currentUser?.id,
+      req.currentUser?.role
+    );
 
     res.status(200).json({
       success: true,

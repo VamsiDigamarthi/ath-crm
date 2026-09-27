@@ -118,6 +118,26 @@ export class SelfSignupsService {
         include: {
           customer: {
             include: {
+              applications: {
+                select: {
+                  id: true,
+                  taxYear: true,
+                  filingType: true,
+                  currentStage: true,
+                  taxDraftSummary: true,
+                  assignedDocAgentId: true,
+                  assignedDocAgent: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                      role: true,
+                    },
+                  },
+                },
+                orderBy: { taxYear: 'desc' },
+              },
               user: {
                 select: {
                   id: true,
@@ -167,7 +187,6 @@ export class SelfSignupsService {
           },
           stageHistories: {
             orderBy: { createdAt: 'desc' },
-            take: 10,
             include: {
               movedByUser: {
                 select: {
@@ -175,13 +194,27 @@ export class SelfSignupsService {
                   firstName: true,
                   lastName: true,
                   email: true,
+                  role: true,
                 },
               },
             },
           },
           auditLogs: {
             orderBy: { createdAt: 'desc' },
-            take: 5,
+          },
+          callLogs: {
+            orderBy: { createdAt: 'desc' },
+            include: {
+              agent: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  role: true,
+                },
+              },
+            },
           },
         },
       }),
@@ -238,10 +271,49 @@ export class SelfSignupsService {
       }),
     ]);
 
+    const formattedLeads = leads.map((lead: any) => {
+      // Find the most recent assigned doc agent in previous tax years (excluding the current application)
+      const previousAppWithDocAgent = lead.customer?.applications?.find(
+        (app: any) => app.id !== lead.id && Boolean(app.assignedDocAgent)
+      );
+
+      const previousDocAgent = previousAppWithDocAgent?.assignedDocAgent
+        ? {
+            ...previousAppWithDocAgent.assignedDocAgent,
+            taxYear: previousAppWithDocAgent.taxYear,
+          }
+        : null;
+
+      const formattedStageHistories = lead.stageHistories?.map((s: any) => ({
+        ...s,
+        movedByName: s.movedByUser
+          ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim()
+          : undefined,
+        movedByEmail: s.movedByUser?.email,
+        movedByRole: s.movedByUser?.role,
+      }));
+
+      const formattedCallLogs = lead.callLogs?.map((c: any) => ({
+        ...c,
+        agentName: c.agent
+          ? `${c.agent.firstName || ''} ${c.agent.lastName || ''}`.trim()
+          : undefined,
+        agentEmail: c.agent?.email,
+        agentRole: c.agent?.role,
+      }));
+
+      return {
+        ...lead,
+        previousDocAgent,
+        stageHistories: formattedStageHistories,
+        callLogs: formattedCallLogs,
+      };
+    });
+
     const totalPages = Math.ceil(totalItems / limit) || 1;
 
     return {
-      leads,
+      leads: formattedLeads,
       stats: {
         totalSelfSignups,
         rawProspectsCount,
@@ -284,12 +356,15 @@ export class SelfSignupsService {
 
     const adminUser = await prisma.user.findUnique({
       where: { id: adminUserId },
-      select: { id: true, firstName: true, lastName: true, email: true },
+      select: { id: true, firstName: true, lastName: true, email: true, role: true },
     });
 
     const adminName = adminUser?.firstName
       ? `${adminUser.firstName} ${adminUser.lastName || ''}`.trim()
-      : adminUser?.email || 'Super Admin';
+      : adminUser?.email || 'Operations Admin';
+
+    const actorRole = adminUser?.role || 'DOC_MANAGER';
+    const actorType = adminUser?.role === Role.ADMIN ? AuditActorType.ADMIN : AuditActorType.MANAGER;
 
     let assignedCount = 0;
 
@@ -329,7 +404,7 @@ export class SelfSignupsService {
           fromStage: app.currentStage,
           toStage: nextStage,
           movedByUserId: adminUserId,
-          remarks: `Admin assigned direct online signup lead to Calling Agent: ${targetAgent.email} (${targetAgent.firstName || ''} ${targetAgent.lastName || ''}). Stage moved to ${nextStage}`,
+          remarks: `${adminName} (${actorRole}) assigned direct online signup lead to Calling Agent: ${targetAgent.email} (${targetAgent.firstName || ''} ${targetAgent.lastName || ''}). Stage moved to ${nextStage}`,
         },
       });
 
@@ -338,9 +413,9 @@ export class SelfSignupsService {
         data: {
           applicationId: appId,
           actorId: adminUserId,
-          actorType: AuditActorType.ADMIN,
+          actorType: actorType,
           actorName: adminName,
-          actorRole: 'ADMIN',
+          actorRole: actorRole,
           action: AuditActionType.STAGE_CHANGE,
           moduleKey: 'ADMIN_SELF_SIGNUP_ASSIGN',
           details: {
@@ -363,7 +438,7 @@ export class SelfSignupsService {
             category: NotificationCategory.DOCUMENTER,
             priority: NotificationPriority.HIGH,
             title: `New Online Lead Assigned: ${app.customer.firstName} ${app.customer.lastName}`,
-            message: `${app.customer.firstName} ${app.customer.lastName} (${app.customer.phone}) has been assigned to you by Admin for initial document outreach.`,
+            message: `${app.customer.firstName} ${app.customer.lastName} (${app.customer.phone}) has been assigned to you by ${adminName} (${actorRole}) for initial document outreach.`,
             actionUrl: `/documenter/agent/queue`,
             actionLabel: 'Open Calling Workspace',
             relatedLeadName: `${app.customer.firstName} ${app.customer.lastName}`,

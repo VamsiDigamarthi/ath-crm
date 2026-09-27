@@ -186,6 +186,7 @@ export const adminService = {
     visaType?: string;
     taxYear?: number;
     priority?: string;
+    department?: string;
   }): Promise<{
     success: boolean;
     data: {

@@ -14,6 +14,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 
 export const renderDualRoleBadge = (item: DocumenterLeadItem) => {
@@ -156,6 +157,7 @@ export const getDocumenterColumns = ({
               <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-[#16A34A] transition-colors flex items-center gap-1.5 flex-wrap">
                 <span className="font-bold text-slate-900">{c.fullName || `${c.firstName} ${c.middleName ? c.middleName + ' ' : ''}${c.lastName}`}</span>
                 {renderVisaBadge(c.visaType)}
+                <ClientPaymentStatusChip lead={item} size="xs" />
                 {renderDualRoleBadge(item)}
               </div>
               <div className="text-[11px] text-slate-500 font-normal mt-0.5 truncate max-w-[230px]">
@@ -189,19 +191,40 @@ export const getDocumenterColumns = ({
     {
       header: 'Location & Year',
       accessorKey: 'customer.state',
-      width: '160px',
-      headerClassName: 'min-w-[160px]',
-      cellClassName: 'min-w-[160px]',
-      render: (item) => (
-        <div className="text-xs text-slate-700">
-          <div className="font-semibold text-slate-800">
-            {item.customer.city ? `${item.customer.city}, ` : ''}{item.customer.state || 'N/A'} {item.customer.zipCode || ''}
+      width: '180px',
+      headerClassName: 'min-w-[180px]',
+      cellClassName: 'min-w-[180px]',
+      render: (item) => {
+        const hasMultipleYears = Boolean(item.allApplications && item.allApplications.length > 1);
+        return (
+          <div className="text-xs text-slate-700">
+            <div className="font-semibold text-slate-800">
+              {item.customer.city ? `${item.customer.city}, ` : ''}{item.customer.state || 'N/A'} {item.customer.zipCode || ''}
+            </div>
+            {hasMultipleYears ? (
+              <div className="flex flex-wrap items-center gap-1 mt-1">
+                {item.allApplications?.map((app) => (
+                  <span
+                    key={app.id}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                      app.id === item.id
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
+                        : 'bg-slate-100 text-slate-600 border-slate-200'
+                    }`}
+                    title={`TY ${app.taxYear} (${app.filingType || 'INDIVIDUAL'}) • Stage: ${app.currentStage.replace(/_/g, ' ')}`}
+                  >
+                    TY {app.taxYear}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+                TY {item.taxYear} • {item.filingType || 'INDIVIDUAL'}
+              </div>
+            )}
           </div>
-          <div className="text-[11px] text-slate-400 font-medium">
-            TY {item.taxYear} • {item.filingType || 'INDIVIDUAL'}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       header: 'Priority',
@@ -219,28 +242,33 @@ export const getDocumenterColumns = ({
     baseColumns.push({
       header: 'Assigned Staff',
       accessorKey: 'assignedDocAgent.email',
-      width: '150px',
-      headerClassName: 'min-w-[150px]',
-      cellClassName: 'min-w-[150px]',
+      width: '160px',
+      headerClassName: 'min-w-[160px]',
+      cellClassName: 'min-w-[160px]',
       render: (item) => {
         if (!item.assignedDocAgent) {
-          if (isAdmin) {
-            return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200 whitespace-nowrap">
-                <UserX className="w-3 h-3 text-slate-400" />
-                Unassigned
-              </span>
-            );
-          }
-
           return (
-            <button
-              onClick={() => onOpenAssignModal(item)}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer whitespace-nowrap"
-            >
-              <UserX className="w-3 h-3 text-amber-600" />
-              Unassigned (Click)
-            </button>
+            <div className="space-y-0.5">
+              {isAdmin ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200 whitespace-nowrap">
+                  <UserX className="w-3 h-3 text-slate-400" />
+                  Unassigned
+                </span>
+              ) : (
+                <button
+                  onClick={() => onOpenAssignModal(item)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <UserX className="w-3 h-3 text-amber-600" />
+                  Unassigned (Click)
+                </button>
+              )}
+              {item.previousDocAgent && (
+                <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                  <span>Prev: {item.previousDocAgent.name || item.previousDocAgent.email.split('@')[0]} (TY{item.previousDocAgent.taxYear})</span>
+                </div>
+              )}
+            </div>
           );
         }
 

@@ -3,6 +3,7 @@ import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
 import { Send, CheckCircle2, Clock, UserCheck, ArrowRight, RotateCcw } from 'lucide-react';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import type { FilingLeadItem } from '../types/filing.types';
 
 export interface FilingColumnsOptions {
@@ -26,11 +27,12 @@ export function getFilingColumns({
       render: (item) => {
         return (
           <div className="space-y-1 py-0.5">
-            {/* Line 1: Name, Visa Badge, Tax Year */}
+            {/* Line 1: Name, Payment Chip, Tax Year */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">
                 {item.taxpayerName}
               </span>
+              <ClientPaymentStatusChip lead={item} size="xs" />
               <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
                 TY {item.taxYear} Form 1040
               </span>
@@ -61,12 +63,30 @@ export function getFilingColumns({
       header: 'Location & SSN',
       accessorKey: 'stateOfResidence',
       render: (item) => {
+        const hasMultipleYears = Boolean(item.allApplications && item.allApplications.length > 1);
         return (
           <div className="space-y-1 text-xs">
             <div className="font-bold text-slate-800">{item.stateOfResidence}</div>
             <div className="font-mono text-[11px] text-slate-500 tracking-wider">
               {item.ssnMasked}
             </div>
+            {hasMultipleYears && (
+              <div className="flex flex-wrap items-center gap-1 mt-1">
+                {item.allApplications?.map((app) => (
+                  <span
+                    key={app.id}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                      app.id === item.id
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
+                        : 'bg-slate-100 text-slate-600 border-slate-200'
+                    }`}
+                    title={`TY ${app.taxYear} (${app.filingType || 'INDIVIDUAL'})`}
+                  >
+                    TY {app.taxYear}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         );
       },

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { revertLeadWorkflow } from './workflow-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
+import { uploadTaxDocument } from '../../middlewares/file-upload-middleware.js';
 import { Role } from '../../types/index.js';
 
 const router = Router();
@@ -25,6 +26,7 @@ router.post(
     Role.FILE_OP_TEAM_LEAD,
     Role.FILE_OP_AGENT
   ),
+  uploadTaxDocument.array('files', 10),
   revertLeadWorkflow
 );
 

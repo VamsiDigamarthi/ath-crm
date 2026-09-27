@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   FileText, 
   ShieldCheck, 
   UserCheck, 
-  Info,
   Calendar,
   Layers,
   Clock,
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { AppTabs } from '@/shared/components/AppTabs';
+import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface PitchTaxDraftSummaryCardProps {
@@ -18,9 +17,9 @@ interface PitchTaxDraftSummaryCardProps {
 }
 
 export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> = ({ lead }) => {
-  const [activeTab, setActiveTab] = useState<'SCHEDULES' | 'STATE' | 'QA_AUDIT'>('SCHEDULES');
   const draft = lead.taxDraftSummary || {};
 
+  /*
   const grossIncome = Number(draft.grossIncome || lead.grossIncome) || 0;
   const w2Wages = Number(draft.w2Wages) || grossIncome;
   const isMarriedJoint = lead.maritalStatus?.includes('Joint') || lead.maritalStatus === 'Married' || (lead.maritalStatus?.includes('Married') && !lead.maritalStatus?.includes('Separately'));
@@ -33,26 +32,29 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
   const stateRefund = Number(draft.stateRefund ?? lead.stateRefund) || 0;
   const stateWithheld = Number(draft.stateWithheld) || 0;
   const stateTax = Number(draft.stateTaxLiability) || 0;
+  */
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
       {/* Header with Explainer Banner */}
       <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100 shrink-0">
-              <FileText className="w-4 h-4" />
+              <ShieldCheck className="w-4 h-4" />
             </div>
             <h3 className="font-bold text-slate-900 text-sm truncate">
-              Form 1040 Tax Calculation &amp; Deductions
+              Tax Preparation &amp; QA Sign-Off Audit
             </h3>
+            <ReturnComplexityBadge lead={lead} size="sm" />
           </div>
           <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-            QA-Certified line-by-line deduction &amp; refund breakdown.
+            QA-Certified return preparation sign-off, reviewer audit status, and preparer notes.
           </p>
         </div>
 
-        {/* Tab Switcher */}
+        {/* Tab Switcher - Federal and State tabs commented out as requested */}
+        {/*
         <div className="shrink-0 overflow-x-auto">
           <AppTabs
             tabs={[
@@ -65,13 +67,14 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
             size="sm"
           />
         </div>
+        */}
       </div>
 
-      {/* Tab 1: Form 1040 Federal Schedule Breakdown */}
+      {/* Tab 1: Form 1040 Federal Schedule Breakdown - Commented out as requested */}
+      {/*
       {activeTab === 'SCHEDULES' && (
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Box 1: Income & Wages (Lines 1 - 9) */}
             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/40 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -100,7 +103,6 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
               </div>
             </div>
 
-            {/* Box 2: Deductions & Taxable Income (Lines 12 - 15) */}
             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/40 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -131,7 +133,6 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
               </div>
             </div>
 
-            {/* Box 3: Tax Calculation & Credits (Lines 16 - 24) */}
             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/40 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -162,7 +163,6 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
               </div>
             </div>
 
-            {/* Box 4: Payments & Final Refund Result (Lines 25d - 34) */}
             <div className={`p-4 rounded-xl border space-y-2.5 ${fedRefund > 0 ? 'border-emerald-200 bg-emerald-50/40' : balanceDue > 0 ? 'border-rose-200 bg-rose-50/40' : 'border-slate-200 bg-slate-50/40'}`}>
               <div className="flex items-center justify-between">
                 <span className={`text-xs font-bold uppercase tracking-wider ${fedRefund > 0 ? 'text-emerald-900' : balanceDue > 0 ? 'text-rose-900' : 'text-slate-700'}`}>
@@ -194,7 +194,6 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
             </div>
           </div>
 
-          {/* Closer Quick Explanation Helper Box */}
           <div className="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 flex items-start gap-2.5 text-xs text-blue-900">
             <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <div>
@@ -207,8 +206,10 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
           </div>
         </div>
       )}
+      */}
 
-      {/* Tab 2: State Return Breakdown */}
+      {/* Tab 2: State Return Breakdown - Commented out as requested */}
+      {/*
       {activeTab === 'STATE' && (
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,9 +255,10 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
           </div>
         </div>
       )}
+      */}
 
-      {/* Tab 3: Preparer & QA Sign-Off Audit Stepper */}
-      {activeTab === 'QA_AUDIT' && (() => {
+      {/* Preparer & QA Sign-Off Audit Stepper */}
+      {(() => {
         const rawStage = String(lead.currentStage || draft.status || '');
         let qaStatus: 'Approved' | 'Changes Required' | 'Pending Review' = 'Approved';
         if (rawStage.includes('CORRECTION') || rawStage.includes('REVISION')) {

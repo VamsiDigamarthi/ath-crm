@@ -8,6 +8,7 @@ export interface AppModalProps {
   onClose: () => void
   title: ReactNode
   subtitle?: ReactNode
+  description?: ReactNode
   children: ReactNode
   footer?: ReactNode
   footerError?: string | null
@@ -23,6 +24,7 @@ export function AppModal({
   onClose,
   title,
   subtitle,
+  description,
   children,
   footer,
   footerError,
@@ -61,7 +63,7 @@ export function AppModal({
   }
 
   const panelStyle: CSSProperties = {
-    ...(width  && { width }),
+    ...(width ? { width, maxWidth: width.includes('px') || width.includes('rem') || width.includes('%') ? `min(96vw, ${width})` : width } : {}),
     ...(height && { height }),
   }
 
@@ -87,7 +89,7 @@ export function AppModal({
         className={cn(
           'relative z-10 flex flex-col bg-white rounded-md shadow-2xl overflow-hidden border border-slate-300',
           'w-full max-h-[90vh]',
-          sizeClasses[size] || 'max-w-lg',
+          width ? 'max-w-none' : (sizeClasses[size] || 'max-w-lg'),
           className
         )}
       >

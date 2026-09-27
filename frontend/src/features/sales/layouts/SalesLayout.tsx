@@ -11,6 +11,7 @@ import {
   Users,
   Bell,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 import { salesService } from '../services/sales-service';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
@@ -75,6 +76,7 @@ export const SalesLayout: React.FC = () => {
         { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/manager/queue' },
         { id: 'dual_role', label: 'Dual Doc + Sales', icon: Sparkles, section: 'Operations', badge: dualBadgeCount !== null ? String(dualBadgeCount) : undefined, path: '/sales/manager/dual-role' },
         { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/sales/manager/team' },
+        { id: 'coupons', label: 'Discount Coupons', icon: Tag, section: 'Management', path: '/sales/coupons' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
       ]
     : [
@@ -86,10 +88,11 @@ export const SalesLayout: React.FC = () => {
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/sales/notifications')) return 'notifications';
+    if (currentPath.includes('/sales/coupons')) return 'coupons';
     if (currentPath.includes('/sales/manager/dual-role')) return 'dual_role';
     if (currentPath.includes('/sales/manager/team')) return 'team';
-    if (currentPath.includes('/sales/manager/queue')) return 'pipeline';
-    if (currentPath.includes('/sales/manager')) return 'dashboard';
+    if (currentPath.includes('/sales/manager/pitch') || currentPath.includes('/sales/manager/queue')) return 'pipeline';
+    if (currentPath === '/sales/manager' || currentPath === '/sales/manager/') return 'dashboard';
     if (isManager && (currentPath.includes('/sales/agent/pitch') || currentPath.includes('/sales/pitch') || currentPath.includes('/sales/agent/queue'))) return 'pipeline';
     if (currentPath.includes('/sales/agent/queue') || currentPath.includes('/sales/agent/pitch')) return 'pitch_queue';
     if (currentPath.includes('/sales/agent')) return 'agent_hub';

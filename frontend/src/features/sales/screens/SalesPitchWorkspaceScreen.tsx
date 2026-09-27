@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Calendar } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
 import { PitchNegotiationBar } from '../components/pitch/PitchNegotiationBar';
@@ -11,6 +11,7 @@ import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndE
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
+import { SalesReturnToAdminModal } from '../components/common/SalesReturnToAdminModal';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesFeeBreakdown } from '../types/sales.types';
 import apiClient from '@/lib/api-client';
@@ -32,6 +33,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   const [isDispatching, setIsDispatching] = useState(false);
   const [pendingDispatchNotes, setPendingDispatchNotes] = useState<string>('');
   const [isSendBackOpen, setIsSendBackOpen] = useState(false);
+  const [isReturnToAdminOpen, setIsReturnToAdminOpen] = useState(false);
 
   const fetchLeadDetail = useCallback(async () => {
     if (!id) return;
@@ -118,7 +120,23 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
     : undefined;
 
   const handleUpdateFeeBreakdown = (updated: SalesFeeBreakdown) => {
-    setLead((prev) => (prev ? { ...prev, feeBreakdown: updated } : prev));
+    setLead((prev) => {
+      if (!prev) return prev;
+      const totalFee = Number(updated.totalServiceFee) || 0;
+      const paid = Number(prev.paidAmount) || 0;
+      const rem = Math.max(0, totalFee - paid);
+      return {
+        ...prev,
+        feeBreakdown: updated,
+        remainingBalance: rem,
+        taxDraftSummary: {
+          ...(prev.taxDraftSummary as any),
+          feeBreakdown: updated,
+          totalQuotedFee: totalFee,
+          remainingBalance: rem,
+        },
+      };
+    });
     const appId = lead?.id || lead?.applicationId;
     if (appId) {
       salesService.updateFeeBreakdown(appId, updated).catch((err) => console.error('Failed to sync fee breakdown:', err));
@@ -271,7 +289,50 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-150 font-sans">
       {/* 1. Taxpayer Header & Certified 1040 Refund Banner */}
-      <PitchTaxpayerHeader lead={lead} onOpenSendBack={() => setIsSendBackOpen(true)} />
+      <PitchTaxpayerHeader
+        lead={lead}
+        onOpenSendBack={() => setIsSendBackOpen(true)}
+        onOpenReturnToAdmin={() => setIsReturnToAdminOpen(true)}
+      />
+
+      {/* 1.05 Multi-Year Return Switcher Tabs */}
+      {lead.availableApplications && lead.availableApplications.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
+              <Calendar className="w-4 h-4 text-purple-600" />
+              <span>Tax Year Filings:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {lead.availableApplications.map((appItem: any) => {
+                const isSelected = appItem.id === (lead.id || lead.applicationId || id);
+                return (
+                  <button
+                    key={appItem.id}
+                    type="button"
+                    onClick={() => {
+                      if (appItem.id !== (lead.id || lead.applicationId || id)) {
+                        navigate(isManager ? `/sales/manager/pitch/${appItem.id}` : `/sales/agent/pitch/${appItem.id}`);
+                      }
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
+                      isSelected
+                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
+                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>TY {appItem.taxYear}</span>
+                    <span className="text-[10px] font-medium opacity-80">
+                      ({appItem.filingType || 'INDIVIDUAL'})
+                    </span>
+                    <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-purple-400' : 'bg-slate-300'}`} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 1.1 Closer Pitch Status & Fee Negotiation Toolbar */}
       <PitchNegotiationBar
@@ -359,6 +420,8 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
             remainingBalance={lead.remainingBalance}
             paymentHistory={lead.paymentHistory}
             esignStatus={lead.esignStatus}
+            applicationId={lead.id || lead.applicationId}
+            customerId={lead.taxpayerId || (lead as any).customerId}
             isLocked={isLocked}
             lockReason={lockReason}
           />
@@ -453,6 +516,18 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         ]}
         defaultTargetDepartment="PREPARATION"
         onRevertSuccess={() => {
+          navigate(backQueuePath);
+        }}
+      />
+
+      {/* 7. Return to Super Admin Pool Modal (Closer cannot convert / price negotiation stalled) */}
+      <SalesReturnToAdminModal
+        isOpen={isReturnToAdminOpen}
+        onClose={() => setIsReturnToAdminOpen(false)}
+        applicationId={lead.id || lead.applicationId}
+        taxpayerName={lead.taxpayerName}
+        taxYear={lead.taxYear || 2025}
+        onReturnSuccess={() => {
           navigate(backQueuePath);
         }}
       />

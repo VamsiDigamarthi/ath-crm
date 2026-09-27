@@ -22,6 +22,13 @@ export interface SelfSignupLeadItem extends Record<string, unknown> {
     ssnTin?: string | null;
     visaType?: string | null;
     occupation?: string | null;
+    applications?: Array<{
+      id: string;
+      taxYear: number;
+      filingType?: string;
+      currentStage?: string;
+      taxDraftSummary?: any;
+    }>;
     user?: {
       id: string;
       email?: string | null;
@@ -51,24 +58,52 @@ export interface SelfSignupLeadItem extends Record<string, unknown> {
     email: string;
     role: string;
   } | null;
+  previousDocAgent?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    taxYear: number;
+  } | null;
   stageHistories?: Array<{
     id: string;
     fromStage?: string | null;
     toStage: string;
     remarks?: string | null;
     createdAt: string;
+    movedByUserId?: string | null;
+    movedByName?: string;
+    movedByEmail?: string;
+    movedByRole?: string;
     movedByUser?: {
       id: string;
       firstName: string;
       lastName: string;
       email: string;
+      role?: string;
     };
+  }>;
+  callLogs?: Array<{
+    id: string;
+    applicationId?: string;
+    disposition: string;
+    subDisposition?: string | null;
+    callSummary?: string | null;
+    agentName?: string;
+    agentEmail?: string;
+    agentRole?: string;
+    durationSeconds?: number;
+    createdAt: string;
   }>;
   auditLogs?: Array<{
     id: string;
+    applicationId?: string;
     action: string;
     actorName?: string | null;
     actorRole?: string | null;
+    actorEmail?: string | null;
+    actorType?: string;
     moduleKey?: string | null;
     details?: any;
     createdAt: string;

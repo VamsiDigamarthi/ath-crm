@@ -13,9 +13,15 @@ import {
   FileCheck2,
   CheckCircle2,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Paperclip,
+  Download,
+  FileText,
+  Calendar,
 } from 'lucide-react';
+import apiClient from '@/lib/api-client';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
@@ -169,6 +175,32 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     }
   };
 
+  const handleOpenRevertDoc = async (doc: { id?: string; fileName: string; filePath?: string; fileUrl?: string }) => {
+    if (doc.fileUrl && (doc.fileUrl.startsWith('http://') || doc.fileUrl.startsWith('https://'))) {
+      window.open(doc.fileUrl, '_blank');
+      return;
+    }
+    if (!doc.id) {
+      toast.error('Document ID not available');
+      return;
+    }
+    try {
+      toast.loading(`Opening ${doc.fileName}...`, { id: 'doc-open' });
+      const response: any = await apiClient.get(`/documenter/documents/${doc.id}/download`, {
+        responseType: 'blob',
+      });
+      const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(doc.fileName);
+      const isPdf = /\.pdf$/i.test(doc.fileName);
+      const mimeType = isImage ? 'image/jpeg' : isPdf ? 'application/pdf' : 'application/octet-stream';
+      const blob = new Blob([response], { type: mimeType });
+      const fileUrl = URL.createObjectURL(blob);
+      window.open(fileUrl, '_blank');
+      toast.success('Document opened in new tab', { id: 'doc-open' });
+    } catch {
+      toast.error('Failed to open document', { id: 'doc-open' });
+    }
+  };
+
   const currentStage = (lead?.currentStage || currentLead.currentStage || 'DOC_OUTREACH') as string;
   const assignedPrepAgent = (lead as any)?.assignedPrepAgent || (currentLead as any)?.assignedPrepAgent;
   const lastRevert =
@@ -191,6 +223,13 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     (lead?.taxDraftSummary as any)?.isDualDocSalesRole ||
     (currentLead.taxDraftSummary as any)?.isDualDocSalesRole
   );
+
+  const availableApplications = (lead as any)?.availableApplications || (currentLead as any)?.availableApplications || [];
+
+  const handleSwitchTaxYear = (targetAppId: string) => {
+    if (targetAppId === (lead?.id || id)) return;
+    navigate(`/documenter/agent/lead/${targetAppId}`);
+  };
 
   return (
     <div className="space-y-6 pb-16 font-sans animate-in fade-in duration-150">
@@ -216,9 +255,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
                 {customer.fullName || `${customer.firstName} ${customer.lastName}`}
               </h2>
-              {currentLead.priority && (
-                <PriorityBadge priority={currentLead.priority} size="sm" />
-              )}
+              <ClientPaymentStatusChip lead={lead || currentLead} scope="return" size="sm" />
+              <PriorityBadge priority={lead?.priority || currentLead.priority || 'NO_PRIORITY'} size="sm" />
               {isDualRole && (
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1 shadow-2xs">
                   <Sparkles className="w-3 h-3 text-indigo-600" />
@@ -317,6 +355,61 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         </div>
       </div>
 
+      {/* 1.2 Multi-Year Return Switcher Tabs */}
+      {availableApplications && availableApplications.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
+              <Calendar className="w-4 h-4 text-emerald-600" />
+              <span>Tax Year Filings:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {availableApplications.map((appItem: any) => {
+                const isSelected = appItem.id === (lead?.id || id);
+                return (
+                  <button
+                    key={appItem.id}
+                    type="button"
+                    onClick={() => handleSwitchTaxYear(appItem.id)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
+                      isSelected
+                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
+                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>TY {appItem.taxYear}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
+                      isSelected ? 'bg-slate-800 text-emerald-400' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {appItem.filingType || 'INDIVIDUAL'}
+                    </span>
+                    <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${
+                      isSelected
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : appItem.currentStage === 'DOC_OUTREACH'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : appItem.currentStage === 'DOC_PREP'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : appItem.currentStage?.startsWith('SALES')
+                        ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                        : appItem.currentStage?.startsWith('FILING')
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {appItem.currentStage?.replace(/_/g, ' ') || 'Outreach'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-500 font-medium px-2">
+            Viewing: <strong className="text-slate-800 font-bold">TY {currentLead.taxYear} ({currentLead.filingType})</strong>
+          </div>
+        </div>
+      )}
+
       {/* 1.5 Revert from Preparation / Sales Alert Banner */}
       {isRevertedToDocumenter && Boolean(lastRevert) && (
         <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-50/60 to-orange-50/40 border border-amber-300/90 text-amber-950 flex items-start gap-3 shadow-xs animate-in fade-in duration-200">
@@ -351,6 +444,62 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                 ))}
               </div>
             )}
+
+            {/* Attached Documents from Reverting Department (Sales / Preparer) */}
+            {(() => {
+              const attachedDocs =
+                lastRevert?.attachedDocuments ||
+                (lead?.taxDraftSummary as any)?.revertsByTarget?.DOCUMENTER?.attachedDocuments ||
+                (lead?.taxDraftSummary as any)?.revertsByTarget?.['SALES_TO_DOCUMENTER']?.attachedDocuments ||
+                (lead?.taxDraftSummary as any)?.lastRevert?.attachedDocuments ||
+                [];
+
+              if (Array.isArray(attachedDocs) && attachedDocs.length > 0) {
+                return (
+                  <div className="p-3 bg-white/90 rounded-xl border border-amber-300/80 space-y-2 mt-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-amber-950">
+                      <span className="flex items-center gap-1.5">
+                        <Paperclip className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Attached Client Documents from {lastRevert?.sourceDepartment || 'Sales Closer'} ({attachedDocs.length}):</span>
+                      </span>
+                      <span className="text-[10px] font-semibold text-amber-800">
+                        Uploaded for Documenter Intake
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      {attachedDocs.map((doc: any, idx: number) => (
+                        <div
+                          key={doc.id || idx}
+                          className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200 shadow-2xs flex items-center justify-between gap-2 text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-900 truncate text-[11px]" title={doc.fileName}>
+                                {doc.fileName}
+                              </p>
+                              <span className="text-[9px] text-slate-500">
+                                {doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB • ` : ''}Attachment
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRevertDoc(doc)}
+                            className="px-2.5 py-1 rounded bg-amber-200/80 hover:bg-amber-300 text-amber-950 font-bold text-[10px] flex items-center gap-1 cursor-pointer transition-colors shrink-0 shadow-2xs"
+                            title="View / Download Attached Document"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>View</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
       )}
@@ -369,6 +518,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                   {customer.fullName || `${customer.firstName} ${customer.lastName}`}
                 </h3>
                 {renderVisaBadge(customer.visaType)}
+                <ClientPaymentStatusChip lead={lead || currentLead} scope="return" size="sm" />
+                <PriorityBadge priority={lead?.priority || currentLead.priority || 'NO_PRIORITY'} size="sm" />
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                   TY {currentLead.taxYear}
                 </span>

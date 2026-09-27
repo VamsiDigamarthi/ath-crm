@@ -1,19 +1,52 @@
 import { prisma } from "../../config/db.js";
-import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType } from "@prisma/client";
+import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType, CouponStatus, Prisma } from "@prisma/client";
 
 export class SalesService {
   /**
+   * Helper to dynamically compute return complexity based on documents, schedules, deductions, and foreign reporting
+   */
+  public static computeReturnComplexity(app: any): 'STANDARD' | 'INVESTMENTS_1099B' | 'FOREIGN_FBAR' | 'SCHEDULE_C' {
+    const draft = app.taxDraftSummary || {};
+    const feeBreakdown = draft.feeBreakdown || {};
+    const documents: any[] = Array.isArray(app.documents) ? app.documents : [];
+    const docText = [
+      ...documents.map((d: any) => `${d.documentCategory || ''} ${d.fileName || ''} ${d.documentType || ''}`),
+      draft.notes || '',
+      draft.remarks || '',
+    ].join(' ').toUpperCase();
+
+    const selectedStates = Array.isArray(feeBreakdown.selectedStates) ? feeBreakdown.selectedStates : [];
+    const fbarFee = Number(feeBreakdown.fbarFee || draft.fbarFee || 0);
+    const fatcaFee = Number(feeBreakdown.fatcaFee || draft.fatcaFee || 0);
+
+    if (fbarFee > 0 || fatcaFee > 0 || docText.includes('FBAR') || docText.includes('FATCA') || docText.includes('8938') || docText.includes('NRE') || docText.includes('NRO') || docText.includes('FOREIGN') || docText.includes('PFIC') || docText.includes('8621')) {
+      return 'FOREIGN_FBAR';
+    }
+    if (docText.includes('SCHEDULE C') || docText.includes('1099-NEC') || docText.includes('SELF-EMPLOYED') || docText.includes('BUSINESS') || docText.includes('RENTAL') || docText.includes('SCHEDULE E') || selectedStates.length >= 2 || docText.includes('K-1') || docText.includes('PARTNERSHIP')) {
+      return 'SCHEDULE_C';
+    }
+    if (docText.includes('1099-B') || docText.includes('STOCK') || docText.includes('CRYPTO') || docText.includes('BROKERAGE') || docText.includes('INVESTMENT') || docText.includes('1099-INT') || docText.includes('1099-DIV') || docText.includes('ITEMIZED') || docText.includes('SCHEDULE A')) {
+      return 'INVESTMENTS_1099B';
+    }
+    return 'STANDARD';
+  }
+
+  /**
    * List all QA-Approved pipeline leads eligible for Sales Pitch & Fee Quotation
    */
-  public static async getPipelineLeads(query: {
-    stage?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-    salesAgentId?: string;
-    priority?: string;
-    isDualRole?: string | boolean;
-  }) {
+  public static async getPipelineLeads(
+    query: {
+      stage?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+      salesAgentId?: string;
+      priority?: string;
+      isDualRole?: string | boolean;
+    },
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
     const skip = (page - 1) * limit;
@@ -89,38 +122,97 @@ export class SalesService {
       };
     }
 
-    const [totalCount, applications] = await Promise.all([
-      prisma.taxApplication.count({ where: baseWhere }),
-      prisma.taxApplication.findMany({
-        where: baseWhere,
-        include: {
-          customer: true,
-          documents: true,
-          assignedDocAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          assignedPrepAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          assignedReviewAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true },
-          },
-          assignedSalesAgent: {
-            select: { id: true, firstName: true, lastName: true, email: true, role: true },
-          },
-          quotes: {
-            orderBy: { createdAt: 'desc' },
-            take: 1,
+    const applications = await prisma.taxApplication.findMany({
+      where: baseWhere,
+      include: {
+        customer: {
+          include: {
+            applications: {
+              select: {
+                id: true,
+                taxYear: true,
+                filingType: true,
+                currentStage: true,
+                taxDraftSummary: true,
+                quotes: {
+                  select: {
+                    status: true,
+                  },
+                },
+                assignedSalesAgentId: true,
+                assignedSalesAgent: {
+                  select: { id: true, firstName: true, lastName: true, email: true },
+                },
+                createdAt: true,
+                updatedAt: true,
+              },
+              orderBy: { taxYear: 'desc' },
+            },
           },
         },
-        orderBy: { updatedAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-    ]);
+        documents: true,
+        assignedDocAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedPrepAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedReviewAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedSalesAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+        },
+        quotes: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
 
-    const formattedLeads = applications.map((app: any) => {
+    // Group applications by customerId so each customer appears as 1 unique row
+    const customerGroupsMap = new Map<string, typeof applications[0][]>();
+    for (const app of applications) {
+      const cId = app.customerId;
+      if (!customerGroupsMap.has(cId)) {
+        customerGroupsMap.set(cId, []);
+      }
+      customerGroupsMap.get(cId)!.push(app);
+    }
+
+    const formattedLeads: any[] = [];
+    for (const [, appsList] of customerGroupsMap.entries()) {
+      let app = appsList[0];
       const customer = app.customer;
+      const allCustomerApps = (customer as any)?.applications || [];
+
+      let visibleApplications = allCustomerApps;
+      if (currentUserRole === Role.SALES_AGENT && currentUserId) {
+        visibleApplications = allCustomerApps.filter((a: any) => a.assignedSalesAgentId === currentUserId);
+      }
+
+      const isPaidClient = Boolean(
+        customer?.isConvertedCustomer ||
+        allCustomerApps.some((a: any) =>
+          a.currentStage === ApplicationStage.FILING_SUCCESS ||
+          a.currentStage === ApplicationStage.FILING_QUEUE ||
+          a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+          a.quotes?.some((q: any) => q.status === 'PAID') ||
+          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+          (a as any).taxDraftSummary?.paidAmount > 0
+        )
+      );
+
+      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+      if (isPaidClient) {
+        clientPaymentStatus = 'PAID';
+      } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+        clientPaymentStatus = 'NEW';
+      } else {
+        clientPaymentStatus = 'UNPAID';
+      }
+
       const fullName = customer
         ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'
         : '-';
@@ -159,7 +251,7 @@ export class SalesService {
       const fatcaFee = Number(savedFeeBreakdown?.fatcaFee || 0);
       const fbarFee = Number(savedFeeBreakdown?.fbarFee || 0);
       const discountAmount = savedFeeBreakdown?.discountAmount !== undefined ? Number(savedFeeBreakdown.discountAmount) : (hasQuote ? Number(latestQuote.discountAmount || 0) : 0);
-      const discountCode = savedFeeBreakdown?.discountCode || latestQuote?.discountCode || '';
+      const discountCode = savedFeeBreakdown?.discountCode || (latestQuote as any)?.discountCode || '';
 
       const calculatedTotal = baseFee + stateFee + (hasAuditDefense ? auditDefenseAmount : 0) + fbarFee + fatcaFee - discountAmount;
       const totalServiceFee = Number(
@@ -226,7 +318,7 @@ export class SalesService {
         currentStage = app.currentStage;
       }
 
-      return {
+      formattedLeads.push({
         id: app.id,
         applicationId: app.id,
         taxpayerId: customer?.id || '',
@@ -237,8 +329,18 @@ export class SalesService {
         visaType: customer?.visaType || '-',
         maritalStatus: customer?.maritalStatus || 'Single',
         stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
-        complexity: 'STANDARD',
+        complexity: SalesService.computeReturnComplexity(app),
         currentStage,
+        clientPaymentStatus,
+        allApplications: visibleApplications.map((a: any) => ({
+          id: a.id,
+          taxYear: a.taxYear,
+          filingType: a.filingType,
+          currentStage: a.currentStage,
+          assignedSalesAgentId: a.assignedSalesAgentId,
+          assignedSalesAgent: a.assignedSalesAgent,
+        })),
+        totalTaxYears: visibleApplications.length,
         priority: app.priority,
         grossIncome,
         federalRefund: validFedRefund,
@@ -303,11 +405,14 @@ export class SalesService {
         esignStatus,
         createdAt: app.createdAt.toISOString(),
         updatedAt: app.updatedAt.toISOString(),
-      };
-    });
+      });
+    }
+
+    const totalCount = formattedLeads.length;
+    const paginatedLeads = formattedLeads.slice(skip, skip + limit);
 
     return {
-      leads: formattedLeads,
+      leads: paginatedLeads,
       pagination: {
         total: totalCount,
         page,
@@ -505,6 +610,38 @@ export class SalesService {
           : balDue > 0
           ? `$${balDue.toLocaleString()} Balance Due`
           : 'Form 1040 QA Approved';
+
+      // Update taxDraftSummary to mark lead as no longer returned to pool
+      try {
+        const prevHistory: any[] = Array.isArray(draft.assignmentHistory) ? draft.assignmentHistory : [];
+        const updatedSummary = {
+          ...draft,
+          isReturnedToPool: false,
+          returnedDepartment: null,
+          returnedReason: null,
+          assignmentHistory: [
+            ...prevHistory,
+            {
+              action: 'ASSIGNED_TO_SALES_CLOSER',
+              department: 'SALES',
+              role: 'SALES_AGENT',
+              agentId: salesAgentId,
+              agentName,
+              assignedByUserId: effectiveManagerId,
+              assignedByUserName: managerName,
+              assignedAt: new Date().toISOString(),
+            },
+          ],
+        };
+        await prisma.taxApplication.update({
+          where: { id: app.id },
+          data: {
+            taxDraftSummary: updatedSummary,
+          },
+        });
+      } catch (sumErr) {
+        console.error('Failed to update taxDraftSummary on sales assign:', sumErr);
+      }
 
       // A. StageHistory Audit Trail
       if (effectiveManagerId) {
@@ -723,7 +860,11 @@ export class SalesService {
   /**
    * Get single Sales Lead by ID for Pitch Workspace
    */
-  public static async getLeadById(applicationId: string) {
+  public static async getLeadById(
+    applicationId: string,
+    currentUserId?: string,
+    currentUserRole?: string
+  ) {
     const [app, auditLogs] = await Promise.all([
       prisma.taxApplication.findUnique({
         where: { id: applicationId },
@@ -777,7 +918,62 @@ export class SalesService {
 
     if (!app) return null;
 
+    // Query sibling applications for multi-tax-year switcher
+    const allCustomerApps = await prisma.taxApplication.findMany({
+      where: { customerId: app.customerId },
+      select: {
+        id: true,
+        taxYear: true,
+        filingType: true,
+        currentStage: true,
+        assignedSalesAgentId: true,
+        assignedSalesAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { taxYear: 'desc' },
+    });
+
+    let availableApplications = allCustomerApps;
+    if (currentUserRole === Role.SALES_AGENT && currentUserId) {
+      availableApplications = allCustomerApps.filter((a) => a.assignedSalesAgentId === currentUserId);
+      if (!availableApplications.some((a) => a.id === app.id)) {
+        if (app.assignedSalesAgentId === currentUserId || !app.assignedSalesAgentId) {
+          availableApplications.push({
+            id: app.id,
+            taxYear: app.taxYear,
+            filingType: app.filingType,
+            currentStage: app.currentStage,
+            assignedSalesAgentId: app.assignedSalesAgentId,
+            assignedSalesAgent: app.assignedSalesAgent,
+            createdAt: app.createdAt,
+            updatedAt: app.updatedAt,
+          });
+        }
+      }
+    }
+
     const customer = app.customer;
+    const isPaidClient = Boolean(
+      customer?.isConvertedCustomer ||
+      allCustomerApps.some((a: any) =>
+        a.currentStage === ApplicationStage.FILING_SUCCESS ||
+        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
+        (a as any).taxDraftSummary?.paidAmount > 0
+      )
+    );
+
+    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
+    if (isPaidClient) {
+      clientPaymentStatus = 'PAID';
+    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
+      clientPaymentStatus = 'NEW';
+    } else {
+      clientPaymentStatus = 'UNPAID';
+    }
+
     const fullName = customer
       ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'
       : '-';
@@ -890,7 +1086,7 @@ export class SalesService {
       visaType: customer?.visaType || '-',
       maritalStatus: customer?.maritalStatus || 'Single',
       stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
-      complexity: 'STANDARD',
+      complexity: SalesService.computeReturnComplexity(app),
       currentStage: app.currentStage,
       grossIncome,
       federalRefund: validFedRefund,
@@ -1011,6 +1207,17 @@ export class SalesService {
       pitchStatus: draft.salesPitch?.pitchStatus || draft.pitchStatus || 'NEED_TIME',
       negotiatedAmount: draft.salesPitch?.negotiatedAmount ?? draft.negotiatedAmount ?? null,
       originalFee: draft.salesPitch?.originalFee || draft.originalFee || totalFeeResolved,
+      clientPaymentStatus,
+      availableApplications: availableApplications.map((a: any) => ({
+        id: a.id,
+        taxYear: a.taxYear,
+        filingType: a.filingType,
+        currentStage: a.currentStage,
+        assignedSalesAgentId: a.assignedSalesAgentId,
+        assignedSalesAgent: a.assignedSalesAgent,
+        createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
+        updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
+      })),
       createdAt: app.createdAt.toISOString(),
       updatedAt: app.updatedAt.toISOString(),
     };
@@ -1533,6 +1740,11 @@ export class SalesService {
 
     const currentDraft: any = app.taxDraftSummary || {};
     const paidAmount = Number(currentDraft.paidAmount || 0);
+    const isPaid = currentDraft.paymentStatus === 'PAID' || (paidAmount > 0 && paidAmount >= Number(currentDraft.totalQuotedFee || 0));
+    if (isPaid) {
+      throw new Error('Fee quotation is locked and cannot be modified because payment has already been verified.');
+    }
+
     const totalServiceFee = Number(feeBreakdown?.totalServiceFee || currentDraft.totalQuotedFee || 247);
     const remainingBalance = Math.max(0, totalServiceFee - paidAmount);
 
@@ -1683,6 +1895,58 @@ export class SalesService {
         });
       } catch (err) {
         console.error('Failed to create salesQuote record:', err);
+      }
+    }
+
+    // Automatically record CouponUsage redemption audit trail if an authorized promo code was applied
+    const appliedCode = mergedFeeBreakdown?.discountCode?.trim()?.toUpperCase();
+    const discountVal = Number(data.discountAmount || mergedFeeBreakdown?.discountAmount || 0);
+
+    if (appliedCode && discountVal > 0) {
+      try {
+        const coupon = await prisma.discountCoupon.findUnique({
+          where: { code: appliedCode },
+        });
+
+        if (coupon) {
+          const existingUsage = await prisma.couponUsage.findFirst({
+            where: {
+              couponId: coupon.id,
+              applicationId,
+            },
+          });
+
+          if (!existingUsage) {
+            await prisma.couponUsage.create({
+              data: {
+                couponId: coupon.id,
+                couponCode: coupon.code,
+                applicationId,
+                customerId: app.customerId || null,
+                appliedByUserId: validAgentId || userId,
+                originalFee: new Prisma.Decimal(totalFee + discountVal),
+                discountAmount: new Prisma.Decimal(discountVal),
+                finalFee: new Prisma.Decimal(totalFee),
+                justificationCategory: coupon.justificationCategory,
+                justificationNotes: coupon.justificationNotes,
+              },
+            });
+
+            const updatedCoupon = await prisma.discountCoupon.update({
+              where: { id: coupon.id },
+              data: { timesUsed: { increment: 1 } },
+            });
+
+            if (updatedCoupon.maxUsageLimit && updatedCoupon.timesUsed >= updatedCoupon.maxUsageLimit) {
+              await prisma.discountCoupon.update({
+                where: { id: coupon.id },
+                data: { status: CouponStatus.DEPLETED },
+              });
+            }
+          }
+        }
+      } catch (couponErr) {
+        console.error('Failed to log couponUsage during payment:', couponErr);
       }
     }
 
@@ -2059,6 +2323,155 @@ export class SalesService {
       recipients: recipientEmails,
       paymentLinkRecord,
       application: updatedApp,
+    };
+  }
+
+  /**
+   * Sales Closer returns / releases lead back to Admin Unassigned Pool
+   */
+  public static async returnLeadToAdmin(options: {
+    applicationId: string;
+    returnedByUserId: string;
+    reason?: string;
+  }) {
+    const { applicationId, returnedByUserId, reason = 'Client not converting / rejected fee quote - Released to Admin Pool' } = options;
+
+    const returnedByUser = await prisma.user.findUnique({
+      where: { id: returnedByUserId },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+    });
+    const returnerName = returnedByUser?.firstName
+      ? `${returnedByUser.firstName} ${returnedByUser.lastName || ''}`.trim()
+      : returnedByUser?.email || 'Sales Closer';
+
+    return await prisma.$transaction(async (tx) => {
+      const app = await tx.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: {
+          assignedSalesAgent: {
+            select: { id: true, email: true, firstName: true, lastName: true, role: true },
+          },
+          customer: {
+            select: { firstName: true, lastName: true, email: true },
+          },
+        },
+      });
+
+      if (!app) {
+        throw new Error('Tax Application not found');
+      }
+
+      const prevSummary = (app.taxDraftSummary as Record<string, any>) || {};
+      const prevHistory: any[] = Array.isArray(prevSummary.assignmentHistory) ? prevSummary.assignmentHistory : [];
+
+      const prevAgent = app.assignedSalesAgent;
+      const prevAgentName = prevAgent?.firstName
+        ? `${prevAgent.firstName} ${prevAgent.lastName || ''}`.trim()
+        : prevAgent?.email || 'Sales Closer';
+
+      const nowIso = new Date().toISOString();
+
+      const newHistoryEntry = {
+        agentId: prevAgent?.id || app.assignedSalesAgentId || 'unknown',
+        agentName: prevAgentName,
+        agentEmail: prevAgent?.email || '',
+        role: prevAgent?.role || 'SALES_AGENT',
+        action: 'RETURNED_TO_POOL',
+        department: 'SALES',
+        assignedAt: app.updatedAt?.toISOString() || app.createdAt.toISOString(),
+        returnedAt: nowIso,
+        returnedByUserId,
+        returnedByUserName: returnerName,
+        reason,
+      };
+
+      const updatedHistory = [...prevHistory, newHistoryEntry];
+      const updatedSummary = {
+        ...prevSummary,
+        assignmentHistory: updatedHistory,
+        isReturnedToPool: true,
+        returnedDepartment: 'SALES',
+        returnedAt: nowIso,
+        returnedBy: returnerName,
+        returnedReason: reason,
+      };
+
+      // Unassign sales agent and set currentStage to SALES_PITCH_QUEUE (ready for Admin or manager re-assignment)
+      const updatedApp = await tx.taxApplication.update({
+        where: { id: app.id },
+        data: {
+          assignedSalesAgentId: null,
+          currentStage: ApplicationStage.SALES_PITCH_QUEUE,
+          taxDraftSummary: updatedSummary,
+        },
+      });
+
+      const clientName = `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || 'Taxpayer';
+
+      // Stage history audit
+      await tx.stageHistory.create({
+        data: {
+          applicationId: app.id,
+          fromStage: app.currentStage,
+          toStage: ApplicationStage.SALES_PITCH_QUEUE,
+          movedByUserId: returnedByUserId,
+          remarks: `Sales Closer ${returnerName} (${returnedByUser?.email || 'agent'}) released lead back to Admin Unassigned Pool. Reason: ${reason}. Previous Closer: ${prevAgentName}.`,
+        },
+      });
+
+      // Audit log
+      await tx.auditLog.create({
+        data: {
+          applicationId: app.id,
+          actorId: returnedByUserId,
+          actorType: returnedByUser?.role === Role.ADMIN ? AuditActorType.ADMIN : AuditActorType.AGENT,
+          actorName: returnerName,
+          actorRole: returnedByUser?.role || 'SALES_AGENT',
+          action: AuditActionType.STAGE_CHANGE,
+          moduleKey: 'SALES_RETURN_TO_ADMIN',
+          details: {
+            actorEmail: returnedByUser?.email || '',
+            previousAgentId: prevAgent?.id,
+            previousAgentEmail: prevAgent?.email,
+            previousAgentName: prevAgentName,
+            returnedDepartment: 'SALES',
+            clientName,
+            reason,
+            actionDescription: `Lead released back to Admin pool by ${returnerName}`,
+          },
+        },
+      });
+
+      return {
+        success: true,
+        message: `Lead for ${clientName} successfully returned to Admin Unassigned Pool`,
+        application: updatedApp,
+      };
+    });
+  }
+
+  /**
+   * Bulk return multiple sales leads back to Admin Unassigned Pool
+   */
+  public static async returnLeadsBulkToAdmin(options: {
+    applicationIds: string[];
+    returnedByUserId: string;
+    reason?: string;
+  }) {
+    const { applicationIds, returnedByUserId, reason } = options;
+    const results = [];
+    for (const appId of applicationIds) {
+      try {
+        const res = await this.returnLeadToAdmin({ applicationId: appId, returnedByUserId, reason });
+        results.push(res);
+      } catch (err: any) {
+        console.error(`Failed to return lead ${appId}:`, err);
+      }
+    }
+    return {
+      success: true,
+      count: results.length,
+      message: `Successfully returned ${results.length} sales lead(s) to Admin Unassigned Pool`,
     };
   }
 }

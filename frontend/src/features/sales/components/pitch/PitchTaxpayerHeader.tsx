@@ -4,14 +4,18 @@ import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin, ChevronDown, ChevronUp, Ro
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../common/SalesStageBadge';
+import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface PitchTaxpayerHeaderProps {
   lead: SalesLeadItem;
   onOpenSendBack?: () => void;
+  onOpenReturnToAdmin?: () => void;
 }
 
-export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, onOpenSendBack }) => {
+export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, onOpenSendBack, onOpenReturnToAdmin }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
@@ -42,10 +46,13 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               {lead.taxpayerName}
             </h2>
+            <ClientPaymentStatusChip lead={lead} scope="return" size="sm" />
+            <PriorityBadge priority={lead.priority || 'NO_PRIORITY'} size="sm" />
             <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
               TY {lead.taxYear} Form 1040
             </span>
             <SalesStageBadge stage={lead.currentStage} />
+            <ReturnComplexityBadge lead={lead} size="md" />
             {(() => {
               const lastRevert =
                 (lead.taxDraftSummary as any)?.revertsByTarget?.SALES ||
@@ -81,6 +88,20 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
+          {/* 1. Return to Admin Pool Button */}
+          {onOpenReturnToAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenReturnToAdmin}
+              className="text-xs font-bold flex items-center gap-1.5 shadow-2xs h-10 px-3.5 border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 cursor-pointer transition-all"
+              title="Release this lead back to Super Admin Pool if client does not convert"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+              <span>Return to Admin</span>
+            </Button>
+          )}
+
           {onOpenSendBack && (() => {
             const isDispatchedToFiling =
               lead.currentStage === 'FILING_QUEUE' ||

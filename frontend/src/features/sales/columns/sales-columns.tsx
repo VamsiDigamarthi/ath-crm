@@ -3,6 +3,8 @@ import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../components/common/SalesStageBadge';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
+import { ReturnComplexityBadge } from '../components/common/ReturnComplexityBadge';
 import { PhoneCall, UserCheck } from 'lucide-react';
 import type { SalesLeadItem } from '../types/sales.types';
 
@@ -30,8 +32,9 @@ export function getSalesColumns({
               {initial}
             </div>
             <div>
-              <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+              <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5 flex-wrap">
                 <span>{item.taxpayerName}</span>
+                <ClientPaymentStatusChip lead={item} size="xs" />
                 {item.visaType && item.visaType !== '-' && (
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
                     {item.visaType}
@@ -85,22 +88,50 @@ export function getSalesColumns({
     {
       header: 'Location & Year',
       accessorKey: 'stateOfResidence',
-      render: (item) => (
-        <div className="space-y-0.5">
-          <div className="text-xs font-semibold text-slate-800">
-            {item.stateOfResidence || 'United States'}
+      render: (item) => {
+        const hasMultipleYears = Boolean(item.allApplications && item.allApplications.length > 1);
+        return (
+          <div className="space-y-0.5">
+            <div className="text-xs font-semibold text-slate-800">
+              {item.stateOfResidence || 'United States'}
+            </div>
+            {hasMultipleYears ? (
+              <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                {item.allApplications?.map((app) => (
+                  <span
+                    key={app.id}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                      app.id === item.id
+                        ? 'bg-purple-50 text-purple-800 border-purple-300 ring-1 ring-purple-500/20'
+                        : 'bg-slate-100 text-slate-600 border-slate-200'
+                    }`}
+                    title={`TY ${app.taxYear} (${app.filingType || 'INDIVIDUAL'})`}
+                  >
+                    TY {app.taxYear}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[10px] text-slate-400 font-medium">
+                TY {item.taxYear || 2025}
+              </div>
+            )}
           </div>
-          <div className="text-[10px] text-slate-400 font-medium">
-            TY {item.taxYear || 2025}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       header: 'Priority',
       accessorKey: 'priority',
       render: (item) => (
         <PriorityBadge priority={item.priority || 'NO_PRIORITY'} size="sm" />
+      ),
+    },
+    {
+      header: 'Return Complexity',
+      accessorKey: 'complexityScore',
+      render: (item) => (
+        <ReturnComplexityBadge lead={item} size="sm" />
       ),
     },
     {

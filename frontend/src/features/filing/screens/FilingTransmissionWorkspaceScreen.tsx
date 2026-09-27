@@ -7,9 +7,12 @@ import {
   Code2,
   Layers,
   RotateCcw,
-  Mail
+  Mail,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
+import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { FilingComplianceGate } from '../components/workspace/FilingComplianceGate';
 import { FilingTaxpayerInspectionCard } from '../components/workspace/FilingTaxpayerInspectionCard';
 import { MeFXMLViewer } from '../components/workspace/MeFXMLViewer';
@@ -95,6 +98,8 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
                 {lead.taxpayerName}
               </h2>
+              <ClientPaymentStatusChip lead={lead} scope="return" size="sm" />
+              <PriorityBadge priority={lead.priority || 'NO_PRIORITY'} size="sm" />
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${isAccepted
                   ? 'bg-emerald-100 text-emerald-800'
                   : isReverted
@@ -203,6 +208,45 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* 1.05 Multi-Year Return Switcher Tabs */}
+      {lead.availableApplications && lead.availableApplications.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
+              <Calendar className="w-4 h-4 text-emerald-600" />
+              <span>Tax Year Filings:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {lead.availableApplications.map((appItem: any) => {
+                const isSelected = appItem.id === (lead.id || lead.applicationId);
+                return (
+                  <button
+                    key={appItem.id}
+                    type="button"
+                    onClick={() => {
+                      if (appItem.id !== (lead.id || lead.applicationId)) {
+                        navigate(`/filing/workspace/${appItem.id}`);
+                      }
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
+                      isSelected
+                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
+                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>TY {appItem.taxYear}</span>
+                    <span className="text-[10px] font-medium opacity-80">
+                      ({appItem.filingType || 'INDIVIDUAL'})
+                    </span>
+                    <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 1.1 Revert from Filing Alert Banner */}
       {isReverted && lastRevert && (

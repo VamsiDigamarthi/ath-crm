@@ -124,7 +124,8 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={`Assign Tax Return: ${targetLeads.length === 1 ? targetLeads[0].taxpayerName : `${targetLeads.length} Selected Returns`}`}
-      width="860px"
+      size="xl"
+      width="940px"
     >
       <form onSubmit={handleAssignSubmit} className="space-y-4 font-sans py-1">
         {/* Selected Leads Banner with Quick Auto-Pair Action */}

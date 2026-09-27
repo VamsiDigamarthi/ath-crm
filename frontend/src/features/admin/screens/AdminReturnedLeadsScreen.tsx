@@ -9,8 +9,6 @@ import { LeadAssignmentModal } from '@/features/documenter/components/LeadAssign
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import {
   RotateCcw,
-  Headphones,
-  CheckCircle2,
   RefreshCw,
   Zap,
   UserCheck,
@@ -22,21 +20,23 @@ import {
   Clock,
   AlertCircle,
   FileSpreadsheet,
+  Building2,
 } from 'lucide-react';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
+import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 
 export const AdminReturnedLeadsScreen: React.FC = () => {
   const {
     leads,
     agents,
-    stats,
     isLoading,
     isActionLoading,
     searchQuery,
     visaFilter,
     taxYearFilter,
     priorityFilter,
+    departmentFilter,
     page,
     limit,
     totalPages,
@@ -50,6 +50,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
     handleVisaChange,
     handleTaxYearChange,
     handlePriorityChange,
+    handleDepartmentChange,
     handlePageChange,
     handleLimitChange,
     handleOpenAssignModal,
@@ -68,14 +69,22 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
         header: 'Taxpayer Client',
         render: (lead: ReturnedLeadItem) => {
           const initials = `${lead.customer?.firstName?.[0] || ''}${lead.customer?.lastName?.[0] || ''}`.toUpperCase() || 'TX';
+          const isSales = lead.department === 'SALES';
           return (
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 font-bold text-xs flex items-center justify-center border border-amber-200 shrink-0">
+              <div
+                className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center border shrink-0 ${
+                  isSales
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}
+              >
                 {initials}
               </div>
               <div>
                 <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5 flex-wrap">
                   <span>{lead.customer?.firstName} {lead.customer?.lastName}</span>
+                  <ClientPaymentStatusChip lead={lead} size="xs" />
                   {lead.customer?.visaType && (
                     <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                       {lead.customer.visaType}
@@ -85,6 +94,29 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
                 <div className="text-[11px] text-slate-400 font-medium mt-0.5">
                   {lead.customer?.occupation || 'Taxpayer'} {lead.customer?.ssnTin ? `• SSN: ***-**-${lead.customer.ssnTin.slice(-4)}` : ''}
                 </div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        header: 'Department / Source',
+        render: (lead: ReturnedLeadItem) => {
+          const isSales = lead.department === 'SALES';
+          return (
+            <div className="space-y-1">
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                  isSales
+                    ? 'bg-blue-50 text-blue-800 border-blue-200'
+                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${isSales ? 'bg-blue-600' : 'bg-amber-600'}`} />
+                <span>{isSales ? 'Sales Closer Return' : 'Documenter Return'}</span>
+              </span>
+              <div className="text-[10px] text-slate-400 font-medium">
+                {isSales ? 'Fee Quotation & Pitch' : 'Calling Outreach & Intake'}
               </div>
             </div>
           );
@@ -128,20 +160,31 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
       },
       {
         header: 'Return Details',
-        render: (lead: ReturnedLeadItem) => (
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5">
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                <RotateCcw className="w-2.5 h-2.5 text-amber-700" />
-                {lead.returnedReason || 'Not Interested'}
-              </span>
+        render: (lead: ReturnedLeadItem) => {
+          const isSales = lead.department === 'SALES';
+          return (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 ${
+                    isSales
+                      ? 'bg-blue-100/70 text-blue-950 border-blue-300'
+                      : 'bg-amber-100 text-amber-900 border-amber-300'
+                  }`}
+                >
+                  <RotateCcw className={`w-2.5 h-2.5 ${isSales ? 'text-blue-700' : 'text-amber-700'}`} />
+                  <span className="truncate max-w-[200px]" title={lead.returnedReason}>
+                    {lead.returnedReason || (isSales ? 'Client Not Converting' : 'Not Interested')}
+                  </span>
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                <Clock className="w-3 h-3 text-slate-400" />
+                <span>By {lead.returnedBy}</span>
+              </div>
             </div>
-            <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
-              <Clock className="w-3 h-3 text-slate-400" />
-              <span>By {lead.returnedBy}</span>
-            </div>
-          </div>
-        ),
+          );
+        },
       },
       {
         header: 'Last Call / Previous Agent',
@@ -204,7 +247,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Super Admin queue of prospect leads released by Calling Agents. Directly assign or auto-distribute to Documenter Calling Agents without manager intermediaries.
+            Super Admin queue of prospect and quotation leads released by Calling Agents and Sales Closers. Directly assign or auto-distribute to Documenter Calling Agents or Sales Closers without manager intermediaries.
           </p>
         </div>
 
@@ -232,82 +275,30 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top Metric KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Card 1: Total Returned Leads */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Returned Records in Pool
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
-              <RotateCcw className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {stats.totalReturned}
-            </div>
-            <div className="text-xs text-amber-700 font-medium mt-1 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span>Awaiting Admin Direct Assignment</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Active Calling Agents */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Available Calling Agents
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
-              <Headphones className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {stats.availableAgents}
-            </div>
-            <div className="text-xs text-[#16A34A] font-medium mt-1 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
-              <span>Active DOC_AGENT staff for immediate intake</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Today's Re-assigned */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Re-allocated Today
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {stats.todayReassigned}
-            </div>
-            <div className="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              <span>Leads redistributed back into outreach</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Search & Filters Bar */}
+      {/* 2. Search & Filters Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
-          <div className="w-full sm:w-80">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 flex-wrap">
+          <div className="w-full sm:w-72">
             <AppSearchInput
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder="Search by taxpayer name, phone, email, SSN..."
               debounceMs={300}
             />
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-600">
+            <Building2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span>Department:</span>
+            <select
+              value={departmentFilter}
+              onChange={(e) => handleDepartmentChange(e.target.value)}
+              className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
+            >
+              <option value="ALL">All Departments</option>
+              <option value="DOCUMENTER">Documenter Outreach</option>
+              <option value="SALES">Sales Closer Pitch</option>
+            </select>
           </div>
 
           <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs font-medium text-slate-600">
@@ -363,7 +354,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
         )}
       </div>
 
-      {/* 4. Data Table */}
+      {/* 3. Data Table */}
       <AppTable<ReturnedLeadItem>
         data={leads}
         columns={columns}
@@ -372,7 +363,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
         rowKey="id"
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}
-        emptyText="No returned leads in the pool. All prospects have been successfully assigned!"
+        emptyText="No returned leads in the pool. All prospects and sales returns have been successfully assigned!"
         pagination={{
           currentPage: page,
           totalPages,
@@ -384,7 +375,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
         }}
       />
 
-      {/* 5. Floating Action Bar when rows are checked */}
+      {/* 4. Floating Action Bar when rows are checked */}
       {selectedRows.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
           <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
@@ -413,7 +404,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
             className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
           >
             <UserCheck className="w-3.5 h-3.5" />
-            <span>Direct Assign Agent</span>
+            <span>Direct Assign Agent / Closer</span>
           </Button>
 
           <button
@@ -426,7 +417,7 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 6. Lead Assignment Modal (Reusing existing Documenter assignment UI) */}
+      {/* 5. Lead Assignment Modal (Supporting Documenter Calling Agents & Sales Closers) */}
       <LeadAssignmentModal
         isOpen={isAssignModalOpen}
         onClose={handleCloseAssignModal}
@@ -437,21 +428,33 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
         isLoading={isActionLoading}
       />
 
-      {/* 7. Taxpayer 360 & Audit Trail Drawer */}
+      {/* 6. Taxpayer 360 & Audit Trail Drawer */}
       <AppDrawer
         isOpen={isAuditDrawerOpen}
         onClose={handleCloseAuditDrawer}
-        className="max-w-4xl"
+        className="sm:max-w-[700px] md:max-w-[820px] lg:max-w-[920px]"
         title={
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 font-bold text-sm flex items-center justify-center border border-amber-200">
+            <div
+              className={`w-9 h-9 rounded-xl font-bold text-sm flex items-center justify-center border ${
+                activeLeadForAudit?.department === 'SALES'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}
+            >
               {activeLeadForAudit?.customer?.firstName?.[0] || 'T'}
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <span>{activeLeadForAudit?.customer?.firstName} {activeLeadForAudit?.customer?.lastName}</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
-                  Returned Lead
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                    activeLeadForAudit?.department === 'SALES'
+                      ? 'bg-blue-100 text-blue-900 border-blue-300'
+                      : 'bg-amber-100 text-amber-900 border-amber-300'
+                  }`}
+                >
+                  {activeLeadForAudit?.department === 'SALES' ? 'Sales Closer Return' : 'Documenter Return'}
                 </span>
               </h3>
               <p className="text-xs text-slate-500 font-medium">
@@ -464,16 +467,26 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
         {activeLeadForAudit && (
           <div className="space-y-6">
             {/* Return Summary Alert */}
-            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div
+              className={`p-4 rounded-xl border flex items-start gap-3 ${
+                activeLeadForAudit.department === 'SALES'
+                  ? 'bg-blue-50/80 border-blue-200 text-blue-950'
+                  : 'bg-amber-50 border-amber-200 text-amber-950'
+              }`}
+            >
+              <AlertCircle
+                className={`w-5 h-5 shrink-0 mt-0.5 ${
+                  activeLeadForAudit.department === 'SALES' ? 'text-blue-600' : 'text-amber-600'
+                }`}
+              />
               <div>
-                <h4 className="text-xs font-bold text-amber-900">
-                  Released by Calling Agent: {activeLeadForAudit.returnedBy}
+                <h4 className="text-xs font-bold">
+                  Released by {activeLeadForAudit.department === 'SALES' ? 'Sales Closer' : 'Calling Agent'}: {activeLeadForAudit.returnedBy}
                 </h4>
-                <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                <p className="text-xs mt-1 leading-relaxed">
                   <strong>Reason:</strong> {activeLeadForAudit.returnedReason}
                 </p>
-                <div className="text-[11px] text-amber-700 font-medium mt-1">
+                <div className="text-[11px] font-medium mt-1 opacity-80">
                   Released at: {new Date(activeLeadForAudit.returnedAt).toLocaleString()}
                 </div>
               </div>
