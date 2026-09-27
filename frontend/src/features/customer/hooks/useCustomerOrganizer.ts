@@ -36,6 +36,15 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
   }, [selectedTaxYear]);
 
   useEffect(() => {
+    if (taxYearParam) {
+      const yr = parseInt(taxYearParam, 10);
+      if (!isNaN(yr) && yr !== selectedTaxYear) {
+        setSelectedTaxYear(yr);
+      }
+    }
+  }, [taxYearParam, selectedTaxYear]);
+
+  useEffect(() => {
     fetchOrganizer();
   }, [fetchOrganizer]);
 
@@ -73,7 +82,13 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
     if (!organizerData) return false;
 
     if (selectedModId === 'm1') {
-      const errors = validateModule1(organizerData.m1_demographics);
+      const e1 = validateModule1(organizerData.m1_demographics);
+      const e2 = validateModule2(
+        organizerData.m2_dependents,
+        organizerData.m1_demographics?.maritalStatus
+      );
+      const e9 = validateModule9(organizerData.m9_directDeposit, selectedTaxYear);
+      const errors = { ...e1, ...e2, ...e9 };
       if (Object.keys(errors).length > 0) {
         setValidationErrors(errors);
         const errorFieldNames = Object.keys(errors);
@@ -191,7 +206,11 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
 
     try {
       setSaving(true);
-      const extraKeys = selectedModId === 'm_income_expenses' ? ['m4', 'm5', 'm6', 'm8', 'm_income_expenses'] : [selectedModId];
+      const extraKeys = selectedModId === 'm_income_expenses' 
+        ? ['m4', 'm5', 'm6', 'm8', 'm2', 'm3', 'm_income_expenses'] 
+        : selectedModId === 'm1'
+          ? ['m1', 'm2', 'm9']
+          : [selectedModId];
       const updatedSubmitted = Array.from(
         new Set([...(organizerData.submittedModules || []), ...extraKeys])
       );
@@ -222,7 +241,7 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
   };
 
   // Navigation handlers
-  const moduleIds = ['m1', 'm2', 'm3', 'm7', 'm9', 'm_income_expenses'];
+  const moduleIds = ['m1', 'm_income_expenses', 'm3', 'm7', 'm_vault'];
   const currentModIndex = moduleIds.indexOf(selectedModId);
 
   const handleNext = async () => {

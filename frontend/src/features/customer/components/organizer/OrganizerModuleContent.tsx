@@ -1,15 +1,12 @@
 import React from 'react';
-import { CheckCircle2, ArrowLeft, ArrowRight, Save, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { ORGANIZER_MODULES } from './OrganizerModuleSidebar';
 import { type OrganizerData } from '../../services/customer-api';
-import { isModuleCompleted } from './utils/organizer-validation';
 import { Module1Demographics } from './modules/Module1Demographics';
-import { Module2Dependents } from './modules/Module2Dependents';
 import { Module3Presence } from './modules/Module3Presence';
 import { Module7Foreign } from './modules/Module7Foreign';
-import { Module9DirectDeposit } from './modules/Module9DirectDeposit';
 import { ModuleIncomeExpenses } from './modules/ModuleIncomeExpenses';
+import { CustomerDocumentVault } from '../CustomerDocumentVault';
 
 interface OrganizerModuleContentProps {
   selectedModId: string;
@@ -40,8 +37,6 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
   clearError,
   className,
 }) => {
-  const currentMod = ORGANIZER_MODULES.find((m) => m.id === selectedModId) || ORGANIZER_MODULES[0];
-
   if (!organizerData) {
     return (
       <div className={className || "lg:col-span-8 bg-white p-12 rounded-md border border-slate-300 shadow-xs text-center text-xs text-black font-semibold"}>
@@ -50,75 +45,72 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
     );
   }
 
-  return (
-    <div className={className || "lg:col-span-8 bg-white p-5 sm:p-7 rounded-md border border-slate-300 shadow-xs flex flex-col justify-between space-y-6"}>
-      <div className="space-y-6">
-        {/* Module Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-300 font-bold shrink-0">
-              {React.createElement(currentMod.icon, { className: 'w-5 h-5' })}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-black uppercase tracking-wider">
-                  Module 0{currentMod.number}
-                </span>
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200 text-black">
-                  {currentMod.section}
-                </span>
-              </div>
-              <h3 className="text-base sm:text-lg font-bold text-black tracking-tight">
-                {currentMod.title}
-              </h3>
-            </div>
-          </div>
+  const isAccordion = selectedModId === 'm1';
 
-          <div>
-            {isModuleCompleted(currentMod.id, organizerData) ? (
-              <span className="px-3.5 py-1.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-2 shadow-2xs">
-                <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
-                <span>Section Submitted &amp; Verified ✓</span>
-              </span>
-            ) : (
-              <span className="px-3.5 py-1.5 rounded-md text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-2 shadow-2xs">
-                <Clock className="w-4 h-4 text-amber-500" />
-                <span>Draft Intake in Progress</span>
-              </span>
-            )}
+  if (isAccordion) {
+    return (
+      <div className={className || "w-full space-y-4 font-sans"}>
+        {/* Module Accordions */}
+        <Module1Demographics
+          data={organizerData?.m1_demographics || ({} as any)}
+          updateField={(field, val) => updateModuleField('m1_demographics', field, val)}
+          m2Data={organizerData?.m2_dependents || ({} as any)}
+          updateM2Field={(field, val) => updateModuleField('m2_dependents', field, val)}
+          m9Data={organizerData?.m9_directDeposit || ({} as any)}
+          updateM9Field={(field, val) => updateModuleField('m9_directDeposit', field, val)}
+          selectedTaxYear={selectedTaxYear}
+          errors={errors}
+          clearError={clearError}
+        />
+
+        {/* Navigation & Action Footer Card */}
+        <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs flex items-center justify-between gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onPrev}
+            disabled={currentModIndex === 0}
+            className="border-slate-300 text-black hover:bg-slate-50 text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-40 rounded-md"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Previous</span>
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onSave}
+              disabled={saving}
+              className="border-slate-300 text-black hover:bg-slate-50 text-xs flex items-center gap-1.5 cursor-pointer rounded-md"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{saving ? 'Saving...' : 'Save Draft'}</span>
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={onNext}
+              disabled={saving}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4 rounded-md"
+            >
+              <span>Save &amp; Next</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* Clean Module Sub-Components */}
-        {selectedModId === 'm1' && (
-          <Module1Demographics
-            data={organizerData?.m1_demographics || ({} as any)}
-            updateField={(field, val) => updateModuleField('m1_demographics', field, val)}
-            selectedTaxYear={selectedTaxYear}
-            errors={errors}
-            clearError={clearError}
-          />
-        )}
-
-        {selectedModId === 'm2' && (
-          <Module2Dependents
-            data={organizerData?.m2_dependents || ({} as any)}
-            updateField={(field, val) => updateModuleField('m2_dependents', field, val)}
-            selectedTaxYear={selectedTaxYear}
-            maritalStatus={organizerData?.m1_demographics?.maritalStatus}
-            primaryTaxpayerLastName={organizerData?.m1_demographics?.lastName || organizerData?.m1_demographics?.fullName?.split(' ').slice(1).join(' ') || ''}
-            errors={errors}
-            clearError={clearError}
-          />
-        )}
-
+  return (
+    <div className={className || "lg:col-span-8 bg-white p-5 sm:p-7 rounded-md border border-slate-300 shadow-xs flex flex-col justify-between space-y-6 font-sans"}>
+      <div className="space-y-6">
         {selectedModId === 'm3' && (
           <Module3Presence
             data={organizerData?.m3_presence || ({} as any)}
             updateField={(field, val) => updateModuleField('m3_presence', field, val)}
             selectedTaxYear={selectedTaxYear}
-            organizerData={organizerData}
-            updateModuleField={updateModuleField}
             errors={errors}
             clearError={clearError}
           />
@@ -134,16 +126,6 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
           />
         )}
 
-        {selectedModId === 'm9' && (
-          <Module9DirectDeposit
-            data={organizerData?.m9_directDeposit || ({} as any)}
-            updateField={(field, val) => updateModuleField('m9_directDeposit', field, val)}
-            selectedTaxYear={selectedTaxYear}
-            errors={errors}
-            clearError={clearError}
-          />
-        )}
-
         {(selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6' || selectedModId === 'm8') && (
           <ModuleIncomeExpenses
             organizerData={organizerData}
@@ -151,6 +133,14 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             selectedTaxYear={selectedTaxYear}
             errors={errors}
             clearError={clearError}
+          />
+        )}
+
+        {selectedModId === 'm_vault' && (
+          <CustomerDocumentVault
+            selectedTaxYear={selectedTaxYear}
+            lockTaxYear={true}
+            isOrganizerMode={true}
           />
         )}
       </div>
@@ -162,10 +152,10 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
           size="sm"
           onClick={onPrev}
           disabled={currentModIndex === 0}
-          className="border-slate-300 text-black hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 rounded-md"
+          className="border-slate-300 text-black hover:bg-slate-50 text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-40 rounded-md"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Previous Module</span>
+          <span>Previous</span>
         </Button>
 
         <div className="flex items-center gap-2">
@@ -174,7 +164,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             variant="outline"
             onClick={onSave}
             disabled={saving}
-            className="border-slate-300 text-black hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
+            className="border-slate-300 text-black hover:bg-slate-50 text-xs flex items-center gap-1.5 cursor-pointer rounded-md"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{saving ? 'Saving...' : 'Save Draft'}</span>
@@ -184,9 +174,9 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             size="sm"
             onClick={onNext}
             disabled={saving}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer px-4 rounded-md"
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4 rounded-md"
           >
-            <span>Save &amp; Continue</span>
+            <span>Save &amp; Next</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>

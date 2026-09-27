@@ -1,14 +1,16 @@
 import React from 'react';
 import { Save } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useCustomerOrganizer } from '../hooks/useCustomerOrganizer';
 import { OrganizerModuleSidebar, ORGANIZER_MODULES } from './organizer/OrganizerModuleSidebar';
 import { OrganizerModuleContent } from './organizer/OrganizerModuleContent';
-import { isModuleCompleted } from './organizer/utils/organizer-validation';
 
 export const CustomerOrganizerWizard: React.FC = () => {
   const { selectedTaxYear: contextTaxYear } = useOutletContext<{ selectedTaxYear?: string }>() || {};
+  const [searchParams] = useSearchParams();
+  const urlYear = searchParams.get('year') || searchParams.get('taxYear');
+  const activeTaxYear = urlYear || contextTaxYear;
 
   // All Business Logic, Field Mutation and PostgreSQL Sync handled by Hook
   const {
@@ -27,7 +29,15 @@ export const CustomerOrganizerWizard: React.FC = () => {
     saveOrganizer,
     handleNext,
     handlePrev,
-  } = useCustomerOrganizer(contextTaxYear);
+  } = useCustomerOrganizer(activeTaxYear);
+
+  // Deep-link to specific tab (e.g. ?tab=m_vault or ?module=m_vault)
+  const tabParam = searchParams.get('tab') || searchParams.get('module');
+  React.useEffect(() => {
+    if (tabParam && ORGANIZER_MODULES.some((m) => m.id === tabParam)) {
+      setSelectedModId(tabParam);
+    }
+  }, [tabParam, setSelectedModId]);
 
   return (
     <div className="space-y-6 pb-8 font-sans animate-in fade-in duration-150">
@@ -43,28 +53,16 @@ export const CustomerOrganizerWizard: React.FC = () => {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
-            ATH Tax Services IRS-compliant intake wizard. Complete all 6 sections to maximize your TY {selectedTaxYear || '2025'} deductions.
+            ATH Tax Services IRS-compliant intake wizard. Complete all 5 sections to maximize your TY {selectedTaxYear || '2025'} deductions.
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <div className="text-right hidden sm:block">
-            <span className="text-xs font-bold text-black">
-              {ORGANIZER_MODULES.filter((m) => isModuleCompleted(m.id, organizerData)).length} of {ORGANIZER_MODULES.length} Verified
-            </span>
-            <div className="w-32 bg-slate-100 rounded-md h-2 mt-1 overflow-hidden border border-slate-200">
-              <div 
-                className="bg-[#16A34A] h-full rounded-md transition-all duration-300" 
-                style={{ width: `${progressPercent}%` }} 
-              />
-            </div>
-          </div>
-
           <Button
             size="sm"
             onClick={() => saveOrganizer(false)}
             disabled={saving || loading}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{saving ? 'Saving to DB...' : 'Save All Drafts'}</span>

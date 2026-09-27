@@ -3,14 +3,14 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { AppSidebar } from '@/shared/components/AppSidebar';
 import { HeaderUserProfile } from '@/shared/components/HeaderUserProfile';
-import { CustomerTaxYearDropdown } from '../components/CustomerTaxYearDropdown';
+import { Button } from '@/shared/components/Button';
+import { CreateNewFilingModal } from '../components/CreateNewFilingModal';
 import {
   LayoutDashboard,
-  CheckSquare,
-  FolderArchive,
-  CreditCard,
+  FileText,
   Bell,
   User,
+  Plus,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -21,6 +21,7 @@ export const CustomerLayout: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [selectedTaxYear, setSelectedTaxYear] = useState<string>('2025');
+  const [isNewFilingModalOpen, setIsNewFilingModalOpen] = useState<boolean>(false);
   
   // Real DB value from backend/prisma/schema/customer.prisma: customerProfile.isConvertedCustomer
   const customerProfile = user?.customerProfile;
@@ -38,7 +39,6 @@ export const CustomerLayout: React.FC = () => {
       }
     }
   }, [applications]);
-
 
   const taxpayerName = customerProfile?.firstName
     ? `${customerProfile.firstName} ${customerProfile.lastName || ''}`.trim()
@@ -64,37 +64,20 @@ export const CustomerLayout: React.FC = () => {
   const navItems = [
     { 
       id: 'customer_dashboard', 
-      label: 'Tax Filing Hub', 
+      label: 'Dashboard', 
       icon: LayoutDashboard, 
-      section: 'Tax Filing Workspace', 
       path: '/customer' 
     },
     { 
-      id: 'customer_organizer', 
-      label: 'Tax Organizer', 
-      icon: CheckSquare, 
-      section: 'Tax Filing Workspace', 
-      path: '/customer/organizer' 
-    },
-    { 
-      id: 'customer_documents', 
-      label: 'Documents Vault', 
-      icon: FolderArchive, 
-      section: 'Financials & Vault', 
-      path: '/customer/documents' 
-    },
-    { 
-      id: 'customer_billing', 
-      label: 'Quotations & Invoices', 
-      icon: CreditCard, 
-      section: 'Financials & Vault', 
-      path: '/customer/billing' 
+      id: 'customer_filings', 
+      label: 'My Filings', 
+      icon: FileText, 
+      path: '/customer/filings' 
     },
     { 
       id: 'customer_notifications', 
       label: 'Notifications', 
       icon: Bell, 
-      section: 'Financials & Vault', 
       badge: unreadCount > 0 ? String(unreadCount) : undefined, 
       path: '/customer/notifications' 
     },
@@ -103,9 +86,8 @@ export const CustomerLayout: React.FC = () => {
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/customer/notifications')) return 'customer_notifications';
-    if (currentPath.includes('/customer/organizer')) return 'customer_organizer';
-    if (currentPath.includes('/customer/documents')) return 'customer_documents';
-    if (currentPath.includes('/customer/billing')) return 'customer_billing';
+    if (currentPath.includes('/customer/filings')) return 'customer_filings';
+    if (currentPath.includes('/customer/organizer')) return 'customer_filings';
     return 'customer_dashboard';
   };
 
@@ -119,7 +101,7 @@ export const CustomerLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="flex h-screen overflow-hidden bg-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
       {/* 1. AppSidebar matching Admin & Manager level UI/UX */}
       <AppSidebar
         width={240}
@@ -142,15 +124,19 @@ export const CustomerLayout: React.FC = () => {
       />
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-100">
         {/* Top Header Bar */}
         <header className="h-16 flex items-center justify-end px-6 bg-white border-b border-slate-300 shrink-0 gap-3">
-          {/* Tax Year Switcher, Notifications & User Info */}
-          <CustomerTaxYearDropdown
-            selectedTaxYear={selectedTaxYear}
-            onSelectTaxYear={setSelectedTaxYear}
-            applications={applications}
-          />
+          {/* New Filing Trigger Button */}
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setIsNewFilingModalOpen(true)}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs inline-flex items-center gap-1.5 shadow-2xs cursor-pointer border border-emerald-700 px-3.5 py-1.5 rounded-md"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Filing</span>
+          </Button>
 
           <NotificationBellPopover />
 
@@ -163,6 +149,13 @@ export const CustomerLayout: React.FC = () => {
           <Outlet context={{ selectedTaxYear, isConvertedCustomer, customerProfile, user }} />
         </main>
       </div>
+
+      {/* Create New Filing Modal */}
+      <CreateNewFilingModal
+        isOpen={isNewFilingModalOpen}
+        onClose={() => setIsNewFilingModalOpen(false)}
+        existingApplications={applications}
+      />
     </div>
   );
 };

@@ -1,9 +1,5 @@
 import React from 'react';
-import { RefreshCw, Plus, Link2 } from 'lucide-react';
-import { Button } from '@/shared/components/Button';
-import { AppSelect } from '@/shared/components/AppSelect';
 import { AppTabs, type TabItem } from '@/shared/components/AppTabs';
-import toast from 'react-hot-toast';
 import { useOutletContext } from 'react-router-dom';
 import { useCustomerDocuments } from '../hooks/useCustomerDocuments';
 import { VaultUploadDropzone } from './vault/VaultUploadDropzone';
@@ -14,21 +10,22 @@ import { DOCUMENT_TYPES } from '@/shared/constants/document-taxonomy';
 
 interface CustomerDocumentVaultProps {
   isConvertedCustomer?: boolean;
+  selectedTaxYear?: string | number;
+  lockTaxYear?: boolean;
+  isOrganizerMode?: boolean;
 }
 
 export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
-  isConvertedCustomer: propConverted,
+  selectedTaxYear: propTaxYear,
 }) => {
   const context = useOutletContext<{
     selectedTaxYear?: string;
-    isConvertedCustomer?: boolean;
   }>() || {};
 
-  const isConvertedCustomer = propConverted !== undefined ? propConverted : Boolean(context.isConvertedCustomer);
+  const effectiveTaxYear = propTaxYear !== undefined ? propTaxYear.toString() : context.selectedTaxYear;
 
   // All Business Logic and State encapsulated in Hook
   const {
-    allDocuments,
     documents,
     filteredDocs,
     physicalFiles,
@@ -37,7 +34,6 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
     activeDocType,
     setActiveDocType,
     selectedYear,
-    setSelectedYear,
     activeVaultTab,
     setActiveVaultTab,
     filterCategory,
@@ -58,7 +54,6 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
     deleteDocument,
     downloadDocument,
     formatFileSize,
-    refetch,
     // Multi-Upload Modal & Staging
     isUploadModalOpen,
     setIsUploadModalOpen,
@@ -75,7 +70,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
     setIsDriveLinkModalOpen,
     isSubmittingLink,
     handleUploadDriveLink,
-  } = useCustomerDocuments(context.selectedTaxYear);
+  } = useCustomerDocuments(effectiveTaxYear);
 
   // Tabs for All Items, Files, and Drive Links within active document type
   const vaultTabs: TabItem[] = [
@@ -97,88 +92,14 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
   ];
 
   return (
-    <div className="space-y-6 pb-8 font-sans animate-in fade-in duration-150">
-      {/* 1. Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
-              {isConvertedCustomer ? 'Multi-Year Tax Document Vault' : 'TY 2025 Intake Document Vault'}
-            </h2>
-            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
-              {allDocuments.length} Total Items
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
-            Upload your official W-2, 1099, FBAR, and tax statements or attach a Google Drive / OneDrive folder link for CPA review.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => refetch()}
-            disabled={loading}
-            className="border-slate-300 bg-white hover:bg-slate-50 text-black text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
-
-          {/* Quick Upload Action Buttons */}
-          <Button
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer rounded-md"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Upload Documents</span>
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setIsDriveLinkModalOpen(true)}
-            className="border-emerald-300 bg-emerald-50/60 hover:bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
-          >
-            <Link2 className="w-3.5 h-3.5" />
-            <span>Upload Drive Link</span>
-          </Button>
-
-          {isConvertedCustomer ? (
-            <div className="w-48">
-              <AppSelect
-                options={[
-                  { label: 'TY 2025 (Active Filing)', value: '2025' },
-                  { label: 'TY 2024 (Filed Returns)', value: '2024' },
-                  { label: 'TY 2023 (Historical Archive)', value: '2023' },
-                ]}
-                value={selectedYear}
-                onChange={(val) => {
-                  if (val) {
-                    setSelectedYear(val);
-                    toast.success(`Vault switched to Tax Year ${val}`);
-                  }
-                }}
-                placeholder="Select Tax Year"
-              />
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 border border-slate-300 text-xs font-bold text-black">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span>TY 2025 (Active Intake)</span>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="space-y-4 font-sans">
 
       {/* 2. Small, Neat Document Type Switch Tabs */}
       <div className="border-b border-slate-200 pb-1">
         <AppTabs
           tabs={DOCUMENT_TYPES.map((dt) => ({
             id: dt.id,
-            label: `${dt.number}) ${dt.label}`,
+            label: dt.label,
             count: docTypeCounts[dt.id] || 0,
           }))}
           activeTab={activeDocType}
@@ -223,8 +144,6 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         filterCategory={filterCategory}
         setFilterCategory={setFilterCategory}
         loading={loading}
-        onOpenUpload={() => fileInputRef.current?.click()}
-        onOpenDriveLinkModal={() => setIsDriveLinkModalOpen(true)}
         onDownload={downloadDocument}
         onDelete={deleteDocument}
       />

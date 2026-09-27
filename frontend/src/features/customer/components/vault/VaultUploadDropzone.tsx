@@ -51,60 +51,45 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
   }, [activeDocType]);
 
   return (
-    <div className="bg-white p-6 rounded-md border border-slate-300 shadow-xs space-y-4">
+    <div className="space-y-3">
       {/* Category Selection Bar & Action Buttons */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+      <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 pb-1">
         <div className="flex items-center gap-2">
-          <UploadCloud className="w-5 h-5 text-[#16A34A]" />
-          <h3 className="text-sm font-bold text-black">Upload New Tax Slips &amp; Statements</h3>
+          <span className="text-xs font-semibold text-gray-700">Category:</span>
+          <div className="w-64">
+            <AppSelect
+              options={categoryOptions}
+              value={uploadCategory}
+              onChange={(val) => setUploadCategory(val || categoryOptions[0]?.value || 'W2_WAGES')}
+              placeholder="Select Category"
+            />
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-black">Category:</span>
-            <div className="w-72">
-              <AppSelect
-                options={categoryOptions}
-                value={uploadCategory}
-                onChange={(val) => setUploadCategory(val || categoryOptions[0]?.value || 'W2_WAGES')}
-                placeholder="Select Category"
-              />
-            </div>
-          </div>
+        {/* Quick Action Buttons */}
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer rounded-md"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Choose Files</span>
+          </Button>
 
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-2">
+          {onOpenDriveLinkModal && (
             <Button
               type="button"
               size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer rounded-md"
+              variant="outline"
+              onClick={onOpenDriveLinkModal}
+              className="border-emerald-300 bg-emerald-50/60 hover:bg-emerald-50 text-emerald-800 text-xs flex items-center gap-1.5 cursor-pointer rounded-md shadow-2xs"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Choose Files</span>
+              <Link2 className="w-3.5 h-3.5" />
+              <span>Attach Drive Link</span>
             </Button>
-
-            {onOpenDriveLinkModal && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={onOpenDriveLinkModal}
-                className="border-emerald-300 bg-emerald-50/60 hover:bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
-              >
-                <Link2 className="w-3.5 h-3.5" />
-                <span>Upload Drive Link</span>
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* IRS Cross-Verification Compliance Banner */}
-      <div className="p-3.5 rounded-md bg-amber-50/70 border border-amber-300 text-xs text-amber-950 flex items-start gap-2 font-medium">
-        <div className="font-bold shrink-0">⚠️ IRS Notice:</div>
-        <div>
-          The IRS cross-verifies all reported income against third-party filed 1098/1099 statements. Please upload all available tax documents to avoid IRS audit notices and penalty assessments.
+          )}
         </div>
       </div>
 

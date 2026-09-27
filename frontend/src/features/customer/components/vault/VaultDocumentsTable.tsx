@@ -8,7 +8,6 @@ import {
   AlertCircle, 
   Clock, 
   FolderArchive, 
-  Plus, 
   RefreshCw,
   Globe,
   ExternalLink,
@@ -33,8 +32,6 @@ interface VaultDocumentsTableProps {
   filterCategory: string;
   setFilterCategory: (cat: string) => void;
   loading: boolean;
-  onOpenUpload: () => void;
-  onOpenDriveLinkModal?: () => void;
   onDownload: (id: string, fileName: string) => void;
   onDelete: (id: string, fileName: string) => void;
 }
@@ -45,8 +42,6 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
   filterCategory,
   setFilterCategory,
   loading,
-  onOpenUpload,
-  onOpenDriveLinkModal,
   onDownload,
   onDelete,
 }) => {
@@ -106,17 +101,17 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
 
   return (
     <>
-      <div className="bg-white rounded-md border border-slate-300 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-md border border-slate-200 overflow-hidden">
         {/* Filter Bar */}
-        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+        <div className="p-3.5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
           <div className="flex items-center gap-2">
             <FileCheck className="w-4 h-4 text-[#16A34A]" />
-            <span className="text-xs font-bold text-black">
+            <span className="text-xs font-semibold text-gray-700">
               Tax Statements for TY {selectedYear} ({filteredDocs.length})
             </span>
           </div>
 
-          <div className="w-72">
+          <div className="w-64">
             <AppSelect
               options={categoryOptions}
               value={filterCategory}
@@ -128,54 +123,33 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
 
         {/* Documents Table */}
         {loading ? (
-          <div className="p-12 text-center text-xs text-black font-semibold">
+          <div className="p-12 text-center text-xs text-slate-500 font-normal">
             <RefreshCw className="w-5 h-5 animate-spin mx-auto text-[#16A34A] mb-2" />
             Loading uploaded tax vault files...
           </div>
         ) : filteredDocs.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-md bg-slate-100 text-black flex items-center justify-center mx-auto border border-slate-300">
+          <div className="p-12 text-center space-y-2">
+            <div className="w-12 h-12 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center mx-auto border border-slate-200">
               <FolderArchive className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-black">No Tax Documents Found</h4>
-              <p className="text-[11px] text-black/80 font-medium mt-0.5">
-                Upload your TY {selectedYear} tax documents or attach a Google Drive / OneDrive folder link.
+              <h4 className="text-xs font-semibold text-gray-700">No Tax Documents Found</h4>
+              <p className="text-[11px] text-slate-500 font-normal mt-0.5">
+                Upload your TY {selectedYear} tax documents or attach a Google Drive / OneDrive folder link above.
               </p>
-            </div>
-            <div className="flex items-center justify-center gap-2.5 pt-2">
-              <Button
-                size="sm"
-                onClick={onOpenUpload}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold gap-1 cursor-pointer shadow-xs rounded-md"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Upload Documents</span>
-              </Button>
-              {onOpenDriveLinkModal && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onOpenDriveLinkModal}
-                  className="border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-bold gap-1 cursor-pointer rounded-md"
-                >
-                  <Link2 className="w-3.5 h-3.5" />
-                  <span>Attach Drive Link</span>
-                </Button>
-              )}
             </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-300 bg-slate-100 text-black font-bold">
-                  <th className="py-3 px-4">Document / Link Name</th>
-                  <th className="py-3 px-4">Type</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Upload Timestamp</th>
-                  <th className="py-3 px-4">Verification</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr className="border-b border-slate-200 bg-slate-50 text-gray-700 font-semibold">
+                  <th className="py-2.5 px-4">Document / Link Name</th>
+                  <th className="py-2.5 px-4">Type</th>
+                  <th className="py-2.5 px-4">Category</th>
+                  <th className="py-2.5 px-4">Upload Timestamp</th>
+                  <th className="py-2.5 px-4">Verification</th>
+                  <th className="py-2.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-black font-medium">

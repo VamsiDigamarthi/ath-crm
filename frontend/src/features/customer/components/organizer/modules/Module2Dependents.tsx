@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
 import { 
-  HelpCircle, 
-  User, 
-  Users, 
-  Building2, 
   Plus, 
   Trash2, 
   Briefcase, 
@@ -135,13 +131,6 @@ export const Module2Dependents: React.FC<Module2Props> = ({
 
   return (
     <div className="space-y-6">
-      {/* Notice Banner */}
-      <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-900 flex items-start gap-2.5">
-        <HelpCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-        <div>
-          <strong>Spouse &amp; Dependent Rules:</strong> Qualifying children under 17 receive up to <strong>$2,000/child Child Tax Credit</strong>. Daycare expenses can be claimed if spouse is working or full-time student.
-        </div>
-      </div>
 
       {/* General Spouse Error Banner if Married but Incomplete */}
       {errors.spouse_general && isMarried && (
@@ -158,7 +147,6 @@ export const Module2Dependents: React.FC<Module2Props> = ({
           <div className="flex items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
-                <User className="w-4 h-4 text-indigo-600" />
                 <span>Spouse / Joint Filer Details</span>
                 {spouse.firstName && (
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
@@ -190,8 +178,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
         }`}>
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
-                <User className="w-4 h-4 text-indigo-600" />
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider">
                 <span>Spouse / Joint Filer Details</span>
               </h4>
               <p className="text-[11px] text-black/60 mt-0.5 font-medium">Spouse legal name, DOB, SSN, occupation and visa status</p>
@@ -311,7 +298,6 @@ export const Module2Dependents: React.FC<Module2Props> = ({
           <div className="flex items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-[#16A34A]" />
                 <span>Qualifying Children &amp; Dependents</span>
                 {(d.dependentsList || []).length > 0 && (
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
@@ -358,7 +344,6 @@ export const Module2Dependents: React.FC<Module2Props> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-[#16A34A]" />
                 <span>Qualifying Children &amp; Dependents</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                   {(d.dependentsList || []).length} Added
@@ -540,7 +525,6 @@ export const Module2Dependents: React.FC<Module2Props> = ({
           <div className="flex items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-purple-600" />
                 <span>Child &amp; Daycare Care Expenses Worksheet</span>
                 {(d.daycareList || []).length > 0 && (
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-bold border border-purple-200">
@@ -583,7 +567,6 @@ export const Module2Dependents: React.FC<Module2Props> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-purple-600" />
                 <span>Child &amp; Daycare Care Expenses Worksheet</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-bold border border-purple-200">
                   {(d.daycareList || []).length} Added

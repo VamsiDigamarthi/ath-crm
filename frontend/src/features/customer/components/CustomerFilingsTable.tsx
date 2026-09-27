@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { 
   FolderArchive, 
-  ArrowRight, 
   FileText, 
+  Building2,
   CheckCircle2, 
   Clock, 
   CreditCard,
   SendHorizontal,
-  Download
+  Eye
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppTable, type ColumnDef } from '@/shared/components/AppTable';
@@ -28,19 +28,16 @@ export const CustomerFilingsTable: React.FC<CustomerFilingsTableProps> = ({
   onSelectTaxYear,
 }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'COMPLETED' | 'ALL'>('ACTIVE');
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'COMPLETED'>('ACTIVE');
 
   // Filter filings based on tab
   const filteredData = useMemo(() => {
-    if (activeTab === 'ACTIVE') {
-      const active = filings.filter((f) => f.isActive);
-      // If none active, fallback to showing all so table is not empty
-      return active.length > 0 ? active : filings;
-    }
     if (activeTab === 'COMPLETED') {
       return filings.filter((f) => f.isCompleted);
     }
-    return filings;
+    const active = filings.filter((f) => f.isActive);
+    // If none active, fallback to showing all so table is not empty
+    return active.length > 0 ? active : filings;
   }, [filings, activeTab]);
 
   const activeCount = filings.filter((f) => f.isActive).length;
@@ -56,11 +53,6 @@ export const CustomerFilingsTable: React.FC<CustomerFilingsTableProps> = ({
       id: 'COMPLETED',
       label: 'Completed Returns',
       count: completedCount,
-    },
-    {
-      id: 'ALL',
-      label: 'All Tax Years',
-      count: filings.length,
     },
   ];
 
@@ -120,11 +112,15 @@ export const CustomerFilingsTable: React.FC<CustomerFilingsTableProps> = ({
 
   const columns: ColumnDef<CustomerFilingItem>[] = [
     {
-      header: 'Tax Year & Return',
+      header: 'Tax Year & Filing',
       render: (item) => (
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-md bg-slate-100 border border-slate-300 text-black flex items-center justify-center font-bold text-xs shrink-0">
-            <FileText className="w-4 h-4 text-black" />
+            {item.filingType === 'BUSINESS' ? (
+              <Building2 className="w-4 h-4 text-black" />
+            ) : (
+              <FileText className="w-4 h-4 text-black" />
+            )}
           </div>
           <div>
             <div className="font-bold text-black text-sm flex items-center gap-1.5">
@@ -133,9 +129,11 @@ export const CustomerFilingsTable: React.FC<CustomerFilingsTableProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" title="Active Season" />
               )}
             </div>
-            <span className="text-xs text-black font-medium block">
-              Form 1040 • {item.filingType === 'JOINT' ? 'Married Joint' : 'Individual Return'}
-            </span>
+            <div className="mt-0.5">
+              <span className="inline-block px-1.5 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-black border border-slate-300 leading-none">
+                {item.filingType === 'BUSINESS' ? 'Business' : 'Individual'}
+              </span>
+            </div>
           </div>
         </div>
       ),
@@ -169,32 +167,13 @@ export const CustomerFilingsTable: React.FC<CustomerFilingsTableProps> = ({
       },
     },
     {
-      header: 'Organizer Progress',
-      render: (item) => (
-        <div className="space-y-1 w-32">
-          <div className="flex items-center justify-between text-xs font-bold text-black">
-            <span>{item.organizerPercent}%</span>
-            <span className="text-[10px] text-black font-medium">
-              {item.organizerPercent === 100 ? 'Verified' : 'In Progress'}
-            </span>
-          </div>
-          <div className="w-full bg-slate-200 rounded-sm h-1.5 overflow-hidden">
-            <div
-              className="bg-[#16A34A] h-full rounded-sm transition-all duration-300"
-              style={{ width: `${item.organizerPercent}%` }}
-            />
-          </div>
-        </div>
-      ),
-    },
-    {
       header: 'Documents',
       render: (item) => (
         <button
           type="button" 
           onClick={() => {
             if (onSelectTaxYear) onSelectTaxYear(item.taxYear.toString());
-            navigate('/customer/documents');
+            navigate(`/customer/organizer?year=${item.taxYear}&tab=m_vault`);
           }}
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-300 text-xs font-bold text-black hover:bg-slate-100 hover:border-slate-400 cursor-pointer transition-colors"
         >
@@ -204,65 +183,34 @@ export const CustomerFilingsTable: React.FC<CustomerFilingsTableProps> = ({
       ),
     },
     {
-      header: 'Assigned Specialist',
-      render: (item) => (
-        <div className="text-xs">
-          <div className="font-bold text-black">{item.assignedSpecialist}</div>
-          <span className="text-black text-[11px] font-medium">Tax Operations Team</span>
-        </div>
-      ),
-    },
-    {
       header: 'Action',
       headerClassName: 'text-right',
       cellClassName: 'text-right',
       render: (item) => {
-        if (item.isCompleted || item.currentStage === 'FILING_SUCCESS') {
-          return (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (onSelectTaxYear) onSelectTaxYear(item.taxYear.toString());
-                navigate('/customer/documents');
-              }}
-              className="rounded-md border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>View Filed 1040</span>
-            </Button>
-          );
-        }
-
-        if (
-          item.currentStage === 'QA_APPROVED' ||
-          item.currentStage === 'SALES_PITCH_QUEUE' ||
-          item.currentStage === 'SALES_PITCHING' ||
-          item.currentStage === 'PAYMENT_PENDING'
-        ) {
-          return (
-            <Button
-              size="sm"
-              onClick={() => navigate('/customer/billing')}
-              className="rounded-md bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer border border-emerald-700"
-            >
-              <CreditCard className="w-3.5 h-3.5" />
-              <span>Review & Pay Fee</span>
-            </Button>
-          );
-        }
+        const handleView = () => {
+          if (onSelectTaxYear) onSelectTaxYear(item.taxYear.toString());
+          if (item.isCompleted || item.currentStage === 'FILING_SUCCESS') {
+            navigate(`/customer/organizer?year=${item.taxYear}&tab=m_vault`);
+          } else if (
+            item.currentStage === 'QA_APPROVED' ||
+            item.currentStage === 'SALES_PITCH_QUEUE' ||
+            item.currentStage === 'SALES_PITCHING' ||
+            item.currentStage === 'PAYMENT_PENDING'
+          ) {
+            navigate('/customer/billing');
+          } else {
+            navigate(`/customer/organizer?year=${item.taxYear}&type=${item.filingType || 'INDIVIDUAL'}`);
+          }
+        };
 
         return (
           <Button
             size="sm"
-            onClick={() => {
-              if (onSelectTaxYear) onSelectTaxYear(item.taxYear.toString());
-              navigate('/customer/organizer');
-            }}
-            className="rounded-md bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer border border-emerald-700"
+            onClick={handleView}
+            className="rounded-md bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs cursor-pointer border border-emerald-700 px-3.5 py-1.5"
           >
-            <span>Resume Filing</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <Eye className="w-3.5 h-3.5" />
+            <span>View</span>
           </Button>
         );
       },
@@ -288,7 +236,7 @@ export const CustomerFilingsTable: React.FC<CustomerFilingsTableProps> = ({
         <AppTabs
           tabs={tabs}
           activeTab={activeTab}
-          onChange={(id) => setActiveTab(id as 'ACTIVE' | 'COMPLETED' | 'ALL')}
+          onChange={(id) => setActiveTab(id as 'ACTIVE' | 'COMPLETED')}
           size="sm"
           className="border-b-0"
         />

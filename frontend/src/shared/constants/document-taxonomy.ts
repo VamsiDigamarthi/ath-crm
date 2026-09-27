@@ -1,7 +1,7 @@
-import { 
-  User, 
-  Briefcase, 
-  ShieldCheck, 
+import {
+  User,
+  Briefcase,
+  ShieldCheck,
   Scale
 } from 'lucide-react';
 
@@ -78,7 +78,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   // ==========================================
   {
     value: 'W2_WAGES',
-    label: 'W-2 Wage Statement (Employer)',
+    label: 'W-2 Wage Statement',
     shortLabel: 'W-2 Wages',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-blue-50',
@@ -87,7 +87,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_INT',
-    label: '1099-INT Bank Interest Statement',
+    label: '1099-INT Bank',
     shortLabel: '1099-INT',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-emerald-50',
@@ -96,7 +96,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_DIV',
-    label: '1099-DIV Dividends & Distributions',
+    label: '1099-DIV',
     shortLabel: '1099-DIV',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-emerald-50',
@@ -105,25 +105,25 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_INT_DIV',
-    label: '1099-INT / 1099-DIV Consolidated Interest & Dividends',
+    label: '1099-INT / 1099-DIV',
     shortLabel: '1099-INT/DIV',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-emerald-50',
     badgeText: 'text-emerald-700',
     badgeBorder: 'border-emerald-200',
   },
-  {
-    value: '1099_BROKERAGE',
-    label: '1099-B Brokerage & Stocks (Robinhood, ESPP, RSU)',
-    shortLabel: '1099-B Stocks',
-    docType: 'INDIVIDUAL',
-    badgeBg: 'bg-amber-50',
-    badgeText: 'text-amber-800',
-    badgeBorder: 'border-amber-200',
-  },
+  // {
+  //   value: '1099_BROKERAGE',
+  //   label: '1099-B Brokerage & Stocks (Robinhood, ESPP, RSU)',
+  //   shortLabel: '1099-B Stocks',
+  //   docType: 'INDIVIDUAL',
+  //   badgeBg: 'bg-amber-50',
+  //   badgeText: 'text-amber-800',
+  //   badgeBorder: 'border-amber-200',
+  // },
   {
     value: '1099_B',
-    label: '1099-B Capital Gains & Stock Sales',
+    label: '1099-B',
     shortLabel: '1099-B',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-amber-50',
@@ -132,25 +132,25 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1098_MORTGAGE',
-    label: '1098 Mortgage Interest Statement',
+    label: '1098',
     shortLabel: '1098 Mortgage',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-indigo-50',
     badgeText: 'text-indigo-700',
     badgeBorder: 'border-indigo-200',
   },
-  {
-    value: 'MORTGAGE_1098',
-    label: '1098 Mortgage Interest Statement (Home Loan)',
-    shortLabel: '1098 Mortgage',
-    docType: 'INDIVIDUAL',
-    badgeBg: 'bg-indigo-50',
-    badgeText: 'text-indigo-700',
-    badgeBorder: 'border-indigo-200',
-  },
+  // {
+  //   value: 'MORTGAGE_1098',
+  //   label: '1098 Mortgage Interest Statement (Home Loan)',
+  //   shortLabel: '1098 Mortgage',
+  //   docType: 'INDIVIDUAL',
+  //   badgeBg: 'bg-indigo-50',
+  //   badgeText: 'text-indigo-700',
+  //   badgeBorder: 'border-indigo-200',
+  // },
   {
     value: '1098_T_TUITION',
-    label: '1098-T Tuition Fees Statement (University / College)',
+    label: '1098-T',
     shortLabel: '1098-T Tuition',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-violet-50',
@@ -159,7 +159,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1098_E_STUDENT_LOAN',
-    label: '1098-E Student Loan Interest Statement',
+    label: '1098-E',
     shortLabel: '1098-E Loan',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-violet-50',
@@ -168,7 +168,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_R_RETIREMENT',
-    label: '1099-R Retirement, Annuity & 401(k) Distributions',
+    label: '1099-R',
     shortLabel: '1099-R 401k',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-indigo-50',
@@ -177,7 +177,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_R',
-    label: '1099-R Pension & IRA Distributions',
+    label: '1099-R',
     shortLabel: '1099-R',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-indigo-50',
@@ -186,7 +186,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_G_STATE_REFUND',
-    label: '1099-G State Refund / Unemployment Compensation',
+    label: '1099-G',
     shortLabel: '1099-G State',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-teal-50',
@@ -195,7 +195,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_SA_HSA',
-    label: '1099-SA HSA / Archer MSA Distributions',
+    label: '1099-SA',
     shortLabel: '1099-SA HSA',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-rose-50',
@@ -204,7 +204,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_OID',
-    label: '1099-OID Original Issue Discount',
+    label: '1099-OID',
     shortLabel: '1099-OID',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-emerald-50',
@@ -213,7 +213,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_C_DEBT',
-    label: '1099-C Cancellation of Debt',
+    label: '1099-C',
     shortLabel: '1099-C Debt',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-slate-50',
@@ -222,7 +222,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_Q_EDUCATION',
-    label: '1099-Q Payments from Qualified Education Programs (529)',
+    label: '1099-Q',
     shortLabel: '1099-Q 529',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-violet-50',
@@ -231,7 +231,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_HC_MA_HEALTH',
-    label: '1099-HC Massachusetts Health Insurance Statement',
+    label: '1099-HC',
     shortLabel: '1099-HC Health',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-pink-50',
@@ -240,7 +240,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1095_A_MARKETPLACE',
-    label: '1095-A / 1095-B / 1095-C Health Marketplace (ACA)',
+    label: '1095-A / 1095-B / 1095-C',
     shortLabel: '1095-A ACA',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-pink-50',
@@ -249,7 +249,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'W2_G_GAMBLING',
-    label: 'W-2G Certain Gambling Winnings',
+    label: 'W-2G',
     shortLabel: 'W-2G Gaming',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-yellow-50',
@@ -258,7 +258,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'STOCK_3921_3922',
-    label: 'Form 3921 / 3922 Employer Stock (ESPP / ISO Exercise)',
+    label: 'Form 3921 / 3922',
     shortLabel: '3921/3922 ESPP',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-amber-50',
@@ -303,7 +303,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'FORM_8879',
-    label: 'Form 8879 E-Sign Signature Form',
+    label: 'Form 8879',
     shortLabel: 'Form 8879 E-Sign',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-purple-50',
@@ -312,7 +312,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'DAYCARE_RECEIPTS',
-    label: 'Daycare Provider Statements / Receipts (Child Care)',
+    label: 'Daycare Provider Statements / Receipts',
     shortLabel: 'Daycare Receipts',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-emerald-50',
@@ -321,7 +321,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'SOLAR_ENERGY_INVOICE',
-    label: 'Clean Energy & Solar Invoices (Form 5695)',
+    label: 'Clean Energy & Solar Invoices',
     shortLabel: 'Solar Invoice',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-emerald-50',
@@ -330,7 +330,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'PROPERTY_TAX_RECEIPTS',
-    label: 'Property Tax Receipts (US County & India Municipal)',
+    label: 'Property Tax Receipts',
     shortLabel: 'Property Tax',
     docType: 'INDIVIDUAL',
     badgeBg: 'bg-indigo-50',
@@ -398,7 +398,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_MISC',
-    label: '1099-MISC / 1099-NEC Freelance & Contractor Income',
+    label: '1099-MISC / 1099-NEC',
     shortLabel: '1099-MISC/NEC',
     docType: 'BUSINESS',
     badgeBg: 'bg-orange-50',
@@ -407,7 +407,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_NEC',
-    label: '1099-NEC Nonemployee Compensation',
+    label: '1099-NEC',
     shortLabel: '1099-NEC',
     docType: 'BUSINESS',
     badgeBg: 'bg-orange-50',
@@ -416,7 +416,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: '1099_K_PAYMENTS',
-    label: '1099-K Payment Card & Third-Party Network (Stripe, PayPal)',
+    label: '1099-K',
     shortLabel: '1099-K Card',
     docType: 'BUSINESS',
     badgeBg: 'bg-amber-50',
@@ -425,7 +425,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'SCHEDULE_K1',
-    label: 'Schedule K-1 (Partnership / S-Corp / Estate Form 1065/1120-S)',
+    label: 'Schedule K-1',
     shortLabel: 'Schedule K-1',
     docType: 'BUSINESS',
     badgeBg: 'bg-blue-50',
@@ -434,7 +434,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'FORM_1120_CORP',
-    label: 'Form 1120 / 1120-S Corporate Tax Return',
+    label: 'Form 1120 / 1120-S',
     shortLabel: 'Form 1120 Corp',
     docType: 'BUSINESS',
     badgeBg: 'bg-blue-50',
@@ -443,7 +443,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'FORM_1065_PARTNERSHIP',
-    label: 'Form 1065 Partnership Tax Return',
+    label: 'Form 1065',
     shortLabel: 'Form 1065 Partner',
     docType: 'BUSINESS',
     badgeBg: 'bg-blue-50',
@@ -452,7 +452,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'BUSINESS_PNL_STATEMENT',
-    label: 'Business Profit & Loss Statement (P&L / Income Statement)',
+    label: 'Business Profit & Loss Statement',
     shortLabel: 'Business P&L',
     docType: 'BUSINESS',
     badgeBg: 'bg-emerald-50',
@@ -511,7 +511,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   // ==========================================
   {
     value: 'FBAR_FOREIGN',
-    label: 'FBAR FinCEN 114 Foreign Indian Bank Accounts',
+    label: 'FBAR FinCEN 114',
     shortLabel: 'FBAR FinCEN 114',
     docType: 'TAX_COMPLIANCE',
     badgeBg: 'bg-purple-50',
@@ -520,7 +520,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'FBAR_FINCEN_114',
-    label: 'FinCEN Form 114 FBAR Annual Report',
+    label: 'FinCEN Form 114',
     shortLabel: 'FBAR 114',
     docType: 'TAX_COMPLIANCE',
     badgeBg: 'bg-purple-50',
@@ -529,7 +529,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'FATCA_FORM_8938',
-    label: 'FATCA Form 8938 Specified Foreign Assets Statement',
+    label: 'FATCA Form 8938',
     shortLabel: 'FATCA 8938',
     docType: 'TAX_COMPLIANCE',
     badgeBg: 'bg-purple-50',
@@ -538,7 +538,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'INDIAN_NRE_NRO_STATEMENTS',
-    label: 'Indian Bank Statements (SBI / HDFC / ICICI NRE & NRO)',
+    label: 'Indian Bank Statements',
     shortLabel: 'NRE/NRO Bank',
     docType: 'TAX_COMPLIANCE',
     badgeBg: 'bg-violet-50',
@@ -556,7 +556,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'INDIAN_ITR_FORM_16',
-    label: 'Indian Income Tax Return (ITR) / Form 16 / Salary Slips',
+    label: 'Indian Income Tax Return',
     shortLabel: 'Indian ITR / Form 16',
     docType: 'TAX_COMPLIANCE',
     badgeBg: 'bg-emerald-50',
@@ -565,7 +565,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'INDIAN_26AS_AIS_TDS',
-    label: 'Indian Form 26AS, AIS (Annual Information) & TDS Certificates',
+    label: 'Indian Form 26AS, AIS',
     shortLabel: '26AS / AIS / TDS',
     docType: 'TAX_COMPLIANCE',
     badgeBg: 'bg-emerald-50',
@@ -624,7 +624,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   // ==========================================
   {
     value: 'IRS_NOTICE_AUDIT',
-    label: 'IRS Notice / Inquiry Letter (CP2000, CP501, Letter 525)',
+    label: 'IRS Notice / Inquiry Letter',
     shortLabel: 'IRS Notice',
     docType: 'TAX_AUDIT',
     badgeBg: 'bg-rose-50',
@@ -642,7 +642,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
   },
   {
     value: 'FORM_2848_POA',
-    label: 'Form 2848 Power of Attorney (CPA Representation)',
+    label: 'Form 2848 Power of Attorney',
     shortLabel: 'Form 2848 POA',
     docType: 'TAX_AUDIT',
     badgeBg: 'bg-indigo-50',
@@ -717,7 +717,7 @@ export const ALL_DOCUMENT_CATEGORIES: DocumentCategoryItem[] = [
     badgeText: 'text-indigo-700',
     badgeBorder: 'border-indigo-200',
   },
-];
+]
 
 /**
  * Maps any category code / string to its parent DocumentTypeId

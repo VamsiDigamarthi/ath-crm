@@ -20,7 +20,7 @@ export function UserProfile({ user, collapsed, theme, accentColor, onUserClick, 
           type="button"
           onClick={onLogout || onUserClick}
           className={cn(
-            'w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-black hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-xs font-bold border border-transparent hover:border-red-200',
+            'w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-black hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-xs font-medium border border-transparent hover:border-red-200',
             collapsed ? 'justify-center px-0 py-2' : '',
           )}
           title="Logout"

@@ -78,7 +78,7 @@ export const DocumenterLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
+    <div className="flex h-screen overflow-hidden bg-slate-100 font-sans">
       {/* Documenter Department Sidebar */}
       <AppSidebar
         width={240}
@@ -101,7 +101,7 @@ export const DocumenterLayout: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 min-w-0">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-100 min-w-0">
         {/* Top Header Bar */}
         <header className="h-16 flex items-center justify-end px-6 bg-white border-b border-slate-300 shrink-0 gap-3">
           <NotificationBellPopover />
