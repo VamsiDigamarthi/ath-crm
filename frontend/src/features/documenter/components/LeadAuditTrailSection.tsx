@@ -480,12 +480,12 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
   }, [filteredEvents, currentPage, itemsPerPage]);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+    <div className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">
       {/* 1. Header Bar */}
       <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col gap-3 bg-gradient-to-r from-slate-50/80 via-white to-slate-50/50">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
+            <div className="w-8 h-8 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
               <History className="w-4 h-4" />
             </div>
             <div className="flex items-center gap-2 flex-wrap">

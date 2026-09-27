@@ -153,5 +153,33 @@ export const documenterService = {
   }): Promise<any> {
     return apiClient.post('/documenter/leads/start-filing', payload);
   },
+
+  /**
+   * Fetch audit logs feed across all leads or scoped to a specific lead
+   */
+  async getAuditLogs(params?: {
+    page?: number;
+    limit?: number;
+    leadId?: string;
+    search?: string;
+    type?: string;
+    actorRole?: string;
+  }): Promise<{
+    success: boolean;
+    data: {
+      auditLogs: any[];
+      stageHistories: any[];
+      callLogs: any[];
+      stats: {
+        totalEvents: number;
+        systemAudits: number;
+        stageHandoffs: number;
+        outreachCalls: number;
+      };
+    };
+  }> {
+    return apiClient.get('/documenter/audit-logs', { params });
+  },
 };
+
 

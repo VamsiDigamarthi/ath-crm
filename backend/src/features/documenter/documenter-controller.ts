@@ -528,5 +528,28 @@ export const startFiling = async (
   }
 };
 
+export const getAuditLogsFeed = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { page, limit, leadId, search, type, actorRole } = req.query;
+    const data = await DocumenterService.getAuditLogsFeed({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      leadId: (leadId as string) || undefined,
+      search: (search as string) || undefined,
+      type: (type as string) || undefined,
+      actorRole: (actorRole as string) || undefined,
+    });
 
-
+    res.status(200).json({
+      success: true,
+      message: 'Audit logs feed fetched successfully',
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

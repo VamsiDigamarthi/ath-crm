@@ -232,7 +232,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
       // If interested in filing and application ID returned, navigate to 360 detail screen immediately!
       const createdAppId = res?.data?.createdApplicationId;
       if (payload.disposition === 'CONNECTED_INTERESTED' && createdAppId) {
-        navigate(`/documenter/agent/lead/${createdAppId}`);
+        navigate(`/documenter/agent/lead/${createdAppId}?from=queue`, { state: { from: 'agent_queue' } });
         return;
       }
 

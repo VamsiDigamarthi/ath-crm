@@ -2896,4 +2896,206 @@ export class DocumenterService {
 
     return app;
   }
+
+  /**
+   * Fetch global or scoped Audit Logs feed across leads
+   */
+  public static async getAuditLogsFeed(params: {
+    page?: number;
+    limit?: number;
+    leadId?: string;
+    search?: string;
+    type?: string;
+    actorRole?: string;
+  }) {
+    const auditWhere: any = {};
+    const stageWhere: any = {};
+    const callWhere: any = {};
+
+    if (params.leadId) {
+      auditWhere.applicationId = params.leadId;
+      stageWhere.applicationId = params.leadId;
+      callWhere.applicationId = params.leadId;
+    }
+
+    if (params.search) {
+      const s = params.search.trim();
+      auditWhere.OR = [
+        { actorName: { contains: s, mode: 'insensitive' } },
+        { moduleKey: { contains: s, mode: 'insensitive' } },
+        { application: { customer: { firstName: { contains: s, mode: 'insensitive' } } } },
+        { application: { customer: { lastName: { contains: s, mode: 'insensitive' } } } },
+        { application: { customer: { email: { contains: s, mode: 'insensitive' } } } },
+      ];
+      stageWhere.OR = [
+        { remarks: { contains: s, mode: 'insensitive' } },
+        { movedByUser: { firstName: { contains: s, mode: 'insensitive' } } },
+        { movedByUser: { lastName: { contains: s, mode: 'insensitive' } } },
+        { movedByUser: { email: { contains: s, mode: 'insensitive' } } },
+        { application: { customer: { firstName: { contains: s, mode: 'insensitive' } } } },
+        { application: { customer: { lastName: { contains: s, mode: 'insensitive' } } } },
+        { application: { customer: { email: { contains: s, mode: 'insensitive' } } } },
+      ];
+      callWhere.OR = [
+        { disposition: { contains: s, mode: 'insensitive' } },
+        { callSummary: { contains: s, mode: 'insensitive' } },
+        { agent: { firstName: { contains: s, mode: 'insensitive' } } },
+        { agent: { lastName: { contains: s, mode: 'insensitive' } } },
+        { application: { customer: { firstName: { contains: s, mode: 'insensitive' } } } },
+        { application: { customer: { lastName: { contains: s, mode: 'insensitive' } } } },
+        { application: { customer: { email: { contains: s, mode: 'insensitive' } } } },
+      ];
+    }
+
+    const [auditLogs, stageHistories, callLogs] = await Promise.all([
+      prisma.auditLog.findMany({
+        where: auditWhere,
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          actorUser: {
+            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          },
+          application: {
+            include: {
+              customer: {
+                select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.stageHistory.findMany({
+        where: stageWhere,
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          movedByUser: {
+            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          },
+          application: {
+            include: {
+              customer: {
+                select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.callLog.findMany({
+        where: callWhere,
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          agent: {
+            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+          },
+          application: {
+            include: {
+              customer: {
+                select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    const formattedAuditLogs = auditLogs.map((a) => {
+      const isClient = a.actorType === 'CLIENT' || 
+                       a.actorRole === 'TAXPAYER_USER' || 
+                       a.actorRole === 'CLIENT' ||
+                       (a.details as any)?.source === 'TAXPAYER_CLIENT_PORTAL' ||
+                       (a.details as any)?.source?.includes('CLIENT');
+
+      const clientName = `${a.application?.customer?.firstName || ''} ${a.application?.customer?.lastName || ''}`.trim() || a.application?.customer?.email || 'Taxpayer Client';
+      const clientEmail = (a.details as any)?.clientEmail || a.application?.customer?.email || a.actorUser?.email || '';
+
+      const staffName = a.actorUser 
+        ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email?.split('@')[0]
+        : 'System Actor';
+      const staffEmail = a.actorUser?.email || '';
+
+      return {
+        id: a.id,
+        applicationId: a.applicationId,
+        actorId: a.actorId,
+        actorType: a.actorType,
+        actorName: isClient ? (a.actorName && !a.actorName.includes('@') ? a.actorName : clientName) : (a.actorName || staffName),
+        actorEmail: isClient ? clientEmail : staffEmail,
+        actorRole: isClient ? 'CLIENT' : (a.actorRole || a.actorUser?.role || 'SYSTEM'),
+        action: a.action,
+        moduleKey: a.moduleKey,
+        details: a.details,
+        createdAt: a.createdAt.toISOString(),
+        taxpayerName: clientName,
+        taxpayerEmail: clientEmail,
+        taxYear: a.application?.taxYear,
+        currentStage: a.application?.currentStage,
+      };
+    });
+
+    const formattedStageHistories = stageHistories.map((s) => {
+      const isClient = s.movedByUser?.role === Role.TAXPAYER_USER;
+      const clientName = `${s.application?.customer?.firstName || ''} ${s.application?.customer?.lastName || ''}`.trim() || s.application?.customer?.email || 'Taxpayer Client';
+      const staffName = s.movedByUser 
+        ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email?.split('@')[0] 
+        : 'System';
+
+      return {
+        id: s.id,
+        applicationId: s.applicationId,
+        fromStage: s.fromStage,
+        toStage: s.toStage,
+        movedByUserId: s.movedByUserId,
+        movedByName: isClient ? clientName : staffName,
+        movedByEmail: isClient ? (s.application?.customer?.email || s.movedByUser?.email || '') : (s.movedByUser?.email || 'System'),
+        movedByRole: isClient ? 'CLIENT' : (s.movedByUser?.role || 'SYSTEM'),
+        remarks: s.remarks || `Stage transitioned from ${s.fromStage} to ${s.toStage}`,
+        createdAt: s.createdAt.toISOString(),
+        taxpayerName: clientName,
+        taxpayerEmail: s.application?.customer?.email,
+        taxYear: s.application?.taxYear,
+        currentStage: s.application?.currentStage,
+      };
+    });
+
+    const formattedCallLogs = callLogs.map((c) => {
+      const clientName = `${c.application?.customer?.firstName || ''} ${c.application?.customer?.lastName || ''}`.trim() || c.application?.customer?.email || 'Taxpayer Client';
+      const staffName = c.agent 
+        ? `${c.agent.firstName || ''} ${c.agent.lastName || ''}`.trim() || c.agent.email?.split('@')[0]
+        : 'Calling Agent';
+
+      return {
+        id: c.id,
+        applicationId: c.applicationId,
+        agentId: c.agentId,
+        agentName: staffName,
+        agentEmail: c.agent?.email || '',
+        agentRole: c.agent?.role || 'DOC_AGENT',
+        disposition: c.disposition,
+        subDisposition: c.subDisposition,
+        callSummary: c.callSummary,
+        callbackScheduledAt: c.callbackScheduledAt?.toISOString(),
+        callbackTimezone: c.callbackTimezone,
+        createdAt: c.createdAt.toISOString(),
+        taxpayerName: clientName,
+        taxpayerEmail: c.application?.customer?.email,
+        taxYear: c.application?.taxYear,
+        currentStage: c.application?.currentStage,
+      };
+    });
+
+    return {
+      auditLogs: formattedAuditLogs,
+      stageHistories: formattedStageHistories,
+      callLogs: formattedCallLogs,
+      stats: {
+        totalEvents: formattedAuditLogs.length + formattedStageHistories.length + formattedCallLogs.length,
+        systemAudits: formattedAuditLogs.length,
+        stageHandoffs: formattedStageHistories.length,
+        outreachCalls: formattedCallLogs.length,
+      },
+    };
+  }
 }

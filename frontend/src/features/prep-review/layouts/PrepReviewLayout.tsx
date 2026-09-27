@@ -38,14 +38,14 @@ export const PrepReviewLayout: React.FC = () => {
   const navItems = isManager
     ? [
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/prep-review/manager' },
-        { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: '1', path: '/prep-review/manager/queue' },
-        { id: 'staff', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', badge: '5', path: '/prep-review/manager/staff' },
+        { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', path: '/prep-review/manager/queue' },
+        { id: 'staff', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/prep-review/manager/staff' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/prep-review/notifications' },
       ]
     : [
         { id: 'specialist_hub', label: 'My Operations Hub', icon: LayoutDashboard, section: 'Specialist Workspace', path: '/prep-review/dashboard' },
-        { id: 'preparer', label: 'Preparer Workbench', icon: Calculator, section: 'Active Operations', badge: '1', path: '/prep-review/preparer' },
-        { id: 'reviewer', label: 'QA Audit Deck', icon: ShieldCheck, section: 'Active Operations', badge: '1', path: '/prep-review/reviewer' },
+        { id: 'preparer', label: 'Preparer Workbench', icon: Calculator, section: 'Active Operations', path: '/prep-review/preparer' },
+        { id: 'reviewer', label: 'QA Audit Deck', icon: ShieldCheck, section: 'Active Operations', path: '/prep-review/reviewer' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Specialist Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/prep-review/notifications' },
       ];
 

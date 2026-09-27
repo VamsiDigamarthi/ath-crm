@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   User, 
@@ -8,8 +8,6 @@ import {
   MapPin, 
   Briefcase, 
   ShieldCheck, 
-  PhoneCall, 
-  RefreshCw,
   FileCheck2,
   CheckCircle2,
   RotateCcw,
@@ -30,10 +28,8 @@ import { renderVisaBadge, renderStageBadge } from '../columns/documenter-columns
 import { TaxpayerCallHistoryTimeline } from '../components/TaxpayerCallHistoryTimeline';
 import { TaxPrepDraftCalculator } from '../components/prep/TaxPrepDraftCalculator';
 import type { TaxDraftComputation } from '../components/prep/TaxPrepDraftCalculator';
-import { TaxPrepDocumentVault } from '../components/prep/TaxPrepDocumentVault';
 import { TaxPrepOrganizerReview } from '../components/prep/TaxPrepOrganizerReview';
 import { DualRoleSalesPitchTab } from '../components/prep/DualRoleSalesPitchTab';
-import { LeadAuditTrailSection } from '../components/LeadAuditTrailSection';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
@@ -44,19 +40,18 @@ import toast from 'react-hot-toast';
 export const Taxpayer360DetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const {
     isAdmin,
     isAgent,
     agents,
-    isLoading: isWorkspaceLoading,
     refreshData,
     handleSaveCallDisposition,
   } = useDocumenterWorkspace();
 
-  const [activeTab, setActiveTab] = useState<'TIMELINE' | 'DOCUMENTS' | 'CALCULATOR' | 'ORGANIZER' | 'SALES_PITCH'>('TIMELINE');
+  const [activeTab, setActiveTab] = useState<'TIMELINE' | 'CALCULATOR' | 'ORGANIZER' | 'SALES_PITCH'>('TIMELINE');
   const [lead, setLead] = useState<DocumenterLeadItem | null>(null);
-  const [isLoadingLead, setIsLoadingLead] = useState<boolean>(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState<boolean>(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
   const [isMoveToPrepModalOpen, setIsMoveToPrepModalOpen] = useState<boolean>(false);
@@ -75,8 +70,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to load full lead details:', err);
-    } finally {
-      setIsLoadingLead(false);
     }
   };
 
@@ -230,7 +223,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
   const handleSwitchTaxYear = (targetAppId: string) => {
     if (targetAppId === (lead?.id || id)) return;
-    navigate(`/documenter/agent/lead/${targetAppId}`);
+    const searchStr = location.search || '';
+    navigate(`/documenter/agent/lead/${targetAppId}${searchStr}`, { state: location.state });
   };
 
   return (
@@ -319,41 +313,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             </Button>
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEmailModalOpen(true)}
-            className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            title="Compose and send official email to client"
-          >
-            <Mail className="w-3.5 h-3.5 text-blue-600" />
-            <span>Email Client</span>
-          </Button>
-
-          {!isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCallModalOpen(true)}
-              className="border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            >
-              <PhoneCall className="w-3.5 h-3.5 text-[#16A34A]" />
-              <span>Log Outreach Call</span>
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refreshData();
-              fetchLeadDetails();
-            }}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingLead || isWorkspaceLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </Button>
         </div>
       </div>
 
@@ -623,7 +582,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       <AppTabs
         tabs={[
           { id: 'TIMELINE', label: 'Call History & Outreach Timeline', count: callLogs.length },
-          { id: 'DOCUMENTS', label: 'Client Documents Vault', count: (lead?.documents || currentLead.documents || []).length },
           { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
           { id: 'ORGANIZER', label: 'Tax Organizer' },
           ...(isDualRole ? [{ id: 'SALES_PITCH', label: 'Sales Pitch & Pricing' }] : []),
@@ -643,20 +601,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           />
         )}
 
-        {activeTab === 'DOCUMENTS' && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
-            <TaxPrepDocumentVault
-              leadId={currentLead.id}
-              applicationId={currentLead.id}
-              customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
-              customerEmail={customer.email || (currentLead.taxpayerEmail as string) || undefined}
-              documents={(lead?.documents || currentLead.documents || []) as any}
-              onDocumentVerified={fetchLeadDetails}
-              onDocumentUploaded={fetchLeadDetails}
-            />
-          </div>
-        )}
-
         {activeTab === 'CALCULATOR' && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
             <TaxPrepDraftCalculator
@@ -671,14 +615,12 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         )}
 
         {activeTab === 'ORGANIZER' && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
-            <TaxPrepOrganizerReview
-              leadId={currentLead.id}
-              customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
-              taxDraftSummary={currentLead.taxDraftSummary}
-              onOrganizerSaved={fetchLeadDetails}
-            />
-          </div>
+          <TaxPrepOrganizerReview
+            leadId={currentLead.id}
+            customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+            taxDraftSummary={currentLead.taxDraftSummary}
+            onOrganizerSaved={fetchLeadDetails}
+          />
         )}
 
         {activeTab === 'SALES_PITCH' && isDualRole && (
@@ -692,19 +634,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             onSwitchToWorksheet={() => setActiveTab('CALCULATOR')}
           />
         )}
-      </div>
-
-      {/* 5. Persistent Bottom Lead Audit & Lifecycle Activity Section (Always Visible) */}
-      <div className="mt-8 pt-6 border-t border-slate-200">
-        <LeadAuditTrailSection
-          stageHistories={lead?.stageHistories || lead?.stageHistory || []}
-          auditLogs={lead?.auditLogs || []}
-          callLogs={callLogs}
-          leadId={currentLead.id}
-          taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
-          taxpayerEmail={(customer.email || currentLead.customer?.email) ?? undefined}
-          currentStage={currentLead.currentStage}
-        />
       </div>
 
       {/* 5. Call Outreach Modal for Logging Conversations */}

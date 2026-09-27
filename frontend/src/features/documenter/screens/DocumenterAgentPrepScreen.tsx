@@ -64,7 +64,8 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
 
           return (
             <Link
-              to={`/documenter/agent/lead/${item.id}`}
+              to={`/documenter/agent/lead/${item.id}?from=documents`}
+              state={{ from: 'agent_documents' }}
               className="flex items-center gap-3 group text-left cursor-pointer min-w-0"
               title="View Client Documents & 360 File"
             >
@@ -175,7 +176,7 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(`/documenter/agent/lead/${item.id}`)}
+            onClick={() => navigate(`/documenter/agent/lead/${item.id}?from=documents`, { state: { from: 'agent_documents' } })}
             className="border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-[#16A34A] text-xs font-bold flex items-center gap-1.5 cursor-pointer ml-auto shadow-2xs h-8 px-3 rounded-lg transition-all"
           >
             <Eye className="w-3.5 h-3.5" />
