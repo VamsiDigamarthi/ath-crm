@@ -24,6 +24,7 @@ import { DocumenterAgentQueueScreen } from '@/features/documenter/screens/Docume
 import { DocumenterAgentCallbacksScreen } from '@/features/documenter/screens/DocumenterAgentCallbacksScreen';
 import { DocumenterAgentPrepScreen } from '@/features/documenter/screens/DocumenterAgentPrepScreen';
 import { Taxpayer360DetailScreen } from '@/features/documenter/screens/Taxpayer360DetailScreen';
+import { AuditLogsScreen } from '@/features/documenter/screens/AuditLogsScreen';
 import { DocumenterLayout } from '@/features/documenter/layouts/DocumenterLayout';
 import { PrepReviewLayout } from '@/features/prep-review/layouts/PrepReviewLayout';
 import { PrepManagerDashboardScreen } from '@/features/prep-review/screens/PrepManagerDashboardScreen';
@@ -310,6 +311,18 @@ export const router = createBrowserRouter([
           {
             path: 'agent/prep',
             element: <Navigate to="/documenter/agent/documents" replace />,
+          },
+          {
+            path: 'manager/audit-logs',
+            element: <AuditLogsScreen />,
+          },
+          {
+            path: 'agent/audit-logs',
+            element: <AuditLogsScreen />,
+          },
+          {
+            path: 'audit-logs',
+            element: <AuditLogsScreen />,
           },
           {
             path: 'agent/lead/:id',

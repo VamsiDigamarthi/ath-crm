@@ -213,7 +213,8 @@ export const getDocumenterColumns = ({
 
         return (
           <Link
-            to={`/documenter/agent/lead/${item.id}`}
+            to={`/documenter/agent/lead/${item.id}?from=queue`}
+            state={{ from: 'agent_queue' }}
             className="flex items-center gap-3 group text-left cursor-pointer min-w-0"
             title="View Lead Details & Call History"
           >
@@ -493,7 +494,8 @@ export const getDocumenterColumns = ({
         return (
           <div className="flex items-center justify-end gap-1.5">
             <Link
-              to={`/documenter/agent/lead/${item.id}`}
+              to={`/documenter/agent/lead/${item.id}?from=queue`}
+              state={{ from: 'agent_queue' }}
               className="h-8 px-2.5 rounded-lg text-xs font-semibold border border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
               title="View Lead Details & Call History"
             >

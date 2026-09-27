@@ -18,6 +18,7 @@ import {
   updateLeadPriority,
   requestMissingDocuments,
   startFiling,
+  getAuditLogsFeed,
 } from './documenter-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
@@ -48,6 +49,14 @@ router.get(
   requireAuth,
   authorize(...DOCUMENTER_ROLES),
   getDocumenterLeads
+);
+
+// 1a. Get audit logs feed (scoped or cross-lead)
+router.get(
+  '/audit-logs',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  getAuditLogsFeed
 );
 
 // 1b. Get single lead full 360 details with all historical call logs
