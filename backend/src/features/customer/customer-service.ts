@@ -1022,11 +1022,13 @@ export class CustomerService {
   /**
    * Client-initiated: Start a new Tax Year return directly from client portal
    */
-  static async startTaxYearReturn(userId: string, taxYearInput: number | string) {
+  static async startTaxYearReturn(userId: string, taxYearInput: number | string, filingTypeInput?: string) {
     const taxYear = parseInt(taxYearInput.toString(), 10);
     if (isNaN(taxYear) || taxYear < 2000 || taxYear > 2100) {
       throw new BadRequestError('Please provide a valid 4-digit Tax Year (between 2000 and 2100)');
     }
+
+    const filingType = filingTypeInput === 'BUSINESS' ? 'BUSINESS' : 'INDIVIDUAL';
 
     const profile = await prisma.customerProfile.findFirst({
       where: { userId },
@@ -1041,10 +1043,12 @@ export class CustomerService {
       throw new NotFoundError('Taxpayer customer profile not found');
     }
 
-    // Check if an application for this tax year already exists
-    const existing = profile.applications.find((a) => a.taxYear === taxYear);
+    // Check if an application for this tax year and filing type already exists
+    const existing = profile.applications.find(
+      (a) => a.taxYear === taxYear && (a.filingType === filingType || (!a.filingType && filingType === 'INDIVIDUAL'))
+    );
     if (existing) {
-      throw new BadRequestError(`A filing application for Tax Year ${taxYear} already exists in your account.`);
+      throw new BadRequestError(`A ${filingType === 'BUSINESS' ? 'Business' : 'Individual'} filing application for Tax Year ${taxYear} already exists in your account.`);
     }
 
     // Carry forward basic demographics from prior application or profile
@@ -1068,14 +1072,14 @@ export class CustomerService {
       visaType: profile.visaType || priorDraft.visaType || 'Standard',
       maritalStatus: profile.maritalStatus || priorDraft.maritalStatus || 'Single',
       bankDetails: priorDraft.bankDetails || null,
-      notes: `Taxpayer client self-initiated new Tax Year ${taxYear} filing via client portal. Awaiting Admin assignment.`,
+      notes: `Taxpayer client self-initiated new ${filingType === 'BUSINESS' ? 'Business' : 'Individual'} Tax Year ${taxYear} filing via client portal. Awaiting Admin assignment.`,
     };
 
     const newApplication = await prisma.taxApplication.create({
       data: {
         customerId: profile.id,
         taxYear,
-        filingType: 'INDIVIDUAL',
+        filingType,
         currentStage: ApplicationStage.RAW_PROSPECT,
         priority: ApplicationPriority.HIGH,
         assignedDocAgentId: null,
@@ -1085,7 +1089,7 @@ export class CustomerService {
             fromStage: null,
             toStage: ApplicationStage.RAW_PROSPECT,
             movedByUserId: userId,
-            remarks: `Client self-initiated Tax Year ${taxYear} filing via Client Portal. Inbound lead in Direct Sign-ups queue.`,
+            remarks: `Client self-initiated ${filingType === 'BUSINESS' ? 'Business' : 'Individual'} Tax Year ${taxYear} filing via Client Portal. Inbound lead in Direct Sign-ups queue.`,
           },
         },
         auditLogs: {
@@ -1098,6 +1102,7 @@ export class CustomerService {
             moduleKey: 'CLIENT_NEW_TAX_YEAR',
             details: {
               taxYear,
+              filingType,
               channel: 'SELF_SERVICE_PORTAL',
               source: 'SELF_SIGNUP',
               isRetainedClient: true,
@@ -1113,8 +1118,8 @@ export class CustomerService {
         data: {
           targetRole: Role.ADMIN,
           applicationId: newApplication.id,
-          title: `Client Self-Added Tax Year ${taxYear}`,
-          message: `${profile.firstName} ${profile.lastName} (${profile.phone}) started a new Tax Year ${taxYear} filing. Ready in Direct Sign-ups queue for agent assignment.`,
+          title: `Client Self-Added ${filingType === 'BUSINESS' ? 'Business' : 'Individual'} Tax Year ${taxYear}`,
+          message: `${profile.firstName} ${profile.lastName} (${profile.phone}) started a new ${filingType === 'BUSINESS' ? 'Business' : 'Individual'} Tax Year ${taxYear} filing. Ready in Direct Sign-ups queue for agent assignment.`,
           category: NotificationCategory.DOCUMENTER,
           priority: NotificationPriority.HIGH,
           actionUrl: '/admin/self-signups',
@@ -1127,8 +1132,8 @@ export class CustomerService {
         data: {
           targetRole: Role.DOC_MANAGER,
           applicationId: newApplication.id,
-          title: `New Return: ${profile.firstName} ${profile.lastName} (TY ${taxYear})`,
-          message: `Taxpayer initiated Tax Year ${taxYear} return. Waiting for Admin lead assignment in Direct Sign-ups.`,
+          title: `New Return: ${profile.firstName} ${profile.lastName} (${filingType === 'BUSINESS' ? 'Business' : 'Individual'} TY ${taxYear})`,
+          message: `Taxpayer initiated ${filingType === 'BUSINESS' ? 'Business' : 'Individual'} Tax Year ${taxYear} return. Waiting for Admin lead assignment in Direct Sign-ups.`,
           category: NotificationCategory.DOCUMENTER,
           priority: NotificationPriority.NORMAL,
           actionUrl: '/admin/self-signups',
@@ -1156,7 +1161,7 @@ export class CustomerService {
       application: newApplication,
       applications: updatedApplications,
       taxYear: newApplication.taxYear,
-      message: `Tax Year ${taxYear} return initiated! Admin has been notified to assign your Documenter agent.`,
+      message: `${filingType === 'BUSINESS' ? 'Business' : 'Individual'} Tax Year ${taxYear} return initiated! Admin has been notified to assign your Documenter agent.`,
     };
   }
 }

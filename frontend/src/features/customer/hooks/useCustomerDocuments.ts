@@ -34,8 +34,17 @@ export const isDriveLinkDoc = (doc: CustomerDocumentItem): boolean => {
   );
 };
 
-export const useCustomerDocuments = (taxYearParam?: string) => {
-  const [selectedYear, setSelectedYear] = useState<string>(taxYearParam || '2025');
+export const useCustomerDocuments = (taxYearParam?: string | number) => {
+  const [selectedYear, setSelectedYear] = useState<string>(
+    taxYearParam ? taxYearParam.toString() : '2025'
+  );
+
+  useEffect(() => {
+    if (taxYearParam) {
+      const yrStr = taxYearParam.toString();
+      setSelectedYear((current) => (current !== yrStr ? yrStr : current));
+    }
+  }, [taxYearParam]);
   const [data, setData] = useState<CustomerDocumentsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);

@@ -200,8 +200,8 @@ export const customerApi = {
     return res;
   },
 
-  startTaxYearReturn: async (taxYear: number): Promise<{ success: boolean; data: any; message: string }> => {
-    const res: any = await apiClient.post('/customer/tax-years', { taxYear });
+  startTaxYearReturn: async (taxYear: number, filingType: 'INDIVIDUAL' | 'BUSINESS' = 'INDIVIDUAL'): Promise<{ success: boolean; data: any; message: string }> => {
+    const res: any = await apiClient.post('/customer/tax-years', { taxYear, filingType });
     return res;
   },
 };
@@ -315,7 +315,20 @@ export interface OrganizerData {
       rentedDate?: string;
       costOfProperty: number;
       totalRentalIncome: number;
+      otherRentalIncome?: number;
       rentalExpenses: number;
+      mortgageInterest?: number;
+      propertyTaxes?: number;
+      insurance?: number;
+      repairs?: number;
+      hoaFees?: number;
+      managementFees?: number;
+      utilities?: number;
+      advertising?: number;
+      cleaning?: number;
+      legalFees?: number;
+      otherExpenses?: number;
+      otherExpensesDesc?: string;
     }>;
   };
   m4_wages: {
@@ -341,7 +354,20 @@ export interface OrganizerData {
       rentedDate?: string;
       costOfProperty: number;
       totalRentalIncome: number;
+      otherRentalIncome?: number;
       rentalExpenses: number;
+      mortgageInterest?: number;
+      propertyTaxes?: number;
+      insurance?: number;
+      repairs?: number;
+      hoaFees?: number;
+      managementFees?: number;
+      utilities?: number;
+      advertising?: number;
+      cleaning?: number;
+      legalFees?: number;
+      otherExpenses?: number;
+      otherExpensesDesc?: string;
     }>;
   };
   m5_interest: {

@@ -9,8 +9,8 @@ const THEMES: Record<'light' | 'dark', SidebarTheme> = {
   light: {
     bg:           'bg-white',
     border:       'border-slate-300',
-    text:         'text-black font-semibold',
-    textMuted:    'text-black/80',
+    text:         'text-black font-normal',
+    textMuted:    'text-black/70 font-normal',
     hover:        'hover:bg-slate-100 hover:text-black',
     sectionLabel: 'text-black font-bold uppercase tracking-wider text-[10px]',
     divider:      'border-slate-200',

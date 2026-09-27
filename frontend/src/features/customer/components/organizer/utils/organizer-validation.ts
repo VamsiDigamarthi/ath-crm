@@ -941,6 +941,9 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
         isModuleCompleted('m8', organizerData)
       );
     }
+    case 'm_vault': {
+      return false;
+    }
     default:
       return false;
   }

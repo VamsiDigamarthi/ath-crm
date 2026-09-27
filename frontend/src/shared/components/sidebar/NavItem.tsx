@@ -59,7 +59,8 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
   const itemStyle = isActive ? activeStyleMap[activeStyle] : {}
 
   const itemClassName = cn(
-    'w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer',
+    'w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-all duration-150 cursor-pointer',
+    isActive ? 'font-bold' : 'font-normal',
     activeStyle === 'bar' ? 'pl-3 border-l-[3px] border-transparent' : '',
     isActive ? activeClasses[activeStyle] : cn('border-transparent', theme.hover, theme.text),
     collapsed ? 'justify-center px-0' : '',
@@ -86,7 +87,7 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
         style={isActive ? { color: '#ffffff' } : undefined}
       />
       {!collapsed && (
-        <span className={cn('flex-1 text-left truncate', isActive ? 'text-white font-bold' : 'text-black font-semibold')}>
+        <span className={cn('flex-1 text-left truncate', isActive ? 'text-white font-bold' : 'text-black font-normal')}>
           {item.label}
         </span>
       )}

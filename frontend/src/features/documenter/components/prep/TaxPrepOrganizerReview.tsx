@@ -199,7 +199,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const m9 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m9_directDeposit || {};
 
   const modulesList = [
-    { id: 'm1', number: 1, title: 'Personal Info, Visa & Marriage', label: 'Personal Info & Visa', icon: User, section: 'Demographics & Family' },
+    { id: 'm1', number: 1, title: 'General Information', label: 'General Information', icon: User, section: 'Demographics & Family' },
     { id: 'm2', number: 2, title: 'Spouse, Dependents & Daycare', label: 'Spouse & Dependents', icon: Users, section: 'Demographics & Family' },
     { id: 'm3', number: 3, title: 'State of Residency & Multi-State', label: 'STATE OF RESIDENCY', icon: Globe, section: 'Residency & Visa' },
     { id: 'm7', number: 4, title: 'FBAR / FATCA & Indian Income (INR)', label: 'FBAR & FATCA', icon: ShieldCheck, section: 'Foreign & FBAR' },

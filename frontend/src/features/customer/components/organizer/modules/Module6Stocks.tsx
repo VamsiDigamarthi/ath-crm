@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, DollarSign, Plus, Trash2, Building2 } from 'lucide-react';
+import { DollarSign, Plus, Trash2, TrendingUp } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppInput } from '@/shared/components/AppInput';
 import { type OrganizerData } from '../../../services/customer-api';
@@ -22,141 +22,88 @@ export const Module6Stocks: React.FC<Module6Props> = ({
 }) => {
   const d = (data || {}) as Partial<OrganizerData['m6_stocks']>;
   const stockList = d.stocksList || [];
-  const [isOpenStocks, setIsOpenStocks] = React.useState<boolean>(false);
+
+  const handleAddBroker = () => {
+    const updated = [
+      ...stockList,
+      {
+        brokerName: '',
+        taxpayerGainLoss: 0,
+        spouseGainLoss: 0,
+        shortTermGainLoss: 0,
+        longTermGainLoss: 0,
+        totalProceeds: 0,
+      },
+    ];
+    updateField('stocksList', updated);
+  };
+
+  const handleRemoveBroker = (idx: number) => {
+    const updated = stockList.filter((_, i) => i !== idx);
+    updateField('stocksList', updated);
+  };
+
+  const handleBrokerChange = (idx: number, field: string, val: any) => {
+    const list = [...stockList];
+    list[idx] = { ...list[idx], [field]: val };
+    updateField('stocksList', list);
+    if (clearError) clearError(`stocks_${idx}_${field}`);
+  };
 
   return (
     <div className="space-y-6 font-sans">
-      <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
-        <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-        <div>
-          <strong>1099-B Brokerage, ESPP/RSU &amp; Capital Loss Carryforwards (Optional):</strong> The IRS matches 1099-B proceeds directly against broker records. Report all trading accounts (Robinhood, Fidelity, E*TRADE, Charles Schwab, Zerodha), employer stock forms (Form 3921 &amp; 3922), and separate gains/losses for Taxpayer and Spouse.
-        </div>
-      </div>
-
-      {/* Dynamic Multi-Brokerage Accounts Table */}
-      {!isOpenStocks ? (
-        /* Collapsed State (Default): Heading at left, Add Button at right */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-emerald-600" />
-                <span>Brokerage Accounts &amp; 1099-B Statements</span>
-                {stockList.length > 0 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                    {stockList.length} Added
-                  </span>
-                )}
-              </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">Add each brokerage platform traded during {selectedTaxYear}</p>
-            </div>
-
-            <Button
-              size="sm"
-              variant="outline"
-              type="button"
-              onClick={() => {
-                setIsOpenStocks(true);
-                if (stockList.length === 0) {
-                  const updated = [
-                    {
-                      brokerName: '',
-                      taxpayerGainLoss: 0,
-                      spouseGainLoss: 0,
-                      shortTermGainLoss: 0,
-                      longTermGainLoss: 0,
-                      totalProceeds: 0,
-                    },
-                  ];
-                  updateField('stocksList', updated);
-                }
-              }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{stockList.length > 0 ? 'View / Edit Brokerages' : 'Add Brokerage'}</span>
-            </Button>
-          </div>
-        </div>
-      ) : (
-        /* Open State: Header with Count + Add Button, List of Brokerages */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-emerald-600" />
-                <span>Brokerage Accounts &amp; 1099-B Statements</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+      {/* 1. Brokerage Accounts List */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+          <div>
+            <h5 className="text-xs font-semibold text-gray-700 tracking-tight flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-[#16A34A]" />
+              <span>Brokerage Accounts &amp; 1099-B Statements</span>
+              {stockList.length > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] font-medium border border-emerald-200">
                   {stockList.length} Added
                 </span>
-              </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">Add each brokerage platform traded during {selectedTaxYear}</p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                type="button"
-                onClick={() => {
-                  const updated = [
-                    ...stockList,
-                    {
-                      brokerName: '',
-                      taxpayerGainLoss: 0,
-                      spouseGainLoss: 0,
-                      shortTermGainLoss: 0,
-                      longTermGainLoss: 0,
-                      totalProceeds: 0,
-                    },
-                  ];
-                  updateField('stocksList', updated);
-                }}
-                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Another Brokerage</span>
-              </Button>
-              <button
-                type="button"
-                onClick={() => setIsOpenStocks(false)}
-                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
-              >
-                Close
-              </button>
-            </div>
+              )}
+            </h5>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Add each brokerage account or crypto exchange traded during {selectedTaxYear}
+            </p>
           </div>
 
-          <div className="space-y-4">
+          <Button
+            size="sm"
+            type="button"
+            onClick={handleAddBroker}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs px-3 py-1.5 rounded-md flex items-center gap-1 cursor-pointer shadow-2xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>{stockList.length > 0 ? 'Add Another Brokerage' : 'Add Brokerage Account'}</span>
+          </Button>
+        </div>
+
+        {stockList.length > 0 && (
+          <div className="space-y-6">
             {stockList.map((broker, idx) => (
-              <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                  <span className="text-xs font-bold text-slate-900">Brokerage Account #{idx + 1}</span>
+              <div key={idx} className="space-y-3 pt-1 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-700">Brokerage Statement #{idx + 1}</span>
                   <button
                     type="button"
-                    onClick={() => {
-                      const list = stockList.filter((_, i) => i !== idx);
-                      updateField('stocksList', list);
-                    }}
-                    className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
+                    onClick={() => handleRemoveBroker(idx)}
+                    className="text-xs text-rose-600 hover:text-rose-800 font-medium flex items-center gap-1 cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Remove</span>
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <AppInput
-                    label="Brokerage / Institution Name *"
-                    placeholder="e.g. Robinhood / Fidelity / E*TRADE"
-                    error={errors[`stock_${idx}_brokerName`]}
-                    value={broker.brokerName}
-                    onChange={(e) => {
-                      const list = [...stockList];
-                      list[idx].brokerName = e.target.value;
-                      updateField('stocksList', list);
-                      if (clearError) clearError(`stock_${idx}_brokerName`);
-                    }}
+                    label="Broker / Institution Name *"
+                    placeholder="e.g. Robinhood / Fidelity / Schwab / E*Trade"
+                    error={errors[`stocks_${idx}_brokerName`]}
+                    value={broker.brokerName || ''}
+                    onChange={(e) => handleBrokerChange(idx, 'brokerName', e.target.value)}
                   />
 
                   <AppInput
@@ -165,11 +112,7 @@ export const Module6Stocks: React.FC<Module6Props> = ({
                     placeholder="e.g. 2400 (or -850)"
                     leftIcon={<DollarSign className="w-4 h-4" />}
                     value={broker.taxpayerGainLoss ? broker.taxpayerGainLoss.toString() : ''}
-                    onChange={(e) => {
-                      const list = [...stockList];
-                      list[idx].taxpayerGainLoss = parseFloat(e.target.value) || 0;
-                      updateField('stocksList', list);
-                    }}
+                    onChange={(e) => handleBrokerChange(idx, 'taxpayerGainLoss', parseFloat(e.target.value) || 0)}
                   />
 
                   <AppInput
@@ -178,11 +121,7 @@ export const Module6Stocks: React.FC<Module6Props> = ({
                     placeholder="e.g. 1200 (or -350)"
                     leftIcon={<DollarSign className="w-4 h-4" />}
                     value={broker.spouseGainLoss ? broker.spouseGainLoss.toString() : ''}
-                    onChange={(e) => {
-                      const list = [...stockList];
-                      list[idx].spouseGainLoss = parseFloat(e.target.value) || 0;
-                      updateField('stocksList', list);
-                    }}
+                    onChange={(e) => handleBrokerChange(idx, 'spouseGainLoss', parseFloat(e.target.value) || 0)}
                   />
 
                   <AppInput
@@ -191,11 +130,7 @@ export const Module6Stocks: React.FC<Module6Props> = ({
                     placeholder="e.g. 1500"
                     leftIcon={<DollarSign className="w-4 h-4" />}
                     value={broker.shortTermGainLoss ? broker.shortTermGainLoss.toString() : ''}
-                    onChange={(e) => {
-                      const list = [...stockList];
-                      list[idx].shortTermGainLoss = parseFloat(e.target.value) || 0;
-                      updateField('stocksList', list);
-                    }}
+                    onChange={(e) => handleBrokerChange(idx, 'shortTermGainLoss', parseFloat(e.target.value) || 0)}
                   />
 
                   <AppInput
@@ -204,11 +139,7 @@ export const Module6Stocks: React.FC<Module6Props> = ({
                     placeholder="e.g. 3200"
                     leftIcon={<DollarSign className="w-4 h-4" />}
                     value={broker.longTermGainLoss ? broker.longTermGainLoss.toString() : ''}
-                    onChange={(e) => {
-                      const list = [...stockList];
-                      list[idx].longTermGainLoss = parseFloat(e.target.value) || 0;
-                      updateField('stocksList', list);
-                    }}
+                    onChange={(e) => handleBrokerChange(idx, 'longTermGainLoss', parseFloat(e.target.value) || 0)}
                   />
 
                   <AppInput
@@ -217,29 +148,31 @@ export const Module6Stocks: React.FC<Module6Props> = ({
                     placeholder="e.g. 65000"
                     leftIcon={<DollarSign className="w-4 h-4" />}
                     value={broker.totalProceeds ? broker.totalProceeds.toString() : ''}
-                    onChange={(e) => {
-                      const list = [...stockList];
-                      list[idx].totalProceeds = parseFloat(e.target.value) || 0;
-                      updateField('stocksList', list);
-                    }}
+                    onChange={(e) => handleBrokerChange(idx, 'totalProceeds', parseFloat(e.target.value) || 0)}
                   />
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Direct Summary: Capital Gains & Prior Year Loss Carryforward */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
-          <DollarSign className="w-4 h-4 text-indigo-600" />
-          <span>Direct Summary: Capital Gains &amp; Prior Year Loss Carryforward</span>
-        </h4>
+      {/* 2. Direct Summary: Capital Gains & Prior Year Loss Carryforward */}
+      <div className="space-y-3 pt-2 border-t border-slate-100">
+        <div>
+          <h5 className="text-xs font-semibold text-gray-700 tracking-tight flex items-center gap-1.5">
+            <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Direct Summary: Capital Gains &amp; Prior Year Loss Carryforward</span>
+          </h5>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Provide annual aggregate capital gains and prior year carryforward losses
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-3.5 rounded-xl border border-emerald-100 bg-emerald-50/40 space-y-3">
-            <span className="text-xs font-bold text-emerald-900 block border-b border-emerald-200 pb-1">
+          {/* Primary Taxpayer */}
+          <div className="space-y-3">
+            <span className="text-xs font-semibold text-gray-700 block border-b border-slate-200 pb-1">
               Primary Taxpayer
             </span>
 
@@ -286,8 +219,9 @@ export const Module6Stocks: React.FC<Module6Props> = ({
             />
           </div>
 
-          <div className="p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/40 space-y-3">
-            <span className="text-xs font-bold text-indigo-900 block border-b border-indigo-200 pb-1">
+          {/* Spouse (Joint Filer) */}
+          <div className="space-y-3">
+            <span className="text-xs font-semibold text-gray-700 block border-b border-slate-200 pb-1">
               Spouse (Joint Filer)
             </span>
 
@@ -332,11 +266,11 @@ export const Module6Stocks: React.FC<Module6Props> = ({
         </div>
       </div>
 
-      {/* ESPP / RSU / Crypto Notice */}
-      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs text-slate-600">
-        <span className="font-bold text-slate-800 block">Employer Stock Forms (ESPP / RSU / Form 3921 / Form 3922):</span>
-        <p>
-          If you exercised incentive stock options or sold vested RSUs with disqualifying dispositions, please upload Form 3921 / Form 3922 into the Document Vault for cost-basis adjustment to prevent double taxation on W-2 wages.
+      {/* 3. ESPP / RSU / Crypto Notice */}
+      <div className="space-y-2 pt-2 border-t border-slate-100">
+        <span className="text-xs font-semibold text-gray-700 block">Employer Stock &amp; Crypto Dispositions (ESPP / RSU / Form 3921 / Form 3922):</span>
+        <p className="text-[11px] text-slate-500">
+          If you exercised incentive stock options or sold vested RSUs with disqualifying dispositions, upload Form 3921 / Form 3922 into Documents for cost-basis adjustment.
         </p>
         <AppInput
           label="Additional Details on Stock / Crypto Dispositions"

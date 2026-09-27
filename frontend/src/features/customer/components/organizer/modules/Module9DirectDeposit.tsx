@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, CreditCard, FileText, Gift, Plus, Trash2 } from 'lucide-react';
+import { Building2, CreditCard, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppInput } from '@/shared/components/AppInput';
 import { AppSelect } from '@/shared/components/AppSelect';
@@ -26,13 +26,6 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
 
   return (
     <div className="space-y-6 font-sans">
-      <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 flex items-start gap-2.5">
-        <Building2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
-        <div>
-          <strong>Direct Deposit of Refund / Auto-Debit of Taxes Due:</strong> Providing your electronic routing &amp; checking account number allows the IRS to send your refund directly within 14-21 days.
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <AppInput
           label="Bank Name *"
@@ -59,7 +52,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
         </div>
 
         <AppInput
-          label="9-Digit Routing Number (Electronic Only) *"
+          label="9-Digit Routing Number *"
           placeholder="e.g. 111000614"
           leftIcon={<CreditCard className="w-4 h-4" />}
           error={errors.routingNumber}
@@ -99,8 +92,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
 
       {/* Notes to Tax Preparer */}
       <div className="space-y-3 pt-3 border-t border-slate-100">
-        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-          <FileText className="w-4 h-4 text-indigo-600" />
+        <h4 className="text-xs font-semibold text-gray-700">
           <span>Notes to Tax Preparer &amp; Contact Preference</span>
         </h4>
 
@@ -186,28 +178,22 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
         /* Collapsed State (Default): Heading at left, Add Button at right */
         <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-md bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold shrink-0">
-                <Gift className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-black flex items-center gap-1.5">
-                  <span>Earn $10 for Every Friend / Colleague You Refer! 🎁</span>
-                  {referrals.length > 0 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                      {referrals.length} Added
-                    </span>
-                  )}
-                </h4>
-                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
-                  Share your colleagues&apos; or friends&apos; contact details. When they file with us, we will honor you with $10 per paid referral.
-                </p>
-              </div>
+            <div>
+              <h4 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                <span>Earn $10 for Every Friend / Colleague You Refer! 🎁</span>
+                {referrals.length > 0 && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] font-medium border border-emerald-200">
+                    {referrals.length} Added
+                  </span>
+                )}
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Share your colleagues&apos; or friends&apos; contact details. When they file with us, we will honor you with $10 per paid referral.
+              </p>
             </div>
 
             <Button
               size="sm"
-              variant="outline"
               type="button"
               onClick={() => {
                 setIsOpenReferrals(true);
@@ -216,7 +202,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
                   updateField('referrals', list);
                 }
               }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 shrink-0 cursor-pointer rounded-md"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium px-3 py-1.5 rounded-md flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{referrals.length > 0 ? 'View / Edit Referrals' : 'Add Referral'}</span>
@@ -227,33 +213,27 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
         /* Open State: Header with Count + Add Button, List of Referrals */
         <div className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-md bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold shrink-0">
-                <Gift className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-black flex items-center gap-1.5">
-                  <span>Earn $10 for Every Friend / Colleague You Refer! 🎁</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
-                    {referrals.length} Added
-                  </span>
-                </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Share your colleagues&apos; or friends&apos; contact details. When they file with us, we will honor you with $10 per paid referral.
-                </p>
-              </div>
+            <div>
+              <h4 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
+                <span>Earn $10 for Every Friend / Colleague You Refer! 🎁</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] font-medium border border-emerald-200">
+                  {referrals.length} Added
+                </span>
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Share your colleagues&apos; or friends&apos; contact details. When they file with us, we will honor you with $10 per paid referral.
+              </p>
             </div>
 
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
-                variant="outline"
                 type="button"
                 onClick={() => {
                   const list = [...referrals, { name: '', email: '', phone: '' }];
                   updateField('referrals', list);
                 }}
-                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 shrink-0 cursor-pointer"
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium px-3 py-1.5 rounded-md flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Another Referral</span>
@@ -261,16 +241,16 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
               <button
                 type="button"
                 onClick={() => setIsOpenReferrals(false)}
-                className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+                className="text-xs text-slate-600 hover:text-slate-800 font-medium cursor-pointer px-2 py-1"
               >
                 Close
               </button>
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             {referrals.map((refItem, idx) => (
-              <div key={idx} className="p-3 rounded-xl bg-slate-50/70 border border-slate-200 shadow-2xs grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
+              <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end pt-2 pb-2 border-b border-slate-100 last:border-b-0">
                 <AppInput
                   label="Friend / Colleague Name"
                   placeholder="e.g. Ramesh Kumar"
@@ -307,27 +287,24 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
                     if (clearError) clearError(`ref_${idx}_phone`);
                   }}
                 />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const list = referrals.filter((_, i) => i !== idx);
-                    updateField('referrals', list);
-                  }}
-                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold border border-slate-200 flex items-center justify-center gap-1 cursor-pointer h-9"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Remove</span>
-                </button>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const list = referrals.filter((_, i) => i !== idx);
+                      updateField('referrals', list);
+                    }}
+                    className="p-2 text-rose-600 hover:bg-rose-50 rounded-md text-xs font-medium flex items-center justify-center gap-1 cursor-pointer h-9 w-full sm:w-auto"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
-
-      {/* Audit Substantiation Disclaimer */}
-      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 font-medium leading-relaxed">
-        <strong>IRS Audit Substantiation Notice:</strong> In case of an IRS or State tax audit, the taxpayer must provide the necessary documentation and receipts as per IRS guidelines to substantiate all income, credits, and deductions claimed on this return.
-      </div>
     </div>
   );
 };

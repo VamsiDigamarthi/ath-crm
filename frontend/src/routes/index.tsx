@@ -55,8 +55,8 @@ import { FilingTransmissionWorkspaceScreen } from '@/features/filing/screens/Fil
 import { AdminSettingsScreen } from '@/features/admin/screens/AdminSettingsScreen';
 import { CustomerLayout } from '@/features/customer/layouts/CustomerLayout';
 import { CustomerDashboardScreen } from '@/features/customer/screens/CustomerDashboardScreen';
+import { CustomerFilingsScreen } from '@/features/customer/screens/CustomerFilingsScreen';
 import { CustomerOrganizerScreen } from '@/features/customer/screens/CustomerOrganizerScreen';
-import { CustomerDocumentsScreen } from '@/features/customer/screens/CustomerDocumentsScreen';
 import { CustomerBillingScreen } from '@/features/customer/screens/CustomerBillingScreen';
 import { CustomerExpertScreen } from '@/features/customer/screens/CustomerExpertScreen';
 import { UnauthorizedScreen } from '@/features/auth/screens/UnauthorizedScreen';
@@ -562,16 +562,20 @@ export const router = createBrowserRouter([
             element: <CustomerDashboardScreen />,
           },
           {
+            path: 'filings',
+            element: <CustomerFilingsScreen />,
+          },
+          {
             path: 'organizer',
             element: <CustomerOrganizerScreen />,
           },
           {
             path: 'documents',
-            element: <CustomerDocumentsScreen />,
+            element: <Navigate to="/customer/organizer?tab=m_vault" replace />,
           },
           {
             path: 'vault',
-            element: <Navigate to="/customer/documents" replace />,
+            element: <Navigate to="/customer/organizer?tab=m_vault" replace />,
           },
           {
             path: 'billing',
@@ -593,11 +597,11 @@ export const router = createBrowserRouter([
   // 6. Common & Fallback Routes
   {
     path: '/portal/vault',
-    element: <Navigate to="/customer/documents" replace />,
+    element: <Navigate to="/customer/organizer?tab=m_vault" replace />,
   },
   {
     path: '/portal/documents',
-    element: <Navigate to="/customer/documents" replace />,
+    element: <Navigate to="/customer/organizer?tab=m_vault" replace />,
   },
   {
     path: '/unauthorized',

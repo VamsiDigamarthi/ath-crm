@@ -261,20 +261,27 @@ export function AppTable<T extends Record<string, unknown>>({
                 </th>
               )}
 
-              {columns.map((col, idx) => (
-                <th
-                  key={idx}
-                  style={col.width ? { width: col.width } : undefined}
-                  className={cn(
-                    DENSITY_HEAD[density],
-                    col.headerClassName
-                  )}
-                >
-                  <div className="flex items-center gap-1.5 font-bold text-black">
-                    <span>{col.header}</span>
-                  </div>
-                </th>
-              ))}
+              {columns.map((col, idx) => {
+                const isRight = col.headerClassName?.includes('text-right') || col.cellClassName?.includes('text-right');
+                const isCenter = col.headerClassName?.includes('text-center') || col.cellClassName?.includes('text-center');
+                return (
+                  <th
+                    key={idx}
+                    style={col.width ? { width: col.width } : undefined}
+                    className={cn(
+                      DENSITY_HEAD[density],
+                      col.headerClassName
+                    )}
+                  >
+                    <div className={cn(
+                      "flex items-center gap-1.5 font-bold text-black",
+                      isRight ? "justify-end text-right" : isCenter ? "justify-center text-center" : "justify-start text-left"
+                    )}>
+                      <span>{col.header}</span>
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
 

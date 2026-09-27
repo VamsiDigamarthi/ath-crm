@@ -12,9 +12,9 @@ import type { AppDatePickerProps } from './datepicker/types'
 import type { ViewMode } from './datepicker/CalendarHeader'
 
 const LABEL_SIZE = {
-  xs: 'text-[11px] font-bold text-black',
-  sm: 'text-xs font-bold text-black',
-  md: 'text-sm font-bold text-black',
+  xs: 'text-[11px] font-medium text-gray-600',
+  sm: 'text-xs font-semibold text-gray-700',
+  md: 'text-sm font-semibold text-gray-800',
 }
 
 export function AppDatePicker({

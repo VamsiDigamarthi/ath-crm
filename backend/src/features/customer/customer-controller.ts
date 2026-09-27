@@ -177,8 +177,8 @@ export class CustomerController {
       throw new NotAuthorizedError();
     }
 
-    const { taxYear } = req.body;
-    const result = await CustomerService.startTaxYearReturn(req.currentUser.id, taxYear);
+    const { taxYear, filingType } = req.body;
+    const result = await CustomerService.startTaxYearReturn(req.currentUser.id, taxYear, filingType);
 
     return SuccessHandler.handle(res, result.message, result, 201);
   }

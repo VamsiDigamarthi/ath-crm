@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Globe, Landmark, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppInput } from '@/shared/components/AppInput';
 import { AppSelect } from '@/shared/components/AppSelect';
@@ -82,23 +82,21 @@ export const Module7Foreign: React.FC<Module7Props> = ({
           <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
-                  <Landmark className="w-4 h-4 text-[#16A34A]" />
+                <h4 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                   <span>Foreign Bank &amp; Demat Accounts (FinCEN Form 114)</span>
                   {accountsList.length > 0 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] font-medium border border-emerald-200">
                       {accountsList.length} Added
                     </span>
                   )}
                 </h4>
-                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
+                <p className="text-[11px] text-slate-500 mt-0.5">
                   List each Indian bank account / fixed deposit / demat account held during {selectedTaxYear}
                 </p>
               </div>
 
               <Button
                 size="sm"
-                variant="outline"
                 type="button"
                 onClick={() => {
                   setIsOpenAccounts(true);
@@ -114,7 +112,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
                     ]);
                   }
                 }}
-                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs px-3 py-1.5 rounded-md flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{accountsList.length > 0 ? 'View / Edit Foreign Accounts' : 'Add Foreign Account'}</span>
@@ -126,14 +124,13 @@ export const Module7Foreign: React.FC<Module7Props> = ({
           <div className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div>
-                <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
-                  <Landmark className="w-4 h-4 text-[#16A34A]" />
+                <h4 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
                   <span>Foreign Bank &amp; Demat Accounts (FinCEN Form 114)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] font-medium border border-emerald-200">
                     {accountsList.length} Added
                   </span>
                 </h4>
-                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
+                <p className="text-[11px] text-slate-500 mt-0.5">
                   List each Indian bank account / fixed deposit / demat account held during {selectedTaxYear}
                 </p>
               </div>
@@ -141,7 +138,6 @@ export const Module7Foreign: React.FC<Module7Props> = ({
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
-                  variant="outline"
                   type="button"
                   onClick={() => {
                     const updated = [
@@ -156,7 +152,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
                     ];
                     updateField('foreignAccountsList', updated);
                   }}
-                  className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+                  className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs px-3 py-1.5 rounded-md flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Another Account</span>
@@ -164,32 +160,32 @@ export const Module7Foreign: React.FC<Module7Props> = ({
                 <button
                   type="button"
                   onClick={() => setIsOpenAccounts(false)}
-                  className="text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer px-2 py-1"
+                  className="text-xs text-slate-600 hover:text-slate-800 font-medium cursor-pointer px-2 py-1"
                 >
                   Close
                 </button>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-6">
               {accountsList.map((acc, idx) => (
-                <div key={idx} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 shadow-2xs space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                    <span className="text-xs font-bold text-slate-800">Account #{idx + 1}</span>
+                <div key={idx} className="space-y-4 pt-2 pb-2">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                    <span className="text-xs font-semibold text-gray-700">Account #{idx + 1}</span>
                     <button
                       type="button"
                       onClick={() => {
                         const list = accountsList.filter((_, i) => i !== idx);
                         updateField('foreignAccountsList', list);
                       }}
-                      className="text-xs text-rose-600 hover:text-rose-800 font-bold flex items-center gap-1 cursor-pointer"
+                      className="text-xs text-rose-600 hover:text-rose-800 font-medium flex items-center gap-1 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Remove</span>
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                     <div className="sm:col-span-2">
                       <AppInput
                         label="Bank / Institution Name *"
@@ -259,11 +255,10 @@ export const Module7Foreign: React.FC<Module7Props> = ({
 
       {/* Indian Foreign Income in INR (₹) */}
       <div className="space-y-4 pt-6 border-t border-slate-200">
-        <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2 pb-1">
-          <Globe className="w-4 h-4 text-indigo-600" />
-          <span>Foreign Indian Income Breakdown (Report in INR ₹)</span>
+        <h4 className="text-xs font-semibold text-gray-700 pb-1">
+          Foreign Indian Income Breakdown (Report in INR ₹)
         </h4>
-        <p className="text-[11px] text-black/60 font-medium">
+        <p className="text-[11px] text-slate-500">
           The IRS cross-verifies global foreign income. Report your Indian earnings to avoid green card / visa hurdles. Enter 0 or leave empty if no foreign income was earned.
         </p>
 

@@ -19,9 +19,9 @@ const variantStyles: Record<NonNullable<ButtonProps['variant']>, string> = {
 }
 
 const sizeStyles: Record<NonNullable<ButtonProps['size']>, string> = {
-  sm: 'px-3 py-1.5 text-xs font-medium h-8',
-  md: 'px-4 py-2 text-xs font-semibold h-10',
-  lg: 'px-5 py-2.5 text-sm font-semibold h-11',
+  sm: 'px-3 py-1.5 text-xs font-normal h-8',
+  md: 'px-4 py-2 text-xs font-normal h-10',
+  lg: 'px-5 py-2.5 text-sm font-normal h-11',
 }
 
 export function Button({

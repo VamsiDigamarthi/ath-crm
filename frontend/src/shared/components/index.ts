@@ -19,4 +19,5 @@ export * from './AppImageUpload'
 export * from './AppTabs'
 export * from './SendEmailModal'
 export * from './HeaderUserProfile'
+export * from './AppAccordion'
 

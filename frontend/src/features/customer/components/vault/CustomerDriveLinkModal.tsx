@@ -141,7 +141,7 @@ export const CustomerDriveLinkModal: React.FC<CustomerDriveLinkModalProps> = ({
                   }`}
                 >
                   <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#16A34A]' : 'text-slate-400'}`} />
-                  <span className="truncate">{dt.number}) {dt.shortLabel}</span>
+                  <span className="truncate">{dt.shortLabel}</span>
                 </button>
               );
             })}
