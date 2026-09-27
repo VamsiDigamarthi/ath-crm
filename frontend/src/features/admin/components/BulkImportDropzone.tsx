@@ -75,7 +75,7 @@ export const BulkImportDropzone: React.FC<BulkImportDropzoneProps> = ({
           </h3>
 
           <p className="text-xs sm:text-sm text-slate-500 max-w-md mt-1 mb-6 leading-relaxed">
-            Supports standard columns: <span className="font-semibold text-slate-700">First Name, Last Name, Email, Phone, SSN/TIN, Address, City, State, Zip, Estimated Income</span>.
+            Supports standard columns: <span className="font-semibold text-slate-700">Name, Email, Phone Number</span>.
           </p>
 
           {/* Action CTAs */}

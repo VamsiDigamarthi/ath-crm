@@ -1,6 +1,5 @@
 import React from 'react';
 import { useBulkImport } from '../hooks/useBulkImport';
-import { BulkImportHero } from '../components/BulkImportHero';
 import { BulkImportDropzone } from '../components/BulkImportDropzone';
 import { BulkImportStats } from '../components/BulkImportStats';
 import { BulkImportTable } from '../components/BulkImportTable';
@@ -10,7 +9,7 @@ import {
   ShieldCheck, 
   Headphones, 
   DollarSign, 
-  FileCheck 
+  FileCheck
 } from 'lucide-react';
 
 export const BulkLeadImportScreen: React.FC = () => {
@@ -44,7 +43,6 @@ export const BulkLeadImportScreen: React.FC = () => {
     handleLoadDemoData,
     handleDownloadTemplate,
     handleClearFile,
-    handleTaxYearChange,
     handleDeleteSelected,
     handleProceedIngestion,
     handleConfirmIngestion,
@@ -54,12 +52,27 @@ export const BulkLeadImportScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Hero Header */}
-      <BulkImportHero
-        taxYear={taxYear}
-        onTaxYearChange={handleTaxYearChange}
-        totalLeadsCount={rows.length}
-      />
+      {/* 1. Clean Top Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Bulk Lead CSV Ingestion
+            </h2>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+              Operations Pipeline
+            </span>
+            {rows.length > 0 && (
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                {rows.length} records parsed
+              </span>
+            )}
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
+            Upload raw prospect sheets to deduplicate against master customer profiles and route qualified cases directly to Documenter outreach queues.
+          </p>
+        </div>
+      </div>
 
       {/* Upload Dropzone */}
       <BulkImportDropzone

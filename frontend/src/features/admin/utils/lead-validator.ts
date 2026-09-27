@@ -76,6 +76,8 @@ export function normalizeVisaType(input?: string | null): { normalized: string |
  * Validate a lead row against strict business and data integrity rules
  */
 export function validateLeadRow(lead: {
+  name?: string;
+  fullName?: string;
   firstName?: string;
   lastName?: string;
   email?: string;
@@ -83,15 +85,14 @@ export function validateLeadRow(lead: {
   visaType?: string;
   state?: string;
 }): { status: LeadValidationStatus; message: string; normalizedVisa?: string | null } {
-  const firstName = (lead.firstName || '').trim();
-  const lastName = (lead.lastName || '').trim();
+  const rawName = (lead.name || lead.fullName || `${lead.firstName || ''} ${lead.lastName || ''}`).trim();
   const email = (lead.email || '').trim().toLowerCase();
   const phone = (lead.phone || '').trim();
   const visa = (lead.visaType || '').trim();
   const state = (lead.state || '').trim().toUpperCase();
 
   // 1. Check for '[object Object]' or invalid object serialization
-  if (isObjectGarbage(firstName) || isObjectGarbage(lastName)) {
+  if (isObjectGarbage(rawName)) {
     return {
       status: 'INVALID_NAME',
       message: "Invalid client name (contains '[object Object]' or invalid reference)",
@@ -117,7 +118,7 @@ export function validateLeadRow(lead: {
   }
 
   // 2. Check for Emojis in any field (Strictly forbidden in tax records)
-  if (EMOJI_REGEX.test(firstName) || EMOJI_REGEX.test(lastName)) {
+  if (EMOJI_REGEX.test(rawName)) {
     return {
       status: 'INVALID_NAME',
       message: 'Emojis and special icons are not permitted in client name',
@@ -135,49 +136,24 @@ export function validateLeadRow(lead: {
       message: 'Emojis are not permitted in phone number',
     };
   }
-  if (EMOJI_REGEX.test(visa)) {
-    return {
-      status: 'INVALID_VISA',
-      message: 'Emojis are not permitted in visa type',
-    };
-  }
 
-  // 3. Name checks (min 2 chars, max 50 chars, must contain alphabetic characters)
-  if (!firstName || firstName.length < 2) {
+  // 3. Name checks (min 2 chars, max 80 chars, must contain alphabetic characters)
+  if (!rawName || rawName.length < 2) {
     return {
       status: 'INVALID_NAME',
-      message: 'First name must be at least 2 characters',
+      message: 'Taxpayer name must be at least 2 characters',
     };
   }
-  if (firstName.length > 50) {
+  if (rawName.length > 80) {
     return {
       status: 'INVALID_NAME',
-      message: 'First name must not exceed 50 characters',
+      message: 'Taxpayer name must not exceed 80 characters',
     };
   }
-  if (!/[a-zA-Z]/.test(firstName)) {
+  if (!/[a-zA-Z]/.test(rawName)) {
     return {
       status: 'INVALID_NAME',
-      message: 'First name must contain valid alphabetic letters',
-    };
-  }
-
-  if (!lastName || lastName.length < 2) {
-    return {
-      status: 'INVALID_NAME',
-      message: 'Last name must be at least 2 characters',
-    };
-  }
-  if (lastName.length > 50) {
-    return {
-      status: 'INVALID_NAME',
-      message: 'Last name must not exceed 50 characters',
-    };
-  }
-  if (!/[a-zA-Z]/.test(lastName)) {
-    return {
-      status: 'INVALID_NAME',
-      message: 'Last name must contain valid alphabetic letters',
+      message: 'Taxpayer name must contain valid alphabetic letters',
     };
   }
 
@@ -199,22 +175,13 @@ export function validateLeadRow(lead: {
     };
   }
 
-  // 6. Visa check (Strictly Mandatory for all tax leads)
-  if (!visa || visa.toUpperCase() === 'N/A' || visa.toUpperCase() === 'NA' || visa.toUpperCase() === 'NONE' || visa.toUpperCase() === 'UNKNOWN') {
-    return {
-      status: 'INVALID_VISA',
-      message: 'Visa Type is required (e.g. H-1B, F-1 OPT, L-1, Green Card, US Citizen, etc.)',
-      normalizedVisa: null,
-    };
-  }
-
-  const { normalized, isValid } = normalizeVisaType(visa);
-  if (!isValid || !normalized) {
-    return {
-      status: 'INVALID_VISA',
-      message: `Unknown Visa Type: '${visa}'. Allowed: H-1B, H-4, L-1, L-2, F-1 OPT, F-1 CPT, F-1, Green Card, US Citizen, etc.`,
-      normalizedVisa: visa,
-    };
+  // 6. Visa check (Optional: if provided, validate & normalize)
+  let normalizedVisa: string | null = null;
+  if (visa && visa.toUpperCase() !== 'N/A' && visa.toUpperCase() !== 'NA' && visa.toUpperCase() !== 'NONE' && visa.toUpperCase() !== 'UNKNOWN') {
+    const { normalized, isValid } = normalizeVisaType(visa);
+    if (isValid && normalized) {
+      normalizedVisa = normalized;
+    }
   }
 
   // 7. State check (Optional: if 2-letter state code is given, verify against US states)
@@ -222,13 +189,13 @@ export function validateLeadRow(lead: {
     return {
       status: 'INVALID_STATE',
       message: `Invalid 2-letter US State code: '${state}'`,
-      normalizedVisa: normalized,
+      normalizedVisa,
     };
   }
 
   return {
     status: 'VALID',
-    message: 'Valid & ready for server ingest',
-    normalizedVisa: normalized,
+    message: 'Valid & ready for import',
+    normalizedVisa,
   };
 }

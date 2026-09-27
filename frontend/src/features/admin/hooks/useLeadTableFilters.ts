@@ -29,12 +29,12 @@ export const useLeadTableFilters = () => {
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
-          r.fullName.toLowerCase().includes(q) ||
-          r.email.toLowerCase().includes(q) ||
-          r.phone.toLowerCase().includes(q) ||
-          r.ssnTin.toLowerCase().includes(q) ||
-          r.city.toLowerCase().includes(q) ||
-          r.state.toLowerCase().includes(q)
+          (r.fullName && r.fullName.toLowerCase().includes(q)) ||
+          (r.email && r.email.toLowerCase().includes(q)) ||
+          (r.phone && r.phone.toLowerCase().includes(q)) ||
+          (r.ssnTin && r.ssnTin.toLowerCase().includes(q)) ||
+          (r.city && r.city.toLowerCase().includes(q)) ||
+          (r.state && r.state.toLowerCase().includes(q))
         );
       }
 
