@@ -102,8 +102,8 @@ export function AppModal({
             >
               {title}
             </h2>
-            {subtitle && (
-              <p className="text-xs text-slate-700 font-medium mt-0.5">{subtitle}</p>
+            {(subtitle || description) && (
+              <p className="text-xs text-slate-700 font-medium mt-0.5">{subtitle || description}</p>
             )}
           </div>
           <button
