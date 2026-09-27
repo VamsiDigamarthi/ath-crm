@@ -248,30 +248,30 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
         {/* Sender SMTP Info Card */}
         <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-md bg-emerald-500/10 text-[#16A34A] flex items-center justify-center shrink-0 border border-emerald-300">
               <UserCheck className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-900 truncate">
+                <span className="text-xs font-bold text-black truncate">
                   Sender: {senderName}
                 </span>
-                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
                   Gmail SMTP
                 </span>
               </div>
-              <span className="text-[11px] text-slate-500 font-medium block truncate">
-                Dispatched from: <strong className="text-slate-700">{senderSmtpEmail}</strong>
+              <span className="text-[11px] text-black/80 font-medium block truncate">
+                Dispatched from: <strong className="text-black">{senderSmtpEmail}</strong>
               </span>
             </div>
           </div>
 
           {recipientName && (
-            <div className="text-right shrink-0 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-2xs">
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">
+            <div className="text-right shrink-0 bg-white px-3 py-1.5 rounded-md border border-slate-300 shadow-2xs">
+              <span className="text-[10px] text-black/70 font-bold block uppercase tracking-wider">
                 Client Target
               </span>
-              <span className="text-xs font-bold text-slate-800 block">
+              <span className="text-xs font-bold text-black block">
                 {recipientName} (TY {taxYear})
               </span>
             </div>

@@ -27,9 +27,9 @@ export const AppCopyButton: React.FC<AppCopyButtonProps> = ({
     <button
       onClick={handleCopy}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg border text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 border-gray-200/60 bg-white transition-all shadow-sm duration-300",
+        "inline-flex items-center justify-center rounded-md border text-black hover:text-[#16A34A] hover:bg-emerald-50 border-slate-300 bg-white transition-all shadow-xs duration-200 cursor-pointer",
         size === 'sm' ? "p-1.5 h-7 w-7" : "p-2 h-8.5 w-8.5",
-        isCopied ? "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200" : "",
+        isCopied ? "border-emerald-300 bg-emerald-50 text-[#16A34A] hover:bg-emerald-50 hover:text-[#16A34A]" : "",
         className
       )}
       title="Copy to clipboard"

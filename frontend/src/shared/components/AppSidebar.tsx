@@ -8,13 +8,13 @@ import type { AppSidebarProps, SidebarTheme } from './sidebar/types'
 const THEMES: Record<'light' | 'dark', SidebarTheme> = {
   light: {
     bg:           'bg-white',
-    border:       'border-gray-200',
-    text:         'text-gray-700',
-    textMuted:    'text-gray-400',
-    hover:        'hover:bg-gray-100',
-    sectionLabel: 'text-gray-400',
-    divider:      'border-gray-100',
-    iconBg:       'bg-gray-100',
+    border:       'border-slate-300',
+    text:         'text-black font-semibold',
+    textMuted:    'text-black/80',
+    hover:        'hover:bg-slate-100 hover:text-black',
+    sectionLabel: 'text-black font-bold uppercase tracking-wider text-[10px]',
+    divider:      'border-slate-200',
+    iconBg:       'bg-slate-100',
   },
   dark: {
     bg:           'bg-gray-900',
@@ -51,13 +51,15 @@ export function AppSidebar({
   brand,
   user,
   onUserClick,
+  showLogoutOnly,
+  onLogout,
   collapsed: controlledCollapsed,
   defaultCollapsed = false,
   onCollapseChange,
   width = 240,
   collapsedWidth = 64,
-  activeStyle = 'pill',
-  accentColor = '#6366f1',
+  activeStyle = 'filled',
+  accentColor = '#16A34A',
   variant = 'light',
   renderLink,
   className,
@@ -87,7 +89,7 @@ export function AppSidebar({
   return (
     <aside
       className={cn(
-        'flex flex-col h-full border-r transition-all duration-200 overflow-hidden',
+        'flex flex-col h-full border-r transition-all duration-200 relative z-20',
         theme.bg,
         theme.border,
         className,
@@ -137,13 +139,15 @@ export function AppSidebar({
         ))}
       </nav>
 
-      {user && (
+      {(user || showLogoutOnly) && (
         <UserProfile
           user={user}
           collapsed={collapsed}
           theme={theme}
           accentColor={accentColor}
           onUserClick={onUserClick}
+          showLogoutOnly={showLogoutOnly}
+          onLogout={onLogout}
         />
       )}
     </aside>

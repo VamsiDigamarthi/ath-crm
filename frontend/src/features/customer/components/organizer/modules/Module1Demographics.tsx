@@ -39,15 +39,15 @@ export const Module1Demographics: React.FC<Module1Props> = ({
 
   return (
     <div className="space-y-6">
-      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2.5">
-        <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+      <div className="flex items-center gap-2 text-xs text-black/70 font-medium">
+        <Lock className="w-3.5 h-3.5 text-black/50 shrink-0" />
         <span>Please fill out your legal name as per your Social Security Card and current residency details.</span>
       </div>
 
-      {/* Basic & Mandatory Demographics Card */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4">
-        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
-          <User className="w-4 h-4 text-emerald-600" />
+      {/* Primary Taxpayer Demographics Section */}
+      <div className="space-y-4">
+        <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2 pb-1">
+          <User className="w-4 h-4 text-[#16A34A]" />
           <span>Primary Taxpayer Demographics</span>
         </h4>
 
@@ -173,9 +173,9 @@ export const Module1Demographics: React.FC<Module1Props> = ({
         </div>
       </div>
 
-      {/* Visa & U.S. Entry Details Card */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4">
-        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
+      {/* Visa & U.S. Entry Details Section */}
+      <div className="space-y-4 pt-6 border-t border-slate-200">
+        <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2 pb-1">
           <Globe className="w-4 h-4 text-indigo-600" />
           <span>VISA Status &amp; U.S. Entry Details</span>
         </h4>
@@ -332,9 +332,9 @@ export const Module1Demographics: React.FC<Module1Props> = ({
         </div>
       </div>
 
-      {/* Marital Status & Current Address Card */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4">
-        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
+      {/* Marital Status & Current Address Section */}
+      <div className="space-y-4 pt-6 border-t border-slate-200">
+        <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2 pb-1">
           <Home className="w-4 h-4 text-purple-600" />
           <span>Marital Status &amp; Current Residential Address</span>
         </h4>

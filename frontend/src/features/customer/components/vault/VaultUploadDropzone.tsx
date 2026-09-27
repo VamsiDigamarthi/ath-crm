@@ -51,17 +51,17 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
   }, [activeDocType]);
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-4">
+    <div className="bg-white p-6 rounded-md border border-slate-300 shadow-xs space-y-4">
       {/* Category Selection Bar & Action Buttons */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-200 pb-3">
         <div className="flex items-center gap-2">
           <UploadCloud className="w-5 h-5 text-[#16A34A]" />
-          <h3 className="text-sm font-bold text-slate-900">Upload New Tax Slips &amp; Statements</h3>
+          <h3 className="text-sm font-bold text-black">Upload New Tax Slips &amp; Statements</h3>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500">Category:</span>
+            <span className="text-xs font-bold text-black">Category:</span>
             <div className="w-72">
               <AppSelect
                 options={categoryOptions}
@@ -78,7 +78,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
               type="button"
               size="sm"
               onClick={() => fileInputRef.current?.click()}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Choose Files</span>
@@ -90,7 +90,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
                 size="sm"
                 variant="outline"
                 onClick={onOpenDriveLinkModal}
-                className="border-indigo-200 bg-indigo-50/60 hover:bg-indigo-50 text-indigo-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                className="border-emerald-300 bg-emerald-50/60 hover:bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
               >
                 <Link2 className="w-3.5 h-3.5" />
                 <span>Upload Drive Link</span>
@@ -101,7 +101,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
       </div>
 
       {/* IRS Cross-Verification Compliance Banner */}
-      <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 flex items-start gap-2">
+      <div className="p-3.5 rounded-md bg-amber-50/70 border border-amber-300 text-xs text-amber-950 flex items-start gap-2 font-medium">
         <div className="font-bold shrink-0">⚠️ IRS Notice:</div>
         <div>
           The IRS cross-verifies all reported income against third-party filed 1098/1099 statements. Please upload all available tax documents to avoid IRS audit notices and penalty assessments.
@@ -120,23 +120,23 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
 
       {/* Condition A: Single Staged File Preview Card */}
       {stagedFile ? (
-        <div className="p-5 rounded-xl bg-slate-50 border-2 border-emerald-300 shadow-xs space-y-4 animate-in fade-in duration-150">
+        <div className="p-5 rounded-md bg-slate-50 border-2 border-emerald-400 shadow-xs space-y-4 animate-in fade-in duration-150">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 text-[#16A34A] flex items-center justify-center shrink-0 border border-emerald-200">
+              <div className="w-12 h-12 rounded-md bg-emerald-100 text-[#16A34A] flex items-center justify-center shrink-0 border border-emerald-300">
                 <FileText className="w-6 h-6" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-bold text-slate-900 truncate">
+                  <span className="text-sm font-bold text-black truncate">
                     {stagedFile.name}
                   </span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-300">
                     {getCategoryBadgeInfo(uploadCategory).label}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  File Size: <strong>{formatFileSize(stagedFile.size)}</strong> • Ready for upload
+                <p className="text-xs text-black/80 font-medium mt-0.5">
+                  File Size: <strong className="text-black">{formatFileSize(stagedFile.size)}</strong> • Ready for upload
                 </p>
               </div>
             </div>
@@ -148,7 +148,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
                 variant="outline"
                 onClick={handleCancelStagedFile}
                 disabled={uploading}
-                className="border-slate-200 text-slate-600 hover:text-red-600 hover:bg-red-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                className="border-slate-300 text-black hover:text-red-600 hover:bg-red-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Cancel</span>
@@ -159,7 +159,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                className="border-slate-300 text-black hover:bg-slate-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Change File</span>
@@ -169,7 +169,7 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
                 size="sm"
                 onClick={handleConfirmUpload}
                 disabled={uploading}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer px-4 rounded-md"
               >
                 <FileUp className="w-4 h-4" />
                 <span>{uploading ? 'Uploading...' : 'Upload Document'}</span>
@@ -178,14 +178,14 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
           </div>
 
           {uploading && (
-            <div className="space-y-1 pt-2 border-t border-slate-200">
-              <div className="flex justify-between text-[11px] font-bold text-slate-600">
+            <div className="space-y-1 pt-2 border-t border-slate-300">
+              <div className="flex justify-between text-[11px] font-bold text-black">
                 <span>Uploading to Secure Vault...</span>
                 <span>{uploadProgress}%</span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-slate-200 rounded-md h-2 overflow-hidden">
                 <div
-                  className="bg-[#16A34A] h-full rounded-full transition-all duration-200"
+                  className="bg-[#16A34A] h-full rounded-md transition-all duration-200"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
@@ -202,22 +202,22 @@ export const VaultUploadDropzone: React.FC<VaultUploadDropzoneProps> = ({
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2 ${
+          className={`border-2 border-dashed rounded-md p-8 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2 ${
             isDragOver
               ? 'border-[#16A34A] bg-emerald-50/50 scale-[0.99]'
-              : 'border-slate-300 hover:border-emerald-500 hover:bg-slate-50/80 bg-slate-50/30'
+              : 'border-slate-300 hover:border-[#16A34A] hover:bg-slate-50/80 bg-slate-50/30'
           }`}
         >
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-200">
+          <div className="w-12 h-12 rounded-md bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-300">
             <UploadCloud className="w-6 h-6" />
           </div>
 
           <div className="space-y-1">
-            <p className="text-xs sm:text-sm font-bold text-slate-800">
+            <p className="text-xs sm:text-sm font-bold text-black">
               Click to Browse or Drag & Drop Multiple Tax Slips Here
             </p>
-            <p className="text-[11px] text-slate-500">
-              Select multiple files at once: <strong>PDF, PNG, JPG, Word, Excel, ZIP</strong> (Max 15MB per file)
+            <p className="text-[11px] text-black/80 font-medium">
+              Select multiple files at once: <strong className="text-black">PDF, PNG, JPG, Word, Excel, ZIP</strong> (Max 15MB per file)
             </p>
           </div>
         </div>

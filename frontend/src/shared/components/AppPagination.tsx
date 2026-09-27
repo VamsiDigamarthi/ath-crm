@@ -64,7 +64,7 @@ export function AppPagination({
         {/* Rows per page selector */}
         {onPerPageChange && (
           <div className="flex items-center gap-2">
-            <span className="text-slate-500 font-medium whitespace-nowrap">Rows per page:</span>
+            <span className="text-black font-semibold whitespace-nowrap">Rows per page:</span>
             <select
               value={itemsPerPage}
               onChange={(e) => {
@@ -72,7 +72,7 @@ export function AppPagination({
                 onPerPageChange(Number(e.target.value));
               }}
               aria-label="Rows per page"
-              className="bg-slate-50 border border-slate-200 text-slate-900 font-bold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] cursor-pointer"
+              className="bg-slate-50 border border-slate-300 text-black font-bold text-xs rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-600 cursor-pointer"
             >
               {perPageOptions.map((opt) => (
                 <option key={opt} value={opt}>
@@ -96,7 +96,7 @@ export function AppPagination({
                 }
               }}
               disabled={currentPage <= 1}
-              className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 text-black hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer font-bold"
               aria-label="Previous page"
             >
               <ChevronLeft size={15} />
@@ -105,7 +105,7 @@ export function AppPagination({
             {pages.map((page, i) => {
               if (page === 'ellipsis-l' || page === 'ellipsis-r') {
                 return (
-                  <span key={`${page}-${i}`} className="w-8 h-8 flex items-center justify-center text-slate-400 text-xs select-none">
+                  <span key={`${page}-${i}`} className="w-8 h-8 flex items-center justify-center text-slate-500 text-xs select-none">
                     …
                   </span>
                 )
@@ -124,10 +124,10 @@ export function AppPagination({
                   }}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'w-8 h-8 rounded-lg text-xs font-bold transition-all border cursor-pointer flex items-center justify-center',
+                    'w-8 h-8 rounded-md text-xs font-bold transition-all border cursor-pointer flex items-center justify-center',
                     isActive
                       ? 'border-transparent shadow-2xs bg-[#16A34A] text-white hover:bg-[#15803D]'
-                      : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-50'
+                      : 'border-slate-300 text-black bg-white hover:bg-slate-100'
                   )}
                 >
                   {page}
@@ -145,7 +145,7 @@ export function AppPagination({
                 }
               }}
               disabled={currentPage >= safeTotalPages}
-              className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="flex items-center justify-center w-8 h-8 rounded-md border border-slate-300 text-black hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer font-bold"
               aria-label="Next page"
             >
               <ChevronRight size={15} />

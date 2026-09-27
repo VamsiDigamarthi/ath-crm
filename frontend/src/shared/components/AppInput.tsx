@@ -95,16 +95,16 @@ export function AppInput({
           maxLength={maxLength}
           autoComplete={autoComplete}
           className={cn(
-            'w-full rounded-xl border-[1.5px] bg-white px-3.5 transition-all duration-200 outline-none',
-            'placeholder:text-slate-300 placeholder:font-normal placeholder:italic text-slate-900 font-semibold',
-            'hover:border-gray-300',
-            'focus:ring-2 focus:ring-emerald-500/15 focus:border-[#16A34A]',
+            'w-full rounded-md border bg-white px-3.5 transition-all duration-200 outline-none',
+            'placeholder:text-slate-400 placeholder:font-normal placeholder:italic text-black font-semibold',
+            'hover:border-slate-400 border-slate-300',
+            'focus:ring-1 focus:ring-emerald-600 focus:border-[#16A34A]',
             SIZE_CLS[size],
             leftIcon && 'pl-10',
             (rightIcon || type === 'password') && 'pr-10',
             error
               ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/15'
-              : 'border-gray-200',
+              : 'border-slate-300',
             (disabled || readOnly) && 'opacity-50 cursor-not-allowed bg-gray-50',
           )}
         />

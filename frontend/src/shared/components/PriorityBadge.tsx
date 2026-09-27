@@ -102,7 +102,7 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center font-semibold rounded-lg border transition-colors shadow-2xs whitespace-nowrap ${sizeClasses} ${config.classes} ${className}`}
+      className={`inline-flex items-center font-bold rounded-md border transition-colors shadow-2xs whitespace-nowrap ${sizeClasses} ${config.classes} ${className}`}
       title={`Application Priority: ${config.label}`}
     >
       {showIcon && <IconComponent className={`${iconSizes} ${config.iconColor} shrink-0`} />}

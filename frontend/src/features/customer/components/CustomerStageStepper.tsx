@@ -141,25 +141,25 @@ export const CustomerStageStepper: React.FC<CustomerStageStepperProps> = ({
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+    <div className="bg-white p-5 rounded-md border border-slate-300 shadow-xs space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-900">TY 2025 Tax Return Filing Progress</span>
+            <span className="text-sm font-bold text-black">TY 2025 Tax Return Filing Progress</span>
             {getStageBadge()}
           </div>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">
+          <p className="text-xs text-black/80 font-semibold mt-0.5">
             {getStageDescription()}
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs font-extrabold text-slate-700">
+          <span className="text-xs font-bold text-black">
             Step {isConvertedCustomer || currentStage === 'FILING_SUCCESS' ? 6 : activeStepId} of 6
           </span>
-          <div className="w-28 bg-slate-100 rounded-full h-2 overflow-hidden">
+          <div className="w-28 bg-slate-100 rounded-md h-2 overflow-hidden border border-slate-200">
             <div
-              className={`h-full rounded-full transition-all duration-300 ${
+              className={`h-full rounded-md transition-all duration-300 ${
                 isConvertedCustomer || currentStage === 'FILING_SUCCESS' ? 'bg-[#16A34A]' : 'bg-[#16A34A]'
               }`}
               style={{ width: `${progressPercent}%` }}
@@ -177,22 +177,22 @@ export const CustomerStageStepper: React.FC<CustomerStageStepperProps> = ({
           return (
             <div
               key={step.id}
-              className={`p-3 rounded-xl border transition-all flex flex-col justify-between min-h-[92px] ${
+              className={`p-3 rounded-md border transition-all flex flex-col justify-between min-h-[92px] ${
                 isActive
                   ? 'bg-amber-50/40 border-amber-300 ring-2 ring-amber-400/20 shadow-xs'
                   : isDone
-                  ? 'bg-emerald-50/30 border-emerald-200 shadow-2xs'
-                  : 'bg-slate-50/60 border-slate-200/80 opacity-70'
+                  ? 'bg-emerald-50/30 border-emerald-300 shadow-2xs'
+                  : 'bg-slate-50 border-slate-300 opacity-80'
               }`}
             >
               <div className="flex items-center justify-between">
                 <div
-                  className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${
+                  className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs ${
                     isActive
                       ? 'bg-amber-500 text-white'
                       : isDone
                       ? 'bg-[#16A34A] text-white'
-                      : 'bg-slate-200 text-slate-500'
+                      : 'bg-slate-200 text-black'
                   }`}
                 >
                   {isDone ? (
@@ -203,23 +203,23 @@ export const CustomerStageStepper: React.FC<CustomerStageStepperProps> = ({
                     <step.icon className="w-3.5 h-3.5" />
                   )}
                 </div>
-                <span className="text-[10px] font-bold text-slate-400">0{step.id}</span>
+                <span className="text-[10px] font-bold text-black">0{step.id}</span>
               </div>
 
               <div className="mt-2">
                 <h4
                   className={`text-xs font-bold leading-tight ${
-                    isActive ? 'text-amber-900' : isDone ? 'text-slate-900' : 'text-slate-500'
+                    isActive ? 'text-amber-900' : isDone ? 'text-black' : 'text-black'
                   }`}
                 >
                   {step.name}
                 </h4>
-                <p className="text-[10px] text-slate-500 leading-tight mt-0.5 line-clamp-2">
+                <p className="text-[10px] text-black/70 font-medium leading-tight mt-0.5 line-clamp-2">
                   {step.description}
                 </p>
               </div>
 
-              <div className="mt-2 pt-1 border-t border-slate-100/80 flex items-center gap-1">
+              <div className="mt-2 pt-1 border-t border-slate-200 flex items-center gap-1">
                 {isDone ? (
                   <span className="text-[10px] font-bold text-[#16A34A] flex items-center gap-0.5">
                     <CheckCircle2 className="w-3 h-3" /> Done
@@ -229,7 +229,7 @@ export const CustomerStageStepper: React.FC<CustomerStageStepperProps> = ({
                     <Clock className="w-3 h-3 text-amber-500" /> In Progress
                   </span>
                 ) : (
-                  <span className="text-[10px] font-medium text-slate-400">Upcoming</span>
+                  <span className="text-[10px] font-semibold text-slate-500">Upcoming</span>
                 )}
               </div>
             </div>

@@ -62,6 +62,8 @@ export interface AppSidebarProps {
   brand?: SidebarBrand
   user?: SidebarUser
   onUserClick?: () => void
+  showLogoutOnly?: boolean
+  onLogout?: () => void
   collapsed?: boolean
   defaultCollapsed?: boolean
   onCollapseChange?: (v: boolean) => void

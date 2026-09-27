@@ -99,14 +99,14 @@ export const NotificationBellPopover: React.FC = () => {
 
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
-      {/* Bell Trigger Button */}
+      {/* Bell Trigger Button - Clean borderless with reduced radius */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`relative p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-center ${
+        className={`relative p-2 rounded-md transition-all cursor-pointer flex items-center justify-center ${
           isOpen
-            ? 'bg-slate-100 border-slate-300 text-slate-900 shadow-xs'
-            : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900'
+            ? 'bg-slate-100 text-black'
+            : 'bg-transparent hover:bg-slate-100 text-slate-700 hover:text-black'
         }`}
         title="Department Notifications & Alerts"
         aria-label="Notifications"
@@ -114,26 +114,26 @@ export const NotificationBellPopover: React.FC = () => {
         <Bell className="w-4 h-4" />
         
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 w-4">
+          <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-600 text-[9px] font-black text-white items-center justify-center shadow-xs">
+            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-600 text-[8.5px] font-bold text-white items-center justify-center">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           </span>
         )}
       </button>
 
-      {/* Glassmorphic / Modern Notifications Dropdown Popover */}
+      {/* Modern Notifications Dropdown Popover */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white shadow-2xl border border-slate-200/90 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 font-sans">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-md bg-white shadow-xl border border-slate-300 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 font-sans">
           {/* Header */}
-          <div className="p-3.5 px-4 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between">
+          <div className="p-3.5 px-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900 text-xs sm:text-sm">
+              <span className="font-bold text-black text-xs sm:text-sm">
                 Notifications
               </span>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
                   {unreadCount} unread
                 </span>
               )}
@@ -143,7 +143,7 @@ export const NotificationBellPopover: React.FC = () => {
               <button
                 type="button"
                 onClick={markAllAsRead}
-                className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1 cursor-pointer"
                 title="Mark all as read"
               >
                 <CheckCheck className="w-3.5 h-3.5" />
@@ -164,13 +164,13 @@ export const NotificationBellPopover: React.FC = () => {
                 <div
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`p-3.5 px-4 flex items-start gap-3 hover:bg-slate-50/90 cursor-pointer transition-all relative group ${
-                    !notif.isRead ? 'bg-blue-50/30' : ''
+                  className={`p-3.5 px-4 flex items-start gap-3 hover:bg-slate-50 cursor-pointer transition-all relative group ${
+                    !notif.isRead ? 'bg-emerald-50/30' : ''
                   }`}
                 >
                   {/* Category Icon Badge */}
                   <div
-                    className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${getCategoryBg(
+                    className={`w-7 h-7 rounded-md border flex items-center justify-center shrink-0 mt-0.5 ${getCategoryBg(
                       notif.category
                     )}`}
                   >
@@ -182,27 +182,27 @@ export const NotificationBellPopover: React.FC = () => {
                     <div className="flex items-center justify-between gap-1 mb-0.5">
                       <p
                         className={`text-xs truncate ${
-                          !notif.isRead ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'
+                          !notif.isRead ? 'font-bold text-black' : 'font-semibold text-black/80'
                         }`}
                       >
                         {notif.title}
                       </p>
-                      <span className="text-[10px] text-slate-400 shrink-0 font-medium">
+                      <span className="text-[10px] text-slate-500 shrink-0 font-medium">
                         {notif.timeAgo}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                    <p className="text-[11px] text-black/70 line-clamp-2 leading-relaxed">
                       {notif.message}
                     </p>
 
                     {notif.relatedLeadName && (
                       <div className="mt-1.5 flex items-center gap-2">
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-black border border-slate-200">
                           {notif.relatedLeadName}
                         </span>
                         {!isAdmin && notif.actionLabel && (
-                          <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-0.5 group-hover:underline">
+                          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5 group-hover:underline">
                             <span>{notif.actionLabel}</span>
                             <ExternalLink className="w-2.5 h-2.5" />
                           </span>
@@ -214,7 +214,7 @@ export const NotificationBellPopover: React.FC = () => {
                   {/* Actions: Unread dot */}
                   <div className="shrink-0 flex items-center justify-center self-stretch">
                     {!notif.isRead && (
-                      <span className="w-2 h-2 rounded-full bg-blue-600" title="Unread" />
+                      <span className="w-2 h-2 rounded-full bg-emerald-600" title="Unread" />
                     )}
                   </div>
                 </div>
@@ -223,8 +223,8 @@ export const NotificationBellPopover: React.FC = () => {
           </div>
 
           {/* Footer CTA: View All Notifications */}
-          <div className="p-2.5 px-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-500 font-medium">
+          <div className="p-2.5 px-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <span className="text-[11px] text-black/60 font-medium">
               Real-time Cross-Role Activity
             </span>
             <button
@@ -233,7 +233,7 @@ export const NotificationBellPopover: React.FC = () => {
                 setIsOpen(false);
                 navigate(getNotificationListUrl(user?.role));
               }}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 cursor-pointer hover:underline"
+              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 cursor-pointer hover:underline"
             >
               <span>View All Notifications</span>
               <ArrowRight className="w-3.5 h-3.5" />

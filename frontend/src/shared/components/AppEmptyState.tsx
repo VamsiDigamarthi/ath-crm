@@ -29,20 +29,20 @@ export const AppEmptyState: React.FC<AppEmptyStateProps> = ({
 }) => {
   return (
     <div className={cn(
-      "w-full flex flex-col items-center justify-center text-center p-8 sm:p-12 bg-white rounded-xl border border-dashed border-gray-200/80 shadow-sm transition-all duration-300 hover:border-gray-300",
+      "w-full flex flex-col items-center justify-center text-center p-8 sm:p-12 bg-white rounded-md border border-dashed border-slate-300 shadow-2xs transition-all duration-300 hover:border-slate-400",
       className
     )}>
       {/* Animated Pulsing Icon Ring */}
       <div className="relative mb-5 flex items-center justify-center">
-        <div className="absolute inset-0 rounded-full bg-indigo-50 animate-ping opacity-60 scale-75 duration-1000" />
-        <div className="relative w-14 h-14 rounded-full bg-indigo-50/80 border border-indigo-100/60 text-indigo-600 flex items-center justify-center shadow-sm">
+        <div className="absolute inset-0 rounded-full bg-emerald-50 animate-ping opacity-60 scale-75 duration-1000" />
+        <div className="relative w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 text-[#16A34A] flex items-center justify-center shadow-xs">
           <IconComponent className="w-6 h-6 stroke-[1.8]" />
         </div>
       </div>
 
       {/* Texts */}
-      <h3 className="text-lg font-bold text-gray-900 tracking-tight font-sans">{title}</h3>
-      <p className="text-sm text-gray-500 max-w-[320px] mt-1.5 font-sans leading-relaxed">
+      <h3 className="text-lg font-bold text-black tracking-tight font-sans">{title}</h3>
+      <p className="text-sm text-slate-700 max-w-[320px] mt-1.5 font-sans leading-relaxed font-medium">
         {description}
       </p>
 
@@ -53,7 +53,7 @@ export const AppEmptyState: React.FC<AppEmptyStateProps> = ({
             <Button
               variant="outline"
               onClick={secondaryAction.onClick}
-              className="h-9 px-4 rounded-lg text-sm font-semibold border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors font-sans"
+              className="h-9 px-4 rounded-md text-sm font-bold border-slate-300 text-black hover:bg-slate-50 transition-colors font-sans"
             >
               {secondaryAction.label}
             </Button>
@@ -61,7 +61,7 @@ export const AppEmptyState: React.FC<AppEmptyStateProps> = ({
           {action && (
             <Button
               onClick={action.onClick}
-              className="h-9 px-4 rounded-lg text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors font-sans gap-1.5"
+              className="h-9 px-4 rounded-md text-sm font-bold bg-[#16A34A] hover:bg-[#15803D] text-white shadow-xs transition-colors font-sans gap-1.5"
             >
               {action.icon ? (
                 React.createElement(action.icon, { className: "w-4 h-4" })

@@ -94,8 +94,8 @@ export function AppSearchInput({
           onChange={(e) => setLocal(e.target.value)}
           placeholder={placeholder}
           className={cn(
-            'w-full pl-9 pr-14 py-2 text-xs rounded-xl border bg-white text-gray-900 placeholder:text-gray-400 font-medium',
-            'border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] transition-all',
+            'w-full pl-9 pr-14 py-2 text-xs rounded-md border bg-white text-black placeholder:text-slate-500 font-semibold',
+            'border-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-600 focus:border-[#16A34A] transition-all',
             error && 'border-rose-400 focus:ring-rose-200'
           )}
         />

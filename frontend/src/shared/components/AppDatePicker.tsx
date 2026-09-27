@@ -12,9 +12,9 @@ import type { AppDatePickerProps } from './datepicker/types'
 import type { ViewMode } from './datepicker/CalendarHeader'
 
 const LABEL_SIZE = {
-  xs: 'text-[11px] font-medium text-gray-600',
-  sm: 'text-xs font-semibold text-gray-700',
-  md: 'text-sm font-semibold text-gray-800',
+  xs: 'text-[11px] font-bold text-black',
+  sm: 'text-xs font-bold text-black',
+  md: 'text-sm font-bold text-black',
 }
 
 export function AppDatePicker({
@@ -33,7 +33,7 @@ export function AppDatePicker({
   error,
   disabled,
   clearable = true,
-  accentColor = '#6366f1',
+  accentColor = '#16A34A',
 }: AppDatePickerProps) {
   const today = new Date()
 
@@ -192,38 +192,38 @@ export function AppDatePicker({
         onClick={openCal}
         disabled={disabled}
         className={cn(
-          'w-full h-10 flex items-center gap-2 px-3.5 bg-white rounded-xl border-[1.5px] text-xs transition-all cursor-pointer',
+          'w-full h-10 flex items-center gap-2 px-3.5 bg-white rounded-md border border-slate-300 text-xs transition-all cursor-pointer font-semibold',
           error
             ? 'border-red-400'
-            : 'border-gray-200 hover:border-gray-300',
-          disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : '',
+            : 'hover:border-slate-400',
+          disabled ? 'opacity-50 cursor-not-allowed bg-slate-100 text-slate-400' : '',
         )}
         style={error ? { borderColor: '#f87171' } : focusStyle}
       >
         <CalendarDays
           size={14}
           className="shrink-0"
-          style={{ color: display ? accentColor : '#9ca3af' }}
+          style={{ color: display ? accentColor : '#000000' }}
         />
-        <span className={cn('flex-1 text-left truncate', display ? 'text-gray-800 font-medium' : 'text-gray-400')}>
+        <span className={cn('flex-1 text-left truncate', display ? 'text-black font-semibold' : 'text-slate-400')}>
           {display || (placeholder ?? (mode === 'single' ? 'Select a date' : 'Select date range'))}
         </span>
         {clearable && hasValue && (
           <X
             size={13}
             onClick={handleClear}
-            className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer shrink-0"
+            className="text-black hover:text-red-600 transition-colors cursor-pointer shrink-0"
           />
         )}
       </button>
 
-      {error && <p className="text-[11px] text-red-500 font-medium">{error}</p>}
+      {error && <p className="text-[11px] text-red-500 font-bold">{error}</p>}
 
       {open && createPortal(
         <div
           ref={calRef}
           style={{ ...calStyle, width: 288 }}
-          className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 select-none"
+          className="bg-white rounded-md shadow-xl border border-slate-300 p-4 select-none"
         >
           <CalendarHeader
             year={calYear}

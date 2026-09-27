@@ -71,22 +71,22 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
       {/* 1. Form W-2 Wages & Taxable Earnings */}
       {!isOpenWages ? (
         /* Collapsed State (Default) */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-all">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 text-indigo-600 border border-slate-200 flex items-center justify-center shrink-0">
-                <FileSpreadsheet className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-md bg-slate-100 text-indigo-600 border border-slate-200 flex items-center justify-center shrink-0">
+                <FileSpreadsheet className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                   <span>1. Form W-2 Wages &amp; Taxable Earnings</span>
                   {hasW2Data && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
                       Added: {w2Data.employerName || (w2Data.estimatedWages ? `$${w2Data.estimatedWages.toLocaleString()}` : '')}
                     </span>
                   )}
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                   Employer wage statements (Form W-2 Box 1 &amp; Box 2 compensation)
                 </p>
               </div>
@@ -97,7 +97,7 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
               variant="outline"
               type="button"
               onClick={() => setIsOpenWages(true)}
-              className="text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1 cursor-pointer shrink-0"
+              className="text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{hasW2Data ? 'View / Edit W-2 Wages' : 'Add W-2 Wages'}</span>
@@ -106,14 +106,14 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
         </div>
       ) : (
         /* Open State: Clean Form */
-        <div id="section-w2-wages" className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div id="section-w2-wages" className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
                 <span>1. Form W-2 Wages &amp; Taxable Earnings</span>
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                 Employer wage statements (Form W-2 Box 1 &amp; Box 2 compensation)
               </p>
             </div>
@@ -121,7 +121,7 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
             <button
               type="button"
               onClick={() => setIsOpenWages(false)}
-              className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
+              className="text-xs text-slate-500 hover:text-black font-semibold px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
             >
               <X className="w-3.5 h-3.5" />
               <span>Close</span>
@@ -141,22 +141,22 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
       {/* 2. 1099 Interest & Dividends */}
       {!isOpenInterest ? (
         /* Collapsed State (Default) */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-all">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 text-blue-600 border border-slate-200 flex items-center justify-center shrink-0">
-                <Landmark className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-md bg-slate-100 text-blue-600 border border-slate-200 flex items-center justify-center shrink-0">
+                <Landmark className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                   <span>2. 1099-INT / DIV / OID Interest &amp; Dividends</span>
                   {hasInterestData && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-bold border border-blue-200">
                       Added: {interestData.bankName || 'Interest/Dividends'}
                     </span>
                   )}
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                   High-yield savings interest, dividends &amp; Original Issue Discount
                 </p>
               </div>
@@ -167,7 +167,7 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
               variant="outline"
               type="button"
               onClick={() => setIsOpenInterest(true)}
-              className="text-xs font-bold border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 flex items-center gap-1 cursor-pointer shrink-0"
+              className="text-xs font-bold border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{hasInterestData ? 'View / Edit 1099 Interest' : 'Add 1099 Interest / Dividends'}</span>
@@ -176,14 +176,14 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
         </div>
       ) : (
         /* Open State: Clean Form */
-        <div id="section-1099-interest" className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div id="section-1099-interest" className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <Landmark className="w-4 h-4 text-blue-600" />
                 <span>2. 1099-INT / DIV / OID Interest &amp; Dividends</span>
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                 High-yield savings interest, dividends &amp; Original Issue Discount
               </p>
             </div>
@@ -191,7 +191,7 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
             <button
               type="button"
               onClick={() => setIsOpenInterest(false)}
-              className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
+              className="text-xs text-slate-500 hover:text-black font-semibold px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
             >
               <X className="w-3.5 h-3.5" />
               <span>Close</span>
@@ -211,22 +211,22 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
       {/* 3. 1099-B Stocks & Capital Gains */}
       {!isOpenStocks ? (
         /* Collapsed State (Default) */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-all">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 text-amber-600 border border-slate-200 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-md bg-slate-100 text-amber-600 border border-slate-200 flex items-center justify-center shrink-0">
+                <TrendingUp className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                   <span>3. 1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</span>
                   {hasStocksData && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold border border-amber-200">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-bold border border-amber-200">
                       {stockList.length} Added
                     </span>
                   )}
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                   Brokerage statements, equity compensation, crypto &amp; carryforward capital losses
                 </p>
               </div>
@@ -237,7 +237,7 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
               variant="outline"
               type="button"
               onClick={() => setIsOpenStocks(true)}
-              className="text-xs font-bold border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 flex items-center gap-1 cursor-pointer shrink-0"
+              className="text-xs font-bold border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{hasStocksData ? 'View / Edit 1099-B Stocks' : 'Add 1099-B Stocks'}</span>
@@ -246,14 +246,14 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
         </div>
       ) : (
         /* Open State: Clean Form */
-        <div id="section-1099b-stocks" className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div id="section-1099b-stocks" className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <TrendingUp className="w-4 h-4 text-amber-600" />
                 <span>3. 1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</span>
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                 Brokerage statements, equity compensation, crypto &amp; carryforward capital losses
               </p>
             </div>
@@ -261,7 +261,7 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
             <button
               type="button"
               onClick={() => setIsOpenStocks(false)}
-              className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
+              className="text-xs text-slate-500 hover:text-black font-semibold px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
             >
               <X className="w-3.5 h-3.5" />
               <span>Close</span>
@@ -281,22 +281,22 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
       {/* 4. Itemized Deductions & Expenses */}
       {!isOpenDeductions ? (
         /* Collapsed State (Default) */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-all">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 text-[#16A34A] border border-slate-200 flex items-center justify-center shrink-0">
-                <Receipt className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-md bg-slate-100 text-[#16A34A] border border-slate-200 flex items-center justify-center shrink-0">
+                <Receipt className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                   <span>4. Itemized Deductions, State Rent &amp; Expenses</span>
                   {hasDeductionsData && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                       Deductions Added
                     </span>
                   )}
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                   State rent deduction, Form 1098 Mortgage, Indian property tax, Solar/Clean energy &amp; eligible expenses
                 </p>
               </div>
@@ -307,7 +307,7 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
               variant="outline"
               type="button"
               onClick={() => setIsOpenDeductions(true)}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{hasDeductionsData ? 'View / Edit Deductions' : 'Add Deductions & Rent'}</span>
@@ -316,14 +316,14 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
         </div>
       ) : (
         /* Open State: Clean Form */
-        <div id="section-itemized-deductions" className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div id="section-itemized-deductions" className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <Receipt className="w-4 h-4 text-emerald-600" />
                 <span>4. Itemized Deductions, State Rent &amp; Expenses</span>
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                 State rent deduction, Form 1098 Mortgage, Indian property tax, Solar/Clean energy &amp; eligible itemized expenses
               </p>
             </div>
@@ -331,7 +331,7 @@ export const ModuleIncomeExpenses: React.FC<ModuleIncomeExpensesProps> = ({
             <button
               type="button"
               onClick={() => setIsOpenDeductions(false)}
-              className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
+              className="text-xs text-slate-500 hover:text-black font-semibold px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer flex items-center gap-1"
             >
               <X className="w-3.5 h-3.5" />
               <span>Close</span>

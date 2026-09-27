@@ -65,22 +65,20 @@ export const Module3Presence: React.FC<Module3Props> = ({
 
   return (
     <div className="space-y-6 font-sans">
-      {/* Notice Banner */}
-      <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 flex items-start gap-2.5">
-        <Globe className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-        <div>
-          <strong>State of Residency &amp; Physical Presence Calculation:</strong> Mention your multi-state residence history, total physical days in the US for {selectedTaxYear}, {selectedTaxYear - 1} &amp; {selectedTaxYear - 2}, and any real estate rental properties owned/rented. Maximum allowed physical days is <strong>{maxCurrentDays} days/year</strong>.
-        </div>
+      {/* Clean Info Notice */}
+      <div className="flex items-center gap-2 text-xs text-black/70 font-medium">
+        <Globe className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+        <span>Mention multi-state residence history, physical presence days ({selectedTaxYear}, {selectedTaxYear - 1}, {selectedTaxYear - 2}), and real estate rental properties. Max physical days: <strong>{maxCurrentDays} days/year</strong>.</span>
       </div>
 
-      {/* 1. 3-Year Physical Presence Day Inputs with Strict 0-365/366 Bound Validation */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-        <div className="border-b border-slate-100 pb-2">
-          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+      {/* 1. 3-Year Physical Presence Day Inputs Section */}
+      <div className="space-y-4">
+        <div className="pb-1">
+          <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2">
             <Calendar className="w-4 h-4 text-indigo-600" />
             <span>Substantial Presence Test (Physical Days in U.S.)</span>
           </h4>
-          <p className="text-[11px] text-slate-500 mt-0.5">
+          <p className="text-[11px] text-black/60 mt-0.5 font-medium">
             Legally determines whether you file Form 1040 (Resident Alien) or Form 1040-NR (Non-Resident Alien)
           </p>
         </div>
@@ -121,14 +119,14 @@ export const Module3Presence: React.FC<Module3Props> = ({
       {/* 2. Multi-State Residing History Table (Taxpayer & Spouse) */}
       {!isOpenStateHistory ? (
         /* Collapsed State (Default): Heading at left, Add Button at right */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <Home className="w-4 h-4 text-emerald-600" />
                 <span>Resided / Residing State Details (Taxpayer &amp; Spouse)</span>
                 {historyList.length > 0 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                     {historyList.length} Added
                   </span>
                 )}
@@ -397,19 +395,19 @@ export const Module3Presence: React.FC<Module3Props> = ({
       {/* 3. Rental Property Income & Expenses Worksheet (Schedule E) */}
       {!isOpenRentals ? (
         /* Collapsed State (Default): Heading at left, Add Button at right */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-[#16A34A]" />
                 <span>Rental Property Income &amp; Expenses (Schedule E)</span>
                 {rentalList.length > 0 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                     {rentalList.length} Added
                   </span>
                 )}
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                 Report rental real estate properties owned and rented in {selectedTaxYear}
               </p>
             </div>
@@ -436,7 +434,7 @@ export const Module3Presence: React.FC<Module3Props> = ({
                   ]);
                 }
               }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{rentalList.length > 0 ? 'View / Edit Rentals' : 'Add Rental Property'}</span>
@@ -445,13 +443,13 @@ export const Module3Presence: React.FC<Module3Props> = ({
         </div>
       ) : (
         /* Open State: Header with Count + Add Button, List of Rental Properties */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-[#16A34A]" />
                 <span>Rental Property Income &amp; Expenses (Schedule E)</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                   {rentalList.length} Added
                 </span>
               </h4>

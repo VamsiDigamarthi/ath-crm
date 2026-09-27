@@ -85,29 +85,29 @@ export function AppModal({
       <div
         style={panelStyle}
         className={cn(
-          'relative z-10 flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden',
+          'relative z-10 flex flex-col bg-white rounded-md shadow-2xl overflow-hidden border border-slate-300',
           'w-full max-h-[90vh]',
           sizeClasses[size] || 'max-w-lg',
           className
         )}
       >
         {/* Fixed Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 shrink-0">
           <div>
             <h2
               id="app-modal-title"
-              className="text-lg font-bold text-gray-900 leading-tight"
+              className="text-lg font-bold text-black leading-tight"
             >
               {title}
             </h2>
             {subtitle && (
-              <p className="text-xs text-gray-500 font-medium mt-0.5">{subtitle}</p>
+              <p className="text-xs text-slate-700 font-medium mt-0.5">{subtitle}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-md text-slate-500 hover:text-black hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />

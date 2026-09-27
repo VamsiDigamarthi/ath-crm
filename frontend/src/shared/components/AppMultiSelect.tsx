@@ -109,37 +109,37 @@ export function AppMultiSelect({
         ref={triggerRef}
         onClick={open}
         className={cn(
-          'min-h-[2.75rem] w-full flex items-center justify-between gap-2 px-3.5 py-1.5 bg-white border-[1.5px] rounded-xl cursor-pointer transition-all duration-200',
-          isOpen ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-gray-200 hover:border-gray-300',
+          'min-h-[2.75rem] w-full flex items-center justify-between gap-2 px-3.5 py-1.5 bg-white border rounded-md cursor-pointer transition-all duration-200',
+          isOpen ? 'border-emerald-600 ring-1 ring-emerald-600' : 'border-slate-300 hover:border-slate-400',
           error && 'border-rose-400',
         )}
       >
         <div className="flex flex-wrap gap-1.5 items-center flex-1">
           {selected.length === 0 ? (
-            <span className="text-gray-400 text-sm select-none">{placeholder}</span>
+            <span className="text-slate-500 text-sm select-none">{placeholder}</span>
           ) : selected.map((opt) => (
             <span
               key={opt.value}
-              className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-lg transition-all hover:bg-indigo-100"
+              className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold px-2 py-0.5 rounded-md transition-all hover:bg-emerald-100"
             >
               {opt.label}
-              <button onClick={(e) => remove(opt.value, e)} className="hover:text-indigo-900 rounded-full hover:bg-indigo-200/50 p-0.5 transition-colors">
+              <button onClick={(e) => remove(opt.value, e)} className="hover:text-emerald-950 rounded-full hover:bg-emerald-200 p-0.5 transition-colors">
                 <X className="w-3 h-3" />
               </button>
             </span>
           ))}
         </div>
 
-        <div className="flex items-center gap-1 text-gray-400 shrink-0">
+        <div className="flex items-center gap-1 text-slate-500 shrink-0">
           {selected.length > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); onChange([]) }}
-              className="hover:text-gray-600 rounded-full p-0.5 hover:bg-gray-100 transition-colors"
+              className="hover:text-black rounded-full p-0.5 hover:bg-slate-100 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           )}
-          <ChevronDown className={cn('w-4 h-4 transition-transform duration-200', isOpen && 'rotate-180 text-indigo-500')} />
+          <ChevronDown className={cn('w-4 h-4 transition-transform duration-200', isOpen && 'rotate-180 text-emerald-600')} />
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export function AppMultiSelect({
         <div
           ref={dropdownRef}
           style={{ position: 'fixed', top: dropdownTop, left: rect.left, width: rect.width, zIndex: 9999 }}
-          className="bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden"
+          className="bg-white border border-slate-300 rounded-md shadow-xl overflow-hidden"
         >
           <div className="flex items-center border-b border-gray-100 px-3.5 py-2.5 bg-gray-50/50">
             <Search className="w-4 h-4 text-gray-400 shrink-0 mr-2" />

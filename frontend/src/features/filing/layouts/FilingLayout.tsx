@@ -2,15 +2,13 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { AppSidebar } from '@/shared/components/AppSidebar';
-import { Button } from '@/shared/components/Button';
+import { HeaderUserProfile } from '@/shared/components/HeaderUserProfile';
 import {
   Send,
   UploadCloud,
   LayoutDashboard,
   LayoutGrid,
   Users,
-  LogOut,
-  FileCheck2,
   Bell,
 } from 'lucide-react';
 import { filingService } from '../services/filing-service';
@@ -96,26 +94,9 @@ export const FilingLayout: React.FC = () => {
     }
   };
 
-  const getRoleBadgeLabel = () => {
-    if (user?.role === 'FILE_OP_MANAGER') return 'IRS E-Filing Department Manager';
-    if (user?.role === 'FILE_OP_AGENT' || user?.role === 'FILE_OP_TEAM_LEAD') return 'IRS E-Filing Specialist / CPA';
-    if (user?.role === 'ADMIN') return 'Administrator';
-    return 'Filing Specialist';
-  };
-
-  const getHeaderTitle = () => {
-    if (activeId === 'notifications') return 'IRS E-Filing Notifications Hub';
-    if (activeId === 'team') return 'Filing Specialists Staff Matrix & Capacity';
-    if (activeId === 'queue') return 'IRS Modernized e-File (MeF) Department Queue';
-    if (activeId === 'dashboard') return 'IRS Transmission Command Center';
-    if (activeId === 'agent_hub') return 'Filing Specialist Operations Hub';
-    if (activeId === 'agent_queue') return 'My IRS Transmission Queue';
-    return 'IRS E-Filing Operations';
-  };
-
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
-      {/* Sidebar - Matching Documenter, PrepReview, and Sales standard */}
+      {/* Sidebar - Matching Documenter, PrepReview, Sales, and Admin standard */}
       <AppSidebar
         width={240}
         variant="light"
@@ -124,7 +105,7 @@ export const FilingLayout: React.FC = () => {
           title: 'TaxCRM Engine',
           subtitle: isManager ? 'Filing Manager Portal' : 'Filing Specialist Portal',
           logo: (
-            <div className="w-7 h-7 rounded-lg bg-[#16A34A] flex items-center justify-center text-white font-bold">
+            <div className="w-7 h-7 rounded-md bg-[#16A34A] flex items-center justify-center text-white font-bold">
               <UploadCloud className="w-4 h-4 text-white" />
             </div>
           ),
@@ -132,50 +113,26 @@ export const FilingLayout: React.FC = () => {
         items={navItems}
         activeId={activeId}
         onItemClick={handleItemClick}
-        user={{
-          name: user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email?.split('@')[0] || 'Filing Specialist',
-          email: user?.email || 'filing@taxcrm.com',
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'filing'}`,
-        }}
-        onUserClick={handleLogout}
+        showLogoutOnly={true}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
         {/* Top Header Bar */}
-        <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-slate-200 shrink-0">
-          <div className="flex items-center gap-3">
-            <h1 className="font-bold text-base text-slate-900 leading-tight flex items-center gap-2">
-              <FileCheck2 className="w-4 h-4 text-[#16A34A]" />
-              <span>{getHeaderTitle()}</span>
-            </h1>
+        <header className="h-16 flex items-center justify-end px-6 bg-white border-b border-slate-300 shrink-0 gap-3">
+          <NotificationBellPopover />
 
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>{getRoleBadgeLabel()}</span>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <NotificationBellPopover />
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="border-slate-200 text-slate-600 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 text-xs font-semibold flex items-center gap-1.5 cursor-pointer h-8 px-2.5"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
-          </div>
+          {/* Reusable Header User Profile Pill */}
+          <HeaderUserProfile />
         </header>
 
-        {/* Dynamic Nested View - Exactly matching Sales and Prep-Review padding */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
+        {/* Dynamic Nested View */}
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>
     </div>
   );
 };
+

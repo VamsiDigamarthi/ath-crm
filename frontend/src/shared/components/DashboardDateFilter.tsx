@@ -49,14 +49,14 @@ export const DashboardDateFilter: React.FC<DashboardDateFilterProps> = ({
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       {/* 1. Main Presets Segmented Control */}
-      <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 shadow-2xs">
+      <div className="flex items-center bg-slate-100 p-1 rounded-md border border-slate-300 shadow-2xs">
         <button
           type="button"
           onClick={() => handlePresetClick('TODAY')}
-          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
             preset === 'TODAY'
-              ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/5'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-[#16A34A] text-white shadow-xs'
+              : 'text-black hover:text-[#16A34A]'
           }`}
         >
           Today
@@ -64,10 +64,10 @@ export const DashboardDateFilter: React.FC<DashboardDateFilterProps> = ({
         <button
           type="button"
           onClick={() => handlePresetClick('WEEK')}
-          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
             preset === 'WEEK'
-              ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/5'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-[#16A34A] text-white shadow-xs'
+              : 'text-black hover:text-[#16A34A]'
           }`}
           title="Actual calendar week (Monday - Sunday)"
         >
@@ -76,10 +76,10 @@ export const DashboardDateFilter: React.FC<DashboardDateFilterProps> = ({
         <button
           type="button"
           onClick={() => handlePresetClick('MONTH')}
-          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
             preset === 'MONTH'
-              ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/5'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-[#16A34A] text-white shadow-xs'
+              : 'text-black hover:text-[#16A34A]'
           }`}
           title="Actual calendar month (1st - End of Month)"
         >
@@ -88,10 +88,10 @@ export const DashboardDateFilter: React.FC<DashboardDateFilterProps> = ({
         <button
           type="button"
           onClick={() => handlePresetClick('CUSTOM')}
-          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+          className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
             preset === 'CUSTOM'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900'
+              ? 'bg-[#16A34A] text-white shadow-xs'
+              : 'text-black hover:text-[#16A34A]'
           }`}
         >
           <CalendarRange className="w-3.5 h-3.5" />
@@ -101,10 +101,10 @@ export const DashboardDateFilter: React.FC<DashboardDateFilterProps> = ({
 
       {/* 2. Custom From/To Date Pickers (Shown when Custom is selected or active) */}
       {showCustomInputs && (
-        <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 px-2.5 rounded-xl border border-slate-200 shadow-2xs text-xs animate-in fade-in duration-150">
-          <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+        <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 px-2.5 rounded-md border border-slate-300 shadow-2xs text-xs animate-in fade-in duration-150">
+          <Calendar className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
           <div className="flex items-center gap-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase">From:</span>
+            <span className="text-[11px] font-bold text-black uppercase">From:</span>
             <input
               type="date"
               value={localStart}
@@ -114,12 +114,12 @@ export const DashboardDateFilter: React.FC<DashboardDateFilterProps> = ({
                   onCustomDateChange(e.target.value, localEnd);
                 }
               }}
-              className="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="px-2 py-0.5 rounded-md border border-slate-300 bg-slate-50 text-xs font-semibold text-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#16A34A]"
             />
           </div>
 
           <div className="flex items-center gap-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase">To:</span>
+            <span className="text-[11px] font-bold text-black uppercase">To:</span>
             <input
               type="date"
               value={localEnd}
@@ -129,7 +129,7 @@ export const DashboardDateFilter: React.FC<DashboardDateFilterProps> = ({
                   onCustomDateChange(localStart, e.target.value);
                 }
               }}
-              className="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="px-2 py-0.5 rounded-md border border-slate-300 bg-slate-50 text-xs font-semibold text-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#16A34A]"
             />
           </div>
 
@@ -137,7 +137,7 @@ export const DashboardDateFilter: React.FC<DashboardDateFilterProps> = ({
             <button
               type="button"
               onClick={handleClearCustom}
-              className="p-1 text-slate-400 hover:text-rose-600 rounded-md transition-colors cursor-pointer"
+              className="p-1 text-black hover:text-rose-600 rounded-md transition-colors cursor-pointer"
               title="Reset date filter"
             >
               <X className="w-3.5 h-3.5" />

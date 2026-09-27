@@ -107,18 +107,18 @@ export function AppTextarea({
         placeholder={placeholder}
         onChange={e => { onChange?.(e.target.value); adjustHeight() }}
         className={cn(
-          'w-full px-3 py-2 text-xs rounded-xl border-[1.5px]',
-          'bg-white text-gray-800 placeholder:text-gray-400',
-          'transition-colors duration-150 focus:outline-none',
+          'w-full px-3 py-2 text-xs rounded-md border',
+          'bg-white text-black placeholder:text-slate-400 font-semibold',
+          'transition-colors duration-150 focus:outline-none border-slate-300',
           'scrollbar-gutter-stable',
           '[&::-webkit-scrollbar]:w-1',
           '[&::-webkit-scrollbar-track]:bg-transparent',
           '[&::-webkit-scrollbar-thumb]:rounded-full',
-          '[&::-webkit-scrollbar-thumb]:bg-gray-200',
-          'hover:[&::-webkit-scrollbar-thumb]:bg-gray-300',
+          '[&::-webkit-scrollbar-thumb]:bg-slate-300',
+          'hover:[&::-webkit-scrollbar-thumb]:bg-slate-400',
           resizeClass,
-          disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:border-gray-300',
-          error ? 'border-red-400 focus:border-red-400' : 'border-gray-200 focus:border-[--ta-accent]',
+          disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:border-slate-400',
+          error ? 'border-red-400 focus:border-red-400' : 'border-slate-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600',
         )}
         style={{
           ...textareaStyle,

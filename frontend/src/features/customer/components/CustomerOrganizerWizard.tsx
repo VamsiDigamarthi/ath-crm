@@ -30,31 +30,31 @@ export const CustomerOrganizerWizard: React.FC = () => {
   } = useCustomerOrganizer(contextTaxYear);
 
   return (
-    <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+    <div className="space-y-6 pb-8 font-sans animate-in fade-in duration-150">
       {/* 1. Standard Top Header & Progress */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
               Tax Organizer
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
               {progressPercent}% Complete
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
+          <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
             ATH Tax Services IRS-compliant intake wizard. Complete all 6 sections to maximize your TY {selectedTaxYear || '2025'} deductions.
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right hidden sm:block">
-            <span className="text-xs font-bold text-slate-800">
+            <span className="text-xs font-bold text-black">
               {ORGANIZER_MODULES.filter((m) => isModuleCompleted(m.id, organizerData)).length} of {ORGANIZER_MODULES.length} Verified
             </span>
-            <div className="w-32 bg-slate-100 rounded-full h-2 mt-1 overflow-hidden">
+            <div className="w-32 bg-slate-100 rounded-md h-2 mt-1 overflow-hidden border border-slate-200">
               <div 
-                className="bg-[#16A34A] h-full rounded-full transition-all duration-300" 
+                className="bg-[#16A34A] h-full rounded-md transition-all duration-300" 
                 style={{ width: `${progressPercent}%` }} 
               />
             </div>

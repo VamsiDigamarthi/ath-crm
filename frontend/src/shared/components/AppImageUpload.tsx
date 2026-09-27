@@ -195,25 +195,25 @@ export const AppImageUpload: React.FC<AppImageUploadProps> = ({
       <div className="w-full">
         {/* Scenario 1: Multiple file upload WITH existing previews */}
         {multiple && previews.length > 0 ? (
-          <div className="w-full p-4 bg-white border border-gray-200 rounded-2xl shadow-sm">
+          <div className="w-full p-4 bg-white border border-slate-300 rounded-md shadow-2xs">
             {/* Grid display of previews */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
               {previews.map((preview) => (
                 <div
                   key={preview.id}
-                  className="relative group aspect-video rounded-xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center shadow-sm h-[90px]"
+                  className="relative group aspect-video rounded-md overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center shadow-2xs h-[90px]"
                 >
                   <img
                     src={preview.url}
                     alt="Upload thumbnail"
-                    className="max-h-[80px] w-auto object-contain rounded-lg transition-transform duration-300 group-hover:scale-105"
+                    className="max-h-[80px] w-auto object-contain rounded-md transition-transform duration-300 group-hover:scale-105"
                   />
                   {/* Hover clear mask */}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
                     <button
                       type="button"
                       onClick={(e) => handleRemove(preview.id, e)}
-                      className="p-1.5 bg-white/90 hover:bg-white text-gray-800 rounded-full shadow-lg transition-transform scale-90 group-hover:scale-100"
+                      className="p-1.5 bg-white/90 hover:bg-white text-black rounded-full shadow-lg transition-transform scale-90 group-hover:scale-100"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -228,8 +228,8 @@ export const AppImageUpload: React.FC<AppImageUploadProps> = ({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={cn(
-                  "aspect-video rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:border-indigo-500 hover:bg-indigo-50/20 text-gray-400 hover:text-indigo-600 h-[90px]",
-                  isDragActive ? "border-indigo-600 bg-indigo-50/30 text-indigo-600 scale-[1.01]" : ""
+                  "aspect-video rounded-md border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 hover:border-emerald-600 hover:bg-emerald-50/20 text-slate-500 hover:text-emerald-700 h-[90px]",
+                  isDragActive ? "border-emerald-600 bg-emerald-50/30 text-emerald-700 scale-[1.01]" : ""
                 )}
                 title="Add more files"
               >
@@ -246,26 +246,26 @@ export const AppImageUpload: React.FC<AppImageUploadProps> = ({
             onDrop={handleDrop}
             onClick={triggerSelect}
             className={cn(
-              "w-full min-h-[140px] flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-4 cursor-pointer transition-all duration-300 bg-white",
-              isDragActive ? "border-indigo-600 bg-indigo-50/30 scale-[1.01]" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/50",
+              "w-full min-h-[140px] flex flex-col items-center justify-center border-2 border-dashed rounded-md p-4 cursor-pointer transition-all duration-300 bg-white",
+              isDragActive ? "border-emerald-600 bg-emerald-50/30 scale-[1.01]" : "border-slate-300 hover:border-slate-400 hover:bg-slate-50/50",
               activeError ? "border-rose-400 bg-rose-50/10 focus-within:ring-rose-500/20" : ""
             )}
           >
             {previews.length > 0 ? (
               /* Single preview thumbnail container */
               <div className="relative group w-full flex items-center justify-center p-2">
-                <div className="relative rounded-xl overflow-hidden shadow-md max-h-[140px] aspect-video border border-gray-100 bg-gray-50 flex items-center justify-center">
+                <div className="relative rounded-md overflow-hidden shadow-xs max-h-[140px] aspect-video border border-slate-200 bg-slate-50 flex items-center justify-center">
                   <img
                     src={previews[0].url}
                     alt="Upload preview"
-                    className="max-h-[120px] w-auto object-contain rounded-lg transition-transform duration-300 group-hover:scale-105"
+                    className="max-h-[120px] w-auto object-contain rounded-md transition-transform duration-300 group-hover:scale-105"
                   />
                   {/* Hover clear mask */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 rounded-lg">
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200 rounded-md">
                     <button
                       type="button"
                       onClick={(e) => handleRemove(previews[0].id, e)}
-                      className="p-2 bg-white/90 hover:bg-white text-gray-800 rounded-full shadow-lg transition-transform scale-90 group-hover:scale-100"
+                      className="p-2 bg-white/90 hover:bg-white text-black rounded-full shadow-lg transition-transform scale-90 group-hover:scale-100"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -275,13 +275,13 @@ export const AppImageUpload: React.FC<AppImageUploadProps> = ({
             ) : (
               /* Completely empty state dropzone */
               <div className="flex flex-col items-center text-center p-2">
-                <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100/60 text-indigo-600 flex items-center justify-center mb-3 shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 text-[#16A34A] flex items-center justify-center mb-3 shadow-xs">
                   <Upload className="w-5 h-5 stroke-[1.8]" />
                 </div>
-                <p className="text-sm font-semibold text-gray-800 font-sans">
-                  Drag & drop your {multiple ? 'images' : 'image'}, or <span className="text-indigo-600 hover:text-indigo-700">browse</span>
+                <p className="text-sm font-bold text-black font-sans">
+                  Drag & drop your {multiple ? 'images' : 'image'}, or <span className="text-[#16A34A] hover:text-[#15803D] underline">browse</span>
                 </p>
-                <p className="text-xs text-gray-400 mt-1 font-sans">
+                <p className="text-xs text-slate-600 mt-1 font-sans font-medium">
                   {resolvedHelperText}
                 </p>
               </div>
