@@ -110,29 +110,29 @@ export function AppSelect({
         onClick={open}
         disabled={disabled}
         className={cn(
-          'w-full h-10 flex items-center justify-between gap-2 px-3.5 bg-white border-[1.5px] rounded-xl text-xs transition-all duration-200',
-          'hover:border-gray-300',
-          isOpen && 'border-indigo-500 ring-2 ring-indigo-500/15',
-          !isOpen && !error && 'border-gray-200',
+          'w-full h-10 flex items-center justify-between gap-2 px-3.5 bg-white border rounded-md text-xs transition-all duration-200',
+          'hover:border-slate-400 border-slate-300',
+          isOpen && 'border-emerald-600 ring-1 ring-emerald-600',
+          !isOpen && !error && 'border-slate-300',
           error && 'border-rose-400',
           disabled && 'opacity-50 cursor-not-allowed bg-gray-50',
         )}
       >
-        <span className={cn('flex-1 truncate text-left', selected ? 'text-gray-900 font-medium' : 'text-gray-400')}>
+        <span className={cn('flex-1 truncate text-left', selected ? 'text-black font-semibold' : 'text-slate-500')}>
           {selected ? selected.label : placeholder}
         </span>
-        <div className="flex items-center gap-1 text-gray-400 shrink-0">
+        <div className="flex items-center gap-1 text-slate-500 shrink-0">
           {value && (
             <span
               role="button"
               tabIndex={-1}
               onClick={(e) => { e.stopPropagation(); onChange('') }}
-              className="p-0.5 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+              className="p-0.5 hover:text-black rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <X size={13} />
             </span>
           )}
-          <ChevronDown size={14} className={cn('transition-transform duration-200', isOpen && 'rotate-180 text-indigo-500')} />
+          <ChevronDown size={14} className={cn('transition-transform duration-200', isOpen && 'rotate-180 text-emerald-600')} />
         </div>
       </button>
 
@@ -142,7 +142,7 @@ export function AppSelect({
         <div
           ref={dropdownRef}
           style={{ position: 'fixed', top: dropdownTop, left: rect.left, width: rect.width, zIndex: 9999 }}
-          className="bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden"
+          className="bg-white border border-slate-300 rounded-md shadow-xl overflow-hidden"
         >
           {searchable && (
             <div className="flex items-center border-b border-gray-100 px-3 py-2 bg-gray-50/50">

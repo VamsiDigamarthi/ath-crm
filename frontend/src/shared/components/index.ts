@@ -18,4 +18,5 @@ export * from './AppEmptyState'
 export * from './AppImageUpload'
 export * from './AppTabs'
 export * from './SendEmailModal'
+export * from './HeaderUserProfile'
 

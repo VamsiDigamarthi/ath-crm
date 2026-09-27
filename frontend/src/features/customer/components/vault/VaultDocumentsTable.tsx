@@ -106,12 +106,12 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-md border border-slate-300 shadow-xs overflow-hidden">
         {/* Filter Bar */}
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
           <div className="flex items-center gap-2">
             <FileCheck className="w-4 h-4 text-[#16A34A]" />
-            <span className="text-xs font-bold text-slate-900">
+            <span className="text-xs font-bold text-black">
               Tax Statements for TY {selectedYear} ({filteredDocs.length})
             </span>
           </div>
@@ -128,18 +128,18 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
 
         {/* Documents Table */}
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-400 font-medium">
-            <RefreshCw className="w-5 h-5 animate-spin mx-auto text-emerald-500 mb-2" />
+          <div className="p-12 text-center text-xs text-black font-semibold">
+            <RefreshCw className="w-5 h-5 animate-spin mx-auto text-[#16A34A] mb-2" />
             Loading uploaded tax vault files...
           </div>
         ) : filteredDocs.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-md bg-slate-100 text-black flex items-center justify-center mx-auto border border-slate-300">
               <FolderArchive className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-800">No Tax Documents Found</h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">
+              <h4 className="text-xs font-bold text-black">No Tax Documents Found</h4>
+              <p className="text-[11px] text-black/80 font-medium mt-0.5">
                 Upload your TY {selectedYear} tax documents or attach a Google Drive / OneDrive folder link.
               </p>
             </div>
@@ -147,7 +147,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
               <Button
                 size="sm"
                 onClick={onOpenUpload}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold gap-1 cursor-pointer shadow-xs"
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold gap-1 cursor-pointer shadow-xs rounded-md"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Upload Documents</span>
@@ -157,7 +157,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={onOpenDriveLinkModal}
-                  className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold gap-1 cursor-pointer"
+                  className="border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-bold gap-1 cursor-pointer rounded-md"
                 >
                   <Link2 className="w-3.5 h-3.5" />
                   <span>Attach Drive Link</span>
@@ -169,7 +169,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-100/60 text-slate-600 font-bold">
+                <tr className="border-b border-slate-300 bg-slate-100 text-black font-bold">
                   <th className="py-3 px-4">Document / Link Name</th>
                   <th className="py-3 px-4">Type</th>
                   <th className="py-3 px-4">Category</th>
@@ -178,25 +178,25 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
+              <tbody className="divide-y divide-slate-200 text-black font-medium">
                 {filteredDocs.map((doc) => {
                   const isLink = isDriveLinkDoc(doc);
                   return (
-                    <tr key={doc.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
                       {/* Name & URL */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                          <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 border ${
                             isLink
-                              ? 'bg-indigo-50 text-indigo-600 border-indigo-200'
-                              : 'bg-emerald-50 text-[#16A34A] border-emerald-100'
+                              ? 'bg-emerald-50 text-[#16A34A] border-emerald-300'
+                              : 'bg-emerald-50 text-[#16A34A] border-emerald-300'
                           }`}>
-                            {isLink ? <Globe className="w-4 h-4 text-indigo-600" /> : <FileText className="w-4 h-4" />}
+                            {isLink ? <Globe className="w-4 h-4 text-[#16A34A]" /> : <FileText className="w-4 h-4" />}
                           </div>
                           <div className="min-w-0">
                             <span
                               onClick={() => setPreviewDoc(doc)}
-                              className="font-bold text-slate-900 block truncate max-w-xs sm:max-w-md hover:text-[#16A34A] cursor-pointer"
+                              className="font-bold text-black block truncate max-w-xs sm:max-w-md hover:text-[#16A34A] cursor-pointer"
                               title={doc.fileName}
                             >
                               {doc.fileName}
@@ -206,7 +206,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                                 href={doc.filePath}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[11px] text-indigo-600 hover:text-indigo-800 truncate block max-w-xs flex items-center gap-1 mt-0.5"
+                                className="text-[11px] text-[#16A34A] hover:text-[#15803D] font-bold truncate block max-w-xs flex items-center gap-1 mt-0.5"
                                 title={doc.filePath}
                               >
                                 <span className="truncate">{doc.filePath}</span>
@@ -220,12 +220,12 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                       {/* Type Badge (File vs Link) */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {isLink ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                            <Link2 className="w-3 h-3 text-indigo-500" /> Drive Link
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                            <Link2 className="w-3 h-3 text-[#16A34A]" /> Drive Link
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                            <FileText className="w-3 h-3 text-slate-500" /> File
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200 text-black border border-slate-300">
+                            <FileText className="w-3 h-3 text-black" /> File
                           </span>
                         )}
                       </td>
@@ -236,7 +236,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                       </td>
 
                       {/* Timestamp */}
-                      <td className="py-3 px-4 text-slate-500 whitespace-nowrap">
+                      <td className="py-3 px-4 text-black font-semibold whitespace-nowrap">
                         {new Date(doc.createdAt).toLocaleString([], {
                           month: 'short',
                           day: 'numeric',
@@ -259,7 +259,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                             size="sm"
                             variant="outline"
                             onClick={() => setPreviewDoc(doc)}
-                            className="border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold p-1.5 cursor-pointer h-7"
+                            className="border-slate-300 text-black hover:bg-slate-100 text-xs font-bold p-1.5 cursor-pointer h-7 rounded-md"
                             title="Preview / Details"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -272,7 +272,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleCopyLink(doc.filePath || '')}
-                                className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold p-1.5 cursor-pointer h-7"
+                                className="border-slate-300 text-black hover:bg-slate-100 text-xs font-bold p-1.5 cursor-pointer h-7 rounded-md"
                                 title="Copy Drive Link"
                               >
                                 <Copy className="w-3.5 h-3.5" />
@@ -281,7 +281,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                                 href={doc.filePath}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center border border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-lg text-xs font-bold p-1.5 h-7 transition-colors"
+                                className="inline-flex items-center justify-center border border-slate-300 text-black hover:bg-slate-100 rounded-md text-xs font-bold p-1.5 h-7 transition-colors"
                                 title="Open Drive Link in new tab"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
@@ -293,7 +293,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                               size="sm"
                               variant="outline"
                               onClick={() => onDownload(doc.id, doc.fileName)}
-                              className="border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold p-1.5 cursor-pointer h-7"
+                              className="border-slate-300 text-black hover:bg-slate-100 text-xs font-bold p-1.5 cursor-pointer h-7 rounded-md"
                               title="Download Document"
                             >
                               <Download className="w-3.5 h-3.5" />
@@ -305,7 +305,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                             size="sm"
                             variant="outline"
                             onClick={() => onDelete(doc.id, doc.fileName)}
-                            className="border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 text-xs font-bold p-1.5 cursor-pointer h-7 transition-colors"
+                            className="border-slate-300 text-black hover:text-red-600 hover:bg-red-50 text-xs font-bold p-1.5 cursor-pointer h-7 transition-colors rounded-md"
                             title="Delete Document"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

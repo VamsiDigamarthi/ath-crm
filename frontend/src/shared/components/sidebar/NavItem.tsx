@@ -41,11 +41,11 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
   const activeRgb = hexToRgb(accentColor)
 
   const activeClasses: Record<ActiveStyle, string> = {
-    pill:   'rounded-xl',
-    bar:    'rounded-r-xl border-l-[3px]',
-    filled: 'rounded-xl',
-    ghost:  'rounded-xl',
-    glow:   'rounded-xl',
+    pill:   'rounded-md',
+    bar:    'rounded-r-md border-l-[3px]',
+    filled: 'rounded-md',
+    ghost:  'rounded-md',
+    glow:   'rounded-md',
   }
 
   const activeStyleMap: Record<ActiveStyle, React.CSSProperties> = {
@@ -82,14 +82,21 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
     <>
       <item.icon
         size={18}
-        className={cn('shrink-0', isActive ? '' : theme.text)}
-        style={isActive ? { color: activeStyle === 'filled' ? '#fff' : accentColor } : undefined}
+        className={cn('shrink-0', isActive ? 'text-white' : theme.text)}
+        style={isActive ? { color: '#ffffff' } : undefined}
       />
-      {!collapsed && <span className="flex-1 text-left truncate">{item.label}</span>}
+      {!collapsed && (
+        <span className={cn('flex-1 text-left truncate', isActive ? 'text-white font-bold' : 'text-black font-semibold')}>
+          {item.label}
+        </span>
+      )}
       {!collapsed && item.badge != null && (
         <span
-          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white leading-none"
-          style={{ backgroundColor: item.badgeColor ?? accentColor }}
+          className={cn(
+            'text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none',
+            isActive ? 'bg-white text-emerald-800' : 'text-white'
+          )}
+          style={{ backgroundColor: isActive ? '#ffffff' : (item.badgeColor ?? accentColor) }}
         >
           {item.badge}
         </span>
@@ -97,7 +104,7 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
       {!collapsed && hasChildren && (
         <ChevronDown
           size={14}
-          className={cn('transition-transform duration-200', expanded ? 'rotate-180' : '', theme.textMuted)}
+          className={cn('transition-transform duration-200', expanded ? 'rotate-180' : '', isActive ? 'text-white' : theme.textMuted)}
         />
       )}
     </>
@@ -183,10 +190,10 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
               return (
                 <div key={sub.id}>
                   {sub.href && renderLink
-                    ? renderLink({ href: sub.href, className: cn('w-full flex items-center gap-2 pl-10 pr-3 py-2 text-sm transition-colors cursor-pointer rounded-xl', subActive ? '' : cn(theme.hover, theme.textMuted)), style: subActive ? { color: accentColor, backgroundColor: `rgba(${activeRgb}, 0.08)` } : undefined, onClick: () => { sub.onClick?.(); onItemClick(sub.id) }, children: <><span className="w-1 h-1 rounded-full bg-current shrink-0 opacity-50" />{sub.label}</> }) as React.ReactElement
+                    ? renderLink({ href: sub.href, className: cn('w-full flex items-center gap-2 pl-10 pr-3 py-2 text-sm transition-colors cursor-pointer rounded-md', subActive ? '' : cn(theme.hover, theme.textMuted)), style: subActive ? { color: accentColor, backgroundColor: `rgba(${activeRgb}, 0.08)` } : undefined, onClick: () => { sub.onClick?.(); onItemClick(sub.id) }, children: <><span className="w-1 h-1 rounded-full bg-current shrink-0 opacity-50" />{sub.label}</> }) as React.ReactElement
                     : sub.href
-                    ? <a href={sub.href} onClick={() => { sub.onClick?.(); onItemClick(sub.id) }} className={cn('w-full flex items-center gap-2 pl-10 pr-3 py-2 text-sm transition-colors cursor-pointer rounded-xl', subActive ? '' : cn(theme.hover, theme.textMuted))} style={subActive ? { color: accentColor, backgroundColor: `rgba(${activeRgb}, 0.08)` } : undefined}><span className="w-1 h-1 rounded-full bg-current shrink-0 opacity-50" />{sub.label}</a>
-                    : <button type="button" onClick={() => { sub.onClick?.(); onItemClick(sub.id) }} className={cn('w-full flex items-center gap-2 pl-10 pr-3 py-2 text-sm transition-colors cursor-pointer rounded-xl', subActive ? '' : cn(theme.hover, theme.textMuted))} style={subActive ? { color: accentColor, backgroundColor: `rgba(${activeRgb}, 0.08)` } : undefined}><span className="w-1 h-1 rounded-full bg-current shrink-0 opacity-50" />{sub.label}</button>
+                    ? <a href={sub.href} onClick={() => { sub.onClick?.(); onItemClick(sub.id) }} className={cn('w-full flex items-center gap-2 pl-10 pr-3 py-2 text-sm transition-colors cursor-pointer rounded-md', subActive ? '' : cn(theme.hover, theme.textMuted))} style={subActive ? { color: accentColor, backgroundColor: `rgba(${activeRgb}, 0.08)` } : undefined}><span className="w-1 h-1 rounded-full bg-current shrink-0 opacity-50" />{sub.label}</a>
+                    : <button type="button" onClick={() => { sub.onClick?.(); onItemClick(sub.id) }} className={cn('w-full flex items-center gap-2 pl-10 pr-3 py-2 text-sm transition-colors cursor-pointer rounded-md', subActive ? '' : cn(theme.hover, theme.textMuted))} style={subActive ? { color: accentColor, backgroundColor: `rgba(${activeRgb}, 0.08)` } : undefined}><span className="w-1 h-1 rounded-full bg-current shrink-0 opacity-50" />{sub.label}</button>
                   }
                 </div>
               )
@@ -201,7 +208,7 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
           style={{ position: 'fixed', top: flyoutPos.top, left: flyoutPos.left, zIndex: 9999, minWidth: 176 }}
-          className="bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 overflow-hidden"
+          className="bg-white rounded-md shadow-xl border border-gray-200 py-1.5 overflow-hidden"
         >
           <div className="px-3 py-2 flex items-center gap-2 border-b border-gray-100 mb-1">
             <item.icon size={14} className="text-gray-400 shrink-0" />

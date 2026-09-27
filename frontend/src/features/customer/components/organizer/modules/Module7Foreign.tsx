@@ -79,19 +79,19 @@ export const Module7Foreign: React.FC<Module7Props> = ({
       {isFbarYes && (
         !isOpenAccounts ? (
           /* Collapsed State (Default): Heading at left, Add Button at right */
-          <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+          <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Landmark className="w-4 h-4 text-emerald-600" />
+                <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Landmark className="w-4 h-4 text-[#16A34A]" />
                   <span>Foreign Bank &amp; Demat Accounts (FinCEN Form 114)</span>
                   {accountsList.length > 0 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                       {accountsList.length} Added
                     </span>
                   )}
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                   List each Indian bank account / fixed deposit / demat account held during {selectedTaxYear}
                 </p>
               </div>
@@ -114,7 +114,7 @@ export const Module7Foreign: React.FC<Module7Props> = ({
                     ]);
                   }
                 }}
-                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+                className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{accountsList.length > 0 ? 'View / Edit Foreign Accounts' : 'Add Foreign Account'}</span>
@@ -123,17 +123,17 @@ export const Module7Foreign: React.FC<Module7Props> = ({
           </div>
         ) : (
           /* Open State: Header with Count + Add Button, List of Accounts */
-          <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+          <div className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                  <Landmark className="w-4 h-4 text-emerald-600" />
+                <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
+                  <Landmark className="w-4 h-4 text-[#16A34A]" />
                   <span>Foreign Bank &amp; Demat Accounts (FinCEN Form 114)</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                     {accountsList.length} Added
                   </span>
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                   List each Indian bank account / fixed deposit / demat account held during {selectedTaxYear}
                 </p>
               </div>
@@ -258,12 +258,12 @@ export const Module7Foreign: React.FC<Module7Props> = ({
       )}
 
       {/* Indian Foreign Income in INR (₹) */}
-      <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
-        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
+      <div className="space-y-4 pt-6 border-t border-slate-200">
+        <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2 pb-1">
           <Globe className="w-4 h-4 text-indigo-600" />
           <span>Foreign Indian Income Breakdown (Report in INR ₹)</span>
         </h4>
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[11px] text-black/60 font-medium">
           The IRS cross-verifies global foreign income. Report your Indian earnings to avoid green card / visa hurdles. Enter 0 or leave empty if no foreign income was earned.
         </p>
 

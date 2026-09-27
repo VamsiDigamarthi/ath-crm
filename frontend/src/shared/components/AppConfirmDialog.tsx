@@ -116,14 +116,14 @@ export function AppConfirmDialog({
       />
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-[400px] bg-white rounded-xl shadow-2xl p-6">
+      <div className="relative z-10 w-full max-w-[400px] bg-white rounded-md border border-slate-300 shadow-2xl p-6">
 
         {/* Close button */}
         <button
           type="button"
           onClick={isLoading ? undefined : onClose}
           disabled={isLoading}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors disabled:opacity-0 cursor-pointer"
+          className="absolute top-4 right-4 p-1.5 rounded-md text-slate-500 hover:text-black hover:bg-slate-100 transition-colors disabled:opacity-0 cursor-pointer"
           aria-label="Close"
         >
           <X className="w-4 h-4" />
@@ -136,13 +136,13 @@ export function AppConfirmDialog({
           </div>
           <h2
             id="confirm-dialog-title"
-            className="text-[17px] font-bold text-gray-900 leading-tight mb-2"
+            className="text-[17px] font-bold text-black leading-tight mb-2"
           >
             {title}
           </h2>
           <p
             id="confirm-dialog-desc"
-            className="text-sm text-gray-500 leading-relaxed"
+            className="text-sm text-slate-700 leading-relaxed font-medium"
           >
             {description}
           </p>

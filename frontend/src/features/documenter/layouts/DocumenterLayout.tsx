@@ -2,10 +2,9 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { AppSidebar } from '@/shared/components/AppSidebar';
-import { Button } from '@/shared/components/Button';
+import { HeaderUserProfile } from '@/shared/components/HeaderUserProfile';
 import {
   Users,
-  LogOut,
   Headphones,
   LayoutDashboard,
   LayoutGrid,
@@ -78,24 +77,6 @@ export const DocumenterLayout: React.FC = () => {
     }
   };
 
-  const getRoleBadgeLabel = () => {
-    if (user?.role === 'DOC_MANAGER') return 'Documenter Manager';
-    if (user?.role === 'DOC_TEAM_LEAD') return 'Documenter Team Lead';
-    return 'Calling Agent';
-  };
-
-  const getHeaderTitle = () => {
-    if (activeId === 'notifications') return 'Documenter Notifications & Activity Hub';
-    if (activeId === 'scorecards') return 'Calling Agent Scorecards & Workload Health';
-    if (activeId === 'self_signups') return 'Direct Online Sign-ups & Self-Added Tax Years';
-    if (activeId === 'caseload') return 'Department Caseload Queue & Pipeline';
-    if (activeId === 'dashboard') return 'Documenter Operations Command Center';
-    if (activeId === 'agent_queue') return 'My Active Calling Queue';
-    if (activeId === 'agent_callbacks') return 'Scheduled Callbacks & Follow-ups';
-    if (activeId === 'agent_prep') return 'Active W-2 Tax Preparation Intakes';
-    return 'Calling Agent Performance Hub';
-  };
-
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
       {/* Documenter Department Sidebar */}
@@ -107,7 +88,7 @@ export const DocumenterLayout: React.FC = () => {
           title: 'TaxCRM Engine',
           subtitle: isManager ? 'Doc Manager Portal' : 'Calling Agent Portal',
           logo: (
-            <div className="w-7 h-7 rounded-lg bg-[#16A34A] flex items-center justify-center text-white font-bold">
+            <div className="w-7 h-7 rounded-md bg-[#16A34A] flex items-center justify-center text-white font-bold">
               <Headphones className="w-4 h-4 text-white" />
             </div>
           ),
@@ -115,44 +96,22 @@ export const DocumenterLayout: React.FC = () => {
         items={navItems}
         activeId={activeId}
         onItemClick={handleItemClick}
-        user={{
-          name: user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.email?.split('@')[0] || 'Staff',
-          email: user?.email || 'staff@taxcrm.com',
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'doc'}`,
-        }}
-        onUserClick={handleLogout}
+        showLogoutOnly={true}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 min-w-0">
         {/* Top Header Bar */}
-        <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-slate-200 shrink-0">
-          <div className="flex items-center gap-3">
-            <h1 className="font-bold text-base text-slate-900 leading-tight">
-              {getHeaderTitle()}
-            </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              <Headphones className="w-3 h-3 text-[#16A34A]" /> {getRoleBadgeLabel()}
-            </span>
-          </div>
+        <header className="h-16 flex items-center justify-end px-6 bg-white border-b border-slate-300 shrink-0 gap-3">
+          <NotificationBellPopover />
 
-          <div className="flex items-center gap-3">
-            <NotificationBellPopover />
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-red-600 text-xs flex items-center gap-2 transition-colors cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Logout</span>
-            </Button>
-          </div>
+          {/* Reusable Header User Profile Pill */}
+          <HeaderUserProfile />
         </header>
 
         {/* Dynamic Screen Outlet */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 min-w-0">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>

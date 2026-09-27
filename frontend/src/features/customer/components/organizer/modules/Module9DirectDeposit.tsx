@@ -126,10 +126,10 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
             <textarea
               rows={4}
               placeholder="Provide any feedback, special circumstances, or details for the tax preparer..."
-              className={`w-full px-3.5 py-2.5 text-xs border rounded-xl transition-all focus:outline-none leading-relaxed ${
+              className={`w-full px-3 py-2 text-xs border rounded-md transition-all focus:outline-none leading-relaxed ${
                 errors.notesToPreparer || (d.notesToPreparer || '').length > 5000
-                  ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/20 text-slate-900'
-                  : 'border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 bg-white text-slate-900'
+                  ? 'border-rose-500 ring-1 ring-rose-200 bg-rose-50/20 text-black'
+                  : 'border-slate-300 focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] bg-white text-black'
               }`}
               value={d.notesToPreparer || ''}
               onChange={(e) => {
@@ -154,7 +154,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
 
           <div className="sm:col-span-2">
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-gray-700 tracking-tight">
+              <label className="text-xs font-semibold text-black tracking-tight">
                 Preferred Way &amp; Best Time to Reach You
               </label>
               <span
@@ -184,22 +184,22 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
       {/* $10 Paid Referral Program Card */}
       {!isOpenReferrals ? (
         /* Collapsed State (Default): Heading at left, Add Button at right */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold shrink-0">
+              <div className="w-8 h-8 rounded-md bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold shrink-0">
                 <Gift className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-black flex items-center gap-1.5">
                   <span>Earn $10 for Every Friend / Colleague You Refer! 🎁</span>
                   {referrals.length > 0 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                       {referrals.length} Added
                     </span>
                   )}
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-0.5">
+                <p className="text-[11px] text-black/60 mt-0.5 font-medium">
                   Share your colleagues&apos; or friends&apos; contact details. When they file with us, we will honor you with $10 per paid referral.
                 </p>
               </div>
@@ -216,7 +216,7 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
                   updateField('referrals', list);
                 }
               }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 shrink-0 cursor-pointer"
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 shrink-0 cursor-pointer rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{referrals.length > 0 ? 'View / Edit Referrals' : 'Add Referral'}</span>
@@ -225,16 +225,16 @@ export const Module9DirectDeposit: React.FC<Module9Props> = ({
         </div>
       ) : (
         /* Open State: Header with Count + Add Button, List of Referrals */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold shrink-0">
+              <div className="w-8 h-8 rounded-md bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold shrink-0">
                 <Gift className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <h4 className="text-xs font-bold text-black flex items-center gap-1.5">
                   <span>Earn $10 for Every Friend / Colleague You Refer! 🎁</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                     {referrals.length} Added
                   </span>
                 </h4>

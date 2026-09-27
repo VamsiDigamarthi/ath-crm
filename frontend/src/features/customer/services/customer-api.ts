@@ -1,5 +1,25 @@
 import apiClient from '@/lib/api-client';
 
+export interface CustomerFilingItem extends Record<string, unknown> {
+  id: string;
+  taxYear: number;
+  filingType: string;
+  currentStage: string;
+  isCompleted: boolean;
+  isActive: boolean;
+  totalRefund: number;
+  totalBalanceDue: number;
+  fedRefund: number;
+  fedDue: number;
+  stateRefund: number;
+  stateDue: number;
+  documentsCount: number;
+  organizerPercent: number;
+  assignedSpecialist: string;
+  updatedAt: string;
+  createdAt: string;
+}
+
 export interface CustomerDashboardResponse {
   taxpayer: {
     id: string;
@@ -48,7 +68,10 @@ export interface CustomerDashboardResponse {
     organizerVerifiedCount: number;
     quoteAmount: number;
     quoteStatus: string;
+    activeFilingsCount?: number;
+    completedFilingsCount?: number;
   };
+  filings?: CustomerFilingItem[];
   availableTaxYears: number[];
 }
 

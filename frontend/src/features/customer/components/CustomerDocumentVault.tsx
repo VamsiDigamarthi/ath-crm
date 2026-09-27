@@ -97,19 +97,19 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
   ];
 
   return (
-    <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+    <div className="space-y-6 pb-8 font-sans animate-in fade-in duration-150">
       {/* 1. Header & Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
               {isConvertedCustomer ? 'Multi-Year Tax Document Vault' : 'TY 2025 Intake Document Vault'}
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
+            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
               {allDocuments.length} Total Items
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
+          <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
             Upload your official W-2, 1099, FBAR, and tax statements or attach a Google Drive / OneDrive folder link for CPA review.
           </p>
         </div>
@@ -120,7 +120,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
             variant="outline"
             onClick={() => refetch()}
             disabled={loading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            className="border-slate-300 bg-white hover:bg-slate-50 text-black text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
@@ -130,7 +130,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
           <Button
             size="sm"
             onClick={() => fileInputRef.current?.click()}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer rounded-md"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Upload Documents</span>
@@ -140,7 +140,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
             size="sm"
             variant="outline"
             onClick={() => setIsDriveLinkModalOpen(true)}
-            className="border-indigo-200 bg-indigo-50/60 hover:bg-indigo-50 text-indigo-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            className="border-emerald-300 bg-emerald-50/60 hover:bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
           >
             <Link2 className="w-3.5 h-3.5" />
             <span>Upload Drive Link</span>
@@ -165,7 +165,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
               />
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 border border-slate-300 text-xs font-bold text-black">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
               <span>TY 2025 (Active Intake)</span>
             </div>

@@ -21,7 +21,7 @@ export function CalendarHeader({ year, month, viewMode, yearRangeStart, accentCo
       <button
         type="button"
         onClick={onPrev}
-        className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer text-gray-500"
+        className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer text-black"
       >
         <ChevronLeft size={14} />
       </button>
@@ -32,14 +32,14 @@ export function CalendarHeader({ year, month, viewMode, yearRangeStart, accentCo
             <button
               type="button"
               onClick={onClickMonth}
-              className="text-sm font-semibold text-gray-900 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+              className="text-sm font-bold text-black px-2 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
             >
               {MONTH_NAMES[month]}
             </button>
             <button
               type="button"
               onClick={onClickYear}
-              className="text-sm font-semibold text-gray-900 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+              className="text-sm font-bold text-black px-2 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
             >
               {year}
             </button>
@@ -49,13 +49,13 @@ export function CalendarHeader({ year, month, viewMode, yearRangeStart, accentCo
           <button
             type="button"
             onClick={onClickYear}
-            className="text-sm font-semibold text-gray-900 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+            className="text-sm font-bold text-black px-2 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
           >
             {year}
           </button>
         )}
         {viewMode === 'years' && (
-          <span className="text-sm font-semibold text-gray-900 px-2">
+          <span className="text-sm font-bold text-black px-2">
             {yearRangeStart} – {yearRangeStart + 11}
           </span>
         )}
@@ -64,7 +64,7 @@ export function CalendarHeader({ year, month, viewMode, yearRangeStart, accentCo
       <button
         type="button"
         onClick={onNext}
-        className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer text-gray-500"
+        className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer text-black"
       >
         <ChevronRight size={14} />
       </button>

@@ -154,19 +154,19 @@ export const Module2Dependents: React.FC<Module2Props> = ({
       {/* 1. Spouse / Joint Filer Details Card */}
       {!isOpenSpouse ? (
         /* Collapsed Spouse State (Default) */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <User className="w-4 h-4 text-indigo-600" />
                 <span>Spouse / Joint Filer Details</span>
                 {spouse.firstName && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-200">
                     Added: {spouse.firstName} {spouse.lastName || ''}
                   </span>
                 )}
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">Spouse legal name, DOB, SSN, occupation and visa status (if filing jointly)</p>
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">Spouse legal name, DOB, SSN, occupation and visa status (if filing jointly)</p>
             </div>
             <Button
               size="sm"
@@ -176,7 +176,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                 setIsOpenSpouse(true);
                 updateField('hasSpouse', true);
               }}
-              className="text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1 cursor-pointer shrink-0"
+              className="text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{spouse.firstName ? 'View / Edit Spouse Details' : 'Add Spouse Details'}</span>
@@ -185,16 +185,16 @@ export const Module2Dependents: React.FC<Module2Props> = ({
         </div>
       ) : (
         /* Open Spouse Form (When User clicks Add / Edit Spouse) */
-        <div className={`p-4 sm:p-5 rounded-xl border bg-white space-y-4 shadow-2xs ${
-          errors.spouse_general && isMarried ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200'
+        <div className={`p-4 rounded-md border bg-white space-y-4 ${
+          errors.spouse_general && isMarried ? 'border-rose-300 ring-1 ring-rose-100' : 'border-slate-200'
         }`}>
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <User className="w-4 h-4 text-indigo-600" />
                 <span>Spouse / Joint Filer Details</span>
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">Spouse legal name, DOB, SSN, occupation and visa status</p>
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">Spouse legal name, DOB, SSN, occupation and visa status</p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -307,19 +307,19 @@ export const Module2Dependents: React.FC<Module2Props> = ({
       {/* 2. Qualifying Children & Dependents */}
       {!isOpenDependents ? (
         /* Collapsed State (Default): Heading at left, Add Button at right */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-emerald-600" />
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-[#16A34A]" />
                 <span>Qualifying Children &amp; Dependents</span>
                 {(d.dependentsList || []).length > 0 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                     {(d.dependentsList || []).length} Added
                   </span>
                 )}
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">Child 1, Child 2, and other elderly dependent family members</p>
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">Child 1, Child 2, and other elderly dependent family members</p>
             </div>
 
             <Button
@@ -345,7 +345,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                   handleFieldChange('childCount', 1);
                 }
               }}
-              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0"
+              className="text-xs font-bold border-emerald-200 text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{(d.dependentsList || []).length > 0 ? 'View / Edit Dependents' : 'Add Child / Dependent'}</span>
@@ -354,17 +354,17 @@ export const Module2Dependents: React.FC<Module2Props> = ({
         </div>
       ) : (
         /* Open State: Header with Count + Add Button, List of Dependents */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-emerald-600" />
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-[#16A34A]" />
                 <span>Qualifying Children &amp; Dependents</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                   {(d.dependentsList || []).length} Added
                 </span>
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">Child 1, Child 2, and other elderly dependent family members</p>
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">Child 1, Child 2, and other elderly dependent family members</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -536,19 +536,19 @@ export const Module2Dependents: React.FC<Module2Props> = ({
       {/* 3. Child & Dependent Daycare Expenses Worksheet */}
       {!isOpenDaycare ? (
         /* Collapsed State (Default): Heading at left, Add Button at right */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-purple-600" />
                 <span>Child &amp; Daycare Care Expenses Worksheet</span>
                 {(d.daycareList || []).length > 0 && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-200">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-bold border border-purple-200">
                     {(d.daycareList || []).length} Added
                   </span>
                 )}
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">Daycare, preschool, or babysitter paid while parents worked</p>
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">Daycare, preschool, or babysitter paid while parents worked</p>
             </div>
             <Button
               size="sm"
@@ -570,7 +570,7 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                   handleFieldChange('daycareExpensesClaimed', true);
                 }
               }}
-              className="text-xs font-bold border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-1 cursor-pointer shrink-0"
+              className="text-xs font-bold border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-1 cursor-pointer shrink-0 rounded-md"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{(d.daycareList || []).length > 0 ? 'View / Edit Daycare' : 'Add Daycare Provider'}</span>
@@ -579,17 +579,17 @@ export const Module2Dependents: React.FC<Module2Props> = ({
         </div>
       ) : (
         /* Open State: Header with Count + Add Button, List of Daycare Providers */
-        <div className="p-4 sm:p-5 rounded-xl border border-slate-200 bg-white space-y-4 shadow-2xs">
+        <div className="p-4 rounded-md border border-slate-200 bg-white space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
-              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-purple-600" />
                 <span>Child &amp; Daycare Care Expenses Worksheet</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-200">
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-bold border border-purple-200">
                   {(d.daycareList || []).length} Added
                 </span>
               </h4>
-              <p className="text-[11px] text-slate-500 mt-0.5">Daycare, preschool, or babysitter paid while parents worked</p>
+              <p className="text-[11px] text-black/60 mt-0.5 font-medium">Daycare, preschool, or babysitter paid while parents worked</p>
             </div>
             <div className="flex items-center gap-2">
               <Button

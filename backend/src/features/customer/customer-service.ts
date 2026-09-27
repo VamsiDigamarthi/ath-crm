@@ -96,6 +96,52 @@ export class CustomerService {
     const quoteAmount = latestQuote ? Number(latestQuote.quoteAmount) - Number(latestQuote.discountAmount) : 0;
     const quoteStatus = latestQuote ? latestQuote.status : (profile.isConvertedCustomer ? 'PAID' : 'PENDING');
 
+    const filings = profile.applications.map((app) => {
+      const appDraft = (app.taxDraftSummary as any) || {};
+      const aFedRefund = Number(appDraft.fedRefund ?? appDraft.federalRefund ?? appDraft.federalTaxRefund ?? 0);
+      const aFedDue = Number(appDraft.balanceDue ?? appDraft.federalBalanceDue ?? 0);
+      const aStateRefund = Number(appDraft.stateRefund ?? appDraft.stateTaxRefund ?? 0);
+      const aStateDue = Number(appDraft.stateBalanceDue ?? 0);
+      const aTotalRefund = aFedRefund + aStateRefund;
+      const aTotalBalanceDue = aFedDue + aStateDue;
+      
+      const aSubmittedList = Array.isArray(appDraft.organizer?.submittedModules)
+        ? appDraft.organizer.submittedModules
+        : (appDraft.organizer?.m1_demographics?.firstName ? ['m1'] : (appDraft.organizerVerifiedCount ? ['m1'] : []));
+      const aOrganizerPercent = Math.min(100, Math.round((Math.max(aSubmittedList.length, appDraft.organizerVerifiedCount || 0) / 9) * 100));
+
+      const isCompleted = app.currentStage === 'FILING_SUCCESS';
+      const isActive = !isCompleted && app.currentStage !== 'DROPPED_CANCELLED';
+
+      const assignedDoc = app.assignedDocAgent ? `${app.assignedDocAgent.firstName} ${app.assignedDocAgent.lastName || ''}`.trim() : null;
+      const assignedPrep = app.assignedPrepAgent ? `${app.assignedPrepAgent.firstName} ${app.assignedPrepAgent.lastName || ''}`.trim() : null;
+      const assignedReview = app.assignedReviewAgent ? `${app.assignedReviewAgent.firstName} ${app.assignedReviewAgent.lastName || ''}`.trim() : null;
+      const assignedSpecialist = assignedReview || assignedPrep || assignedDoc || 'Assigned Specialist';
+
+      return {
+        id: app.id,
+        taxYear: app.taxYear,
+        filingType: app.filingType,
+        currentStage: app.currentStage,
+        isCompleted,
+        isActive,
+        totalRefund: aTotalRefund,
+        totalBalanceDue: aTotalBalanceDue,
+        fedRefund: aFedRefund,
+        fedDue: aFedDue,
+        stateRefund: aStateRefund,
+        stateDue: aStateDue,
+        documentsCount: app.documents?.length || 0,
+        organizerPercent: aOrganizerPercent,
+        assignedSpecialist,
+        updatedAt: app.updatedAt,
+        createdAt: app.createdAt,
+      };
+    });
+
+    const activeFilingsCount = filings.filter((f) => f.isActive).length;
+    const completedFilingsCount = filings.filter((f) => f.isCompleted).length;
+
     return {
       taxpayer: {
         id: profile.id,
@@ -157,7 +203,10 @@ export class CustomerService {
         organizerVerifiedCount,
         quoteAmount,
         quoteStatus,
+        activeFilingsCount,
+        completedFilingsCount,
       },
+      filings,
       availableTaxYears: profile.applications.map((a) => a.taxYear),
     };
   }

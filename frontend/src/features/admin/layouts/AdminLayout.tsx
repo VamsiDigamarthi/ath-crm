@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { AppSidebar } from '@/shared/components/AppSidebar';
-import { Button } from '@/shared/components/Button';
+import { HeaderUserProfile } from '@/shared/components/HeaderUserProfile';
 import {
   LayoutDashboard,
   FileSpreadsheet,
@@ -14,8 +14,6 @@ import {
   UserPlus,
   UserCheck,
   Settings,
-  ShieldCheck,
-  LogOut,
   Bell,
   Mail,
   Globe,
@@ -28,7 +26,7 @@ import toast from 'react-hot-toast';
 export const AdminLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { logout } = useAuthStore();
 
   const handleLogout = async () => {
     try {
@@ -83,45 +81,6 @@ export const AdminLayout: React.FC = () => {
 
   const activeId = getActiveId();
 
-  const getHeaderTitle = () => {
-    switch (activeId) {
-      case 'notifications':
-        return 'Department Notifications & Activity Hub';
-      case 'coupons':
-        return 'Manager-Approved Discount Coupons & Justification Control';
-      case 'all-taxpayers':
-        if (currentPath.match(/\/admin\/all-taxpayers\/.+/)) {
-          return 'Taxpayer 360 Full Profile & Multi-Year Filing Details';
-        }
-        return 'Master Taxpayer Registry & Lifecycle Funnel';
-      case 'self-signups':
-        return 'Direct Online Sign-ups & Self-Registration Pool';
-      case 'returned-leads':
-        return 'Returned & Unassigned Leads Pool';
-      case 'customers':
-        return 'Customer & Client Directory';
-      case 'employees':
-        return 'Staff & Team Directory';
-      case 'email-templates':
-        return 'Email Templates & Communications';
-      case 'prospects':
-        return 'Bulk Lead Import & Deduplication';
-      case 'documenter':
-        return 'Documenter Department Supervision';
-      case 'prep-review':
-        return 'Tax Prep & QA Review Department Supervision';
-      case 'sales':
-        return 'Sales & Fee Quotations Supervision';
-      case 'filing':
-        return 'File Operator & CPA E-Filing Hub';
-      case 'settings':
-        return 'System Settings';
-      case 'dashboard':
-      default:
-        return 'Executive Operations Dashboard';
-    }
-  };
-
   const handleItemClick = (id: string) => {
     if (id === 'coupons') {
       navigate('/admin/coupons');
@@ -144,7 +103,7 @@ export const AdminLayout: React.FC = () => {
           title: 'TaxCRM Engine',
           subtitle: 'Tax Filing Operations',
           logo: (
-            <div className="w-7 h-7 rounded-lg bg-[#16A34A] flex items-center justify-center text-white font-bold">
+            <div className="w-7 h-7 rounded-md bg-[#16A34A] flex items-center justify-center text-white font-bold">
               <FileSpreadsheet className="w-4 h-4 text-white" />
             </div>
           ),
@@ -152,44 +111,22 @@ export const AdminLayout: React.FC = () => {
         items={navItems}
         activeId={activeId}
         onItemClick={handleItemClick}
-        user={{
-          name: user?.email?.split('@')[0] || 'Admin',
-          email: user?.email || user?.mobile || 'admin@taxcrm.com',
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'admin'}`,
-        }}
-        onUserClick={handleLogout}
+        showLogoutOnly={true}
+        onLogout={handleLogout}
       />
 
       {/* Right Container (Header + Routed Content Body) */}
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
         {/* Top Header Bar */}
-        <header className="h-16 flex items-center justify-between px-6 bg-white border-b border-slate-200 shrink-0">
-          <div className="flex items-center gap-3">
-            <h1 className="font-bold text-base text-slate-900">
-              {getHeaderTitle()}
-            </h1>
-            <span className="text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-[#16A34A]" /> Super Admin
-            </span>
-          </div>
+        <header className="h-16 flex items-center justify-end px-6 bg-white border-b border-slate-300 shrink-0 gap-3">
+          <NotificationBellPopover />
 
-          <div className="flex items-center gap-3">
-            <NotificationBellPopover />
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-red-600 text-xs flex items-center gap-2 transition-colors cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Logout</span>
-            </Button>
-          </div>
+          {/* Reusable Header User Profile Pill */}
+          <HeaderUserProfile />
         </header>
 
         {/* Scrollable Right Main Content rendered via React Router Outlet */}
-        <main className="flex-1 overflow-y-auto p-6 sm:p-8">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>

@@ -44,31 +44,31 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
   if (!organizerData) {
     return (
-      <div className={className || "lg:col-span-8 bg-white p-12 rounded-xl border border-slate-200 shadow-xs text-center text-xs text-slate-400"}>
+      <div className={className || "lg:col-span-8 bg-white p-12 rounded-md border border-slate-300 shadow-xs text-center text-xs text-black font-semibold"}>
         Loading module intake data...
       </div>
     );
   }
 
   return (
-    <div className={className || "lg:col-span-8 bg-white p-5 sm:p-7 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-6"}>
+    <div className={className || "lg:col-span-8 bg-white p-5 sm:p-7 rounded-md border border-slate-300 shadow-xs flex flex-col justify-between space-y-6"}>
       <div className="space-y-6">
         {/* Module Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-200 font-bold shrink-0">
+            <div className="w-10 h-10 rounded-md bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-300 font-bold shrink-0">
               {React.createElement(currentMod.icon, { className: 'w-5 h-5' })}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-xs font-bold text-black uppercase tracking-wider">
                   Module 0{currentMod.number}
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-200 text-black">
                   {currentMod.section}
                 </span>
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold text-black tracking-tight">
                 {currentMod.title}
               </h3>
             </div>
@@ -76,12 +76,12 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
 
           <div>
             {isModuleCompleted(currentMod.id, organizerData) ? (
-              <span className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-2 shadow-2xs">
+              <span className="px-3.5 py-1.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 flex items-center gap-2 shadow-2xs">
                 <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
                 <span>Section Submitted &amp; Verified ✓</span>
               </span>
             ) : (
-              <span className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-2 shadow-2xs">
+              <span className="px-3.5 py-1.5 rounded-md text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 flex items-center gap-2 shadow-2xs">
                 <Clock className="w-4 h-4 text-amber-500" />
                 <span>Draft Intake in Progress</span>
               </span>
@@ -156,13 +156,13 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
       </div>
 
       {/* Navigation & Action Footer */}
-      <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+      <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
         <Button
           variant="outline"
           size="sm"
           onClick={onPrev}
           disabled={currentModIndex === 0}
-          className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+          className="border-slate-300 text-black hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 rounded-md"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Previous Module</span>
@@ -174,7 +174,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             variant="outline"
             onClick={onSave}
             disabled={saving}
-            className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+            className="border-slate-300 text-black hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-md"
           >
             <Save className="w-3.5 h-3.5" />
             <span>{saving ? 'Saving...' : 'Save Draft'}</span>
@@ -184,7 +184,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             size="sm"
             onClick={onNext}
             disabled={saving}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer px-4 rounded-md"
           >
             <span>Save &amp; Continue</span>
             <ArrowRight className="w-3.5 h-3.5" />
