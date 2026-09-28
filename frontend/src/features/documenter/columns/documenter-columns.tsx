@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Eye,
-  Sparkles
+  Sparkles,
+  FilePlus2
 } from 'lucide-react';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
@@ -125,13 +126,51 @@ export interface GetDocumenterColumnsProps {
   isAdmin?: boolean;
 }
 
-export const isLeadInCallingOnlyMode = (item: DocumenterLeadItem): boolean => {
-  // 1. Raw prospect
-  if (item.isRawProspect || item.id?.startsWith('raw-') || item.totalTaxYears === 0) {
-    return true;
+/**
+ * Helper to check if a lead is a raw ingested prospect (bulk uploaded without an active TaxApplication / Tax Year)
+ */
+export const isRawLead = (item: DocumenterLeadItem): boolean => {
+  if (item.isRawProspect === true) return true;
+  if ((item as any).isReturnConfigured === false) return true;
+  if ((item.taxDraftSummary as any)?.isReturnConfigured === false) return true;
+  if ((item.taxDraftSummary as any)?.isRawIngested === true) return true;
+  if (item.id?.startsWith('raw-')) return true;
+  if (!item.taxYear || item.totalTaxYears === 0) return true;
+  return false;
+};
+
+/**
+ * Check if the lead has been marked as Interested in calling outreach
+ */
+export const isLeadInterested = (item: DocumenterLeadItem): boolean => {
+  const log = item.lastCallLog || (item as any).callLogs?.[0];
+  return log?.disposition === 'CONNECTED_INTERESTED';
+};
+
+/**
+ * Check if Configure Return (Start Filing) button should be displayed:
+ * Flow: Admin bulk uploaded lead (raw prospect, no tax year yet) -> Agent calls lead -> Marks as Interested ->
+ * Configure Return button appears so agent can configure Tax Year & Return Type.
+ */
+export const canConfigureReturn = (item: DocumenterLeadItem): boolean => {
+  return isRawLead(item) && isLeadInterested(item);
+};
+
+/**
+ * Check if 360 View is allowed:
+ * 1. For RAW leads (no tax year configured yet): View is NEVER allowed.
+ * 2. For EXISTING leads (already has a Tax Year / TaxApplication):
+ *    - Allowed if marked as "Interested" (CONNECTED_INTERESTED)
+ *    - Allowed if in advanced stages (DOC_PREP, SALES_PITCHING, FILING, PAID, etc.)
+ *    - Otherwise (initial uncalled state, voicemail, callback, fallback, not interested) -> View is LOCKED / NOT shown.
+ */
+export const canViewLead = (item: DocumenterLeadItem): boolean => {
+  // If it's still a raw lead without an active TaxApplication/taxYear, View cannot be opened yet
+  if (isRawLead(item)) {
+    return false;
   }
 
-  // 2. If already progressed to Tax Prep, Sales, or IRS Filing, View is fully enabled
+  // If already progressed to Tax Prep, Sales, or IRS Filing, or Paid client
   const advancedStages = [
     'DOC_PREP',
     'CORRECTION_NEEDED',
@@ -141,29 +180,22 @@ export const isLeadInCallingOnlyMode = (item: DocumenterLeadItem): boolean => {
     'FILING_IN_PROGRESS',
     'FILING_SUCCESS',
   ];
-  if (advancedStages.includes(item.currentStage)) {
-    return false;
+  if (advancedStages.includes(item.currentStage) || item.clientPaymentStatus === 'PAID') {
+    return true;
   }
 
-  // 3. If paid client
-  if (item.clientPaymentStatus === 'PAID') {
-    return false;
-  }
+  // For existing customer in outreach/calling stage: View is unlocked only when marked Interested
+  return isLeadInterested(item);
+};
 
-  // 4. In RAW_PROSPECT or DOC_OUTREACH: only enabled if an outreach call confirmed CONNECTED_INTERESTED
-  const log = item.lastCallLog || (item as any).callLogs?.[0];
-  if (log?.disposition === 'CONNECTED_INTERESTED') {
-    return false;
-  }
-
-  // Otherwise, outreach call is still pending / only calling is allowed
-  return true;
+export const isLeadInCallingOnlyMode = (item: DocumenterLeadItem): boolean => {
+  return !canViewLead(item);
 };
 
 export const getDocumenterColumns = ({
   onOpenCallModal,
   onOpenAssignModal,
-  onOpenStartFilingModal: _onOpenStartFilingModal,
+  onOpenStartFilingModal,
   onReassignLead: _onReassignLead,
   onRevertLead: _onRevertLead,
   hideAssignedStaff = false,
@@ -408,6 +440,8 @@ export const getDocumenterColumns = ({
               return { label: 'Invalid / Wrong No', color: 'text-rose-700 bg-rose-50 border-rose-200' };
             case 'CLIENT_NOT_QUALIFIED':
               return { label: 'Client Not Qualified', color: 'text-purple-700 bg-purple-50 border-purple-200' };
+            case 'FALLBACK':
+              return { label: 'Fall Back', color: 'text-slate-700 bg-slate-100 border-slate-300' };
             default:
               return { label: disp.replace(/_/g, ' '), color: 'text-slate-700 bg-slate-100 border-slate-200' };
           }
@@ -461,56 +495,49 @@ export const getDocumenterColumns = ({
       headerClassName: 'text-right min-w-[180px]',
       cellClassName: 'text-right min-w-[180px]',
       render: (item) => {
-        const isCallingOnly = isLeadInCallingOnlyMode(item);
-
-        if (isCallingOnly) {
-          return (
-            <div className="flex items-center justify-end gap-1.5">
-              <Button
-                size="sm"
-                onClick={() => onOpenCallModal(item)}
-                className="h-8 px-3 rounded-lg text-xs font-bold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer whitespace-nowrap"
-                title="Call Prospect & Log Outcome"
-              >
-                <PhoneCall className="w-3.5 h-3.5" />
-                <span>Call</span>
-              </Button>
-              {isAdmin && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onOpenAssignModal(item)}
-                  className="h-8 px-2.5 rounded-lg text-xs font-bold border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
-                  title="Assign Lead to Agent"
-                >
-                  <UserCheck className="w-3.5 h-3.5 text-[#16A34A]" />
-                  <span>Assign</span>
-                </Button>
-              )}
-            </div>
-          );
-        }
+        const canView = canViewLead(item);
+        const canConfig = canConfigureReturn(item);
 
         return (
           <div className="flex items-center justify-end gap-1.5">
-            <Link
-              to={`/documenter/agent/lead/${item.id}?from=queue`}
-              state={{ from: 'agent_queue' }}
-              className="h-8 px-2.5 rounded-lg text-xs font-semibold border border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
-              title="View Lead Details & Call History"
-            >
-              <Eye className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">View</span>
-            </Link>
+            {/* 1. Configure Return button when Raw Ingested Lead is marked Interested */}
+            {canConfig && onOpenStartFilingModal && (
+              <Button
+                size="sm"
+                onClick={() => onOpenStartFilingModal(item)}
+                className="h-8 px-2.5 rounded-lg text-xs font-bold border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer whitespace-nowrap animate-in fade-in"
+                title="Configure Tax Year & Filing Type for this interested prospect"
+              >
+                <FilePlus2 className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Configure Return</span>
+              </Button>
+            )}
+
+            {/* 2. View button when Tax Year exists & lead is Qualified / Interested */}
+            {canView && (
+              <Link
+                to={`/documenter/agent/lead/${item.id}?from=queue`}
+                state={{ from: 'agent_queue' }}
+                className="h-8 px-2.5 rounded-lg text-xs font-semibold border border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1 shadow-2xs transition-all cursor-pointer whitespace-nowrap animate-in fade-in"
+                title="View Lead Details & Call History"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">View</span>
+              </Link>
+            )}
+
+            {/* 3. Call button (Always active for queue outreach) */}
             <Button
               size="sm"
               onClick={() => onOpenCallModal(item)}
               className="h-8 px-3 rounded-lg text-xs font-bold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer whitespace-nowrap"
-              title="Call Lead"
+              title="Call Prospect & Log Outcome"
             >
               <PhoneCall className="w-3.5 h-3.5" />
               <span>Call</span>
             </Button>
+
+            {/* 4. Admin / Manager Assign Button */}
             {isAdmin && (
               <Button
                 size="sm"
@@ -523,6 +550,8 @@ export const getDocumenterColumns = ({
                 <span>Assign</span>
               </Button>
             )}
+
+            {/* 5. Non-admin unassigned staff self-assignment helper */}
             {!hideAssignedStaff && !isAdmin && (
               <Button
                 size="sm"

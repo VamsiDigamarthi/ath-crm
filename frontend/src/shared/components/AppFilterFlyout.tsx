@@ -74,10 +74,22 @@ export const AppFilterFlyout: React.FC<AppFilterFlyoutProps> = ({
     setDraftFilters((prev) => {
       const currentVals = prev[catId] || [];
       let nextVals: string[];
-      if (currentVals.includes(value)) {
-        nextVals = currentVals.filter((v) => v !== value);
+
+      if (value === 'ALL') {
+        nextVals = ['ALL'];
       } else {
-        nextVals = [...currentVals, value];
+        const withoutAll = currentVals.filter((v) => v !== 'ALL');
+        if (withoutAll.includes(value)) {
+          nextVals = withoutAll.filter((v) => v !== value);
+          if (nextVals.length === 0) nextVals = ['ALL'];
+        } else {
+          // If category is single-select (like 'tab' stage)
+          if (catId === 'tab') {
+            nextVals = [value];
+          } else {
+            nextVals = [...withoutAll, value];
+          }
+        }
       }
       return { ...prev, [catId]: nextVals };
     });
@@ -85,10 +97,12 @@ export const AppFilterFlyout: React.FC<AppFilterFlyoutProps> = ({
 
   const handleSelectAllForActiveCategory = () => {
     if (!activeCategory) return;
-    const allValues = activeCategory.options.map((opt) => opt.value);
+    const specificValues = activeCategory.options
+      .map((opt) => opt.value)
+      .filter((v) => v !== 'ALL');
     setDraftFilters((prev) => ({
       ...prev,
-      [activeCategory.id]: allValues,
+      [activeCategory.id]: specificValues.length > 0 ? specificValues : ['ALL'],
     }));
   };
 
@@ -96,7 +110,7 @@ export const AppFilterFlyout: React.FC<AppFilterFlyoutProps> = ({
     if (!activeCategory) return;
     setDraftFilters((prev) => ({
       ...prev,
-      [activeCategory.id]: [],
+      [activeCategory.id]: ['ALL'],
     }));
   };
 

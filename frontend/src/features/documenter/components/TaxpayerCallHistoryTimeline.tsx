@@ -8,9 +8,10 @@ import {
   MessageSquare, 
   CheckCircle2, 
   AlertCircle, 
-  Plus,
-  Mail,
-  UserX
+  Plus, 
+  Mail, 
+  UserX,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { CallLogItem } from '../types/documenter.types';
@@ -101,6 +102,13 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
             Client Not Qualified
           </span>
         );
+      case 'FALLBACK':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
+            <RotateCcw className="w-3.5 h-3.5 text-slate-600" />
+            Fall Back
+          </span>
+        );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
@@ -114,7 +122,7 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
   // Filter logs
   const filteredLogs = callLogs.filter((log) => {
     if (filterType === 'CONNECTED') {
-      return log.disposition === 'CONNECTED_INTERESTED' || log.disposition === 'CONNECTED_CALLBACK';
+      return log.disposition === 'CONNECTED_INTERESTED' || log.disposition === 'CONNECTED_CALLBACK' || log.disposition === 'FALLBACK';
     }
     if (filterType === 'CALLBACKS') {
       return Boolean(log.callbackScheduledAt);

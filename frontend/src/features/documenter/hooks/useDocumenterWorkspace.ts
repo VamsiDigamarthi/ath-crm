@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { 
   DocumenterLeadItem, 
   DocumenterStats, 
@@ -14,7 +13,6 @@ import toast from 'react-hot-toast';
 import type { DateFilterPreset } from '@/shared/utils/date-filters';
 
 export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
-  const navigate = useNavigate();
   const { user } = useAuthStore();
   const isAgent = user?.role === 'DOC_AGENT';
   const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'ADMIN';
@@ -228,21 +226,14 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
       toast.success(res?.message || 'Call outcome logged successfully!');
       setIsCallModalOpen(false);
       setActiveLeadForCall(null);
-
-      // If interested in filing and application ID returned, navigate to 360 detail screen immediately!
-      const createdAppId = res?.data?.createdApplicationId;
-      if (payload.disposition === 'CONNECTED_INTERESTED' && createdAppId) {
-        navigate(`/documenter/agent/lead/${createdAppId}?from=queue`, { state: { from: 'agent_queue' } });
-        return;
-      }
-
       fetchLeads();
+      fetchAgents();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to log disposition');
     } finally {
       setIsActionLoading(false);
     }
-  }, [fetchLeads, navigate]);
+  }, [fetchLeads, fetchAgents]);
 
   const handleOpenCallModal = useCallback((lead: DocumenterLeadItem) => {
     setActiveLeadForCall(lead);
@@ -284,6 +275,11 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
 
   const handlePriorityChange = useCallback((priority: string) => {
     setPriorityFilter(priority);
+    setPage(1);
+  }, []);
+
+  const handleVisaChange = useCallback((visa: string) => {
+    setVisaFilter(visa);
     setPage(1);
   }, []);
 
@@ -344,6 +340,7 @@ export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
     setSearchQuery,
     visaFilter,
     setVisaFilter,
+    handleVisaChange,
     priorityFilter,
     handlePriorityChange,
     handleUpdatePriority,

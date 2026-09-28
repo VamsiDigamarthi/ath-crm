@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { CallOutreachModal } from '../components/CallOutreachModal';
+import { StartFilingModal } from '../components/StartFilingModal';
 import { getDocumenterColumns } from '../columns/documenter-columns';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
@@ -9,14 +10,16 @@ import { AppColumnConfigDropdown, type ColumnConfigItem } from '@/shared/compone
 import { Button } from '@/shared/components/Button';
 import { 
   PhoneCall, 
-  PhoneOutgoing,
+  PhoneOutgoing, 
   RefreshCw, 
-  CheckCircle2,
-  Clock,
-  UserX,
-  RotateCcw,
-  ChevronUp,
-  ChevronDown
+  CheckCircle2, 
+  Clock, 
+  UserX, 
+  RotateCcw, 
+  ChevronUp, 
+  ChevronDown,
+  Layers,
+  Check
 } from 'lucide-react';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 import toast from 'react-hot-toast';
@@ -72,10 +75,11 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     searchQuery,
     setSearchQuery,
     visaFilter,
-    setVisaFilter,
+    handleVisaChange,
     priorityFilter,
     handlePriorityChange,
     leads,
+    agents,
     stats,
     isLoading,
     isActionLoading,
@@ -89,13 +93,88 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     setSelectedRows,
     handleReturnToAdminPool,
     isCallModalOpen,
+    isStartFilingModalOpen,
     activeLeadForCall,
+    activeLeadForStartFiling,
     handleOpenCallModal,
     handleOpenAssignModal,
+    handleOpenStartFilingModal,
+    handleStartFiling,
     handleCloseModals,
     handleSaveCallDisposition,
     refreshData,
   } = useDocumenterWorkspace();
+
+  // Status Filter Dropdown State & Click Outside Listener
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
+    if (isStatusDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isStatusDropdownOpen]);
+
+  // Statuses for queue dropdown with live counts
+  const queueStatuses = useMemo(() => [
+    {
+      id: 'ALL',
+      label: 'All Leads',
+      count: stats.myLeads || totalItems || 0,
+      icon: Layers,
+      color: 'text-slate-700 bg-slate-100',
+    },
+    {
+      id: 'NOT_CALLED',
+      label: 'New Leads',
+      count: stats.uncontacted ?? 0,
+      icon: PhoneOutgoing,
+      color: 'text-blue-700 bg-blue-50',
+    },
+    {
+      id: 'OUTREACH',
+      label: 'In Outreach',
+      count: stats.activeOutreach ?? 0,
+      icon: PhoneCall,
+      color: 'text-amber-700 bg-amber-50',
+    },
+    {
+      id: 'CALLBACKS',
+      label: 'Scheduled Callbacks',
+      count: stats.callbacks ?? 0,
+      icon: Clock,
+      color: 'text-purple-700 bg-purple-50',
+    },
+    {
+      id: 'FALLBACK',
+      label: 'Fall Back',
+      count: stats.fallback ?? 0,
+      icon: RotateCcw,
+      color: 'text-slate-700 bg-slate-100',
+    },
+    {
+      id: 'NOT_INTERESTED',
+      label: 'Not Interested',
+      count: stats.notInterested ?? stats.dropped ?? 0,
+      icon: UserX,
+      color: 'text-rose-700 bg-rose-50',
+    },
+  ], [stats, totalItems]);
+
+  const currentStatus = useMemo(() => {
+    return (
+      queueStatuses.find((s) => s.id === activeTab) ||
+      (activeTab === 'MY_LEADS' ? queueStatuses[0] : (activeTab === 'DROPPED' ? queueStatuses[5] : queueStatuses[0]))
+    );
+  }, [queueStatuses, activeTab]);
 
   // 3. Filter Categories for 2-Column Flyout
   const filterCategories = useMemo<FilterCategory[]>(() => [
@@ -107,6 +186,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         { label: 'New / Uncontacted Leads', value: 'NOT_CALLED' },
         { label: 'Outreach Active', value: 'OUTREACH' },
         { label: 'Scheduled Callbacks', value: 'CALLBACKS' },
+        { label: 'Fall Back', value: 'FALLBACK' },
         { label: 'Not Interested / Dropped', value: 'NOT_INTERESTED' },
       ],
     },
@@ -138,8 +218,8 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
   // 4. Selected Filters Mapping
   const activeFilters = useMemo<Record<string, string[]>>(() => ({
     tab: [activeTab],
-    priority: [priorityFilter],
-    visa: [visaFilter],
+    priority: priorityFilter === 'ALL' ? ['ALL'] : priorityFilter.split(','),
+    visa: visaFilter === 'ALL' ? ['ALL'] : visaFilter.split(','),
   }), [activeTab, priorityFilter, visaFilter]);
 
   const handleApplyFilters = (newFilters: Record<string, string[]>) => {
@@ -150,15 +230,17 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     }
     
     // 2. Sync Priority
-    const selectedPriority = newFilters.priority?.[0] || 'ALL';
-    if (selectedPriority && selectedPriority !== priorityFilter) {
-      handlePriorityChange(selectedPriority);
+    const validPriorities = (newFilters.priority || []).filter((v) => v !== 'ALL' && v !== '');
+    const priorityVal = validPriorities.length === 0 ? 'ALL' : validPriorities.join(',');
+    if (priorityVal !== priorityFilter) {
+      handlePriorityChange(priorityVal);
     }
     
     // 3. Sync Visa
-    const selectedVisa = newFilters.visa?.[0] || 'ALL';
-    if (selectedVisa && selectedVisa !== visaFilter) {
-      setVisaFilter(selectedVisa);
+    const validVisas = (newFilters.visa || []).filter((v) => v !== 'ALL' && v !== '');
+    const visaVal = validVisas.length === 0 ? 'ALL' : validVisas.join(',');
+    if (visaVal !== visaFilter) {
+      handleVisaChange(visaVal);
     }
   };
 
@@ -168,9 +250,10 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
       getDocumenterColumns({
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
+        onOpenStartFilingModal: handleOpenStartFilingModal,
         hideAssignedStaff: true,
       }),
-    [handleOpenCallModal, handleOpenAssignModal]
+    [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal]
   );
 
   const columns = useMemo(() => {
@@ -294,9 +377,9 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
 
       {/* 3. Sleek Enterprise Toolbar (Clean Flat Layout, No Heavy White Box) */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 pt-1">
-        {/* Left: Search Input + Quick Tab Pills */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5 flex-1 min-w-0">
-          <div className="w-full md:w-64 lg:w-72 shrink-0">
+        {/* Left: Search Input + Status Filter Dropdown */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1 min-w-0">
+          <div className="w-full sm:w-64 lg:w-72 shrink-0">
             <AppSearchInput
               value={searchQuery}
               onChange={setSearchQuery}
@@ -305,71 +388,72 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
             />
           </div>
 
-          {/* Dynamic Quick Tab Filter Pills */}
-          <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl overflow-x-auto min-w-0 border border-slate-200/60 shadow-2xs">
+          {/* Status Filter Dropdown with Live Counts */}
+          <div className="relative shrink-0" ref={statusDropdownRef}>
             <button
               type="button"
-              onClick={() => handleTabChange('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'ALL' || activeTab === 'MY_LEADS'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+              onClick={() => setIsStatusDropdownOpen((prev) => !prev)}
+              className={`h-9 px-3.5 rounded-xl border bg-white text-xs font-bold flex items-center justify-between gap-2.5 cursor-pointer transition-all shadow-2xs min-w-[190px] ${
+                isStatusDropdownOpen
+                  ? 'border-slate-400 ring-2 ring-slate-400/20 text-slate-900 shadow-xs'
+                  : 'border-slate-200 hover:border-slate-300 text-slate-800 hover:bg-slate-50'
               }`}
             >
-              All Leads ({stats.myLeads || totalItems})
+              <div className="flex items-center gap-2 min-w-0">
+                <currentStatus.icon className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                <span className="truncate">{currentStatus.label}</span>
+                <span className="px-1.5 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                  {currentStatus.count}
+                </span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${isStatusDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            <button
-              type="button"
-              onClick={() => handleTabChange('NOT_CALLED')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'NOT_CALLED'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <PhoneOutgoing className="w-3.5 h-3.5 text-blue-600" />
-              <span>New Leads ({stats.uncontacted ?? 0})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTabChange('OUTREACH')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'OUTREACH'
-                  ? 'bg-white text-amber-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>In Outreach ({stats.activeOutreach})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTabChange('CALLBACKS')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'CALLBACKS'
-                  ? 'bg-white text-purple-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>Scheduled Callbacks ({stats.callbacks})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTabChange('NOT_INTERESTED')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'NOT_INTERESTED' || activeTab === 'DROPPED'
-                  ? 'bg-white text-rose-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <UserX className="w-3.5 h-3.5 text-rose-500" />
-              <span>Not Interested ({stats.notInterested ?? stats.dropped ?? 0})</span>
-            </button>
+            {isStatusDropdownOpen && (
+              <div className="absolute left-0 top-full mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
+                  Filter by Status
+                </div>
+                <div className="space-y-0.5 px-1">
+                  {queueStatuses.map((opt) => {
+                    const isSelected = currentStatus.id === opt.id;
+                    const Icon = opt.icon;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          handleTabChange(opt.id as any);
+                          setIsStatusDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-100 text-slate-900 font-bold'
+                            : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-6 h-6 rounded-md flex items-center justify-center ${opt.color}`}>
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
+                          <span>{opt.label}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                            isSelected
+                              ? 'bg-white text-slate-800 border border-slate-300 shadow-2xs'
+                              : 'bg-slate-100 text-slate-600 border border-slate-200'
+                          }`}>
+                            {opt.count}
+                          </span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-slate-700 stroke-[2.5]" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -383,7 +467,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
             onReset={() => {
               handleTabChange('ALL');
               handlePriorityChange('ALL');
-              setVisaFilter('ALL');
+              handleVisaChange('ALL');
             }}
           />
 
@@ -499,6 +583,16 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         lead={activeLeadForCall}
         isManager={false}
         onSaveDisposition={handleSaveCallDisposition}
+        isLoading={isActionLoading}
+      />
+
+      {/* Start / Configure Tax Filing Modal */}
+      <StartFilingModal
+        isOpen={isStartFilingModalOpen}
+        onClose={handleCloseModals}
+        lead={activeLeadForStartFiling}
+        agents={agents}
+        onConfirmStartFiling={handleStartFiling}
         isLoading={isActionLoading}
       />
     </div>

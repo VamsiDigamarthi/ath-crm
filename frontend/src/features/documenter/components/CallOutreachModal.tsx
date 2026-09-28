@@ -8,17 +8,13 @@ import {
   CalendarClock, 
   XCircle, 
   PhoneMissed, 
-  PhoneOff,
-  UserX,
-  User,
-  Globe,
-  MapPin,
-  Clock,
-  History,
-  Check,
-  PhoneCall,
-  FileText,
-  UserCheck
+  PhoneOff, 
+  UserX, 
+  Clock, 
+  History, 
+  Check, 
+  PhoneCall, 
+  RotateCcw
 } from 'lucide-react';
 import type { DocumenterLeadItem, CallDisposition, DocumenterAgentItem } from '../types/documenter.types';
 
@@ -57,9 +53,6 @@ interface DispositionConfig {
   title: string;
   subtitle: string;
   icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  activeClass: string;
-  chipActiveClass: string;
   subOptions: string[];
 }
 
@@ -69,9 +62,6 @@ const dispositions: DispositionConfig[] = [
     title: 'Connected - Interested in Filing',
     subtitle: 'Initiate Tax Prep & trigger Client Portal Access',
     icon: CheckCircle2,
-    color: 'emerald',
-    activeClass: 'border-[#16A34A] bg-emerald-50/70 text-[#16A34A]',
-    chipActiveClass: 'bg-[#16A34A] text-white border-[#16A34A]',
     subOptions: [
       'Interested – Wants to File',
       'Interested – Wants Tax Planning',
@@ -87,9 +77,6 @@ const dispositions: DispositionConfig[] = [
     title: 'Connected - Busy / Call Back Later',
     subtitle: 'Schedule a specific follow-up date & time',
     icon: CalendarClock,
-    color: 'amber',
-    activeClass: 'border-amber-500 bg-amber-50/70 text-amber-800',
-    chipActiveClass: 'bg-amber-600 text-white border-amber-600',
     subOptions: [
       'Client Busy',
       'At Work',
@@ -105,9 +92,6 @@ const dispositions: DispositionConfig[] = [
     title: 'No Answer / Voicemail',
     subtitle: 'Retain in queue and increment outreach attempts',
     icon: PhoneMissed,
-    color: 'blue',
-    activeClass: 'border-blue-500 bg-blue-50/70 text-blue-800',
-    chipActiveClass: 'bg-blue-600 text-white border-blue-600',
     subOptions: [
       'No Answer – No Voicemail Left',
       'No Answer – Voicemail Left',
@@ -125,9 +109,6 @@ const dispositions: DispositionConfig[] = [
     title: 'Connected – Not Interested',
     subtitle: 'Close lead & mark as Dropped / Cancelled',
     icon: XCircle,
-    color: 'rose',
-    activeClass: 'border-rose-500 bg-rose-50/70 text-rose-800',
-    chipActiveClass: 'bg-rose-600 text-white border-rose-600',
     subOptions: [
       'Already Filed Taxes',
       'Already Has Tax Preparer / CPA',
@@ -149,9 +130,6 @@ const dispositions: DispositionConfig[] = [
     title: 'Invalid / Unreachable Contact',
     subtitle: 'Flag lead for contact number correction',
     icon: PhoneOff,
-    color: 'slate',
-    activeClass: 'border-slate-500 bg-slate-100 text-slate-800',
-    chipActiveClass: 'bg-slate-700 text-white border-slate-700',
     subOptions: [
       'Disconnected Number',
       'Wrong Number',
@@ -171,9 +149,6 @@ const dispositions: DispositionConfig[] = [
     title: 'Client Not Qualified',
     subtitle: 'Lead is not eligible or created in error',
     icon: UserX,
-    color: 'purple',
-    activeClass: 'border-purple-500 bg-purple-50/70 text-purple-800',
-    chipActiveClass: 'bg-purple-600 text-white border-purple-600',
     subOptions: [
       'Not a U.S. Taxpayer',
       'No U.S. Filing Requirement',
@@ -182,13 +157,30 @@ const dispositions: DispositionConfig[] = [
       'Lead Created in Error',
     ],
   },
+  {
+    id: 'FALLBACK',
+    title: 'Fall Back',
+    subtitle: 'Retain lead in outreach pipeline for subsequent cycle / follow-up',
+    icon: RotateCcw,
+    subOptions: [
+      'Client Requested Follow-Up Later',
+      'Thinking / Considering Options',
+      'Price Evaluation / Seeking Discount',
+      'Comparing Other CPAs / Services',
+      'Will Respond via WhatsApp / Email',
+      'Awaiting Previous Year Documents',
+      'Consulting Family / Partner',
+      'Follow Up in Later Cycle',
+      'Other',
+    ],
+  },
 ];
 
 export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
   isOpen,
   onClose,
   lead,
-  agents = [],
+  agents: _agents = [],
   isManager = false,
   onSaveDisposition,
   isLoading = false,
@@ -200,11 +192,10 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
   const [callbackTimezone, setCallbackTimezone] = useState<string>('Eastern');
   const [isPreviousSummaryExpanded, setIsPreviousSummaryExpanded] = useState<boolean>(false);
 
-  // Tax return intake fields (starts unselected with strict validation)
+  // Tax return intake fields
   const [taxYear, setTaxYear] = useState<number | ''>('');
   const [filingType, setFilingType] = useState<string>('');
   const [assignedDocAgentId, setAssignedDocAgentId] = useState<string>('');
-  const [validationErrors, setValidationErrors] = useState<{ taxYear?: string; filingType?: string } | null>(null);
 
   // Auto-bind / pre-fill previous call notes & callback time when modal opens
   useEffect(() => {
@@ -212,7 +203,6 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
       setTaxYear('');
       setFilingType('');
       setAssignedDocAgentId(lead.assignedDocAgentId || '');
-      setValidationErrors(null);
 
       const log = lead.lastCallLog || (lead as any).callLogs?.[0];
       if (log) {
@@ -253,7 +243,6 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
     if (config && !config.subOptions.includes(selectedSubDisposition)) {
       setSelectedSubDisposition('');
     }
-    setValidationErrors(null);
   };
 
   const handleSubOptionClick = (sub: string) => {
@@ -269,21 +258,6 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (selectedDisposition === 'CONNECTED_INTERESTED') {
-      const errors: { taxYear?: string; filingType?: string } = {};
-      if (!taxYear) {
-        errors.taxYear = 'Please select a Tax Filing Year';
-      }
-      if (!filingType) {
-        errors.filingType = 'Please select a Filing / Return Type';
-      }
-      if (Object.keys(errors).length > 0) {
-        setValidationErrors(errors);
-        return;
-      }
-    }
-    setValidationErrors(null);
-
     onSaveDisposition({
       applicationId: lead.id,
       disposition: selectedDisposition,
@@ -292,7 +266,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
       callbackDate: isCallbackRequired ? callbackDate : undefined,
       callbackTimezone: isCallbackRequired ? callbackTimezone : undefined,
       taxYear: selectedDisposition === 'CONNECTED_INTERESTED' && taxYear ? Number(taxYear) : undefined,
-      filingType: selectedDisposition === 'CONNECTED_INTERESTED' ? filingType : undefined,
+      filingType: selectedDisposition === 'CONNECTED_INTERESTED' ? (filingType || undefined) : undefined,
       assignedDocAgentId: isManager && selectedDisposition === 'CONNECTED_INTERESTED' ? (assignedDocAgentId || undefined) : undefined,
     });
   };
@@ -354,7 +328,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
               {isLoading
                 ? 'Saving...'
                 : selectedDisposition === 'CONNECTED_INTERESTED'
-                ? `Confirm ${taxYear ? `TY ${taxYear}` : ''} Filing & Open Case`
+                ? 'Confirm Filing & Open Case'
                 : 'Save Disposition & Update'}
             </Button>
           </div>
@@ -362,47 +336,26 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
       }
     >
       <div className="space-y-5">
-        {/* Taxpayer Contact Card */}
-        <div className="p-4 rounded-xl bg-slate-900 text-white border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-slate-950/20">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-[#16A34A] border border-emerald-500/30 flex items-center justify-center font-bold text-sm">
-              <User className="w-5 h-5 text-emerald-400" />
-            </div>
-            <div>
-              <div className="font-bold text-sm text-white flex items-center gap-2">
-                <span>{customer.fullName || `${customer.firstName} ${customer.lastName}`}</span>
-                {customer.visaType && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    <Globe className="w-2.5 h-2.5" /> {customer.visaType}
-                  </span>
-                )}
-              </div>
-              <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-                <MapPin className="w-3 h-3 text-slate-500" />
-                <span>{customer.city ? `${customer.city}, ` : ''}{customer.state || 'US'} {customer.zipCode || ''}</span>
-                <span>• {isRaw ? 'Filing Not Started' : `TY ${lead.taxYear}`}</span>
-              </div>
-            </div>
+        {/* Simple Clean Taxpayer Name & Call Action (Removed heavy dark bg) */}
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <div>
+            <span className="text-sm font-bold text-slate-900">
+              {customer.fullName || `${customer.firstName} ${customer.lastName}`}
+            </span>
           </div>
 
-          {/* Attempt Badge & Quick Click-to-Call */}
-          <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold text-xs shadow-2xs whitespace-nowrap">
-              <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Attempt #{attemptNumber}</span>
-            </div>
-
-            <div className="flex items-center gap-2 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700">
+          {customer.phone && (
+            <div className="flex items-center gap-1.5">
               <a
                 href={`tel:${customer.phone}`}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs transition-colors shadow-2xs"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs transition-colors shadow-2xs"
               >
                 <PhoneOutgoing className="w-3.5 h-3.5" />
-                {customer.phone}
+                <span>{customer.phone}</span>
               </a>
               <AppCopyButton text={customer.phone} size="sm" />
             </div>
-          </div>
+          )}
         </div>
 
         {/* Previous Call Log History Banner */}
@@ -453,8 +406,8 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
                   key={item.id}
                   className={`rounded-xl border transition-all ${
                     isSelected
-                      ? item.activeClass + ' shadow-xs ring-1 ring-current'
-                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      ? 'bg-emerald-50/40 border-[#16A34A] shadow-xs ring-1 ring-[#16A34A]'
+                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
                   }`}
                 >
                   <div
@@ -464,13 +417,13 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                          isSelected ? 'bg-white shadow-xs' : 'bg-slate-100 text-slate-600'
+                          isSelected ? 'bg-[#16A34A] text-white shadow-xs' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         <Icon className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-slate-900">
+                        <div className={`text-xs font-bold ${isSelected ? 'text-slate-900' : 'text-slate-800'}`}>
                           {item.title}
                         </div>
                         <div className="text-[11px] text-slate-500 font-normal">
@@ -479,9 +432,9 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
                       </div>
                     </div>
                     <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
                         isSelected
-                          ? 'border-current bg-current'
+                          ? 'border-[#16A34A] bg-[#16A34A]'
                           : 'border-slate-300 bg-white'
                       }`}
                     >
@@ -491,7 +444,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
 
                   {/* Sub-options Chips (Shown when this disposition is selected) */}
                   {isSelected && item.subOptions && item.subOptions.length > 0 && (
-                    <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-200/60 mt-1">
+                    <div className="px-3.5 pb-3.5 pt-1.5 border-t border-emerald-100 mt-1">
                       <div className="text-[11px] font-semibold text-slate-600 mb-2 flex items-center gap-1">
                         <span>Select Sub-Outcome / Reason:</span>
                         {selectedSubDisposition && (
@@ -508,10 +461,10 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
                               key={sub}
                               type="button"
                               onClick={() => handleSubOptionClick(sub)}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer inline-flex items-center gap-1.5 border ${
                                 isChipSelected
-                                  ? `${item.chipActiveClass} shadow-xs font-semibold`
-                                  : 'bg-white/90 border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-white hover:text-slate-900'
+                                  ? 'bg-[#16A34A] text-white border-[#16A34A] shadow-xs font-semibold'
+                                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-100 font-medium'
                               }`}
                             >
                               {isChipSelected && <Check className="w-3 h-3 shrink-0 stroke-[2.5]" />}
@@ -528,7 +481,8 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
           </div>
         </div>
 
-        {/* Initiate Tax Filing Year & Return Type for Interested Call */}
+        {/* Initiate Tax Filing Year & Return Type for Interested Call - Commented out as requested */}
+        {/*
         {selectedDisposition === 'CONNECTED_INTERESTED' && (
           <div className="p-4 rounded-xl bg-emerald-50/80 border border-emerald-300 animate-in fade-in duration-150 space-y-3.5 shadow-2xs">
             <div className="flex items-center justify-between">
@@ -554,11 +508,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
                       setValidationErrors((prev) => (prev ? { ...prev, taxYear: undefined } : null));
                     }
                   }}
-                  className={`w-full px-3 py-2 text-xs rounded-xl border bg-white focus:outline-none focus:ring-2 font-bold text-slate-800 shadow-2xs cursor-pointer transition-all ${
-                    validationErrors?.taxYear
-                      ? 'border-rose-500 focus:ring-rose-400 bg-rose-50/40 text-rose-900 ring-1 ring-rose-500'
-                      : 'border-emerald-300 focus:ring-emerald-500'
-                  }`}
+                  className="w-full px-3 py-2 text-xs rounded-xl border bg-white focus:outline-none focus:ring-2 font-bold text-slate-800 shadow-2xs cursor-pointer border-emerald-300 focus:ring-emerald-500"
                 >
                   <option value="">-- Select Tax Year --</option>
                   <option value={2025}>TY 2025 (Current Filing Season)</option>
@@ -568,11 +518,6 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
                   <option value={2021}>TY 2021</option>
                   <option value={2020}>TY 2020</option>
                 </select>
-                {validationErrors?.taxYear && (
-                  <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1 animate-in fade-in duration-150">
-                    <span>⚠️</span> {validationErrors.taxYear}
-                  </p>
-                )}
               </div>
 
               <div>
@@ -587,24 +532,14 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
                       setValidationErrors((prev) => (prev ? { ...prev, filingType: undefined } : null));
                     }
                   }}
-                  className={`w-full px-3 py-2 text-xs rounded-xl border bg-white focus:outline-none focus:ring-2 font-bold text-slate-800 shadow-2xs cursor-pointer transition-all ${
-                    validationErrors?.filingType
-                      ? 'border-rose-500 focus:ring-rose-400 bg-rose-50/40 text-rose-900 ring-1 ring-rose-500'
-                      : 'border-emerald-300 focus:ring-emerald-500'
-                  }`}
+                  className="w-full px-3 py-2 text-xs rounded-xl border bg-white focus:outline-none focus:ring-2 font-bold text-slate-800 shadow-2xs cursor-pointer border-emerald-300 focus:ring-emerald-500"
                 >
                   <option value="">-- Select Return Type --</option>
                   <option value="INDIVIDUAL">Individual</option>
                   <option value="BUSINESS">Business</option>
                 </select>
-                {validationErrors?.filingType && (
-                  <p className="text-[11px] font-semibold text-rose-600 mt-1 flex items-center gap-1 animate-in fade-in duration-150">
-                    <span>⚠️</span> {validationErrors.filingType}
-                  </p>
-                )}
               </div>
 
-              {/* Manager/Admin gets to select Assign Agent */}
               {isManager && agents && agents.length > 0 && (
                 <div className="sm:col-span-2">
                   <label className="block text-[11px] font-bold text-emerald-900 mb-1 flex items-center gap-1">
@@ -628,6 +563,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
             </div>
           </div>
         )}
+        */}
 
         {/* Callback Date, Time & Timezone Scheduler */}
         {isCallbackRequired && (

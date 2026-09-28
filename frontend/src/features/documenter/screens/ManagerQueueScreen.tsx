@@ -57,6 +57,7 @@ export const ManagerQueueScreen: React.FC = () => {
     activeLeadForStartFiling,
     handleOpenCallModal,
     handleOpenAssignModal,
+    handleOpenStartFilingModal,
     handleStartFiling,
     handleCloseModals,
     handleSaveCallDisposition,
@@ -68,10 +69,11 @@ export const ManagerQueueScreen: React.FC = () => {
       getDocumenterColumns({
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
+        onOpenStartFilingModal: handleOpenStartFilingModal,
         isManagerView: true,
         isAdmin: true,
       }),
-    [handleOpenCallModal, handleOpenAssignModal]
+    [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal]
   );
 
   const tabs = [

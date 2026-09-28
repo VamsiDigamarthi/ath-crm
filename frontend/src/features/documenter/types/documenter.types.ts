@@ -1,4 +1,4 @@
-export type DocumenterTab = 
+export type DocumenterTab =
   | 'RAW_PROSPECTS'
   | 'UNASSIGNED'
   | 'NOT_CALLED'
@@ -10,15 +10,17 @@ export type DocumenterTab =
   | 'CALLBACKS'
   | 'DROPPED'
   | 'NOT_INTERESTED'
+  | 'FALLBACK'
   | 'ALL';
 
-export type CallDisposition = 
+export type CallDisposition =
   | 'CONNECTED_INTERESTED'
   | 'CONNECTED_CALLBACK'
   | 'NO_ANSWER_VOICEMAIL'
   | 'CONNECTED_NOT_INTERESTED'
   | 'INVALID_DISCONNECTED'
-  | 'CLIENT_NOT_QUALIFIED';
+  | 'CLIENT_NOT_QUALIFIED'
+  | 'FALLBACK';
 
 export interface CallLogItem {
   id: string;
@@ -172,6 +174,7 @@ export interface DocumenterStats {
   inPrep: number;
   myLeads: number;
   callbacks: number;
+  fallback?: number;
   notInterested?: number;
   dropped?: number;
   total: number;
