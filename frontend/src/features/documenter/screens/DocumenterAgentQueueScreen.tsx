@@ -22,7 +22,6 @@ import {
   Check
 } from 'lucide-react';
 import type { DocumenterLeadItem } from '../types/documenter.types';
-import toast from 'react-hot-toast';
 
 const AVAILABLE_COLUMNS: ColumnConfigItem[] = [
   { id: 'taxpayer', label: 'Taxpayer Client', defaultVisible: true, locked: true },
@@ -268,31 +267,6 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     });
   }, [allColumns, visibleColumnIds]);
 
-  const handleStartNextCall = () => {
-    // 1. Priority 1: Next uncalled lead in active outreach (no calls yet)
-    const nextUncalledLead = leads.find(
-      (l) => l.currentStage === 'DOC_OUTREACH' && !l.lastCallLog
-    );
-    if (nextUncalledLead) {
-      handleOpenCallModal(nextUncalledLead);
-      return;
-    }
-
-    // 2. Priority 2: Next lead in outreach needing follow-up
-    const nextOutreachLead = leads.find((l) => l.currentStage === 'DOC_OUTREACH');
-    if (nextOutreachLead) {
-      handleOpenCallModal(nextOutreachLead);
-      return;
-    }
-
-    // 3. Fallback: First available lead or completion message
-    if (leads.length > 0) {
-      handleOpenCallModal(leads[0]);
-    } else {
-      toast.success('All assigned leads have been dialed! Great job!');
-    }
-  };
-
   return (
     <div className="space-y-4 pb-12 font-sans animate-in fade-in duration-150">
       {/* 1. Header & Title Section */}
@@ -510,17 +484,6 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
-          </Button>
-
-          {/* Start Next Call CTA */}
-          <Button
-            size="sm"
-            onClick={handleStartNextCall}
-            disabled={leads.length === 0}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <PhoneCall className="w-3.5 h-3.5" />
-            <span>Start Next Call</span>
           </Button>
         </div>
       </div>

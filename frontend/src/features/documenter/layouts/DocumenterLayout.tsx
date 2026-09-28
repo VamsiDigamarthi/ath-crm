@@ -10,10 +10,10 @@ import {
   LayoutGrid,
   PhoneCall,
   Clock,
+  RotateCcw,
   FileCheck2,
   Bell,
   Globe,
-  History,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -45,15 +45,16 @@ export const DocumenterLayout: React.FC = () => {
       { id: 'self_signups', label: 'Direct Sign-ups', icon: Globe, section: 'Operations', path: '/documenter/manager/self-signups' },
       { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', path: '/documenter/manager/queue' },
       { id: 'scorecards', label: 'Agent Scorecards', icon: Users, section: 'Operations', path: '/documenter/manager/scorecards' },
-      { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Operations', path: '/documenter/manager/audit-logs' },
+      // { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Operations', path: '/documenter/manager/audit-logs' },
       { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
     ]
     : [
       { id: 'agent_dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
       { id: 'agent_queue', label: 'My Calling', icon: PhoneCall, section: 'Calling Workspace', path: '/documenter/agent/queue' },
       { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', path: '/documenter/agent/callbacks' },
+      { id: 'agent_fallback', label: 'Fallback Leads', icon: RotateCcw, section: 'Calling Workspace', path: '/documenter/agent/fallback' },
       { id: 'agent_documents', label: 'My Documents', icon: FileCheck2, section: 'Intake Pipeline', path: '/documenter/agent/documents' },
-      { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Intake Pipeline', path: '/documenter/agent/audit-logs' },
+      // { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Intake Pipeline', path: '/documenter/agent/audit-logs' },
       { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Calling Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
     ];
 
@@ -70,6 +71,8 @@ export const DocumenterLayout: React.FC = () => {
       sessionStorage.setItem('doc_last_tab', 'agent_queue');
     } else if (currentPath.includes('/documenter/agent/callbacks')) {
       sessionStorage.setItem('doc_last_tab', 'agent_callbacks');
+    } else if (currentPath.includes('/documenter/agent/fallback')) {
+      sessionStorage.setItem('doc_last_tab', 'agent_fallback');
     } else if (currentPath.includes('/audit-logs')) {
       sessionStorage.setItem('doc_last_tab', 'audit_logs');
     } else if (currentPath.includes('/documenter/notifications')) {
@@ -96,6 +99,7 @@ export const DocumenterLayout: React.FC = () => {
     if (currentPath === '/documenter/manager' || currentPath === '/documenter/manager/') return 'dashboard';
     if (currentPath.includes('/documenter/agent/queue')) return 'agent_queue';
     if (currentPath.includes('/documenter/agent/callbacks')) return 'agent_callbacks';
+    if (currentPath.includes('/documenter/agent/fallback')) return 'agent_fallback';
     if (currentPath.includes('/documenter/agent/documents') || currentPath.includes('/documenter/agent/prep')) return 'agent_documents';
     if (currentPath === '/documenter/agent' || currentPath === '/documenter/agent/') return 'agent_dashboard';
 
@@ -104,6 +108,7 @@ export const DocumenterLayout: React.FC = () => {
       if (fromQuery === 'documents' || fromQuery === 'agent_documents') return 'agent_documents';
       if (fromQuery === 'queue' || fromQuery === 'agent_queue') return 'agent_queue';
       if (fromQuery === 'callbacks' || fromQuery === 'agent_callbacks') return 'agent_callbacks';
+      if (fromQuery === 'fallback' || fromQuery === 'agent_fallback') return 'agent_fallback';
       if (fromQuery === 'audit_logs' || fromQuery === 'audit-logs') return 'audit_logs';
       if (fromQuery === 'caseload') return 'caseload';
 
@@ -111,6 +116,7 @@ export const DocumenterLayout: React.FC = () => {
         if (locationState.from === 'documents' || locationState.from === 'agent_documents') return 'agent_documents';
         if (locationState.from === 'queue' || locationState.from === 'agent_queue') return 'agent_queue';
         if (locationState.from === 'callbacks' || locationState.from === 'agent_callbacks') return 'agent_callbacks';
+        if (locationState.from === 'fallback' || locationState.from === 'agent_fallback') return 'agent_fallback';
         if (locationState.from === 'audit_logs') return 'audit_logs';
         if (locationState.from === 'caseload') return 'caseload';
       }

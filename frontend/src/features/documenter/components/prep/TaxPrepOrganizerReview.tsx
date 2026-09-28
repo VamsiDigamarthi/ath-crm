@@ -203,7 +203,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
-              Tax Organizer {viewMode === 'AGENT_EDIT' ? '' : '— Audit'}
+              Info &amp; Files {viewMode === 'AGENT_EDIT' ? '' : '— Audit'}
             </h2>
             <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
               {progressPercent}% Complete

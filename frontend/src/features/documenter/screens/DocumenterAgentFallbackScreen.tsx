@@ -9,12 +9,12 @@ import { AppFilterFlyout, type FilterCategory } from '@/shared/components/AppFil
 import { AppColumnConfigDropdown, type ColumnConfigItem } from '@/shared/components/AppColumnConfigDropdown';
 import { Button } from '@/shared/components/Button';
 import { 
-  Clock, 
-  AlertCircle, 
-  CheckCircle2, 
+  RotateCcw, 
+  PhoneCall, 
   RefreshCw, 
+  CheckCircle2, 
   ChevronUp, 
-  ChevronDown 
+  ChevronDown
 } from 'lucide-react';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 
@@ -27,11 +27,11 @@ const AVAILABLE_COLUMNS: ColumnConfigItem[] = [
   { id: 'actions', label: 'Actions', defaultVisible: true, locked: true },
 ];
 
-export const DocumenterAgentCallbacksScreen: React.FC = () => {
+export const DocumenterAgentFallbackScreen: React.FC = () => {
   // 1. Collapsible Top Summary Cards State
   const [isStatsCollapsed, setIsStatsCollapsed] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('ath_callbacks_queue_stats_collapsed') === 'true';
+      return localStorage.getItem('ath_fallback_queue_stats_collapsed') === 'true';
     } catch {
       return false;
     }
@@ -41,7 +41,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
     setIsStatsCollapsed((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem('ath_callbacks_queue_stats_collapsed', String(next));
+        localStorage.setItem('ath_fallback_queue_stats_collapsed', String(next));
       } catch {}
       return next;
     });
@@ -51,7 +51,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(() => {
     const lockedIds = AVAILABLE_COLUMNS.filter((c) => c.locked).map((c) => c.id);
     try {
-      const saved = localStorage.getItem('ath_callbacks_queue_visible_columns');
+      const saved = localStorage.getItem('ath_fallback_queue_visible_columns');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -93,61 +93,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
     handleCloseModals,
     handleSaveCallDisposition,
     refreshData,
-  } = useDocumenterWorkspace('CALLBACKS');
-
-  // Helper to format callback urgency and time label
-  const getCallbackUrgency = (dateStr?: string | null) => {
-    if (!dateStr) return { urgency: 'UPCOMING' as const, label: 'Scheduled Later', isToday: false, isImminent: false };
-
-    const targetDate = new Date(dateStr);
-    const now = new Date();
-    const diffMs = targetDate.getTime() - now.getTime();
-    const diffMins = Math.round(diffMs / 60000);
-
-    const isToday = targetDate.toDateString() === now.toDateString();
-    const timeFormatted = targetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    if (diffMins < 0 && Math.abs(diffMins) <= 120) {
-      return {
-        urgency: 'IMMINENT' as const,
-        label: `Overdue by ${Math.abs(diffMins)} mins (${timeFormatted})`,
-        isToday,
-        isImminent: true,
-      };
-    }
-
-    if (diffMins >= 0 && diffMins <= 30) {
-      return {
-        urgency: 'IMMINENT' as const,
-        label: `In ${diffMins} mins (${timeFormatted})`,
-        isToday: true,
-        isImminent: true,
-      };
-    }
-
-    if (isToday) {
-      return {
-        urgency: 'UPCOMING' as const,
-        label: `Today at ${timeFormatted}`,
-        isToday: true,
-        isImminent: false,
-      };
-    }
-
-    return {
-      urgency: 'UPCOMING' as const,
-      label: `${targetDate.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${timeFormatted}`,
-      isToday: false,
-      isImminent: false,
-    };
-  };
-
-  const imminentCount = useMemo(() => {
-    return leads.filter((l) => {
-      const log = l.lastCallLog || (l as any).callLogs?.[0];
-      return log?.callbackScheduledAt && getCallbackUrgency(log.callbackScheduledAt).isImminent;
-    }).length;
-  }, [leads]);
+  } = useDocumenterWorkspace('FALLBACK');
 
   // 3. Filter Categories for 2-Column Flyout
   const filterCategories = useMemo<FilterCategory[]>(() => [
@@ -227,15 +173,15 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Scheduled Callbacks &amp; Appointments
+              Fallback Leads &amp; Re-Outreach Queue
             </h2>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-              <Clock className="w-3 h-3 text-purple-600" />
-              <span>Callbacks</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+              <RotateCcw className="w-3 h-3 text-slate-600" />
+              <span>Fall Back</span>
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Time-sensitive callback commitments with interested taxpayers. Maintain 100% on-time outreach SLAs.
+            Review and re-engage qualified leads retained for subsequent calling cycles and follow-up outreach.
           </p>
         </div>
       </div>
@@ -243,52 +189,31 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
       {/* 2. Top Metric Summary Cards (Collapsible) */}
       {!isStatsCollapsed && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* Card 1: Total Callbacks */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
+          {/* Card 1: Total Fallback Leads */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500">
-                Total Scheduled Callbacks
+                Total Fallback Leads
               </span>
-              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
-                <Clock className="w-4 h-4" />
+              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200">
+                <RotateCcw className="w-4 h-4 text-slate-600" />
               </div>
             </div>
             <div className="mt-3">
               <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                {stats.callbacks || totalItems}
+                {stats.fallback ?? totalItems}
               </div>
-              <div className="text-xs text-purple-600 font-medium mt-1">
-                Active commitments in your queue
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Imminent / Due Today */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500">
-                Due Today / Imminent
-              </span>
-              <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
-                <AlertCircle className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                {imminentCount > 0 ? imminentCount : (stats.callbacks ? Math.min(stats.callbacks, 1) : 0)}
-              </div>
-              <div className="text-xs text-amber-700 font-medium mt-1 flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 rounded-full bg-amber-500" />
-                <span>{stats.nextCallbackAt ? `Next: ${new Date(stats.nextCallbackAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'On track'}</span>
+              <div className="text-xs text-slate-600 font-medium mt-1">
+                Awaiting next follow-up cycle
               </div>
             </div>
           </div>
 
-          {/* Card 3: On-Time SLA */}
+          {/* Card 2: Dials Completed Today */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500">
-                On-Time SLA Health
+                Today's Dials Completed
               </span>
               <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
                 <CheckCircle2 className="w-4 h-4" />
@@ -296,11 +221,31 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
             </div>
             <div className="mt-3">
               <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                100%
+                {stats.todayDials ?? 0}
               </div>
               <div className="text-xs text-[#16A34A] font-medium mt-1 flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-[#16A34A]" />
-                <span>Prompt outreach turnaround</span>
+                <span>{stats.contactRatePct ?? 0}% Contact Rate ({stats.todayConnected ?? 0} connected)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Personal Queue Activity */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500">
+                My Total Assigned Leads
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                <PhoneCall className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                {stats.myLeads || totalItems}
+              </div>
+              <div className="text-xs text-blue-600 font-medium mt-1">
+                Active in your calling caseload
               </div>
             </div>
           </div>
@@ -315,7 +260,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
             <AppSearchInput
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Search scheduled callbacks by name, email, phone..."
+              placeholder="Search fallback leads by name, email, phone..."
               debounceMs={300}
             />
           </div>
@@ -337,7 +282,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
             columns={AVAILABLE_COLUMNS}
             visibleColumnIds={visibleColumnIds}
             onChange={setVisibleColumnIds}
-            storageKey="ath_callbacks_queue_visible_columns"
+            storageKey="ath_fallback_queue_visible_columns"
           />
 
           <Button
@@ -373,7 +318,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Scheduled Callbacks AppTable */}
+      {/* 4. Fallback Leads AppTable */}
       <AppTable<DocumenterLeadItem>
         data={leads}
         columns={columns}
@@ -381,7 +326,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
         rowKey="id"
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}
-        emptyText="No pending callback commitments in your queue. All scheduled calls are up to date!"
+        emptyText="No leads in your Fallback queue. All follow-ups are up to date!"
         pagination={{
           currentPage: page,
           totalPages,
