@@ -93,7 +93,7 @@ export const CustomerDashboardScreen: React.FC = () => {
         </p>
       </div>
 
-      {/* 2. Top 3 Clean Stat Cards */}
+      {/* 2. Top 4 Clean Stat Cards */}
       <CustomerStatsCards
         activeFilingsCount={activeFilingsCount}
         completedFilingsCount={completedFilingsCount}
@@ -101,6 +101,8 @@ export const CustomerDashboardScreen: React.FC = () => {
         totalBalanceDue={totalBalanceDue}
         isConvertedCustomer={isConverted}
         activeTaxYear={selectedTaxYear || 2025}
+        filings={filings}
+        availableTaxYears={dashboardData?.availableTaxYears}
       />
 
       {/* 3. Below: Clean Active Filings Table */}

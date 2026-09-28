@@ -59,53 +59,11 @@ export const ReviewModule3Presence: React.FC<ReviewModule3PresenceProps> = ({
         </div>
       )}
 
-      {/* 3-Year Presence Breakdown Dynamic to active taxYear */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl border border-slate-200 bg-emerald-50/50 space-y-2">
-          <span className="text-[10px] font-bold text-emerald-800 uppercase flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-emerald-600" />
-            <span>TY {selectedTaxYear} Days in U.S.</span>
-          </span>
-          <div className="text-2xl font-extrabold text-emerald-900">
-            {valDays(currentYearDays)}
-          </div>
-          <span className="text-[11px] text-emerald-700">
-            {currentYearDays !== undefined ? 'Substantial Presence Factor: 100%' : 'Not reported'}
-          </span>
-        </div>
-
-        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
-          <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-slate-400" />
-            <span>TY {selectedTaxYear - 1} Days in U.S.</span>
-          </span>
-          <div className="text-2xl font-extrabold text-slate-800">
-            {valDays(priorYear1Days)}
-          </div>
-          <span className="text-[11px] text-slate-500">
-            {priorYear1Days !== undefined ? `1/3 Weight Factor: ${Math.round(priorYear1Days / 3)} Days` : 'Not reported'}
-          </span>
-        </div>
-
-        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
-          <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-            <Calendar className="w-3 h-3 text-slate-400" />
-            <span>TY {selectedTaxYear - 2} Days in U.S.</span>
-          </span>
-          <div className="text-2xl font-extrabold text-slate-800">
-            {valDays(priorYear2Days)}
-          </div>
-          <span className="text-[11px] text-slate-500">
-            {priorYear2Days !== undefined ? `1/6 Weight Factor: ${Math.round(priorYear2Days / 6)} Days` : 'Not reported'}
-          </span>
-        </div>
-      </div>
-
-      {/* State Residency Table */}
-      <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3 shadow-2xs">
+      {/* 1. State Residency Table (Taxpayer & Spouse) */}
+      <div className="space-y-3">
         <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
           <MapPin className="w-4 h-4 text-indigo-600" />
-          <span>Multi-State Residing History ({selectedTaxYear - 3} - {selectedTaxYear})</span>
+          <span>Resided / Residing State Details (Taxpayer &amp; Spouse) ({selectedTaxYear - 3} - {selectedTaxYear})</span>
         </h5>
         
         {historyList.length === 0 ? (
@@ -142,6 +100,54 @@ export const ReviewModule3Presence: React.FC<ReviewModule3PresenceProps> = ({
             </table>
           </div>
         )}
+      </div>
+
+      {/* 2. Substantial Presence Test (Physical Days in U.S.) */}
+      <div className="space-y-3">
+        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+          <Calendar className="w-4 h-4 text-emerald-600" />
+          <span>Substantial Presence Test (Physical Days in U.S.)</span>
+        </h5>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl border border-slate-200 bg-emerald-50/50 space-y-2">
+            <span className="text-[10px] font-bold text-emerald-800 uppercase flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-emerald-600" />
+              <span>TY {selectedTaxYear} Days in U.S.</span>
+            </span>
+            <div className="text-2xl font-extrabold text-emerald-900">
+              {valDays(currentYearDays)}
+            </div>
+            <span className="text-[11px] text-emerald-700">
+              {currentYearDays !== undefined ? 'Substantial Presence Factor: 100%' : 'Not reported'}
+            </span>
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+            <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-slate-400" />
+              <span>TY {selectedTaxYear - 1} Days in U.S.</span>
+            </span>
+            <div className="text-2xl font-extrabold text-slate-800">
+              {valDays(priorYear1Days)}
+            </div>
+            <span className="text-[11px] text-slate-500">
+              {priorYear1Days !== undefined ? `1/3 Weight Factor: ${Math.round(priorYear1Days / 3)} Days` : 'Not reported'}
+            </span>
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+            <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-slate-400" />
+              <span>TY {selectedTaxYear - 2} Days in U.S.</span>
+            </span>
+            <div className="text-2xl font-extrabold text-slate-800">
+              {valDays(priorYear2Days)}
+            </div>
+            <span className="text-[11px] text-slate-500">
+              {priorYear2Days !== undefined ? `1/6 Weight Factor: ${Math.round(priorYear2Days / 6)} Days` : 'Not reported'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Schedule E Rental Properties Section */}

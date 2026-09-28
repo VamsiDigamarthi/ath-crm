@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AppTabs, type TabItem } from '@/shared/components/AppTabs';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useCustomerDocuments } from '../hooks/useCustomerDocuments';
 import { VaultUploadDropzone } from './vault/VaultUploadDropzone';
 import { VaultDocumentsTable } from './vault/VaultDocumentsTable';
@@ -13,16 +13,37 @@ interface CustomerDocumentVaultProps {
   selectedTaxYear?: string | number;
   lockTaxYear?: boolean;
   isOrganizerMode?: boolean;
+  filingType?: string;
 }
 
 export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
   selectedTaxYear: propTaxYear,
+  filingType: propFilingType,
 }) => {
+  const [searchParams] = useSearchParams();
   const context = useOutletContext<{
     selectedTaxYear?: string;
+    customerProfile?: any;
   }>() || {};
 
   const effectiveTaxYear = propTaxYear !== undefined ? propTaxYear.toString() : context.selectedTaxYear;
+
+  const urlType = searchParams.get('type') || searchParams.get('filingType');
+  const matchedApp = context.customerProfile?.applications?.find(
+    (a: any) => a.taxYear?.toString() === effectiveTaxYear
+  );
+  const effectiveFilingType = (propFilingType || urlType || matchedApp?.filingType || 'INDIVIDUAL').toUpperCase();
+  const isBusiness = effectiveFilingType === 'BUSINESS';
+
+  // Filter Document Types:
+  // BUSINESS: only 'BUSINESS' and 'TAX_AUDIT'
+  // INDIVIDUAL: 'INDIVIDUAL', 'TAX_COMPLIANCE', and 'TAX_AUDIT'
+  const visibleDocTypes = useMemo(() => {
+    if (isBusiness) {
+      return DOCUMENT_TYPES.filter((dt) => dt.id === 'BUSINESS' || dt.id === 'TAX_AUDIT');
+    }
+    return DOCUMENT_TYPES.filter((dt) => dt.id === 'INDIVIDUAL' || dt.id === 'TAX_COMPLIANCE' || dt.id === 'TAX_AUDIT');
+  }, [isBusiness]);
 
   // All Business Logic and State encapsulated in Hook
   const {
@@ -70,7 +91,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
     setIsDriveLinkModalOpen,
     isSubmittingLink,
     handleUploadDriveLink,
-  } = useCustomerDocuments(effectiveTaxYear);
+  } = useCustomerDocuments(effectiveTaxYear, effectiveFilingType);
 
   // Tabs for All Items, Files, and Drive Links within active document type
   const vaultTabs: TabItem[] = [
@@ -97,7 +118,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
       {/* 2. Small, Neat Document Type Switch Tabs */}
       <div className="border-b border-slate-200 pb-1">
         <AppTabs
-          tabs={DOCUMENT_TYPES.map((dt) => ({
+          tabs={visibleDocTypes.map((dt) => ({
             id: dt.id,
             label: dt.label,
             count: docTypeCounts[dt.id] || 0,
