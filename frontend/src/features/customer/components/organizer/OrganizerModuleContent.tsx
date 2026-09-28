@@ -5,7 +5,8 @@ import { type OrganizerData } from '../../services/customer-api';
 import { Module1Demographics } from './modules/Module1Demographics';
 import { Module3Presence } from './modules/Module3Presence';
 import { Module7Foreign } from './modules/Module7Foreign';
-import { ModuleIncomeExpenses } from './modules/ModuleIncomeExpenses';
+import { ModuleIncome } from './modules/ModuleIncome';
+import { ModuleExpenses } from './modules/ModuleExpenses';
 import { CustomerDocumentVault } from '../CustomerDocumentVault';
 
 interface OrganizerModuleContentProps {
@@ -56,6 +57,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
           updateField={(field, val) => updateModuleField('m1_demographics', field, val)}
           m2Data={organizerData?.m2_dependents || ({} as any)}
           updateM2Field={(field, val) => updateModuleField('m2_dependents', field, val)}
+          m3Data={organizerData?.m3_presence || ({} as any)}
+          updateM3Field={(field, val) => updateModuleField('m3_presence', field, val)}
           m9Data={organizerData?.m9_directDeposit || ({} as any)}
           updateM9Field={(field, val) => updateModuleField('m9_directDeposit', field, val)}
           selectedTaxYear={selectedTaxYear}
@@ -126,8 +129,18 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
           />
         )}
 
-        {(selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6' || selectedModId === 'm8') && (
-          <ModuleIncomeExpenses
+        {(selectedModId === 'm_income' || selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6') && (
+          <ModuleIncome
+            organizerData={organizerData}
+            updateModuleField={updateModuleField}
+            selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
+          />
+        )}
+
+        {(selectedModId === 'm_expenses' || selectedModId === 'm8') && (
+          <ModuleExpenses
             organizerData={organizerData}
             updateModuleField={updateModuleField}
             selectedTaxYear={selectedTaxYear}

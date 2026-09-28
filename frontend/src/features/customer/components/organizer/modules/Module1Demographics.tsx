@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Building2,
   User,
-  Users
+  Users,
+  Globe
 } from 'lucide-react';
 import { AppInput } from '@/shared/components/AppInput';
 import { AppSelect } from '@/shared/components/AppSelect';
@@ -18,12 +19,15 @@ import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { AppAccordion, AppAccordionItem } from '@/shared/components/AppAccordion';
 import { parseUsDate, formatUsDate } from '../utils/organizer-date-helpers';
 import { type OrganizerData } from '../../../services/customer-api';
+import { Module3Presence } from './Module3Presence';
 
 interface Module1Props {
   data: OrganizerData['m1_demographics'];
   updateField: <K extends keyof OrganizerData['m1_demographics']>(field: K, value: OrganizerData['m1_demographics'][K]) => void;
   m2Data?: OrganizerData['m2_dependents'];
   updateM2Field?: <K extends keyof OrganizerData['m2_dependents']>(field: K, value: OrganizerData['m2_dependents'][K]) => void;
+  m3Data?: OrganizerData['m3_presence'];
+  updateM3Field?: <K extends keyof OrganizerData['m3_presence']>(field: K, value: OrganizerData['m3_presence'][K]) => void;
   m9Data?: OrganizerData['m9_directDeposit'];
   updateM9Field?: <K extends keyof OrganizerData['m9_directDeposit']>(field: K, value: OrganizerData['m9_directDeposit'][K]) => void;
   selectedTaxYear: number;
@@ -36,6 +40,8 @@ export const Module1Demographics: React.FC<Module1Props> = ({
   updateField,
   m2Data,
   updateM2Field,
+  m3Data,
+  updateM3Field,
   m9Data,
   updateM9Field,
   selectedTaxYear,
@@ -151,10 +157,10 @@ export const Module1Demographics: React.FC<Module1Props> = ({
   return (
     <div className="space-y-4 font-sans">
       <AppAccordion defaultOpenIndex={0} allowMultiple={true}>
-        {/* Accordion 1: Personal Details */}
+        {/* Accordion 1: General Information */}
         <AppAccordionItem
           index={0}
-          title="Personal Details"
+          title="General Information"
           icon={<User className="w-4 h-4" />}
         >
           <div className="space-y-4">
@@ -789,9 +795,24 @@ export const Module1Demographics: React.FC<Module1Props> = ({
       </div>
     </AppAccordionItem>
 
-    {/* Accordion 3: Bank Details */}
+    {/* Accordion 3: State & Residency */}
     <AppAccordionItem
       index={2}
+      title="State & Residency"
+      icon={<Globe className="w-4 h-4" />}
+    >
+      <Module3Presence
+        data={m3Data || ({} as any)}
+        updateField={updateM3Field || (() => {})}
+        selectedTaxYear={selectedTaxYear}
+        errors={errors}
+        clearError={clearError}
+      />
+    </AppAccordionItem>
+
+    {/* Accordion 4: Bank Details */}
+    <AppAccordionItem
+      index={3}
       title="Bank Details"
       icon={<Building2 className="w-4 h-4" />}
     >

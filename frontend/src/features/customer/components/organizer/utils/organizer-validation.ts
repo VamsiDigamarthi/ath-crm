@@ -933,6 +933,16 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
       const m9 = organizerData.m9_directDeposit;
       return Boolean(m9 && m9.bankName && m9.routingNumber && m9.accountNumber && m9.accountOwnerName);
     }
+    case 'm_income': {
+      return (
+        isModuleCompleted('m4', organizerData) ||
+        isModuleCompleted('m5', organizerData) ||
+        isModuleCompleted('m6', organizerData)
+      );
+    }
+    case 'm_expenses': {
+      return isModuleCompleted('m8', organizerData);
+    }
     case 'm_income_expenses': {
       return (
         isModuleCompleted('m4', organizerData) ||

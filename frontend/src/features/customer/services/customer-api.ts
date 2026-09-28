@@ -85,6 +85,9 @@ export interface CustomerDocumentItem {
   createdAt: string;
   isUnlocked?: boolean;
   isDriveLink?: boolean;
+  fileSize?: number;
+  fileUrl?: string;
+  uploadedAt?: string;
 }
 
 export interface CustomerDocumentsResponse {
@@ -507,6 +510,14 @@ export interface OrganizerData {
       months: number;
       monthlyRent: number;
       totalRentPaid: number;
+    }>;
+    otherTaxesPaidDocuments?: Array<{
+      id?: string;
+      name: string;
+      fileUrl?: string;
+      size?: number;
+      type?: string;
+      uploadedAt?: string;
     }>;
   };
   m9_directDeposit: {

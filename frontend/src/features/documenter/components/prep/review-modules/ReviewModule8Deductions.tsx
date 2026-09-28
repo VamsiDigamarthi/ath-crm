@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Home, Heart, Receipt } from 'lucide-react';
+import { Clock, Home, Heart, Receipt, FileText, ExternalLink } from 'lucide-react';
 
 interface ReviewModule8DeductionsProps {
   m8: any;
@@ -200,6 +200,49 @@ export const ReviewModule8Deductions: React.FC<ReviewModule8DeductionsProps> = (
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Other Taxes Paid - Attached Documents */}
+      <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3 shadow-2xs">
+        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
+          <FileText className="w-4 h-4 text-emerald-600" />
+          <span>Other Taxes Paid - Attached Documents ({(m8.otherTaxesPaidDocuments || []).length})</span>
+        </h5>
+        
+        {(m8.otherTaxesPaidDocuments || []).length === 0 ? (
+          <div className="p-4 rounded-xl border border-dashed border-slate-300 text-center text-xs text-slate-400 italic">
+            No tax payment receipts or proof documents attached yet.
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden bg-white">
+            {(m8.otherTaxesPaidDocuments || []).map((doc: any, idx: number) => (
+              <div key={doc.id || idx} className="p-2.5 flex items-center justify-between gap-3 hover:bg-slate-50">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-7 h-7 rounded bg-emerald-50 text-[#16A34A] flex items-center justify-center shrink-0">
+                    <FileText className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-900 truncate">{doc.name}</p>
+                    <p className="text-[10px] text-slate-400">
+                      {doc.size ? `${(doc.size / 1024).toFixed(1)} KB` : ''} {doc.uploadedAt ? `• ${new Date(doc.uploadedAt).toLocaleDateString()}` : ''}
+                    </p>
+                  </div>
+                </div>
+                {doc.fileUrl && (
+                  <a
+                    href={doc.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                    title="View Document"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

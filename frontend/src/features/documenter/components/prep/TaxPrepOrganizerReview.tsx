@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Users, Building2, LayoutGrid, Edit3, Eye, Save, ArrowLeft, ArrowRight, CheckCircle2, Clock } from 'lucide-react';
+import { User, Users, Building2, LayoutGrid, Edit3, Eye, Save, ArrowLeft, ArrowRight, CheckCircle2, Clock, Globe } from 'lucide-react';
 import { 
   isModuleCompleted,
   validateModule1,
@@ -111,11 +111,28 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const validateActiveModule = (): boolean => {
     let errs: Record<string, string> = {};
     if (selectedModId === 'm1') {
-      errs = validateModule1(localOrganizer.m1_demographics);
+      const e1 = validateModule1(localOrganizer.m1_demographics);
+      const e2 = validateModule2(localOrganizer.m2_dependents, localOrganizer.m1_demographics?.maritalStatus);
+      const e3 = validateModule3(localOrganizer.m3_presence, activeTaxYear);
+      const e9 = validateModule9(localOrganizer.m9_directDeposit, activeTaxYear);
+      errs = { ...e1, ...e2, ...e3, ...e9 };
     } else if (selectedModId === 'm2') {
       errs = validateModule2(localOrganizer.m2_dependents, localOrganizer.m1_demographics?.maritalStatus);
     } else if (selectedModId === 'm3') {
       errs = validateModule3(localOrganizer.m3_presence, activeTaxYear);
+    } else if (selectedModId === 'm_income') {
+      const e4 = validateModule4(localOrganizer.m4_wages, activeTaxYear);
+      const e5 = validateModule5(localOrganizer.m5_interest, activeTaxYear);
+      const e6 = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
+      errs = { ...e4, ...e5, ...e6 };
+    } else if (selectedModId === 'm_expenses') {
+      errs = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
+    } else if (selectedModId === 'm_income_expenses') {
+      const e4 = validateModule4(localOrganizer.m4_wages, activeTaxYear);
+      const e5 = validateModule5(localOrganizer.m5_interest, activeTaxYear);
+      const e6 = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
+      const e8 = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
+      errs = { ...e4, ...e5, ...e6, ...e8 };
     } else if (selectedModId === 'm4') {
       errs = validateModule4(localOrganizer.m4_wages, activeTaxYear);
     } else if (selectedModId === 'm5') {
@@ -151,7 +168,16 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     try {
       setIsSaving(true);
       const existingSubmitted: string[] = localOrganizer.submittedModules || ['m1'];
-      const submittedModules = Array.from(new Set([...existingSubmitted, selectedModId]));
+      const extraKeys = selectedModId === 'm1' 
+        ? ['m1', 'm2', 'm3', 'm9'] 
+        : selectedModId === 'm_income'
+          ? ['m4', 'm5', 'm6', 'm_income']
+          : selectedModId === 'm_expenses'
+            ? ['m8', 'm_expenses']
+            : selectedModId === 'm_income_expenses' 
+              ? ['m4', 'm5', 'm6', 'm8', 'm_income', 'm_expenses', 'm_income_expenses']
+              : [selectedModId];
+      const submittedModules = Array.from(new Set([...existingSubmitted, ...extraKeys]));
       
       const payload = {
         ...localOrganizer,
@@ -337,7 +363,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               <AppAccordion defaultOpenIndex={0} allowMultiple={true}>
                 <AppAccordionItem
                   index={0}
-                  title="Personal Details"
+                  title="General Information"
                   icon={<User className="w-4 h-4" />}
                 >
                   <ReviewModule1Demographics
@@ -362,6 +388,17 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
 
                 <AppAccordionItem
                   index={2}
+                  title="State & Residency"
+                  icon={<Globe className="w-4 h-4" />}
+                >
+                  <ReviewModule3Presence
+                    m3={m3}
+                    selectedTaxYear={activeTaxYear}
+                  />
+                </AppAccordionItem>
+
+                <AppAccordionItem
+                  index={3}
                   title="Bank Details"
                   icon={<Building2 className="w-4 h-4" />}
                 >
@@ -373,12 +410,6 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                 </AppAccordionItem>
               </AppAccordion>
             </div>
-          )}
-
-          {selectedModId === 'm3' && (
-            <ReviewModule3Presence
-              m3={m3}
-            />
           )}
 
           {selectedModId === 'm7' && (
@@ -395,7 +426,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             />
           )}
 
-          {(selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6' || selectedModId === 'm8') && (
+          {(selectedModId === 'm_income' || selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6') && (
             <div className="space-y-6">
               {/* Part 1: W-2 Wages */}
               <div className="space-y-2">
@@ -423,11 +454,15 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                 </div>
                 <ReviewModule6Stocks m6={m6} />
               </div>
+            </div>
+          )}
 
+          {(selectedModId === 'm_expenses' || selectedModId === 'm_income_expenses' || selectedModId === 'm8') && (
+            <div className="space-y-6">
               {/* Part 4: Itemized Deductions & Expenses */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Part 4</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Part 1</span>
                   <h4 className="text-xs font-bold text-slate-800">Itemized Deductions, State Rent &amp; Expenses</h4>
                 </div>
                 <ReviewModule8Deductions m8={m8} />
