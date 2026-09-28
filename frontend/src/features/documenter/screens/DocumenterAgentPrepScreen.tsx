@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { Button } from '@/shared/components/Button';
@@ -12,12 +12,32 @@ import {
   Clock, 
   Eye, 
   Sparkles, 
-  FileText
+  FileText,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { renderVisaBadge } from '../columns/documenter-columns';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 
 export const DocumenterAgentPrepScreen: React.FC = () => {
+  const [isStatsCollapsed, setIsStatsCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('ath_docs_queue_stats_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleStats = () => {
+    setIsStatsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('ath_docs_queue_stats_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
   const navigate = useNavigate();
   const {
     leads,
@@ -205,6 +225,26 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
+            onClick={toggleStats}
+            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all"
+            title={isStatsCollapsed ? 'Expand summary cards' : 'Collapse summary cards to see more rows'}
+          >
+            {isStatsCollapsed ? (
+              <>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                <span>Expand Cards</span>
+              </>
+            ) : (
+              <>
+                <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
+                <span>Collapse Cards</span>
+              </>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={refreshData}
             disabled={isLoading}
             className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
@@ -215,69 +255,71 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Card 1: Active Intakes */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Active Intakes in Pipeline
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 font-bold">
-              <FileCheck2 className="w-4 h-4" />
+      {/* 2. Top Summary KPI Cards (Collapsible) */}
+      {!isStatsCollapsed && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Card 1: Active Intakes */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500">
+                Active Intakes in Pipeline
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 font-bold">
+                <FileCheck2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                {stats.inPrep || totalItems || prepLeads.length}
+              </div>
+              <div className="text-xs text-purple-600 font-medium mt-1">
+                Qualified taxpayers ready for document prep
+              </div>
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {stats.inPrep || totalItems || prepLeads.length}
-            </div>
-            <div className="text-xs text-purple-600 font-medium mt-1">
-              Qualified taxpayers ready for document prep
-            </div>
-          </div>
-        </div>
 
-        {/* Card 2: Uploaded Documents */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Files with Documents
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100 font-bold">
-              <FileText className="w-4 h-4" />
+          {/* Card 2: Uploaded Documents */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500">
+                Files with Documents
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100 font-bold">
+                <FileText className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                {uploadedDocsCount}
+              </div>
+              <div className="text-xs text-[#16A34A] font-medium mt-1 flex items-center gap-1">
+                <span>{uploadedDocsCount > 0 ? `${uploadedDocsCount} clients uploaded tax files` : 'Awaiting uploads'}</span>
+              </div>
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {uploadedDocsCount}
-            </div>
-            <div className="text-xs text-[#16A34A] font-medium mt-1 flex items-center gap-1">
-              <span>{uploadedDocsCount > 0 ? `${uploadedDocsCount} clients uploaded tax files` : 'Awaiting uploads'}</span>
-            </div>
-          </div>
-        </div>
 
-        {/* Card 3: Ready for Sales */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Ready for Calculation / Sales
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 font-bold">
-              <Send className="w-4 h-4" />
+          {/* Card 3: Ready for Sales */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500">
+                Ready for Calculation / Sales
+              </span>
+              <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 font-bold">
+                <Send className="w-4 h-4" />
+              </div>
             </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {readyForSalesCount}
-            </div>
-            <div className="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-blue-500" />
-              <span>{readyForSalesCount > 0 ? `${readyForSalesCount} files ready for sales pitch` : 'Drafts in progress'}</span>
+            <div className="mt-3">
+              <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                {readyForSalesCount}
+              </div>
+              <div className="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-blue-500" />
+                <span>{readyForSalesCount > 0 ? `${readyForSalesCount} files ready for sales pitch` : 'Drafts in progress'}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Search & Filter Bar */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">

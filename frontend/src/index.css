@@ -74,8 +74,8 @@
   html, body {
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif !important;
     color: #000000 !important;
-    background-color: #f1f5f9 !important;
-    @apply bg-slate-100 text-foreground font-sans antialiased;
+    background-color: #f8fafc !important;
+    @apply bg-slate-50 text-foreground font-sans antialiased;
   }
 }
 

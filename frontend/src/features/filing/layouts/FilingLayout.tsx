@@ -95,11 +95,11 @@ export const FilingLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 font-sans">
+    <div className="flex h-screen overflow-hidden bg-[#F8FAFC] font-sans">
       {/* Sidebar - Matching Documenter, PrepReview, Sales, and Admin standard */}
       <AppSidebar
         width={240}
-        variant="light"
+        variant="dark"
         accentColor="#16A34A"
         brand={{
           title: 'TaxCRM Engine',
@@ -118,9 +118,9 @@ export const FilingLayout: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F8FAFC]">
         {/* Top Header Bar */}
-        <header className="h-16 flex items-center justify-end px-6 bg-white border-b border-slate-300 shrink-0 gap-3">
+        <header className="h-16 flex items-center justify-end px-6 bg-white border-b border-slate-200 shrink-0 gap-3">
           <NotificationBellPopover />
 
           {/* Reusable Header User Profile Pill */}

@@ -20,12 +20,15 @@ export function UserProfile({ user, collapsed, theme, accentColor, onUserClick, 
           type="button"
           onClick={onLogout || onUserClick}
           className={cn(
-            'w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-black hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer text-xs font-medium border border-transparent hover:border-red-200',
+            'w-full flex items-center gap-2.5 rounded-md px-3 py-2 transition-colors cursor-pointer text-xs font-medium border border-transparent',
+            theme.bg === 'bg-white'
+              ? 'text-slate-800 hover:text-red-700 hover:bg-red-50 hover:border-red-200'
+              : 'text-slate-300 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/20',
             collapsed ? 'justify-center px-0 py-2' : '',
           )}
           title="Logout"
         >
-          <LogOut size={16} className="shrink-0 text-black group-hover:text-red-600" />
+          <LogOut size={16} className={cn("shrink-0", theme.bg === 'bg-white' ? "text-slate-600 group-hover:text-red-600" : "text-slate-400 group-hover:text-rose-400")} />
           {!collapsed && <span>Logout</span>}
         </button>
       </div>

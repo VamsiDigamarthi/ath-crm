@@ -182,7 +182,7 @@ export function AppTable<T extends Record<string, unknown>>({
   const totalCols = columns.length + (selectable ? 1 : 0)
 
   return (
-    <div className={cn('bg-white border border-slate-300 rounded-md shadow-2xs overflow-hidden flex flex-col', className)}>
+    <div className={cn('bg-white border border-slate-200/90 rounded-xl shadow-xs overflow-hidden flex flex-col', className)}>
       {/* Top Header toolbar */}
       {(title || description || searchable || exportable) && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 border-b border-slate-200 bg-white">

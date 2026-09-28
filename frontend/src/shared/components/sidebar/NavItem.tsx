@@ -59,8 +59,8 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
   const itemStyle = isActive ? activeStyleMap[activeStyle] : {}
 
   const itemClassName = cn(
-    'w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-all duration-150 cursor-pointer',
-    isActive ? 'font-bold' : 'font-normal',
+    'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs transition-all duration-150 cursor-pointer',
+    isActive ? 'font-bold' : 'font-semibold',
     activeStyle === 'bar' ? 'pl-3 border-l-[3px] border-transparent' : '',
     isActive ? activeClasses[activeStyle] : cn('border-transparent', theme.hover, theme.text),
     collapsed ? 'justify-center px-0' : '',
@@ -83,11 +83,27 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
     <>
       <item.icon
         size={18}
-        className={cn('shrink-0', isActive ? 'text-white' : theme.text)}
+        className={cn(
+          'shrink-0 transition-colors',
+          isActive
+            ? 'text-white'
+            : theme.bg === 'bg-white'
+            ? 'text-slate-500'
+            : 'text-slate-300'
+        )}
         style={isActive ? { color: '#ffffff' } : undefined}
       />
       {!collapsed && (
-        <span className={cn('flex-1 text-left truncate', isActive ? 'text-white font-bold' : 'text-black font-normal')}>
+        <span
+          className={cn(
+            'flex-1 text-left truncate transition-colors text-xs font-semibold',
+            isActive
+              ? 'text-white font-bold'
+              : theme.bg === 'bg-white'
+              ? 'text-slate-700'
+              : 'text-slate-200'
+          )}
+        >
           {item.label}
         </span>
       )}
@@ -95,9 +111,10 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
         <span
           className={cn(
             'text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none',
-            isActive ? 'bg-white text-emerald-800' : 'text-white'
+            isActive
+              ? 'bg-white text-emerald-800'
+              : 'bg-emerald-600 text-white'
           )}
-          style={{ backgroundColor: isActive ? '#ffffff' : (item.badgeColor ?? accentColor) }}
         >
           {item.badge}
         </span>
@@ -105,7 +122,15 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
       {!collapsed && hasChildren && (
         <ChevronDown
           size={14}
-          className={cn('transition-transform duration-200', expanded ? 'rotate-180' : '', isActive ? 'text-white' : theme.textMuted)}
+          className={cn(
+            'transition-transform duration-200',
+            expanded ? 'rotate-180' : '',
+            isActive
+              ? 'text-white'
+              : theme.bg === 'bg-white'
+              ? 'text-slate-400'
+              : 'text-slate-300'
+          )}
         />
       )}
     </>
