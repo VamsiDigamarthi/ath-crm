@@ -26,8 +26,6 @@ import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { renderVisaBadge, renderStageBadge } from '../columns/documenter-columns';
 import { TaxpayerCallHistoryTimeline } from '../components/TaxpayerCallHistoryTimeline';
-import { TaxPrepDraftCalculator } from '../components/prep/TaxPrepDraftCalculator';
-import type { TaxDraftComputation } from '../components/prep/TaxPrepDraftCalculator';
 import { TaxPrepOrganizerReview } from '../components/prep/TaxPrepOrganizerReview';
 import { DualRoleSalesPitchTab } from '../components/prep/DualRoleSalesPitchTab';
 import { CallOutreachModal } from '../components/CallOutreachModal';
@@ -58,7 +56,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
   const [isMovingToPrep, setIsMovingToPrep] = useState<boolean>(false);
   const [prepTransferNotes, setPrepTransferNotes] = useState<string>('');
-  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Fetch full 360 lead details including all historical call logs
   const fetchLeadDetails = async () => {
@@ -136,39 +133,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const customer = currentLead.customer;
   const callLogs: CallLogItem[] = currentLead.callLogs || [];
 
-  const handleSaveDraft = async (draft: TaxDraftComputation) => {
-    setIsSaving(true);
-    try {
-      await documenterService.saveTaxDraft({
-        applicationId: currentLead.id,
-        taxDraftSummary: draft,
-      });
-      toast.success('Draft tax computation saved to database!');
-      refreshData();
-    } catch {
-      toast.error('Failed to save draft computation');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
-  const handleSendToSales = async (draft: TaxDraftComputation) => {
-    setIsSaving(true);
-    try {
-      await documenterService.sendToSales({
-        applicationId: currentLead.id,
-        taxDraftSummary: draft,
-        remarks: `Tax draft prepared by Documenter. Estimated Federal Refund: +$${draft.estimatedFedRefund.toLocaleString()}. Sent to Sales Pitch Queue.`,
-      });
-      toast.success('Successfully transferred lead to Sales Pitch Queue! 🚀');
-      refreshData();
-      navigate('/documenter/agent/queue');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to submit to sales');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleOpenRevertDoc = async (doc: { id?: string; fileName: string; filePath?: string; fileUrl?: string }) => {
     if (doc.fileUrl && (doc.fileUrl.startsWith('http://') || doc.fileUrl.startsWith('https://'))) {
@@ -205,6 +170,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     ((currentLead?.taxDraftSummary as any)?.lastRevert?.targetDepartment === 'DOCUMENTER' ? (currentLead?.taxDraftSummary as any)?.lastRevert : null);
   const isRevertedToDocumenter = currentStage === 'DOC_OUTREACH' && Boolean(lastRevert && !lastRevert.resolved);
   const canMoveToPrep = currentStage === 'RAW_PROSPECT' || currentStage === 'DOC_OUTREACH';
+  const isTransferredToPrep = currentStage !== 'RAW_PROSPECT' && currentStage !== 'DOC_OUTREACH';
+  const isReadOnly = isTransferredToPrep && !isRevertedToDocumenter;
 
   const hasAssignedPreparer = Boolean(assignedPrepAgent?.id || (lead as any)?.assignedPrepAgentId);
   const isRevertedFromPrep = lastRevert?.sourceDepartment === 'PREPARATION' || hasAssignedPreparer;
@@ -582,11 +549,11 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       <AppTabs
         tabs={[
           { id: 'TIMELINE', label: 'Call History & Outreach Timeline', count: callLogs.length },
-          { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
+          // { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
           { id: 'ORGANIZER', label: 'Tax Organizer' },
           ...(isDualRole ? [{ id: 'SALES_PITCH', label: 'Sales Pitch & Pricing' }] : []),
         ]}
-        activeTab={activeTab}
+        activeTab={activeTab === 'CALCULATOR' ? 'TIMELINE' : activeTab}
         onChange={(tabId) => setActiveTab(tabId as any)}
       />
 
@@ -598,21 +565,16 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
             onOpenCallModal={() => setIsCallModalOpen(true)}
             onOpenEmailModal={() => setIsEmailModalOpen(true)}
+            readOnly={isReadOnly}
           />
         )}
 
-        {activeTab === 'CALCULATOR' && (
+        {/* Tax Draft Worksheet Commented Out */}
+        {/* {activeTab === 'CALCULATOR' && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
-            <TaxPrepDraftCalculator
-              initialDraft={currentLead.taxDraftSummary as any}
-              customerMaritalStatus={customer.maritalStatus || 'Single'}
-              taxYear={currentLead.taxYear}
-              onSaveDraft={handleSaveDraft}
-              onSendToSales={handleSendToSales}
-              isSaving={isSaving}
-            />
+            ...
           </div>
-        )}
+        )} */}
 
         {activeTab === 'ORGANIZER' && (
           <TaxPrepOrganizerReview
@@ -620,6 +582,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
             taxDraftSummary={currentLead.taxDraftSummary}
             onOrganizerSaved={fetchLeadDetails}
+            allowEdit={!isReadOnly}
+            readOnly={isReadOnly}
           />
         )}
 
@@ -631,7 +595,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               refreshData();
               fetchLeadDetails();
             }}
-            onSwitchToWorksheet={() => setActiveTab('CALCULATOR')}
+            onSwitchToWorksheet={() => setActiveTab('ORGANIZER')}
           />
         )}
       </div>

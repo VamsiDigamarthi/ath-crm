@@ -1588,7 +1588,7 @@ export class DocumenterService {
 
           let initialStage: ApplicationStage = ApplicationStage.DOC_OUTREACH;
           if (disposition === 'CONNECTED_INTERESTED') {
-            initialStage = ApplicationStage.DOC_PREP;
+            initialStage = ApplicationStage.DOC_OUTREACH;
           } else if (disposition === 'CONNECTED_NOT_INTERESTED' || disposition === 'CLIENT_NOT_QUALIFIED') {
             initialStage = ApplicationStage.DROPPED_CANCELLED;
           } else if (disposition === 'INVALID_DISCONNECTED') {
@@ -1654,10 +1654,10 @@ export class DocumenterService {
 
         // 1. Handle disposition transitions
         if (disposition === 'CONNECTED_INTERESTED') {
-          targetStage = ApplicationStage.DOC_PREP;
+          targetStage = ApplicationStage.DOC_OUTREACH;
           auditRemark = subDisposition
-            ? `Lead agreed & interested in filing (${subDisposition}). Moved to DOC_PREP and provisioned Client Portal access.`
-            : `Lead agreed & interested in filing. Moved to DOC_PREP and provisioned Client Portal access for taxpayer (Tax Organizer & Document Vault).`;
+            ? `Lead agreed & interested in filing (${subDisposition}). Qualified return for outreach workspace and provisioned Client Portal access.`
+            : `Lead agreed & interested in filing. Qualified return for outreach workspace and provisioned Client Portal access for taxpayer.`;
 
           // Lazy Taxpayer User Provisioning
           if (!app.customer.userId && (app.customer.email || app.customer.phone)) {

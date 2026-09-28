@@ -34,6 +34,7 @@ interface VaultDocumentsTableProps {
   loading: boolean;
   onDownload: (id: string, fileName: string) => void;
   onDelete: (id: string, fileName: string) => void;
+  readOnly?: boolean;
 }
 
 export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
@@ -44,6 +45,7 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
   loading,
   onDownload,
   onDelete,
+  readOnly = false,
 }) => {
   const [previewDoc, setPreviewDoc] = useState<CustomerDocumentItem | null>(null);
 
@@ -275,15 +277,17 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                           )}
 
                           {/* Delete (if pending) */}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onDelete(doc.id, doc.fileName)}
-                            className="border-slate-300 text-black hover:text-red-600 hover:bg-red-50 text-xs font-bold p-1.5 cursor-pointer h-7 transition-colors rounded-md"
-                            title="Delete Document"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          {!readOnly && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onDelete(doc.id, doc.fileName)}
+                              className="border-slate-300 text-black hover:text-red-600 hover:bg-red-50 text-xs font-bold p-1.5 cursor-pointer h-7 transition-colors rounded-md"
+                              title="Delete Document"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>

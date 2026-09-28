@@ -13,10 +13,12 @@ interface CustomerDocumentVaultProps {
   selectedTaxYear?: string | number;
   lockTaxYear?: boolean;
   isOrganizerMode?: boolean;
+  readOnly?: boolean;
 }
 
 export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
   selectedTaxYear: propTaxYear,
+  readOnly = false,
 }) => {
   const context = useOutletContext<{
     selectedTaxYear?: string;
@@ -109,23 +111,25 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
       </div>
 
       {/* 3. Drag & Drop Upload Sub-Component */}
-      <VaultUploadDropzone
-        uploadCategory={uploadCategory}
-        setUploadCategory={setUploadCategory}
-        activeDocType={activeDocType}
-        stagedFile={stagedFile}
-        uploading={uploading}
-        uploadProgress={uploadProgress}
-        isDragOver={isDragOver}
-        setIsDragOver={setIsDragOver}
-        fileInputRef={fileInputRef}
-        handleFileSelect={handleFileSelect}
-        handleDrop={handleDrop}
-        handleConfirmUpload={handleConfirmUpload}
-        handleCancelStagedFile={handleCancelStagedFile}
-        formatFileSize={formatFileSize}
-        onOpenDriveLinkModal={() => setIsDriveLinkModalOpen(true)}
-      />
+      {!readOnly && (
+        <VaultUploadDropzone
+          uploadCategory={uploadCategory}
+          setUploadCategory={setUploadCategory}
+          activeDocType={activeDocType}
+          stagedFile={stagedFile}
+          uploading={uploading}
+          uploadProgress={uploadProgress}
+          isDragOver={isDragOver}
+          setIsDragOver={setIsDragOver}
+          fileInputRef={fileInputRef}
+          handleFileSelect={handleFileSelect}
+          handleDrop={handleDrop}
+          handleConfirmUpload={handleConfirmUpload}
+          handleCancelStagedFile={handleCancelStagedFile}
+          formatFileSize={formatFileSize}
+          onOpenDriveLinkModal={() => setIsDriveLinkModalOpen(true)}
+        />
+      )}
 
       {/* 4. Tab Switcher: All Items vs Uploaded Files vs Drive Links (for active doc type) */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-1">
@@ -146,6 +150,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
         loading={loading}
         onDownload={downloadDocument}
         onDelete={deleteDocument}
+        readOnly={readOnly}
       />
 
       {/* 6. Drive Link Upload Modal */}

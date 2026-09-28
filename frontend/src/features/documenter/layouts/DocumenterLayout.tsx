@@ -41,21 +41,21 @@ export const DocumenterLayout: React.FC = () => {
   // Role-specific Navigation Items
   const navItems = isManager
     ? [
-        { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/documenter/manager' },
-        { id: 'self_signups', label: 'Direct Sign-ups', icon: Globe, section: 'Operations', path: '/documenter/manager/self-signups' },
-        { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', path: '/documenter/manager/queue' },
-        { id: 'scorecards', label: 'Agent Scorecards', icon: Users, section: 'Operations', path: '/documenter/manager/scorecards' },
-        { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Operations', path: '/documenter/manager/audit-logs' },
-        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
-      ]
+      { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/documenter/manager' },
+      { id: 'self_signups', label: 'Direct Sign-ups', icon: Globe, section: 'Operations', path: '/documenter/manager/self-signups' },
+      { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', path: '/documenter/manager/queue' },
+      { id: 'scorecards', label: 'Agent Scorecards', icon: Users, section: 'Operations', path: '/documenter/manager/scorecards' },
+      { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Operations', path: '/documenter/manager/audit-logs' },
+      { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
+    ]
     : [
-        { id: 'agent_dashboard', label: 'Calling Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
-        { id: 'agent_queue', label: 'My Calling Queue', icon: PhoneCall, section: 'Calling Workspace', path: '/documenter/agent/queue' },
-        { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', path: '/documenter/agent/callbacks' },
-        { id: 'agent_documents', label: 'My Documents', icon: FileCheck2, section: 'Intake Pipeline', path: '/documenter/agent/documents' },
-        { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Intake Pipeline', path: '/documenter/agent/audit-logs' },
-        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Calling Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
-      ];
+      { id: 'agent_dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
+      { id: 'agent_queue', label: 'My Calling', icon: PhoneCall, section: 'Calling Workspace', path: '/documenter/agent/queue' },
+      { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', path: '/documenter/agent/callbacks' },
+      { id: 'agent_documents', label: 'My Documents', icon: FileCheck2, section: 'Intake Pipeline', path: '/documenter/agent/documents' },
+      { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Intake Pipeline', path: '/documenter/agent/audit-logs' },
+      { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Calling Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
+    ];
 
   const currentPath = location.pathname;
   const searchParams = new URLSearchParams(location.search);

@@ -72,6 +72,12 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    if (!canEdit && viewMode === 'AGENT_EDIT') {
+      setViewMode('INSPECTOR');
+    }
+  }, [canEdit, viewMode]);
+
+  useEffect(() => {
     const raw = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
     setLocalOrganizer({
       ...raw,
@@ -256,15 +262,17 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             </button>
           </div>
 
-          <Button
-            size="sm"
-            onClick={handleSaveOrganizerOnCall}
-            disabled={isSaving}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span>{isSaving ? 'Saving to DB...' : 'Save All Drafts'}</span>
-          </Button>
+          {canEdit && (
+            <Button
+              size="sm"
+              onClick={handleSaveOrganizerOnCall}
+              disabled={isSaving}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{isSaving ? 'Saving to DB...' : 'Save All Drafts'}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -306,6 +314,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             onSave={handleSaveOrganizerOnCall}
             currentModIndex={currentModIndex}
             saving={isSaving}
+            readOnly={!canEdit}
           />
         </div>
       )}
@@ -392,6 +401,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               selectedTaxYear={activeTaxYear}
               lockTaxYear={true}
               isOrganizerMode={true}
+              readOnly={!canEdit}
             />
           )}
 

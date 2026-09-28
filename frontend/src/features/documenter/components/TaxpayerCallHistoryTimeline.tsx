@@ -20,6 +20,7 @@ interface TaxpayerCallHistoryTimelineProps {
   taxpayerName: string;
   onOpenCallModal: () => void;
   onOpenEmailModal?: () => void;
+  readOnly?: boolean;
 }
 
 export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelineProps> = ({
@@ -27,6 +28,7 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
   taxpayerName,
   onOpenCallModal,
   onOpenEmailModal,
+  readOnly = false,
 }) => {
   const [filterType, setFilterType] = useState<'ALL' | 'CONNECTED' | 'CALLBACKS'>('ALL');
   const [expandedCallIds, setExpandedCallIds] = useState<Record<string, boolean>>({});
@@ -175,26 +177,30 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
             </button>
           </div>
 
-          {onOpenEmailModal && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onOpenEmailModal}
-              className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            >
-              <Mail className="w-3.5 h-3.5 text-blue-600" />
-              <span>Email Client</span>
-            </Button>
-          )}
+          {!readOnly && (
+            <>
+              {onOpenEmailModal && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onOpenEmailModal}
+                  className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Mail className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Email Client</span>
+                </Button>
+              )}
 
-          <Button
-            size="sm"
-            onClick={onOpenCallModal}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Log New Call</span>
-          </Button>
+              <Button
+                size="sm"
+                onClick={onOpenCallModal}
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log New Call</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
