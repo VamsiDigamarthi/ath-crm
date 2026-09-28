@@ -943,17 +943,28 @@ export class CustomerService {
     const submittedModules = Array.from(new Set(newSubmitted));
 
     cleanOrganizerData.submittedModules = submittedModules;
+    const isBusiness = activeApp.filingType === 'BUSINESS' || Boolean(cleanOrganizerData.b1_companyInfo);
     const effectiveSavedSet = new Set<string>();
-    submittedModules.forEach((m) => {
-      if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
-        effectiveSavedSet.add(m);
-      }
-      if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
-        effectiveSavedSet.add('m_income_expenses');
-      }
-    });
+
+    if (isBusiness) {
+      ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses'].forEach((m) => {
+        if (submittedModules.includes(m)) {
+          effectiveSavedSet.add(m);
+        }
+      });
+    } else {
+      submittedModules.forEach((m) => {
+        if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
+          effectiveSavedSet.add(m);
+        }
+        if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
+          effectiveSavedSet.add('m_income_expenses');
+        }
+      });
+    }
     const completedCount = effectiveSavedSet.size;
-    const progressPercent = Math.min(100, Math.round((completedCount / 6) * 100));
+    const totalModules = isBusiness ? 3 : 6;
+    const progressPercent = Math.min(100, Math.round((completedCount / totalModules) * 100));
 
     const updatedSummary = {
       ...currentDraft,
@@ -981,6 +992,9 @@ export class CustomerService {
       m5: 'Section 06 (1099 Interest & Dividends)',
       m6: 'Section 06 (1099-B Stock & Crypto Gains)',
       m8: 'Section 06 (Itemized Deductions & Expenses)',
+      b1_companyInfo: 'Section 01 (Company Information)',
+      b2_businessIncome: 'Section 02 (Business Income)',
+      b3_businessExpenses: 'Section 03 (Business Expenses)',
     };
     const latestModuleKey = submittedModules[submittedModules.length - 1] || 'm1';
     const latestModuleName = moduleNamesMap[latestModuleKey] || `Section ${latestModuleKey.toUpperCase()}`;

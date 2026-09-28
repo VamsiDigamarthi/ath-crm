@@ -534,6 +534,204 @@ export interface OrganizerData {
       phone: string;
     }>;
   };
+
+  // Business Filing Modules
+  b1_companyInfo?: {
+    businessName: string;
+    dba?: string;
+    ein: string;
+    formationDate?: string;
+    entityType: string;
+    scorpElectionDate?: string;
+    businessActivity: string;
+    accountingMethod?: 'CASH' | 'ACCRUAL' | 'OTHER';
+    address: string;
+    suite?: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    contactName: string;
+    contactTitle: string;
+    contactEmail: string;
+    contactPhone: string;
+    priorYearReturnFiled?: 'YES' | 'NO';
+    partners?: BusinessPartnerItem[];
+  };
+
+  b2_businessIncome?: {
+    clientIncome1099?: Business1099IncomeItem[];
+    grossSalesNot1099?: number;
+    returnsAndAllowances?: number;
+    interestIncome?: number;
+    dividendIncome?: number;
+    otherIncomeDescription?: string;
+    otherIncomeAmount?: number;
+    monthlyRevenue?: {
+      jan?: number;
+      feb?: number;
+      mar?: number;
+      apr?: number;
+      may?: number;
+      jun?: number;
+      jul?: number;
+      aug?: number;
+      sep?: number;
+      oct?: number;
+      nov?: number;
+      dec?: number;
+    };
+  };
+
+  b3_businessExpenses?: {
+    // 1. Payroll & Compensation
+    officerCompensation?: number;
+    employeeWages?: number;
+    contractorPayments?: number;
+    employerPayrollTaxes?: number;
+    futaTax?: number;
+    sutaTax?: number;
+    employeeBenefits?: number;
+    retirementPlanContributions?: number;
+    payrollProcessingFees?: number;
+
+    // 2. Facilities & Occupancy
+    rentProperty?: number;
+    utilitiesCommercial?: number;
+    commercialInsurance?: number;
+    repairsMaintenance?: number;
+    cleaningJanitorial?: number;
+    realEstateTaxes?: number;
+
+    // 3. Professional & Administrative
+    legalProfessionalFees?: number;
+    accountingTaxPrepFees?: number;
+    bankServiceCharges?: number;
+    merchantCardFees?: number;
+    softwareSubscriptions?: number;
+    officeSupplies?: number;
+    telephoneCellular?: number;
+    internetHosting?: number;
+    licensesPermitsStateFees?: number;
+
+    // 4. Marketing & Travel
+    advertisingMarketing?: number;
+    travelAirfare?: number;
+    lodgingHotels?: number;
+    businessMeals50?: number;
+    clientGifts?: number;
+    educationConferences?: number;
+    employeeWelfare?: number;
+    meetingExpenses?: number;
+    perDiemExpenses?: number;
+
+    // 5. Other Operating Deductions
+    otherOperatingInsurance?: number;
+    duesSubscriptions?: number;
+    badDebts?: number;
+    charitableContributions?: number;
+    otherExpensesDescription?: string;
+    otherExpensesAmount?: number;
+
+    // 6. Cost of Goods Sold (COGS)
+    hasInventory?: boolean;
+    beginningInventory?: number;
+    inventoryPurchases?: number;
+    directLabor?: number;
+    otherProductionCosts?: number;
+    endingInventory?: number;
+
+    // 7. Business Vehicles (Form 4562)
+    hasVehicleExpenses?: boolean;
+    vehicles?: BusinessVehicleItem[];
+
+    // 8. Equipment & Depreciation (Sec 179)
+    hasEquipmentPurchases?: boolean;
+    equipmentAssets?: BusinessAssetItem[];
+
+    // 9. Home Office Deduction (Form 8829)
+    hasHomeOffice?: boolean;
+    homeOffice?: BusinessHomeOffice;
+  };
+}
+
+export interface BusinessPartnerItem {
+  id?: string;
+  name: string;
+  title?: string;
+  ssnOrEin?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  visaStatus?: string;
+  ownershipPercentage: number;
+  isForeign?: boolean;
+  isActiveMember?: boolean;
+  guaranteedPayments?: number;
+  distributionsReceived?: number;
+  capitalContributions?: number;
+}
+
+export interface Business1099IncomeItem {
+  id?: string;
+  clientName: string;
+  clientEin?: string;
+  clientAddress?: string;
+  grossAmount: number;
+  fedTaxWithheld?: number;
+  stateTaxWithheld?: number;
+  note?: string;
+}
+
+export interface BusinessVehicleItem {
+  id?: string;
+  vehicleDescription: string;
+  datePlacedInService?: string;
+  isPurchasedOnBusinessName?: 'YES' | 'NO';
+  usedForAnotherBusiness?: 'YES' | 'NO';
+  totalMiles?: number;
+  businessMiles?: number;
+  commutingMiles?: number;
+  personalMiles?: number;
+  calculationMethod?: 'STANDARD' | 'ACTUAL';
+  gasOilExpenses?: number;
+  repairsMaintenance?: number;
+  insuranceLease?: number;
+  parkingAndTolls?: number;
+  isAnotherPersonalVehicle?: 'YES' | 'NO';
+  hasWrittenEvidence?: 'YES' | 'NO';
+}
+
+export interface BusinessAssetItem {
+  id?: string;
+  description: string;
+  dateAcquired: string;
+  costBasis: number;
+  businessUsePercentage: number;
+  isNewProperty?: 'NEW' | 'USED';
+  section179Requested?: 'YES' | 'NO';
+  soldDuringYear?: 'YES' | 'NO';
+  salePrice?: number;
+  saleDate?: string;
+  carryoverDepreciation?: number;
+}
+
+export interface BusinessHomeOffice {
+  officeSquareFootage?: number;
+  totalHomeSquareFootage?: number;
+  calculationMethod?: 'SIMPLIFIED' | 'ACTUAL';
+  personalTaxClaimed?: 'YES' | 'NO';
+  directRepairs?: number;
+  mortgageInterest?: number;
+  realEstateTaxes?: number;
+  rentPaid?: number;
+  homeownersInsurance?: number;
+  utilities?: number;
+  internet?: number;
+  maintenanceRepairs?: number;
+  homeCostBasis?: number;
+  datePlacedInUse?: string;
+  landValue?: number;
 }
 
 export interface OrganizerResponse {

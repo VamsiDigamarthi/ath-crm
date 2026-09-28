@@ -10,10 +10,15 @@ import {
   validateModule6,
   validateModule7,
   validateModule8,
-  validateModule9
+  validateModule9,
+  validateBusinessCompanyInfo,
+  validateBusinessIncome,
+  validateBusinessExpenses,
 } from '@/features/customer/components/organizer/utils/organizer-validation';
 import { OrganizerModuleContent } from '@/features/customer/components/organizer/OrganizerModuleContent';
-import { ORGANIZER_MODULES } from '@/features/customer/components/organizer/OrganizerModuleSidebar';
+import { 
+  getModulesForFilingType,
+} from '@/features/customer/components/organizer/OrganizerModuleSidebar';
 import { Button } from '@/shared/components/Button';
 import toast from 'react-hot-toast';
 import apiClient from '@/lib/api-client';
@@ -39,6 +44,7 @@ interface TaxPrepOrganizerReviewProps {
   onOrganizerSaved?: () => void;
   allowEdit?: boolean;
   readOnly?: boolean;
+  filingType?: string;
 }
 
 export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
@@ -48,13 +54,20 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   onOrganizerSaved,
   allowEdit = true,
   readOnly = false,
+  filingType,
 }) => {
   const canEdit = allowEdit && !readOnly;
   const organizer = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
   const activeTaxYear = taxDraftSummary?.taxYear || organizer.taxYear || 2025;
+  const effectiveFilingType =
+    filingType ||
+    taxDraftSummary?.filingType ||
+    (organizer?.b1_companyInfo ? 'BUSINESS' : 'INDIVIDUAL');
+  const modulesList = getModulesForFilingType(effectiveFilingType);
+  const initialModId = effectiveFilingType === 'BUSINESS' ? 'b1_companyInfo' : 'm1';
 
   const [viewMode, setViewMode] = useState<'INSPECTOR' | 'GRID' | 'AGENT_EDIT'>(canEdit ? 'AGENT_EDIT' : 'INSPECTOR');
-  const [selectedModId, setSelectedModId] = useState<string>('m1');
+  const [selectedModId, setSelectedModId] = useState<string>(initialModId);
   const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});
   
   // Local state for Agent Editing on Call
@@ -145,6 +158,12 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
       errs = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
     } else if (selectedModId === 'm9') {
       errs = validateModule9(localOrganizer.m9_directDeposit, activeTaxYear);
+    } else if (selectedModId === 'b1_companyInfo') {
+      errs = validateBusinessCompanyInfo(localOrganizer.b1_companyInfo);
+    } else if (selectedModId === 'b2_businessIncome') {
+      errs = validateBusinessIncome(localOrganizer.b2_businessIncome);
+    } else if (selectedModId === 'b3_businessExpenses') {
+      errs = validateBusinessExpenses(localOrganizer.b3_businessExpenses);
     }
 
     if (Object.keys(errs).length > 0) {
@@ -167,7 +186,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     }
     try {
       setIsSaving(true);
-      const existingSubmitted: string[] = localOrganizer.submittedModules || ['m1'];
+      const existingSubmitted: string[] = localOrganizer.submittedModules || [initialModId];
       const extraKeys = selectedModId === 'm1' 
         ? ['m1', 'm2', 'm3', 'm9'] 
         : selectedModId === 'm_income'
@@ -210,7 +229,6 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const m8 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m8_deductions || {};
   const m9 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m9_directDeposit || {};
 
-  const modulesList = ORGANIZER_MODULES;
   const currentOrgData = viewMode === 'AGENT_EDIT' ? localOrganizer : organizer;
   const completedCount = modulesList.filter((m) => isModuleCompleted(m.id, currentOrgData)).length;
   const progressPercent = Math.round((completedCount / modulesList.length) * 100);
@@ -332,6 +350,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             onSave={handleSaveOrganizerOnCall}
             currentModIndex={currentModIndex}
             saving={isSaving}
+            filingType={effectiveFilingType}
           />
         </div>
       )}
@@ -467,6 +486,32 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                 </div>
                 <ReviewModule8Deductions m8={m8} />
               </div>
+            </div>
+          )}
+
+          {effectiveFilingType === 'BUSINESS' && selectedModId !== 'm_vault' && (
+            <div className="space-y-4">
+              <OrganizerModuleContent
+                selectedModId={selectedModId}
+                selectedTaxYear={activeTaxYear}
+                organizerData={currentOrgData}
+                updateModuleField={updateModuleField}
+                errors={{}}
+                onNext={() => {
+                  if (currentModIndex < modulesList.length - 1) {
+                    setSelectedModId(modulesList[currentModIndex + 1].id);
+                  }
+                }}
+                onPrev={() => {
+                  if (currentModIndex > 0) {
+                    setSelectedModId(modulesList[currentModIndex - 1].id);
+                  }
+                }}
+                onSave={handleSaveOrganizerOnCall}
+                currentModIndex={currentModIndex}
+                saving={isSaving}
+                filingType={effectiveFilingType}
+              />
             </div>
           )}
 

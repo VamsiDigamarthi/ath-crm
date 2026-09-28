@@ -2435,8 +2435,12 @@ export class DocumenterService {
     const submittedModules = Array.from(new Set(newSubmitted));
 
     cleanOrganizerData.submittedModules = submittedModules;
-    const completedCount = submittedModules.length;
-    const progressPercent = Math.round((completedCount / 9) * 100);
+    const isBusiness = app.filingType === 'BUSINESS' || Boolean(cleanOrganizerData.b1_companyInfo);
+    const totalModules = isBusiness ? 3 : 9;
+    const completedCount = isBusiness
+      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses'].filter((m) => submittedModules.includes(m)).length
+      : submittedModules.length;
+    const progressPercent = Math.min(100, Math.round((completedCount / totalModules) * 100));
 
     const updatedSummary = {
       ...currentDraft,

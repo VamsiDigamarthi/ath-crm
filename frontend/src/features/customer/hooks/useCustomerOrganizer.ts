@@ -1,22 +1,56 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   customerApi,
   type OrganizerData,
 } from '../services/customer-api';
-import { validateModule1, validateModule2, validateModule3, validateModule4, validateModule5, validateModule6, validateModule7, validateModule8, validateModule9, type ValidationErrorMap } from '../components/organizer/utils/organizer-validation';
+import { 
+  validateModule1, 
+  validateModule2, 
+  validateModule3, 
+  validateModule4, 
+  validateModule5, 
+  validateModule6, 
+  validateModule7, 
+  validateModule8, 
+  validateModule9,
+  validateBusinessCompanyInfo,
+  validateBusinessIncome,
+  validateBusinessExpenses,
+  type ValidationErrorMap 
+} from '../components/organizer/utils/organizer-validation';
 import toast from 'react-hot-toast';
 
-export const useCustomerOrganizer = (taxYearParam?: string) => {
+export const useCustomerOrganizer = (taxYearParam?: string, filingTypeParam?: string) => {
+  const isBusiness = filingTypeParam?.toUpperCase() === 'BUSINESS';
+  const defaultModId = isBusiness ? 'b1_companyInfo' : 'm1';
+
   const [selectedTaxYear, setSelectedTaxYear] = useState<number>(
     taxYearParam ? parseInt(taxYearParam, 10) : 2025
   );
   const [organizerData, setOrganizerData] = useState<OrganizerData | null>(null);
-  const [selectedModId, setSelectedModId] = useState<string>('m1');
+  const [selectedModId, setSelectedModId] = useState<string>(defaultModId);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [completedCount, setCompletedCount] = useState<number>(0);
   const [validationErrors, setValidationErrors] = useState<ValidationErrorMap>({});
+
+  const moduleIds = useMemo(() => {
+    return isBusiness
+      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm_vault']
+      : ['m1', 'm_income', 'm_expenses', 'm7', 'm_vault'];
+  }, [isBusiness]);
+
+  const currentModIndex = moduleIds.indexOf(selectedModId);
+
+  // Sync selectedModId when filingType changes
+  useEffect(() => {
+    if (isBusiness && !moduleIds.includes(selectedModId)) {
+      setSelectedModId('b1_companyInfo');
+    } else if (!isBusiness && !moduleIds.includes(selectedModId)) {
+      setSelectedModId('m1');
+    }
+  }, [isBusiness, moduleIds, selectedModId]);
 
   const fetchOrganizer = useCallback(async () => {
     try {
@@ -61,7 +95,7 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
   // Update a specific module field
   const updateModuleField = <K extends keyof OrganizerData>(
     moduleKey: K,
-    field: keyof OrganizerData[K],
+    field: keyof NonNullable<OrganizerData[K]>,
     value: any
   ) => {
     setOrganizerData((prev) => {
@@ -69,7 +103,7 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
       return {
         ...prev,
         [moduleKey]: {
-          ...prev[moduleKey],
+          ...(prev[moduleKey] as any),
           [field]: value,
         },
       };
@@ -81,6 +115,38 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
   const validateCurrentModule = (): boolean => {
     if (!organizerData) return false;
 
+    // Business Modules
+    if (selectedModId === 'b1_companyInfo') {
+      const errors = validateBusinessCompanyInfo(organizerData.b1_companyInfo);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        const errorFieldNames = Object.keys(errors);
+        toast.error(`Please fix company details: ${errors[errorFieldNames[0]]}`);
+        return false;
+      }
+    }
+
+    if (selectedModId === 'b2_businessIncome') {
+      const errors = validateBusinessIncome(organizerData.b2_businessIncome);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        const errorFieldNames = Object.keys(errors);
+        toast.error(`Please fix business income: ${errors[errorFieldNames[0]]}`);
+        return false;
+      }
+    }
+
+    if (selectedModId === 'b3_businessExpenses') {
+      const errors = validateBusinessExpenses(organizerData.b3_businessExpenses);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        const errorFieldNames = Object.keys(errors);
+        toast.error(`Please fix business expenses: ${errors[errorFieldNames[0]]}`);
+        return false;
+      }
+    }
+
+    // Individual Modules
     if (selectedModId === 'm1') {
       const e1 = validateModule1(organizerData.m1_demographics);
       const e2 = validateModule2(
@@ -268,9 +334,6 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
   };
 
   // Navigation handlers
-  const moduleIds = ['m1', 'm_income', 'm_expenses', 'm7', 'm_vault'];
-  const currentModIndex = moduleIds.indexOf(selectedModId);
-
   const handleNext = async () => {
     const success = await saveOrganizer(true);
     if (!success) {
@@ -278,7 +341,7 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
       return;
     }
 
-    if (currentModIndex < moduleIds.length - 1) {
+    if (currentModIndex >= 0 && currentModIndex < moduleIds.length - 1) {
       setSelectedModId(moduleIds[currentModIndex + 1]);
     } else {
       toast.success('All intake sections reviewed! Ready for CPA return preparation.');
@@ -310,5 +373,7 @@ export const useCustomerOrganizer = (taxYearParam?: string) => {
     handleNext,
     handlePrev,
     refetch: fetchOrganizer,
+    filingType: isBusiness ? 'BUSINESS' : 'INDIVIDUAL',
+    moduleIds,
   };
 };

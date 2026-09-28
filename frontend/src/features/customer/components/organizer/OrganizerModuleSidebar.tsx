@@ -2,9 +2,10 @@ import React from 'react';
 import { 
   User, 
   ShieldCheck, 
-  Receipt,
-  FolderArchive,
-  TrendingUp
+  Receipt, 
+  FolderArchive, 
+  TrendingUp,
+  Building2
 } from 'lucide-react';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { type OrganizerData } from '../../services/customer-api';
@@ -19,7 +20,7 @@ export interface ModuleDefinition {
   icon: any;
 }
 
-export const ORGANIZER_MODULES: ModuleDefinition[] = [
+export const INDIVIDUAL_MODULES: ModuleDefinition[] = [
   {
     id: 'm1',
     number: 1,
@@ -67,20 +68,70 @@ export const ORGANIZER_MODULES: ModuleDefinition[] = [
   },
 ];
 
+export const BUSINESS_MODULES: ModuleDefinition[] = [
+  {
+    id: 'b1_companyInfo',
+    number: 1,
+    section: 'Company Profile & Ownership',
+    title: 'General Information',
+    label: 'General Information',
+    description: 'Entity Name, EIN, Formation Date, Structure, Address & Partners/Shareholders K-1',
+    icon: Building2,
+  },
+  {
+    id: 'b2_businessIncome',
+    number: 2,
+    section: 'Revenue & Gross Receipts',
+    title: 'Income',
+    label: 'Income',
+    description: 'Form 1099-NEC/MISC, Client Invoices, Gross Receipts & Monthly Sales',
+    icon: TrendingUp,
+  },
+  {
+    id: 'b3_businessExpenses',
+    number: 3,
+    section: 'Operating Deductions & Assets',
+    title: 'Expenses',
+    label: 'Expenses',
+    description: 'Payroll, Commercial Facility, Supplies, Marketing, COGS, Vehicle, Assets & Home Office',
+    icon: Receipt,
+  },
+  {
+    id: 'm_vault',
+    number: 4,
+    section: 'Documents & Vault',
+    title: 'Upload Documents',
+    label: 'Upload Documents',
+    description: 'Corporate records, P&L, 1099s, bank statements & tax audit files',
+    icon: FolderArchive,
+  },
+];
+
+// Backwards compatibility alias
+export const ORGANIZER_MODULES = INDIVIDUAL_MODULES;
+
+export const getModulesForFilingType = (filingType?: string): ModuleDefinition[] => {
+  return filingType?.toUpperCase() === 'BUSINESS' ? BUSINESS_MODULES : INDIVIDUAL_MODULES;
+};
+
 interface OrganizerModuleSidebarProps {
   selectedModId: string;
   onSelectModule: (id: string) => void;
   completedCount?: number;
   organizerData?: OrganizerData | null;
+  filingType?: string;
 }
 
 export const OrganizerModuleSidebar: React.FC<OrganizerModuleSidebarProps> = ({
   selectedModId,
   onSelectModule,
+  filingType,
 }) => {
+  const modules = getModulesForFilingType(filingType);
+
   return (
     <AppTabs
-      tabs={ORGANIZER_MODULES.map((m) => ({
+      tabs={modules.map((m) => ({
         id: m.id,
         label: m.label,
       }))}
