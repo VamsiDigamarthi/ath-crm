@@ -593,7 +593,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         tabs={[
           { id: 'TIMELINE', label: 'Call History & Outreach Timeline', count: callLogs.length },
           // { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
-          { id: 'ORGANIZER', label: 'Info & Files' },
+          { id: 'ORGANIZER', label: 'Tax Info and Files' },
           ...(isDualRole ? [{ id: 'SALES_PITCH', label: 'Sales Pitch & Pricing' }] : []),
         ]}
         activeTab={activeTab === 'CALCULATOR' ? 'TIMELINE' : activeTab}

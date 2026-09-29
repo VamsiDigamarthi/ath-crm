@@ -84,6 +84,7 @@ export const Module1Demographics: React.FC<Module1Props> = ({
             data={m3Data || ({} as any)}
             updateField={updateM3Field || (() => {})}
             selectedTaxYear={selectedTaxYear}
+            defaultState={d.state}
             errors={errors}
             clearError={clearError}
           />

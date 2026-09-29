@@ -97,8 +97,17 @@ export const BUSINESS_MODULES: ModuleDefinition[] = [
     icon: Receipt,
   },
   {
-    id: 'm_vault',
+    id: 'm7',
     number: 4,
+    section: 'Foreign & FBAR',
+    title: 'FBAR / FATCA & Indian Income (INR)',
+    label: 'FBAR & FATCA',
+    description: 'Foreign accounts >$10k/$50k, Indian Salary, Dividends, NRE/NRO Interest & TDS',
+    icon: ShieldCheck,
+  },
+  {
+    id: 'm_vault',
+    number: 5,
     section: 'Documents & Vault',
     title: 'Upload Documents',
     label: 'Upload Documents',

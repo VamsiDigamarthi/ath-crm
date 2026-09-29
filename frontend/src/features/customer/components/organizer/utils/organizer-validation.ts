@@ -643,16 +643,17 @@ export const validateModule7 = (
   // 2. Validate Foreign Accounts if FBAR is YES or accounts are present
   const accounts = data.foreignAccountsList || [];
   accounts.forEach((acc, idx) => {
-    const bName = (acc.bankName || '').trim();
+    const bName = (acc.institutionName || acc.bankName || '').trim();
     if (!bName) {
-      errors[`foreignAcc_${idx}_bankName`] = 'Indian Bank / Institution Name is required (e.g. HDFC, SBI, ICICI)';
+      errors[`foreignAcc_${idx}_bankName`] = 'Bank / Institution Name is required (e.g. HDFC, SBI, ICICI)';
     } else if (containsXssOrHtml(bName)) {
       errors[`foreignAcc_${idx}_bankName`] = 'HTML tags or script injections are strictly forbidden!';
     } else if (bName.length < 2) {
       errors[`foreignAcc_${idx}_bankName`] = 'Bank name must be at least 2 characters';
     }
 
-    if (acc.maxBalanceInr !== undefined && (isNaN(acc.maxBalanceInr) || acc.maxBalanceInr < 0)) {
+    const peak = acc.maxValue !== undefined ? acc.maxValue : acc.maxBalanceInr;
+    if (peak !== undefined && (isNaN(peak) || peak < 0)) {
       errors[`foreignAcc_${idx}_maxBalanceInr`] = 'Max balance cannot be negative';
     }
   });

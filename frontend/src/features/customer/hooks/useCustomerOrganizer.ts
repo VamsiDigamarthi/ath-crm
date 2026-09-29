@@ -37,7 +37,7 @@ export const useCustomerOrganizer = (taxYearParam?: string, filingTypeParam?: st
 
   const moduleIds = useMemo(() => {
     return isBusiness
-      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm_vault']
+      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7', 'm_vault']
       : ['m1', 'm_income', 'm_expenses', 'm7', 'm_vault'];
   }, [isBusiness]);
 
@@ -57,7 +57,24 @@ export const useCustomerOrganizer = (taxYearParam?: string, filingTypeParam?: st
       setLoading(true);
       const res = await customerApi.getOrganizer(selectedTaxYear.toString());
       if (res.data) {
-        setOrganizerData(res.data.organizer);
+        const org = res.data.organizer;
+        if (org && org.m3_presence) {
+          const userState = org.m1_demographics?.state || 'TX';
+          if (!org.m3_presence.statesResidedHistory || org.m3_presence.statesResidedHistory.length === 0) {
+            org.m3_presence.statesResidedHistory = [
+              {
+                taxYear: selectedTaxYear,
+                state: userState,
+                fromDate: '',
+                toDate: '',
+                spouseState: userState,
+                spouseFromDate: '',
+                spouseToDate: '',
+              },
+            ];
+          }
+        }
+        setOrganizerData(org);
         setProgressPercent(res.data.progressPercent);
         setCompletedCount(res.data.completedCount);
       }

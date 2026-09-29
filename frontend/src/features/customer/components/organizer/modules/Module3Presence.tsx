@@ -11,6 +11,7 @@ interface Module3Props {
   data: OrganizerData['m3_presence'];
   updateField: <K extends keyof OrganizerData['m3_presence']>(field: K, value: OrganizerData['m3_presence'][K]) => void;
   selectedTaxYear: number;
+  defaultState?: string;
   errors?: ValidationErrorMap;
   clearError?: (field: string) => void;
 }
@@ -19,11 +20,45 @@ export const Module3Presence: React.FC<Module3Props> = ({
   data,
   updateField,
   selectedTaxYear,
+  defaultState = '',
   errors = {},
   clearError,
 }) => {
   const d = (data || {}) as Partial<OrganizerData['m3_presence']>;
-  const historyList = d.statesResidedHistory || [];
+  const fallbackState = defaultState || '';
+
+  // Ensure there is always at least 1 default row open
+  const rawList = d.statesResidedHistory;
+  const historyList = (rawList && rawList.length > 0)
+    ? rawList
+    : [
+        {
+          taxYear: selectedTaxYear,
+          state: fallbackState,
+          fromDate: '',
+          toDate: '',
+          spouseState: fallbackState,
+          spouseFromDate: '',
+          spouseToDate: '',
+        },
+      ];
+
+  // Auto-initialize form state with the default row if empty or missing
+  React.useEffect(() => {
+    if (!d.statesResidedHistory || d.statesResidedHistory.length === 0) {
+      updateField('statesResidedHistory', [
+        {
+          taxYear: selectedTaxYear,
+          state: fallbackState,
+          fromDate: '',
+          toDate: '',
+          spouseState: fallbackState,
+          spouseFromDate: '',
+          spouseToDate: '',
+        },
+      ]);
+    }
+  }, [d.statesResidedHistory, selectedTaxYear, fallbackState, updateField]);
 
   const maxCurrentDays = isLeapYear(selectedTaxYear) ? 366 : 365;
   const maxPrior1Days = isLeapYear(selectedTaxYear - 1) ? 366 : 365;
@@ -72,10 +107,10 @@ export const Module3Presence: React.FC<Module3Props> = ({
                 ...historyList,
                 {
                   taxYear: selectedTaxYear,
-                  state: '',
+                  state: fallbackState,
                   fromDate: '',
                   toDate: '',
-                  spouseState: '',
+                  spouseState: fallbackState,
                   spouseFromDate: '',
                   spouseToDate: '',
                 },
@@ -85,7 +120,7 @@ export const Module3Presence: React.FC<Module3Props> = ({
             className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium px-3 py-1.5 rounded-md flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>{historyList.length > 0 ? 'Add Another Row' : 'Add State Row'}</span>
+            <span>Add Another Row</span>
           </Button>
         </div>
 
@@ -130,8 +165,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         className="w-16 px-1.5 py-1 border border-slate-200 rounded text-xs font-bold text-center bg-white"
                         value={row.taxYear || ''}
                         onChange={(e) => {
-                          const list = [...historyList];
-                          list[idx].taxYear = parseInt(e.target.value, 10) || selectedTaxYear;
+                          const list = historyList.map((item, i) =>
+                            i === idx ? { ...item, taxYear: parseInt(e.target.value, 10) || selectedTaxYear } : item
+                          );
                           updateField('statesResidedHistory', list);
                         }}
                       />
@@ -151,8 +187,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                           }`}
                           value={row.state || ''}
                           onChange={(e) => {
-                            const list = [...historyList];
-                            list[idx].state = e.target.value.toUpperCase();
+                            const list = historyList.map((item, i) =>
+                              i === idx ? { ...item, state: e.target.value.toUpperCase() } : item
+                            );
                             updateField('statesResidedHistory', list);
                             if (clearError) clearError(`state_${idx}_state`);
                           }}
@@ -174,8 +211,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         error={errors[`state_${idx}_fromDate`]}
                         value={parseUsDate(row.fromDate)}
                         onChange={(dVal) => {
-                          const list = [...historyList];
-                          list[idx].fromDate = formatUsDate(dVal);
+                          const list = historyList.map((item, i) =>
+                            i === idx ? { ...item, fromDate: formatUsDate(dVal) } : item
+                          );
                           updateField('statesResidedHistory', list);
                           if (clearError) clearError(`state_${idx}_fromDate`);
                         }}
@@ -191,8 +229,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         error={errors[`state_${idx}_toDate`]}
                         value={parseUsDate(row.toDate)}
                         onChange={(dVal) => {
-                          const list = [...historyList];
-                          list[idx].toDate = formatUsDate(dVal);
+                          const list = historyList.map((item, i) =>
+                            i === idx ? { ...item, toDate: formatUsDate(dVal) } : item
+                          );
                           updateField('statesResidedHistory', list);
                           if (clearError) clearError(`state_${idx}_toDate`);
                         }}
@@ -208,8 +247,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-xs uppercase font-bold text-slate-800"
                         value={row.spouseState || ''}
                         onChange={(e) => {
-                          const list = [...historyList];
-                          list[idx].spouseState = e.target.value.toUpperCase();
+                          const list = historyList.map((item, i) =>
+                            i === idx ? { ...item, spouseState: e.target.value.toUpperCase() } : item
+                          );
                           updateField('statesResidedHistory', list);
                         }}
                       />
@@ -224,8 +264,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         error={errors[`state_${idx}_spouseFromDate`]}
                         value={parseUsDate(row.spouseFromDate)}
                         onChange={(dVal) => {
-                          const list = [...historyList];
-                          list[idx].spouseFromDate = formatUsDate(dVal);
+                          const list = historyList.map((item, i) =>
+                            i === idx ? { ...item, spouseFromDate: formatUsDate(dVal) } : item
+                          );
                           updateField('statesResidedHistory', list);
                           if (clearError) clearError(`state_${idx}_spouseFromDate`);
                         }}
@@ -241,8 +282,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
                         error={errors[`state_${idx}_spouseToDate`]}
                         value={parseUsDate(row.spouseToDate)}
                         onChange={(dVal) => {
-                          const list = [...historyList];
-                          list[idx].spouseToDate = formatUsDate(dVal);
+                          const list = historyList.map((item, i) =>
+                            i === idx ? { ...item, spouseToDate: formatUsDate(dVal) } : item
+                          );
                           updateField('statesResidedHistory', list);
                           if (clearError) clearError(`state_${idx}_spouseToDate`);
                         }}
@@ -254,11 +296,33 @@ export const Module3Presence: React.FC<Module3Props> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          const list = historyList.filter((_, i) => i !== idx);
-                          updateField('statesResidedHistory', list);
+                          if (historyList.length <= 1) {
+                            const reset = [
+                              {
+                                taxYear: selectedTaxYear,
+                                state: '',
+                                fromDate: '',
+                                toDate: '',
+                                spouseState: '',
+                                spouseFromDate: '',
+                                spouseToDate: '',
+                              },
+                            ];
+                            updateField('statesResidedHistory', reset);
+                            if (clearError) {
+                              clearError(`state_${idx}_state`);
+                              clearError(`state_${idx}_fromDate`);
+                              clearError(`state_${idx}_toDate`);
+                              clearError(`state_${idx}_spouseFromDate`);
+                              clearError(`state_${idx}_spouseToDate`);
+                            }
+                          } else {
+                            const list = historyList.filter((_, i) => i !== idx);
+                            updateField('statesResidedHistory', list);
+                          }
                         }}
                         className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
-                        title="Remove row"
+                        title={historyList.length <= 1 ? "Clear row" : "Remove row"}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

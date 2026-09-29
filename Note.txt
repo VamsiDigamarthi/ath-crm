@@ -1,0 +1,32 @@
+=================== CLIENT PORTAL ===================
+tax organiser
+1) general information in accordion instead of personal detials
+2) Resided / Residing State Details (Taxpayer & Spouse) -> keep this tab above the bank details tab and below dependents tab
+3) substantial Presence Test (Physical Days in U.S.) -> keep this below top point
+7) split income and expense into 2 tabs
+8) add a new tab in expense called Taxes Paid , only contains multiple attachments 
+8) rename docs tab to upload docs
+
+
+0) business tax filing contains only general info , income and expense , documents tab 
+10) business docs contains only Business , Tax audit tabs
+
+4) dashboard refund stat card add year filter
+5) add a new stat card which show amount due
+6) add amout to be paid on table of filinf and inside details
+
+=============Business tax filing options=========
+1) GENERAL INFORMATION + add partner in given doc
+
+
+
+================= NEW =================
+http://localhost:5173/customer/organizer?year=2027&type=INDIVIDUAL
+ CHECK GIVEN FBAR AND FATCA DOC
+1) Min 1 row auto open ,if 2026 is current year in general info tab
+2) Fbar and fatca info need the bank information types from https://bsaefiling.fincen.gov/file/fbar/html
+3) Do you need Fatca to be filed ? question (single > 50k usd) (married > 100k usd) 
+4) Fbar and Fatca tab to be added in business filing too
+5) In fbar and fatca show some general info of spouse and self with close accordion function
+7) Edit button in all the tabs so they will be aware to lock them
+8) STepper info view in the client taxyear detail view http://localhost:5173/customer/organizer?year=2027&type=INDIVIDUAL from https://theworknova.esconsulting.cloud/talent-360/requirements/8c04e500-f850-4c86-99d4-d54abcec085e

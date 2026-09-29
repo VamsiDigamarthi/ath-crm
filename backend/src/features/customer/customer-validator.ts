@@ -302,6 +302,9 @@ export const m7ForeignSchema = z.object({
   hasFbar: z.boolean().optional().default(false),
   hasFbarOver10k: z.enum(['YES', 'NO']).optional().default('NO'),
   spouseFbarOver10k: z.enum(['YES', 'NO']).optional().default('NO'),
+  hasFatcaOver50k: z.enum(['YES', 'NO']).optional().default('NO'),
+  needsFatcaFiling: z.enum(['YES', 'NO']).optional().default('NO'),
+  spouseFatcaOver50k: z.enum(['YES', 'NO']).optional().default('NO'),
   indianBankName: z
     .string()
     .trim()
@@ -322,20 +325,50 @@ export const m7ForeignSchema = z.object({
     .default(''),
   otherForeignIncomeInr: z.number().min(0).max(1000000000).optional().default(0),
   foreignTaxesPaidInr: z.number().min(0).max(1000000000).optional().default(0),
+  notesToPreparer: z
+    .string()
+    .trim()
+    .max(2000)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  referrals: z
+    .array(
+      z.object({
+        name: z.string().trim().max(150).optional().default(''),
+        email: z.string().trim().max(150).optional().default(''),
+        phone: z.string().trim().max(50).optional().default(''),
+      })
+    )
+    .optional()
+    .default([]),
   foreignAccountsList: z
     .array(
       z.object({
-        bankName: z
-          .string()
-          .trim()
-          .max(150)
-          .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
-          .optional()
-          .default(''),
-        accountType: z.string().trim().max(50).optional().default('SAVINGS_NRE'),
+        ownerType: z.string().trim().max(50).optional().default('TAXPAYER'),
+        bankName: z.string().trim().max(150).optional().default(''),
+        institutionName: z.string().trim().max(150).optional().default(''),
+        accountType: z.string().trim().max(50).optional().default('SAVINGS'),
+        otherAccountTypeDesc: z.string().trim().max(150).optional().default(''),
         accountNumber: z.string().trim().max(50).optional().default(''),
+        currencyType: z.string().trim().max(20).optional().default('INR'),
         maxBalanceInr: z.number().min(0).optional().default(0),
+        maxValue: z.number().min(0).optional().default(0),
+        maxValueUsd: z.number().min(0).optional().default(0),
         interestEarnedInr: z.number().min(0).optional().default(0),
+        interestEarned: z.number().min(0).optional().default(0),
+        dividendEarned: z.number().min(0).optional().default(0),
+        branchAddress: z.string().trim().max(250).optional().default(''),
+        city: z.string().trim().max(100).optional().default(''),
+        state: z.string().trim().max(100).optional().default(''),
+        postalCode: z.string().trim().max(50).optional().default(''),
+        country: z.string().trim().max(100).optional().default('India'),
+        jointOwnersCount: z.union([z.number(), z.string()]).optional().default(0),
+        jointOwnerName: z.string().trim().max(150).optional().default(''),
+        jointOwnerRelationship: z.string().trim().max(100).optional().default(''),
+        jointOwnerTin: z.string().trim().max(50).optional().default(''),
+        jointOwnerAddress: z.string().trim().max(250).optional().default(''),
+        accountCity: z.string().trim().max(100).optional().default(''),
       })
     )
     .optional()

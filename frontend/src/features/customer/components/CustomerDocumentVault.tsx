@@ -38,11 +38,11 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
   const isBusiness = effectiveFilingType === 'BUSINESS';
 
   // Filter Document Types:
-  // BUSINESS: only 'BUSINESS' and 'TAX_AUDIT'
+  // BUSINESS: 'BUSINESS', 'TAX_COMPLIANCE' (FBAR/FATCA), and 'TAX_AUDIT'
   // INDIVIDUAL: 'INDIVIDUAL', 'TAX_COMPLIANCE', and 'TAX_AUDIT'
   const visibleDocTypes = useMemo(() => {
     if (isBusiness) {
-      return DOCUMENT_TYPES.filter((dt) => dt.id === 'BUSINESS' || dt.id === 'TAX_AUDIT');
+      return DOCUMENT_TYPES.filter((dt) => dt.id === 'BUSINESS' || dt.id === 'TAX_COMPLIANCE' || dt.id === 'TAX_AUDIT');
     }
     return DOCUMENT_TYPES.filter((dt) => dt.id === 'INDIVIDUAL' || dt.id === 'TAX_COMPLIANCE' || dt.id === 'TAX_AUDIT');
   }, [isBusiness]);

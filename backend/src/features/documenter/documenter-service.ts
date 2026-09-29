@@ -2493,9 +2493,9 @@ export class DocumenterService {
 
     cleanOrganizerData.submittedModules = submittedModules;
     const isBusiness = app.filingType === 'BUSINESS' || Boolean(cleanOrganizerData.b1_companyInfo);
-    const totalModules = isBusiness ? 3 : 9;
+    const totalModules = isBusiness ? 4 : 9;
     const completedCount = isBusiness
-      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses'].filter((m) => submittedModules.includes(m)).length
+      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7'].filter((m) => submittedModules.includes(m)).length
       : submittedModules.length;
     const progressPercent = Math.min(100, Math.round((completedCount / totalModules) * 100));
 
