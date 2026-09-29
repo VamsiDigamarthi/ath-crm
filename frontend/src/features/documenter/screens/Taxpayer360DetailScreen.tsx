@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -16,6 +16,10 @@ import {
   Download,
   FileText,
   Calendar,
+  History,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
@@ -26,10 +30,9 @@ import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { renderVisaBadge, renderStageBadge } from '../columns/documenter-columns';
 import { TaxpayerCallHistoryTimeline } from '../components/TaxpayerCallHistoryTimeline';
-import { TaxPrepDraftCalculator } from '../components/prep/TaxPrepDraftCalculator';
-import type { TaxDraftComputation } from '../components/prep/TaxPrepDraftCalculator';
 import { TaxPrepOrganizerReview } from '../components/prep/TaxPrepOrganizerReview';
 import { DualRoleSalesPitchTab } from '../components/prep/DualRoleSalesPitchTab';
+import { LeadAuditTrailSection } from '../components/LeadAuditTrailSection';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
@@ -58,7 +61,25 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
   const [isMovingToPrep, setIsMovingToPrep] = useState<boolean>(false);
   const [prepTransferNotes, setPrepTransferNotes] = useState<string>('');
-  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Audit Logs State (Initially Collapsed, Scoped to selected Tax Year)
+  const [isAuditCollapsed, setIsAuditCollapsed] = useState<boolean>(true);
+  const [auditData, setAuditData] = useState<{
+    auditLogs: any[];
+    stageHistories: any[];
+    callLogs: any[];
+    stats?: {
+      totalEvents: number;
+      systemAudits: number;
+      stageHandoffs: number;
+      outreachCalls: number;
+    };
+  }>({
+    auditLogs: [],
+    stageHistories: [],
+    callLogs: [],
+  });
+  const [isAuditLoading, setIsAuditLoading] = useState<boolean>(false);
 
   // Fetch full 360 lead details including all historical call logs
   const fetchLeadDetails = async () => {
@@ -72,6 +93,22 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       console.error('Failed to load full lead details:', err);
     }
   };
+
+  // Fetch audit logs specifically for this selected Tax Year / Lead ID
+  const fetchLeadAuditLogs = useCallback(async (appId: string) => {
+    if (!appId) return;
+    try {
+      setIsAuditLoading(true);
+      const res = await documenterService.getAuditLogs({ leadId: appId });
+      if (res?.data) {
+        setAuditData(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load audit logs for lead:', err);
+    } finally {
+      setIsAuditLoading(false);
+    }
+  }, []);
 
   const handleConfirmMoveToPrep = async () => {
     if (!id && !lead?.id) return;
@@ -95,7 +132,10 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
   useEffect(() => {
     fetchLeadDetails();
-  }, [id]);
+    if (id) {
+      fetchLeadAuditLogs(id);
+    }
+  }, [id, fetchLeadAuditLogs]);
 
   // Fallback if not loaded
   const currentLead: DocumenterLeadItem = lead || {
@@ -136,39 +176,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const customer = currentLead.customer;
   const callLogs: CallLogItem[] = currentLead.callLogs || [];
 
-  const handleSaveDraft = async (draft: TaxDraftComputation) => {
-    setIsSaving(true);
-    try {
-      await documenterService.saveTaxDraft({
-        applicationId: currentLead.id,
-        taxDraftSummary: draft,
-      });
-      toast.success('Draft tax computation saved to database!');
-      refreshData();
-    } catch {
-      toast.error('Failed to save draft computation');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
-  const handleSendToSales = async (draft: TaxDraftComputation) => {
-    setIsSaving(true);
-    try {
-      await documenterService.sendToSales({
-        applicationId: currentLead.id,
-        taxDraftSummary: draft,
-        remarks: `Tax draft prepared by Documenter. Estimated Federal Refund: +$${draft.estimatedFedRefund.toLocaleString()}. Sent to Sales Pitch Queue.`,
-      });
-      toast.success('Successfully transferred lead to Sales Pitch Queue! 🚀');
-      refreshData();
-      navigate('/documenter/agent/queue');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to submit to sales');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleOpenRevertDoc = async (doc: { id?: string; fileName: string; filePath?: string; fileUrl?: string }) => {
     if (doc.fileUrl && (doc.fileUrl.startsWith('http://') || doc.fileUrl.startsWith('https://'))) {
@@ -205,6 +213,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     ((currentLead?.taxDraftSummary as any)?.lastRevert?.targetDepartment === 'DOCUMENTER' ? (currentLead?.taxDraftSummary as any)?.lastRevert : null);
   const isRevertedToDocumenter = currentStage === 'DOC_OUTREACH' && Boolean(lastRevert && !lastRevert.resolved);
   const canMoveToPrep = currentStage === 'RAW_PROSPECT' || currentStage === 'DOC_OUTREACH';
+  const isTransferredToPrep = currentStage !== 'RAW_PROSPECT' && currentStage !== 'DOC_OUTREACH';
+  const isReadOnly = isTransferredToPrep && !isRevertedToDocumenter;
 
   const hasAssignedPreparer = Boolean(assignedPrepAgent?.id || (lead as any)?.assignedPrepAgentId);
   const isRevertedFromPrep = lastRevert?.sourceDepartment === 'PREPARATION' || hasAssignedPreparer;
@@ -582,11 +592,11 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       <AppTabs
         tabs={[
           { id: 'TIMELINE', label: 'Call History & Outreach Timeline', count: callLogs.length },
-          { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
+          // { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
           { id: 'ORGANIZER', label: 'Tax Info and Files' },
           ...(isDualRole ? [{ id: 'SALES_PITCH', label: 'Sales Pitch & Pricing' }] : []),
         ]}
-        activeTab={activeTab}
+        activeTab={activeTab === 'CALCULATOR' ? 'TIMELINE' : activeTab}
         onChange={(tabId) => setActiveTab(tabId as any)}
       />
 
@@ -598,21 +608,16 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
             onOpenCallModal={() => setIsCallModalOpen(true)}
             onOpenEmailModal={() => setIsEmailModalOpen(true)}
+            readOnly={isReadOnly}
           />
         )}
 
-        {activeTab === 'CALCULATOR' && (
+        {/* Tax Draft Worksheet Commented Out */}
+        {/* {activeTab === 'CALCULATOR' && (
           <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
-            <TaxPrepDraftCalculator
-              initialDraft={currentLead.taxDraftSummary as any}
-              customerMaritalStatus={customer.maritalStatus || 'Single'}
-              taxYear={currentLead.taxYear}
-              onSaveDraft={handleSaveDraft}
-              onSendToSales={handleSendToSales}
-              isSaving={isSaving}
-            />
+            ...
           </div>
-        )}
+        )} */}
 
         {activeTab === 'ORGANIZER' && (
           <TaxPrepOrganizerReview
@@ -621,6 +626,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             taxDraftSummary={currentLead.taxDraftSummary}
             filingType={currentLead.filingType || (currentLead.taxDraftSummary as any)?.filingType}
             onOrganizerSaved={fetchLeadDetails}
+            allowEdit={!isReadOnly}
+            readOnly={isReadOnly}
           />
         )}
 
@@ -632,12 +639,81 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               refreshData();
               fetchLeadDetails();
             }}
-            onSwitchToWorksheet={() => setActiveTab('CALCULATOR')}
+            onSwitchToWorksheet={() => setActiveTab('ORGANIZER')}
           />
         )}
       </div>
 
-      {/* 5. Call Outreach Modal for Logging Conversations */}
+      {/* 5. Collapsible Tax Year Audit Trail & Lifecycle Activity Section */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all font-sans">
+        {/* Clickable Header Accordion Bar */}
+        <button
+          type="button"
+          onClick={() => setIsAuditCollapsed((prev) => !prev)}
+          className="w-full p-4 sm:p-5 flex items-center justify-between gap-4 text-left hover:bg-slate-50/80 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#16A34A] flex items-center justify-center shrink-0 shadow-2xs">
+              <History className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  Audit Trail &amp; System Activity Logs
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                  TY {currentLead.taxYear} ({currentLead.filingType || 'INDIVIDUAL'})
+                </span>
+                {(auditData.stats?.totalEvents || auditData.stageHistories?.length || 0) > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    {auditData.stats?.totalEvents ?? ((auditData.stageHistories?.length || 0) + (auditData.callLogs?.length || 0) + (auditData.auditLogs?.length || 0))} Events Logged
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
+                Immutable audit record of all stage handoffs, outreach calls, document updates, and user allocations for this specific return.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-bold text-slate-600 hidden sm:inline">
+              {isAuditCollapsed ? 'Expand Audit Logs' : 'Collapse Audit Logs'}
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
+              {isAuditCollapsed ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronUp className="w-4 h-4" />
+              )}
+            </div>
+          </div>
+        </button>
+
+        {/* Collapsible Content */}
+        {!isAuditCollapsed && (
+          <div className="p-4 sm:p-6 border-t border-slate-100 bg-slate-50/40 animate-in fade-in slide-in-from-top-2 duration-200">
+            {isAuditLoading ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500">
+                <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
+                <span className="text-xs font-semibold">Loading audit logs for TY {currentLead.taxYear}...</span>
+              </div>
+            ) : (
+              <LeadAuditTrailSection
+                stageHistories={auditData.stageHistories?.length ? auditData.stageHistories : (currentLead.stageHistories || [])}
+                auditLogs={auditData.auditLogs || []}
+                callLogs={auditData.callLogs?.length ? auditData.callLogs : (currentLead.callLogs || [])}
+                leadId={currentLead.id}
+                taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+                taxpayerEmail={customer.email || undefined}
+                currentStage={currentLead.currentStage}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 6. Call Outreach Modal for Logging Conversations */}
       <CallOutreachModal
         isOpen={isCallModalOpen}
         onClose={() => setIsCallModalOpen(false)}

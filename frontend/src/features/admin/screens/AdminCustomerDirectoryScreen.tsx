@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   CheckCircle2, 
@@ -12,32 +13,82 @@ import {
   MapPin, 
   ShieldCheck, 
   Eye, 
-  Sparkles,
-  AlertTriangle,
-  Plus,
-  History,
-  FileSpreadsheet
+  Sparkles, 
+  AlertTriangle, 
+  Plus, 
+  History, 
+  FileSpreadsheet,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { AppSelect } from '@/shared/components/AppSelect';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { AppPagination } from '@/shared/components/AppPagination';
 import { AppEmptyState } from '@/shared/components/AppEmptyState';
 import { AppModal } from '@/shared/components/AppModal';
+import { AppFilterFlyout, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { AppColumnConfigDropdown, type ColumnConfigItem } from '@/shared/components/AppColumnConfigDropdown';
 import { StartNewTaxYearModal } from '../components/StartNewTaxYearModal';
 import { useCustomerDirectory } from '../hooks/useCustomerDirectory';
 import type { AdminCustomerItem } from '../types/customer-directory.types';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
-import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 
+const AVAILABLE_COLUMNS: ColumnConfigItem[] = [
+  { id: 'taxpayer', label: 'Client Profile', defaultVisible: true, locked: true },
+  { id: 'contact', label: 'Contact & Location', defaultVisible: true },
+  { id: 'summary', label: 'Tax Return Summary', defaultVisible: true },
+  { id: 'team', label: 'Assigned Specialists', defaultVisible: true },
+  { id: 'fee', label: 'Service Fee & PIN', defaultVisible: true },
+  { id: 'irs_status', label: 'IRS E-Filing Status', defaultVisible: true },
+  { id: 'actions', label: 'Actions', defaultVisible: true, locked: true },
+];
+
 export const AdminCustomerDirectoryScreen: React.FC = () => {
+  const navigate = useNavigate();
+
+  // 1. Collapsible Top Metric Summary Cards State (Persisted, Default Collapsed)
+  const [isStatsCollapsed, setIsStatsCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('ath_admin_files_stats_collapsed');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleStats = () => {
+    setIsStatsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('ath_admin_files_stats_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // 2. Column Visibility Config (Persisted)
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(() => {
+    const lockedIds = AVAILABLE_COLUMNS.filter((c) => c.locked).map((c) => c.id);
+    try {
+      const saved = localStorage.getItem('ath_admin_files_visible_columns');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return Array.from(new Set([...lockedIds, ...parsed]));
+        }
+      }
+    } catch {}
+    return AVAILABLE_COLUMNS.map((c) => c.id);
+  });
+
   const {
     loading,
     data,
     stats,
     searchQuery,
+    selectedPaymentStatus,
     selectedTaxYear,
     selectedFilingStatus,
     selectedPriority,
@@ -45,6 +96,7 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
     taxYearOptions,
     setSelectedCustomer,
     handleSearchChange,
+    handlePaymentStatusChange,
     handleYearChange,
     handleStatusChange,
     handlePriorityChange,
@@ -54,180 +106,236 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
 
   const [customerForNewTaxYear, setCustomerForNewTaxYear] = useState<AdminCustomerItem | null>(null);
 
+  // 3. Filter Categories for 2-Column Flyout (Payment Status, IRS Filing Status, Tax Year & Priority)
+  const filterCategories = useMemo<FilterCategory[]>(() => {
+    return [
+      {
+        id: 'payment',
+        label: 'Payment Status',
+        options: [
+          { label: 'All Files', value: 'ALL' },
+          { label: `Paid Files (${stats.totalPaid || 0})`, value: 'PAID' },
+          { label: `Unpaid Files (${stats.totalUnpaid || 0})`, value: 'UNPAID' },
+        ],
+      },
+      {
+        id: 'filingStatus',
+        label: 'IRS Filing Status',
+        options: [
+          { label: 'All Filing Statuses', value: 'ALL' },
+          { label: `IRS Accepted (${stats.totalAccepted || 0})`, value: 'ACCEPTED' },
+          { label: `IRS Rejected (${stats.totalRejected || 0})`, value: 'REJECTED' },
+          { label: `In Transmission (${stats.totalInProgress || 0})`, value: 'IN_PROGRESS' },
+        ],
+      },
+      {
+        id: 'taxYear',
+        label: 'Tax Year',
+        options: taxYearOptions.map((opt) => ({
+          label: opt.label,
+          value: opt.value,
+        })),
+      },
+      {
+        id: 'priority',
+        label: 'Priority',
+        options: [
+          { label: 'All Priorities', value: 'ALL' },
+          { label: 'High Priority (P1)', value: 'HIGH' },
+          { label: 'Medium Priority (P2)', value: 'MEDIUM' },
+          { label: 'Low Priority (P3)', value: 'LOW' },
+        ],
+      },
+    ];
+  }, [stats, taxYearOptions]);
+
+  // Active filters mapping for flyout
+  const activeFilters = useMemo<Record<string, string[]>>(() => ({
+    payment: [selectedPaymentStatus],
+    filingStatus: [selectedFilingStatus],
+    taxYear: [selectedTaxYear],
+    priority: selectedPriority === 'ALL' ? ['ALL'] : selectedPriority.split(','),
+  }), [selectedPaymentStatus, selectedFilingStatus, selectedTaxYear, selectedPriority]);
+
+  const handleApplyFilters = (newFilters: Record<string, string[]>) => {
+    // Sync payment
+    const newPayment = (newFilters.payment?.[0] as 'ALL' | 'PAID' | 'UNPAID') || 'ALL';
+    if (newPayment !== selectedPaymentStatus) {
+      handlePaymentStatusChange(newPayment);
+    }
+
+    // Sync filing status
+    const newStatus = (newFilters.filingStatus?.[0] as 'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS') || 'ALL';
+    if (newStatus !== selectedFilingStatus) {
+      handleStatusChange(newStatus);
+    }
+
+    // Sync tax year
+    const newYear = newFilters.taxYear?.[0] || 'ALL';
+    if (newYear !== selectedTaxYear) {
+      handleYearChange(newYear);
+    }
+
+    // Sync priority
+    const validPriorities = (newFilters.priority || []).filter((v) => v !== 'ALL' && v !== '');
+    const priorityVal = validPriorities.length === 0 ? 'ALL' : validPriorities.join(',');
+    if (priorityVal !== selectedPriority) {
+      handlePriorityChange(priorityVal);
+    }
+  };
+
+  const handleResetFilters = () => {
+    handlePaymentStatusChange('ALL');
+    handleStatusChange('ALL');
+    handleYearChange('ALL');
+    handlePriorityChange('ALL');
+    handleSearchChange('');
+  };
+
   return (
-    <div className="space-y-6 font-sans pb-12">
-      {/* 1. Header Banner */}
+    <div className="space-y-4 font-sans pb-12 animate-in fade-in duration-150">
+      {/* 1. Header Banner (No file icon in title) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Converted Customers & Clients Directory
+              Files & Clients Directory
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-emerald-600" />
               <span>Paid & Retained Clients</span>
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
             Directory of officially converted taxpayers with Form 1040 certified filings, multi-year retention, and IRS e-filing history.
           </p>
         </div>
+      </div>
 
-        <div className="flex items-center gap-2.5">
+      {/* 2. Top Metric KPI Summary Cards (Collapsible with Persistence) */}
+      {!isStatsCollapsed && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Card 1: Converted Files */}
+          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-slate-500">Converted Clients</span>
+              <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mt-1">
+                {stats.totalConverted || stats.totalPaid || 0}
+              </div>
+              <div className="text-[11px] text-slate-400 font-medium mt-0.5">Retained Taxpayers</div>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Card 2: IRS Accepted */}
+          <div className="p-5 rounded-xl bg-white border border-emerald-100 shadow-xs hover:border-emerald-300 transition-all flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-emerald-600">IRS Accepted</span>
+              <div className="text-2xl sm:text-3xl font-bold text-emerald-600 tracking-tight mt-1">
+                {stats.totalAccepted}
+              </div>
+              <div className="text-[11px] text-emerald-500 font-medium mt-0.5">100% E-File Acknowledged</div>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Card 3: IRS Rejected */}
+          <div className="p-5 rounded-xl bg-white border border-rose-100 shadow-xs hover:border-rose-300 transition-all flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-rose-600">IRS Rejected</span>
+              <div className="text-2xl sm:text-3xl font-bold text-rose-600 tracking-tight mt-1">
+                {stats.totalRejected}
+              </div>
+              <div className="text-[11px] text-rose-400 font-medium mt-0.5">Correction Required</div>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
+              <XCircle className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Card 4: Revenue Realized */}
+          <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-amber-600">Revenue Realized</span>
+              <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mt-1">
+                ${stats.totalFeesCollected.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-slate-400 font-medium mt-0.5">Service Fees Paid</div>
+            </div>
+            <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
+              <DollarSign className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Sleek Enterprise Toolbar (Clean Flat Layout) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        {/* Left: Search Input */}
+        <div className="w-full sm:w-80 md:w-96">
+          <AppSearchInput
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search files by client name, email, phone, SSN..."
+            debounceMs={300}
+            className="w-full"
+          />
+        </div>
+
+        {/* Right: Filters Flyout + Columns Config + Collapse Toggle + Refresh */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {/* Advanced 2-Column Filter Flyout */}
+          <AppFilterFlyout
+            categories={filterCategories}
+            selectedFilters={activeFilters}
+            onApply={handleApplyFilters}
+            onReset={handleResetFilters}
+          />
+
+          {/* Dynamic Column Visibility Configuration */}
+          <AppColumnConfigDropdown
+            columns={AVAILABLE_COLUMNS}
+            visibleColumnIds={visibleColumnIds}
+            onChange={setVisibleColumnIds}
+            storageKey="ath_admin_files_visible_columns"
+          />
+
+          {/* Expand/Collapse KPI Cards Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleStats}
+            className="h-9 border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer rounded-xl bg-white hover:bg-slate-50 flex items-center gap-1.5 shadow-2xs"
+            title={isStatsCollapsed ? 'Expand Summary Cards' : 'Collapse Summary Cards'}
+          >
+            {isStatsCollapsed ? (
+              <>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden sm:inline">Expand Cards</span>
+              </>
+            ) : (
+              <>
+                <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden sm:inline">Collapse</span>
+              </>
+            )}
+          </Button>
+
+          {/* Refresh Button */}
           <Button
             variant="outline"
             size="sm"
             onClick={fetchCustomers}
             disabled={loading}
-            className="border-slate-200 text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs rounded-xl"
+            className="h-9 border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-xl bg-white hover:bg-slate-50 shadow-2xs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-600' : 'text-slate-500'}`} />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
-        </div>
-      </div>
-
-      {/* 2. Top Metric KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Converted Clients */}
-        <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-slate-500">Converted Clients</span>
-            <div className="text-2xl font-bold text-slate-900 mt-1">{stats.totalConverted}</div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Retained Taxpayers</div>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
-            <Users className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* IRS Accepted */}
-        <div className="p-5 rounded-xl bg-white border border-emerald-100 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-emerald-600">IRS Accepted</span>
-            <div className="text-2xl font-bold text-emerald-600 mt-1">{stats.totalAccepted}</div>
-            <div className="text-[11px] text-emerald-500 font-medium mt-0.5">100% E-File Acknowledged</div>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* IRS Rejected */}
-        <div className="p-5 rounded-xl bg-white border border-rose-100 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-rose-600">IRS Rejected</span>
-            <div className="text-2xl font-bold text-rose-600 mt-1">{stats.totalRejected}</div>
-            <div className="text-[11px] text-rose-400 font-medium mt-0.5">Correction Required</div>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
-            <XCircle className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* Revenue Realized */}
-        <div className="p-5 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-amber-600">Revenue Realized</span>
-            <div className="text-2xl font-bold text-slate-900 mt-1">
-              ${stats.totalFeesCollected.toLocaleString()}
-            </div>
-            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Service Fees Paid</div>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-            <DollarSign className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Search & Dual Filter Toolbar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Debounced Search bar */}
-          <div className="flex-1 max-w-md">
-            <AppSearchInput
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search clients by name, email, phone, SSN, city..."
-              enableShortcut={false}
-              className="w-full text-xs"
-            />
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-            {/* Priority Filter */}
-            <div className="w-full sm:w-48">
-              <PriorityFilterSelect
-                value={selectedPriority}
-                onChange={handlePriorityChange}
-              />
-            </div>
-
-            {/* Reusable AppSelect Dropdown for Tax Year Filter */}
-            <div className="w-full sm:w-48">
-              <AppSelect
-                options={taxYearOptions}
-                value={selectedTaxYear}
-                onChange={handleYearChange}
-                placeholder="Select Tax Year"
-                className="w-full text-xs font-medium"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* IRS Filing Outcome Quick Filter Bar */}
-        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 overflow-x-auto">
-          <span className="text-[11px] font-bold text-slate-400 mr-1">
-            Filing Status:
-          </span>
-          <button
-            type="button"
-            onClick={() => handleStatusChange('ALL')}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              selectedFilingStatus === 'ALL'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            All Statuses
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStatusChange('ACCEPTED')}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedFilingStatus === 'ACCEPTED'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-            }`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>IRS Accepted ({stats.totalAccepted})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStatusChange('REJECTED')}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedFilingStatus === 'REJECTED'
-                ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
-            }`}
-          >
-            <XCircle className="w-3.5 h-3.5" />
-            <span>IRS Rejected ({stats.totalRejected})</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStatusChange('IN_PROGRESS')}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              selectedFilingStatus === 'IN_PROGRESS'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>In Transmission ({stats.totalInProgress})</span>
-          </button>
         </div>
       </div>
 
@@ -237,39 +345,49 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500">
-                <th className="py-3.5 px-4">Client Profile</th>
-                <th className="py-3.5 px-4">Contact & Location</th>
-                <th className="py-3.5 px-4">Tax Return Summary</th>
-                <th className="py-3.5 px-4">Assigned Team</th>
-                <th className="py-3.5 px-4">Service Fee & PIN</th>
-                <th className="py-3.5 px-4">IRS E-Filing Status</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                {visibleColumnIds.includes('taxpayer') && (
+                  <th className="py-3.5 px-4">Client Profile</th>
+                )}
+                {visibleColumnIds.includes('contact') && (
+                  <th className="py-3.5 px-4">Contact & Location</th>
+                )}
+                {visibleColumnIds.includes('summary') && (
+                  <th className="py-3.5 px-4">Tax Return Summary</th>
+                )}
+                {visibleColumnIds.includes('team') && (
+                  <th className="py-3.5 px-4">Assigned Specialists</th>
+                )}
+                {visibleColumnIds.includes('fee') && (
+                  <th className="py-3.5 px-4">Service Fee & PIN</th>
+                )}
+                {visibleColumnIds.includes('irs_status') && (
+                  <th className="py-3.5 px-4">IRS E-Filing Status</th>
+                )}
+                {visibleColumnIds.includes('actions') && (
+                  <th className="py-3.5 px-4 text-right">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={visibleColumnIds.length || 7} className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-7 h-7 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
-                      <span className="text-xs font-medium">Loading converted clients...</span>
+                      <span className="text-xs font-medium">Loading files directory...</span>
                     </div>
                   </td>
                 </tr>
               ) : !data?.customers?.length ? (
                 <tr>
-                  <td colSpan={7} className="p-8">
+                  <td colSpan={visibleColumnIds.length || 7} className="p-8">
                     <AppEmptyState
                       icon={Users}
-                      title="No Converted Clients Found"
-                      description="No records match your active Tax Year or IRS Filing Status filter criteria."
+                      title="No Files or Client Records Found"
+                      description="No records match your active search or filter criteria."
                       action={{
                         label: "Reset All Filters",
-                        onClick: () => {
-                          handleYearChange('ALL');
-                          handleStatusChange('ALL');
-                          handleSearchChange('');
-                        }
+                        onClick: handleResetFilters
                       }}
                     />
                   </td>
@@ -283,20 +401,11 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                     <tr 
                       key={c.id} 
                       className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
-                      onClick={() => setSelectedCustomer(c)}
+                      onClick={() => navigate(`/admin/all-taxpayers/${c.customerId || c.id}`)}
                     >
-                      {/* Client Info */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shadow-xs ${
-                            app?.irsStatus === 'ACCEPTED'
-                              ? 'bg-emerald-500 text-white'
-                              : app?.irsStatus === 'REJECTED'
-                              ? 'bg-rose-500 text-white'
-                              : 'bg-slate-800 text-white'
-                          }`}>
-                            {c.firstName[0] || 'C'}{c.lastName?.[0] || ''}
-                          </div>
+                      {/* 1. Client Info (No Avatar square box) */}
+                      {visibleColumnIds.includes('taxpayer') && (
+                        <td className="py-4 px-4">
                           <div>
                             <div className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center gap-1.5 flex-wrap">
                               <span>{c.fullName}</span>
@@ -313,173 +422,185 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                               </span>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
+                      )}
 
-                      {/* Contact & Location */}
-                      <td className="py-4 px-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-slate-700 font-medium text-[11px]">
-                            <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span className="truncate max-w-[150px]">{c.email}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
-                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span>{c.phone}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-slate-400 text-[10px]">
-                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span>{c.city}, {c.state}</span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Tax Return Summary */}
-                      <td className="py-4 px-4">
-                        {app ? (
+                      {/* 2. Contact & Location */}
+                      {visibleColumnIds.includes('contact') && (
+                        <td className="py-4 px-4">
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-[11px] font-bold text-slate-900">TY{app.taxYear}</span>
-                              <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                                {app.currentStage.replace(/_/g, ' ')}
-                              </span>
-                              {app.priority && (
-                                <PriorityBadge priority={app.priority} size="sm" />
+                            <div className="flex items-center gap-1.5 text-slate-700 font-medium text-[11px]">
+                              <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span className="truncate max-w-[150px]">{c.email}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-slate-500 text-[11px]">
+                              <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>{c.phone}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-slate-400 text-[10px]">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>{c.city}, {c.state}</span>
+                            </div>
+                          </div>
+                        </td>
+                      )}
+
+                      {/* 3. Tax Return Summary */}
+                      {visibleColumnIds.includes('summary') && (
+                        <td className="py-4 px-4">
+                          {app ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-bold text-slate-900">TY{app.taxYear}</span>
+                                <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                                  {app.currentStage.replace(/_/g, ' ')}
+                                </span>
+                                {app.priority && (
+                                  <PriorityBadge priority={app.priority} size="sm" />
+                                )}
+                              </div>
+                              {hasDue ? (
+                                <div className="text-[11px] font-bold text-rose-600">
+                                  Total Due: -${(app.fedDue + app.stateDue).toLocaleString()}
+                                </div>
+                              ) : (
+                                <div className="text-[11px] font-bold text-emerald-600">
+                                  Refund: +${(app.fedRefund + app.stateRefund).toLocaleString()}
+                                </div>
                               )}
                             </div>
-                            {hasDue ? (
-                              <div className="text-[11px] font-bold text-rose-600">
-                                Total Due: -${(app.fedDue + app.stateDue).toLocaleString()}
-                              </div>
-                            ) : (
-                              <div className="text-[11px] font-bold text-emerald-600">
-                                Refund: +${(app.fedRefund + app.stateRefund).toLocaleString()}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-[11px] italic">No active draft</span>
-                        )}
-                      </td>
+                          ) : (
+                            <span className="text-slate-400 text-[11px] italic">No active draft</span>
+                          )}
+                        </td>
+                      )}
 
-                      {/* Assigned Specialists */}
-                      <td className="py-4 px-4">
-                        {app?.assignedTeam ? (
-                          <div className="space-y-0.5 text-[11px]">
-                            <div className="text-slate-700">
-                              <span className="text-slate-400 font-medium">CPA:</span> {app.assignedTeam.reviewAgent}
+                      {/* 4. Assigned Specialists */}
+                      {visibleColumnIds.includes('team') && (
+                        <td className="py-4 px-4">
+                          {app?.assignedTeam ? (
+                            <div className="space-y-0.5 text-[11px]">
+                              <div className="text-slate-700">
+                                <span className="text-slate-400 font-medium">CPA:</span> {app.assignedTeam.reviewAgent}
+                              </div>
+                              <div className="text-slate-500 text-[10px]">
+                                <span className="text-slate-400 font-medium">Filer:</span> {app.assignedTeam.fileOperator}
+                              </div>
                             </div>
-                            <div className="text-slate-500 text-[10px]">
-                              <span className="text-slate-400 font-medium">Filer:</span> {app.assignedTeam.fileOperator}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-[11px]">-</span>
-                        )}
-                      </td>
+                          ) : (
+                            <span className="text-slate-400 text-[11px]">-</span>
+                          )}
+                        </td>
+                      )}
 
-                      {/* Service Fee & PIN */}
-                      <td className="py-4 px-4">
-                        {app ? (
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                app.paymentStatus === 'PAID'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}>
-                                ${app.paidAmount || 227} {app.paymentStatus}
+                      {/* 5. Service Fee & PIN */}
+                      {visibleColumnIds.includes('fee') && (
+                        <td className="py-4 px-4">
+                          {app ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  app.paymentStatus === 'PAID'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                  ${app.paidAmount || 227} {app.paymentStatus}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-slate-500">
+                                PIN: {app.taxpayerPin || '66666'} ({app.esignStatus})
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-[11px]">-</span>
+                          )}
+                        </td>
+                      )}
+
+                      {/* 6. IRS E-Filing Status */}
+                      {visibleColumnIds.includes('irs_status') && (
+                        <td className="py-4 px-4">
+                          {app?.irsStatus === 'ACCEPTED' ? (
+                            <div className="space-y-1">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1 shadow-xs">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>IRS Accepted</span>
+                              </span>
+                              {app.certificateId && (
+                                <div className="text-[10px] text-emerald-700 font-semibold">
+                                  Cert: {app.certificateId}
+                                </div>
+                              )}
+                            </div>
+                          ) : app?.irsStatus === 'REJECTED' ? (
+                            <div className="space-y-1">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 inline-flex items-center gap-1 shadow-xs">
+                                <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                <span>IRS Rejected</span>
+                              </span>
+                              {app.rejectionCode && (
+                                <div className="text-[10px] text-rose-600 font-medium">
+                                  Code: {app.rejectionCode}
+                                </div>
+                              )}
+                            </div>
+                          ) : app?.irsStatus === 'IN_PROGRESS' ? (
+                            <div className="space-y-1">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin" />
+                                <span>Transmitting</span>
                               </span>
                             </div>
-                            <div className="text-[10px] text-slate-500">
-                              PIN: {app.taxpayerPin || '66666'} ({app.esignStatus})
+                          ) : app?.irsStatus === 'QUEUED' ? (
+                            <div className="space-y-1">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 inline-flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>Filing Queue</span>
+                              </span>
                             </div>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-[11px]">-</span>
-                        )}
-                      </td>
+                          ) : (
+                            <div className="space-y-1">
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1">
+                                <span>Awaiting E-File</span>
+                              </span>
+                            </div>
+                          )}
+                        </td>
+                      )}
 
-                      {/* IRS E-Filing Status */}
-                      <td className="py-4 px-4">
-                        {app?.irsStatus === 'ACCEPTED' ? (
-                          <div className="space-y-1">
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1 shadow-xs">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                              <span>IRS Accepted</span>
-                            </span>
-                            {app.certificateId && (
-                              <div className="text-[10px] text-emerald-700">
-                                Cert: {app.certificateId}
-                              </div>
-                            )}
-                          </div>
-                        ) : app?.irsStatus === 'REJECTED' ? (
-                          <div className="space-y-1">
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 inline-flex items-center gap-1 shadow-xs">
-                              <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                              <span>IRS Rejected</span>
-                            </span>
-                            {app.rejectionCode && (
-                              <div className="text-[10px] text-rose-600 font-medium">
-                                Code: {app.rejectionCode}
-                              </div>
-                            )}
-                          </div>
-                        ) : app?.irsStatus === 'IN_PROGRESS' ? (
-                          <div className="space-y-1">
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-amber-600 animate-spin" />
-                              <span>Transmitting</span>
-                            </span>
-                          </div>
-                        ) : app?.irsStatus === 'QUEUED' ? (
-                          <div className="space-y-1">
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 inline-flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                              <span>Filing Queue</span>
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 inline-flex items-center gap-1">
-                              <span>Awaiting E-File</span>
-                            </span>
-                          </div>
-                        )}
-                      </td>
+                      {/* 7. Actions */}
+                      {visibleColumnIds.includes('actions') && (
+                        <td className="py-4 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCustomerForNewTaxYear(c);
+                              }}
+                              className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold flex items-center gap-1 cursor-pointer rounded-xl shadow-2xs"
+                              title="Start New Tax Year Return"
+                            >
+                              <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>+ New Return</span>
+                            </Button>
 
-                      {/* Actions */}
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCustomerForNewTaxYear(c);
-                            }}
-                            className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-bold flex items-center gap-1 cursor-pointer rounded-xl shadow-2xs"
-                            title="Start New Tax Year Return"
-                          >
-                            <Plus className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>+ New Return</span>
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedCustomer(c);
-                            }}
-                            className="border-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer rounded-xl"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-slate-600" />
-                            <span>Inspect</span>
-                          </Button>
-                        </div>
-                      </td>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/admin/all-taxpayers/${c.customerId || c.id}`);
+                              }}
+                              className="w-8 h-8 p-0 border-slate-200 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 cursor-pointer rounded-lg bg-white shadow-2xs flex items-center justify-center transition-all"
+                              title="Inspect 360 Taxpayer Profile"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -934,4 +1055,3 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
     </div>
   );
 };
-

@@ -5,7 +5,6 @@ import {
   FilePlus2, 
   Calendar, 
   FileText, 
-  UserCheck, 
   MessageSquare, 
   Globe, 
   Mail, 
@@ -17,7 +16,7 @@ export interface StartFilingModalProps {
   isOpen: boolean;
   onClose: () => void;
   lead: DocumenterLeadItem | null;
-  agents: DocumenterAgentItem[];
+  agents?: DocumenterAgentItem[];
   onConfirmStartFiling: (payload: {
     customerId: string;
     taxYear: number;
@@ -32,20 +31,27 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
   isOpen,
   onClose,
   lead,
-  agents,
+  agents: _agents,
   onConfirmStartFiling,
   isLoading = false,
 }) => {
   const [taxYear, setTaxYear] = useState<number | ''>('');
-  const [filingType, setFilingType] = useState<string>('');
-  const [assignedDocAgentId, setAssignedDocAgentId] = useState<string>('');
+  const [filingType, setFilingType] = useState<string>('INDIVIDUAL');
   const [remarks, setRemarks] = useState<string>('');
   const [validationErrors, setValidationErrors] = useState<{ taxYear?: string; filingType?: string } | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen && lead) {
+      setTaxYear(lead.taxYear || 2025);
+      setFilingType(lead.filingType || 'INDIVIDUAL');
+      setRemarks('');
+      setValidationErrors(null);
+    }
+  }, [isOpen, lead]);
 
   if (!lead) return null;
 
   const customer = lead.customer;
-  const callingAgents = agents.filter((a) => a.role === 'DOC_AGENT' || a.role === 'DOC_MANAGER');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,18 +71,18 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
       customerId: lead.customerId || customer.id,
       taxYear: Number(taxYear),
       filingType,
-      assignedDocAgentId: assignedDocAgentId ? assignedDocAgentId : null,
+      assignedDocAgentId: lead.assignedDocAgentId || null,
       remarks: remarks.trim() || undefined,
     });
   };
 
-  const yearOptions = [2025, 2024, 2023, 2022, 2021, 2020];
+  const yearOptions = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 
   return (
     <AppModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Start Tax Year Filing"
+      title="Configure Tax Year & Filing Return"
       size="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-5 font-sans">
@@ -188,27 +194,6 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
               <p className="text-[10px] text-slate-400">Select Individual or Business return.</p>
             )}
           </div>
-        </div>
-
-        {/* Assigned Agent */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <UserCheck className="w-3.5 h-3.5 text-purple-600" />
-            <span>Assign Document Agent (Optional)</span>
-          </label>
-          <select
-            value={assignedDocAgentId}
-            onChange={(e) => setAssignedDocAgentId(e.target.value)}
-            className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs cursor-pointer"
-          >
-            <option value="">Leave Unassigned (Outreach Pool)</option>
-            {callingAgents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.email} ({agent.role.replace('DOC_', '')}) - {agent.activeLoad} active leads
-              </option>
-            ))}
-          </select>
-          <p className="text-[10px] text-slate-400">If assigned, this agent will receive the filing in their queue.</p>
         </div>
 
         {/* Remarks / Notes */}

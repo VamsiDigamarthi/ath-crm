@@ -72,6 +72,8 @@ export interface AdminCustomerResponse {
     totalAccepted: number;
     totalRejected: number;
     totalInProgress: number;
+    totalPaid: number;
+    totalUnpaid: number;
     totalFeesCollected: number;
   };
 }

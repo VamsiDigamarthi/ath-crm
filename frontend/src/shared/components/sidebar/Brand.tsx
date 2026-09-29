@@ -70,7 +70,8 @@ export function Brand({ brand, collapsed, onToggle, theme, accentColor }: Props)
         onClick={onToggle}
         title="Collapse sidebar"
         className={cn(
-          'w-7 h-7 rounded-md flex items-center justify-center transition-colors shrink-0 cursor-pointer text-black hover:bg-slate-100',
+          'w-7 h-7 rounded-md flex items-center justify-center transition-colors shrink-0 cursor-pointer',
+          theme.bg === 'bg-white' ? 'text-slate-700 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
         )}
       >
         <ChevronLeft size={16} />

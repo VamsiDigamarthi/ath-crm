@@ -8,9 +8,10 @@ import {
   MessageSquare, 
   CheckCircle2, 
   AlertCircle, 
-  Plus,
-  Mail,
-  UserX
+  Plus, 
+  Mail, 
+  UserX,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import type { CallLogItem } from '../types/documenter.types';
@@ -20,6 +21,7 @@ interface TaxpayerCallHistoryTimelineProps {
   taxpayerName: string;
   onOpenCallModal: () => void;
   onOpenEmailModal?: () => void;
+  readOnly?: boolean;
 }
 
 export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelineProps> = ({
@@ -27,6 +29,7 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
   taxpayerName,
   onOpenCallModal,
   onOpenEmailModal,
+  readOnly = false,
 }) => {
   const [filterType, setFilterType] = useState<'ALL' | 'CONNECTED' | 'CALLBACKS'>('ALL');
   const [expandedCallIds, setExpandedCallIds] = useState<Record<string, boolean>>({});
@@ -99,6 +102,13 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
             Client Not Qualified
           </span>
         );
+      case 'FALLBACK':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
+            <RotateCcw className="w-3.5 h-3.5 text-slate-600" />
+            Fall Back
+          </span>
+        );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
@@ -112,7 +122,7 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
   // Filter logs
   const filteredLogs = callLogs.filter((log) => {
     if (filterType === 'CONNECTED') {
-      return log.disposition === 'CONNECTED_INTERESTED' || log.disposition === 'CONNECTED_CALLBACK';
+      return log.disposition === 'CONNECTED_INTERESTED' || log.disposition === 'CONNECTED_CALLBACK' || log.disposition === 'FALLBACK';
     }
     if (filterType === 'CALLBACKS') {
       return Boolean(log.callbackScheduledAt);
@@ -175,26 +185,30 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
             </button>
           </div>
 
-          {onOpenEmailModal && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onOpenEmailModal}
-              className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            >
-              <Mail className="w-3.5 h-3.5 text-blue-600" />
-              <span>Email Client</span>
-            </Button>
-          )}
+          {!readOnly && (
+            <>
+              {onOpenEmailModal && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onOpenEmailModal}
+                  className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                >
+                  <Mail className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Email Client</span>
+                </Button>
+              )}
 
-          <Button
-            size="sm"
-            onClick={onOpenCallModal}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Log New Call</span>
-          </Button>
+              <Button
+                size="sm"
+                onClick={onOpenCallModal}
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log New Call</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { ManagerFunnelAnalytics } from '../components/ManagerFunnelAnalytics';
 import { FloatingActionBar } from '../components/FloatingActionBar';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { CallOutreachModal } from '../components/CallOutreachModal';
+import { StartFilingModal } from '../components/StartFilingModal';
 import { getDocumenterColumns } from '../columns/documenter-columns';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { AppTable } from '@/shared/components/AppTable';
@@ -54,10 +55,14 @@ export const DocumenterManagerScreen: React.FC = () => {
     handleDirectAssign,
     isAssignModalOpen,
     isCallModalOpen,
+    isStartFilingModalOpen,
     activeLeadForCall,
     activeLeadForAssign,
+    activeLeadForStartFiling,
     handleOpenCallModal,
     handleOpenAssignModal,
+    handleOpenStartFilingModal,
+    handleStartFiling,
     handleCloseModals,
     handleSaveCallDisposition,
     refreshData,
@@ -81,10 +86,11 @@ export const DocumenterManagerScreen: React.FC = () => {
       getDocumenterColumns({
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
+        onOpenStartFilingModal: handleOpenStartFilingModal,
         isManagerView: true,
         isAdmin: true,
       }),
-    [handleOpenCallModal, handleOpenAssignModal]
+    [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal]
   );
 
   // Department Queue Tabs
@@ -437,6 +443,16 @@ export const DocumenterManagerScreen: React.FC = () => {
         agents={agents}
         isManager={!isAgent}
         onSaveDisposition={handleSaveCallDisposition}
+        isLoading={isActionLoading}
+      />
+
+      {/* Start / Configure Tax Filing Modal */}
+      <StartFilingModal
+        isOpen={isStartFilingModalOpen}
+        onClose={handleCloseModals}
+        lead={activeLeadForStartFiling}
+        agents={agents}
+        onConfirmStartFiling={handleStartFiling}
         isLoading={isActionLoading}
       />
     </div>

@@ -1,8 +1,8 @@
 import { prisma } from '../../config/db.js';
-import { 
-  ApplicationStage, 
-  Role, 
-  NotificationCategory, 
+import {
+  ApplicationStage,
+  Role,
+  NotificationCategory,
   NotificationPriority,
   AuditActorType,
   AuditActionType
@@ -16,7 +16,7 @@ import { sanitizeObject } from '../customer/customer-validator.js';
 export interface DocumenterLeadQuery {
   page?: number;
   limit?: number;
-  tab?: 'RAW_PROSPECTS' | 'UNASSIGNED' | 'NOT_CALLED' | 'UNCONTACTED' | 'OUTREACH' | 'PREP' | 'DOCUMENTS' | 'MY_DOCUMENTS' | 'MY_LEADS' | 'CALLBACKS' | 'DROPPED' | 'NOT_INTERESTED' | 'ALL';
+  tab?: 'RAW_PROSPECTS' | 'UNASSIGNED' | 'NOT_CALLED' | 'UNCONTACTED' | 'OUTREACH' | 'PREP' | 'DOCUMENTS' | 'MY_DOCUMENTS' | 'MY_LEADS' | 'CALLBACKS' | 'FALLBACK' | 'DROPPED' | 'NOT_INTERESTED' | 'ALL';
   search?: string;
   agentId?: string;
   visaType?: string;
@@ -239,8 +239,8 @@ export class DocumenterService {
     const formattedStageHistories = app.stageHistories.map((s) => {
       const isClient = s.movedByUser?.role === Role.TAXPAYER_USER;
       const clientName = `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Taxpayer Client';
-      const staffName = s.movedByUser 
-        ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email?.split('@')[0] 
+      const staffName = s.movedByUser
+        ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email?.split('@')[0]
         : 'System';
 
       return {
@@ -258,16 +258,16 @@ export class DocumenterService {
     });
 
     const formattedAuditLogs = app.auditLogs.map((a) => {
-      const isClient = a.actorType === 'CLIENT' || 
-                       a.actorRole === 'TAXPAYER_USER' || 
-                       a.actorRole === 'CLIENT' ||
-                       (a.details as any)?.source === 'TAXPAYER_CLIENT_PORTAL' ||
-                       (a.details as any)?.source?.includes('CLIENT');
+      const isClient = a.actorType === 'CLIENT' ||
+        a.actorRole === 'TAXPAYER_USER' ||
+        a.actorRole === 'CLIENT' ||
+        (a.details as any)?.source === 'TAXPAYER_CLIENT_PORTAL' ||
+        (a.details as any)?.source?.includes('CLIENT');
 
       const clientName = `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Taxpayer Client';
       const clientEmail = (a.details as any)?.clientEmail || app.customer.email || a.actorUser?.email || '';
 
-      const staffName = a.actorUser 
+      const staffName = a.actorUser
         ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email?.split('@')[0]
         : 'System Actor';
       const staffEmail = a.actorUser?.email || '';
@@ -345,7 +345,12 @@ export class DocumenterService {
     }
 
     if (priority && priority !== 'ALL') {
-      where.priority = priority as any;
+      const priorities = priority.split(',').map((p) => p.trim()).filter((p) => p && p !== 'ALL');
+      if (priorities.length === 1) {
+        where.priority = priorities[0] as any;
+      } else if (priorities.length > 1) {
+        where.priority = { in: priorities as any };
+      }
     }
 
     // Role-based restrictions: If regular DOC_AGENT, strictly scope to their assigned leads
@@ -400,6 +405,14 @@ export class DocumenterService {
         };
         where.currentStage = { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] };
         break;
+      case 'FALLBACK':
+        where.callLogs = {
+          some: {
+            disposition: 'FALLBACK',
+          },
+        };
+        where.currentStage = { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] };
+        break;
       case 'DROPPED':
       case 'NOT_INTERESTED':
         where.currentStage = ApplicationStage.DROPPED_CANCELLED;
@@ -428,11 +441,19 @@ export class DocumenterService {
       };
     }
 
-    if (visaType && visaType.trim()) {
-      where.customer = {
-        ...(where.customer || {}),
-        visaType: { equals: visaType.trim() },
-      };
+    if (visaType && visaType.trim() && visaType !== 'ALL') {
+      const visas = visaType.split(',').map((v) => v.trim()).filter((v) => v && v !== 'ALL');
+      if (visas.length === 1) {
+        where.customer = {
+          ...(where.customer || {}),
+          visaType: { equals: visas[0] },
+        };
+      } else if (visas.length > 1) {
+        where.customer = {
+          ...(where.customer || {}),
+          visaType: { in: visas },
+        };
+      }
     }
 
     const now = new Date();
@@ -462,14 +483,15 @@ export class DocumenterService {
 
     // 2. Query data and counts in parallel
     const [
-      leads, 
-      totalItems, 
-      unassignedCount, 
-      uncontactedCount, 
-      outreachCount, 
-      prepCount, 
-      myLeadsCount, 
+      leads,
+      totalItems,
+      unassignedCount,
+      uncontactedCount,
+      outreachCount,
+      prepCount,
+      myLeadsCount,
       callbacksCount,
+      fallbackCount,
       notInterestedCount,
       todayDialsCount,
       todayConnectedCount,
@@ -479,61 +501,61 @@ export class DocumenterService {
       tab === 'RAW_PROSPECTS'
         ? Promise.resolve([])
         : prisma.taxApplication.findMany({
-            where,
-            orderBy: [
-              { taxYear: 'desc' },
-              { createdAt: 'desc' },
-            ],
-            include: {
-              customer: {
-                include: {
-                  applications: {
-                    select: {
-                      id: true,
-                      taxYear: true,
-                      filingType: true,
-                      currentStage: true,
-                      taxDraftSummary: true,
-                      quotes: {
-                        select: {
-                          status: true,
-                        },
+          where,
+          orderBy: [
+            { taxYear: 'desc' },
+            { createdAt: 'desc' },
+          ],
+          include: {
+            customer: {
+              include: {
+                applications: {
+                  select: {
+                    id: true,
+                    taxYear: true,
+                    filingType: true,
+                    currentStage: true,
+                    taxDraftSummary: true,
+                    quotes: {
+                      select: {
+                        status: true,
                       },
-                      assignedDocAgentId: true,
-                      assignedDocAgent: {
-                        select: {
-                          id: true,
-                          email: true,
-                          mobile: true,
-                          role: true,
-                        },
-                      },
-                      createdAt: true,
-                      updatedAt: true,
                     },
-                    orderBy: { taxYear: 'desc' },
+                    assignedDocAgentId: true,
+                    assignedDocAgent: {
+                      select: {
+                        id: true,
+                        email: true,
+                        mobile: true,
+                        role: true,
+                      },
+                    },
+                    createdAt: true,
+                    updatedAt: true,
                   },
+                  orderBy: { taxYear: 'desc' },
                 },
               },
-              assignedDocAgent: {
-                select: {
-                  id: true,
-                  email: true,
-                  mobile: true,
-                  role: true,
-                },
-              },
-              callLogs: {
-                orderBy: { createdAt: 'desc' },
-                take: 1,
-              },
-              stageHistories: {
-                orderBy: { createdAt: 'desc' },
-                take: 1,
-              },
-              documents: true,
             },
-          }),
+            assignedDocAgent: {
+              select: {
+                id: true,
+                email: true,
+                mobile: true,
+                role: true,
+              },
+            },
+            callLogs: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
+            stageHistories: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
+            documents: true,
+          },
+        }),
       tab === 'RAW_PROSPECTS' ? Promise.resolve(0) : prisma.taxApplication.count({ where }),
       prisma.taxApplication.count({
         where: {
@@ -572,11 +594,11 @@ export class DocumenterService {
       }),
       currentUserId
         ? prisma.taxApplication.count({
-            where: { 
-              assignedDocAgentId: currentUserId,
-              ...(currentUserRole === Role.DOC_AGENT ? { currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] } } : {}),
-            },
-          })
+          where: {
+            assignedDocAgentId: currentUserId,
+            ...(currentUserRole === Role.DOC_AGENT ? { currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] } } : {}),
+          },
+        })
         : 0,
       prisma.taxApplication.count({
         where: {
@@ -586,6 +608,17 @@ export class DocumenterService {
               callbackScheduledAt: { not: null },
             },
           },
+        },
+      }),
+      prisma.taxApplication.count({
+        where: {
+          ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { assignedDocAgentId: currentUserId } : {}),
+          callLogs: {
+            some: {
+              disposition: 'FALLBACK',
+            },
+          },
+          currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] },
         },
       }),
       prisma.taxApplication.count({
@@ -601,7 +634,7 @@ export class DocumenterService {
         where: {
           ...agentCallLogsWhere,
           disposition: {
-            in: ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'],
+            in: ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED', 'FALLBACK'],
           },
         },
       }),
@@ -620,8 +653,8 @@ export class DocumenterService {
       }),
     ]);
 
-    const contactRatePct = todayDialsCount > 0 
-      ? Number(((todayConnectedCount / todayDialsCount) * 100).toFixed(1)) 
+    const contactRatePct = todayDialsCount > 0
+      ? Number(((todayConnectedCount / todayDialsCount) * 100).toFixed(1))
       : 0;
 
     // Query actual call logs created this week for real charts
@@ -642,7 +675,7 @@ export class DocumenterService {
     // 1. Always include hours where calls actually happened today
     // 2. Plus standard workday hours (9 AM - 5 PM)
     const activeHoursSet = new Set<number>([9, 10, 11, 12, 13, 14, 15, 16, 17]);
-    
+
     recentCallLogs.forEach((log) => {
       const logDate = new Date(log.createdAt);
       if (logDate >= startOfToday) {
@@ -658,7 +691,7 @@ export class DocumenterService {
         return d >= startOfToday && d.getHours() === h;
       });
       const connectedCount = hourLogs.filter((l) =>
-        ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'].includes(l.disposition)
+        ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED', 'FALLBACK'].includes(l.disposition)
       ).length;
 
       return {
@@ -671,7 +704,7 @@ export class DocumenterService {
     // Compute real daily buckets for last 5 days
     const daysMap: Record<string, { day: string; dials: number; connected: number; prep: number }> = {};
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    
+
     for (let i = 4; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -684,7 +717,7 @@ export class DocumenterService {
       const dateStr = new Date(log.createdAt).toISOString().slice(0, 10);
       if (daysMap[dateStr]) {
         daysMap[dateStr].dials += 1;
-        if (['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'].includes(log.disposition)) {
+        if (['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED', 'FALLBACK'].includes(log.disposition)) {
           daysMap[dateStr].connected += 1;
         }
         if (log.disposition === 'CONNECTED_INTERESTED') {
@@ -728,6 +761,7 @@ export class DocumenterService {
       activeOutreach: outreachCount,
       inPrep: prepCount,
       callbacks: callbacksCount,
+      fallback: fallbackCount,
       myLeads: myLeadsCount,
       notInterested: notInterestedCount,
       dropped: notInterestedCount,
@@ -905,8 +939,22 @@ export class DocumenterService {
         clientPaymentStatus = 'UNPAID';
       }
 
+      const isConfigured = Boolean(
+        (primaryApp.taxDraftSummary as any)?.isReturnConfigured === true ||
+        primaryApp.currentStage === ApplicationStage.DOC_PREP ||
+        primaryApp.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
+        primaryApp.currentStage === ApplicationStage.SALES_PITCHING ||
+        primaryApp.currentStage === ApplicationStage.FILING_QUEUE ||
+        primaryApp.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+        primaryApp.currentStage === ApplicationStage.FILING_SUCCESS ||
+        isPaidClient ||
+        (allCustomerApps.length > 1)
+      );
+
       groupedLeads.push({
         ...primaryApp,
+        isRawProspect: !isConfigured,
+        isReturnConfigured: isConfigured,
         lastCallLog: primaryApp.callLogs?.[0] || null,
         clientPaymentStatus,
         allApplications: visibleApplications.map((a: any) => ({
@@ -918,7 +966,7 @@ export class DocumenterService {
           assignedDocAgent: a.assignedDocAgent,
         })),
         previousDocAgent,
-        totalTaxYears: visibleApplications.length,
+        totalTaxYears: isConfigured ? visibleApplications.length : 0,
       });
     }
 
@@ -1009,7 +1057,7 @@ export class DocumenterService {
 
       const dials = agent._count.callLogs;
       const connected = agent.callLogs.filter((l) =>
-        ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED'].includes(l.disposition)
+        ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED', 'FALLBACK'].includes(l.disposition)
       ).length;
       const rate = dials > 0 ? `${((connected / dials) * 100).toFixed(1)}%` : '0.0%';
 
@@ -1051,8 +1099,8 @@ export class DocumenterService {
       where: { id: returnedByUserId },
       select: { id: true, email: true, firstName: true, lastName: true, role: true },
     });
-    const returnerName = returnedByUser?.firstName 
-      ? `${returnedByUser.firstName} ${returnedByUser.lastName || ''}`.trim() 
+    const returnerName = returnedByUser?.firstName
+      ? `${returnedByUser.firstName} ${returnedByUser.lastName || ''}`.trim()
       : returnedByUser?.email || 'Calling Agent';
 
     return await prisma.$transaction(async (tx) => {
@@ -1213,17 +1261,17 @@ export class DocumenterService {
       select: { email: true, firstName: true, lastName: true, role: true },
     });
     const assignerRoleTitle = assignedByUser?.role === Role.ADMIN ? 'Super Admin' : 'Documenter Manager';
-    const assignerName = assignedByUser?.firstName 
-      ? `${assignedByUser.firstName} ${assignedByUser.lastName || ''}`.trim() 
+    const assignerName = assignedByUser?.firstName
+      ? `${assignedByUser.firstName} ${assignedByUser.lastName || ''}`.trim()
       : assignedByUser?.email || assignerRoleTitle;
 
     return await prisma.$transaction(async (tx) => {
       // 1. Fetch current applications
       const apps = await tx.taxApplication.findMany({
         where: { id: { in: applicationIds } },
-        select: { 
-          id: true, 
-          currentStage: true, 
+        select: {
+          id: true,
+          currentStage: true,
           assignedDocAgentId: true,
           assignedSalesAgentId: true,
           isDualDocSalesRole: true,
@@ -1346,7 +1394,7 @@ export class DocumenterService {
           },
         });
 
-        const roleRemark = alsoAssignAsSales 
+        const roleRemark = alsoAssignAsSales
           ? `directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}) as DUAL-ROLE (Documenter Intake + Sales Closer).`
           : `directly assigned this lead to Calling Agent ${targetAgent.email} (${targetAgent.role}).`;
 
@@ -1386,7 +1434,7 @@ export class DocumenterService {
       await tx.notification.create({
         data: {
           recipientUserId: targetAgent.id,
-          title: apps.length === 1 
+          title: apps.length === 1
             ? (alsoAssignAsSales ? `1 Dual-Role Lead Assigned (Doc + Sales)` : `1 New Lead Assigned to Your Calling Queue`)
             : (alsoAssignAsSales ? `${apps.length} Dual-Role Leads Assigned (Doc + Sales)` : `${apps.length} New Leads Assigned to Your Calling Queue`),
           message: alsoAssignAsSales
@@ -1396,8 +1444,8 @@ export class DocumenterService {
           priority: 'HIGH',
           actionUrl: '/documenter/agent/queue',
           actionLabel: 'Open Calling Queue',
-          relatedLeadName: apps.length === 1 && apps[0]?.customer?.firstName 
-            ? `${apps[0].customer.firstName} ${apps[0].customer.lastName || ''}`.trim() 
+          relatedLeadName: apps.length === 1 && apps[0]?.customer?.firstName
+            ? `${apps[0].customer.firstName} ${apps[0].customer.lastName || ''}`.trim()
             : undefined,
           applicationId: apps.length === 1 ? apps[0].id : undefined,
         },
@@ -1429,8 +1477,8 @@ export class DocumenterService {
       where: { id: assignedByUserId },
       select: { email: true, firstName: true, lastName: true },
     });
-    const assignerName = assignedByUser?.firstName 
-      ? `${assignedByUser.firstName} ${assignedByUser.lastName || ''}`.trim() 
+    const assignerName = assignedByUser?.firstName
+      ? `${assignedByUser.firstName} ${assignedByUser.lastName || ''}`.trim()
       : assignedByUser?.email || 'Documenter Manager';
 
     // 1. Fetch active DOC_AGENT staff
@@ -1452,9 +1500,9 @@ export class DocumenterService {
       where: applicationIds && applicationIds.length > 0
         ? { id: { in: applicationIds } }
         : {
-            assignedDocAgentId: null,
-            currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] },
-          },
+          assignedDocAgentId: null,
+          currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] },
+        },
       select: { id: true, currentStage: true },
       orderBy: { createdAt: 'asc' },
     });
@@ -1543,13 +1591,13 @@ export class DocumenterService {
     assignedDocAgentId?: string | null;
     userRole?: string;
   }) {
-    const { 
-      applicationIds, 
-      disposition, 
-      subDisposition, 
-      callSummary, 
-      callbackDate, 
-      callbackTimezone, 
+    const {
+      applicationIds,
+      disposition,
+      subDisposition,
+      callSummary,
+      callbackDate,
+      callbackTimezone,
       agentUserId,
       taxYear,
       filingType,
@@ -1588,11 +1636,13 @@ export class DocumenterService {
 
           let initialStage: ApplicationStage = ApplicationStage.DOC_OUTREACH;
           if (disposition === 'CONNECTED_INTERESTED') {
-            initialStage = ApplicationStage.DOC_PREP;
+            initialStage = ApplicationStage.DOC_OUTREACH;
           } else if (disposition === 'CONNECTED_NOT_INTERESTED' || disposition === 'CLIENT_NOT_QUALIFIED') {
             initialStage = ApplicationStage.DROPPED_CANCELLED;
           } else if (disposition === 'INVALID_DISCONNECTED') {
             initialStage = ApplicationStage.CORRECTION_NEEDED;
+          } else if (disposition === 'FALLBACK') {
+            initialStage = ApplicationStage.DOC_OUTREACH;
           }
 
           let yearApp = await tx.taxApplication.findUnique({
@@ -1628,6 +1678,8 @@ export class DocumenterService {
                   zipCode: customer.zipCode,
                   paymentStatus: 'PENDING',
                   esignStatus: 'PENDING',
+                  isReturnConfigured: Boolean(taxYear),
+                  isRawIngested: !taxYear,
                 },
                 stageHistories: {
                   create: {
@@ -1654,10 +1706,10 @@ export class DocumenterService {
 
         // 1. Handle disposition transitions
         if (disposition === 'CONNECTED_INTERESTED') {
-          targetStage = ApplicationStage.DOC_PREP;
+          targetStage = ApplicationStage.DOC_OUTREACH;
           auditRemark = subDisposition
-            ? `Lead agreed & interested in filing (${subDisposition}). Moved to DOC_PREP and provisioned Client Portal access.`
-            : `Lead agreed & interested in filing. Moved to DOC_PREP and provisioned Client Portal access for taxpayer (Tax Organizer & Document Vault).`;
+            ? `Lead agreed & interested in filing (${subDisposition}). Qualified return for outreach workspace and provisioned Client Portal access.`
+            : `Lead agreed & interested in filing. Qualified return for outreach workspace and provisioned Client Portal access for taxpayer.`;
 
           // Lazy Taxpayer User Provisioning
           if (!app.customer.userId && (app.customer.email || app.customer.phone)) {
@@ -1712,6 +1764,11 @@ export class DocumenterService {
           auditRemark = subDisposition
             ? `No answer / voicemail (${subDisposition}). Retained in outreach.`
             : `No answer / voicemail left. Retained in outreach.`;
+        } else if (disposition === 'FALLBACK') {
+          targetStage = ApplicationStage.DOC_OUTREACH;
+          auditRemark = subDisposition
+            ? `Lead marked as Fall Back (${subDisposition}). Retained in outreach pipeline.`
+            : `Lead marked as Fall Back. Retained in outreach pipeline.`;
         }
 
         // 2. Create CallLog entry
@@ -2665,7 +2722,7 @@ export class DocumenterService {
     }
 
     // 3. In-App Notification & Email to the Document Agent who handled/verified this lead
-    let docAgentUser = app.assignedDocAgentId 
+    let docAgentUser = app.assignedDocAgentId
       ? await prisma.user.findUnique({ where: { id: app.assignedDocAgentId }, select: { id: true, firstName: true, lastName: true, email: true, role: true } })
       : null;
 
@@ -2823,80 +2880,134 @@ export class DocumenterService {
       throw new NotFoundError('Customer profile not found');
     }
 
-    const existingApp = await prisma.taxApplication.findUnique({
-      where: {
-        customerId_taxYear: {
-          customerId,
-          taxYear: Number(taxYear),
-        },
-      },
-    });
-
-    if (existingApp) {
-      throw new BadRequestError(`A Tax Application for TY ${taxYear} already exists for this client.`);
-    }
-
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
 
     const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Staff Member';
-
     const targetDocAgentId = assignedDocAgentId || (userRole === Role.DOC_AGENT ? userId : null);
 
-    const app = await prisma.taxApplication.create({
-      data: {
+    // 1. Check if there is an unconfigured placeholder application for this customer
+    const unconfiguredApp = await prisma.taxApplication.findFirst({
+      where: {
         customerId,
-        taxYear: Number(taxYear),
-        filingType,
-        currentStage: ApplicationStage.DOC_OUTREACH,
-        assignedDocAgentId: targetDocAgentId,
-        taxDraftSummary: {
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          email: customer.email,
-          phone: customer.phone,
-          ssnTin: customer.ssnTin,
-          dob: customer.dob,
-          visaType: customer.visaType || 'H-1B',
-          filingStatus: customer.maritalStatus || 'Single',
-          addressLine1: customer.addressLine1,
-          city: customer.city,
-          state: customer.state,
-          zipCode: customer.zipCode,
-          paymentStatus: 'PENDING',
-          esignStatus: 'PENDING',
-        },
-        stageHistories: {
-          create: {
-            fromStage: null,
-            toStage: ApplicationStage.DOC_OUTREACH,
-            movedByUserId: userId,
-            remarks: remarks || `Started Tax Year ${taxYear} filing from Raw Lead Ingestion.`,
+        currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    let app;
+    if (unconfiguredApp && (unconfiguredApp.taxDraftSummary as any)?.isReturnConfigured !== true) {
+      app = await prisma.taxApplication.update({
+        where: { id: unconfiguredApp.id },
+        data: {
+          taxYear: Number(taxYear),
+          filingType,
+          assignedDocAgentId: targetDocAgentId || unconfiguredApp.assignedDocAgentId,
+          taxDraftSummary: {
+            ...(unconfiguredApp.taxDraftSummary as any || {}),
+            isReturnConfigured: true,
+            isRawIngested: false,
           },
-        },
-        auditLogs: {
-          create: {
-            actorId: userId,
-            actorType: 'AGENT',
-            actorName,
-            actorRole: userRole || 'DOC_MANAGER',
-            action: 'STAGE_CHANGE',
-            moduleKey: 'TAX_APPLICATION_CREATION',
-            details: {
-              taxYear,
-              filingType,
-              assignedDocAgentId: targetDocAgentId,
-              remarks: remarks || `Started Tax Year ${taxYear} filing from Raw Lead Ingestion.`,
+          stageHistories: {
+            create: {
+              fromStage: unconfiguredApp.currentStage,
+              toStage: ApplicationStage.DOC_OUTREACH,
+              movedByUserId: userId,
+              remarks: remarks || `Configured Tax Year ${taxYear} (${filingType}) filing return by ${actorName}.`,
             },
           },
         },
-      },
-      include: {
-        customer: true,
-        assignedDocAgent: true,
-      },
-    });
+        include: {
+          customer: true,
+          assignedDocAgent: true,
+        },
+      });
+    } else {
+      const existingApp = await prisma.taxApplication.findUnique({
+        where: {
+          customerId_taxYear: {
+            customerId,
+            taxYear: Number(taxYear),
+          },
+        },
+      });
+
+      if (existingApp) {
+        app = await prisma.taxApplication.update({
+          where: { id: existingApp.id },
+          data: {
+            filingType,
+            assignedDocAgentId: targetDocAgentId || existingApp.assignedDocAgentId,
+            taxDraftSummary: {
+              ...(existingApp.taxDraftSummary as any || {}),
+              isReturnConfigured: true,
+              isRawIngested: false,
+            },
+          },
+          include: {
+            customer: true,
+            assignedDocAgent: true,
+          },
+        });
+      } else {
+        app = await prisma.taxApplication.create({
+          data: {
+            customerId,
+            taxYear: Number(taxYear),
+            filingType,
+            currentStage: ApplicationStage.DOC_OUTREACH,
+            assignedDocAgentId: targetDocAgentId,
+            taxDraftSummary: {
+              firstName: customer.firstName,
+              lastName: customer.lastName,
+              email: customer.email,
+              phone: customer.phone,
+              ssnTin: customer.ssnTin,
+              dob: customer.dob,
+              visaType: customer.visaType || 'H-1B',
+              filingStatus: customer.maritalStatus || 'Single',
+              addressLine1: customer.addressLine1,
+              city: customer.city,
+              state: customer.state,
+              zipCode: customer.zipCode,
+              paymentStatus: 'PENDING',
+              esignStatus: 'PENDING',
+              isReturnConfigured: true,
+              isRawIngested: false,
+            },
+            stageHistories: {
+              create: {
+                fromStage: null,
+                toStage: ApplicationStage.DOC_OUTREACH,
+                movedByUserId: userId,
+                remarks: remarks || `Started Tax Year ${taxYear} filing from Raw Lead Ingestion.`,
+              },
+            },
+            auditLogs: {
+              create: {
+                actorId: userId,
+                actorType: 'AGENT',
+                actorName,
+                actorRole: userRole || 'DOC_MANAGER',
+                action: 'STAGE_CHANGE',
+                moduleKey: 'TAX_APPLICATION_CREATION',
+                details: {
+                  taxYear,
+                  filingType,
+                  assignedDocAgentId: targetDocAgentId,
+                  remarks: remarks || `Started Tax Year ${taxYear} filing from Raw Lead Ingestion.`,
+                },
+              },
+            },
+          },
+          include: {
+            customer: true,
+            assignedDocAgent: true,
+          },
+        });
+      }
+    }
 
     return app;
   }
@@ -3006,16 +3117,16 @@ export class DocumenterService {
     ]);
 
     const formattedAuditLogs = auditLogs.map((a) => {
-      const isClient = a.actorType === 'CLIENT' || 
-                       a.actorRole === 'TAXPAYER_USER' || 
-                       a.actorRole === 'CLIENT' ||
-                       (a.details as any)?.source === 'TAXPAYER_CLIENT_PORTAL' ||
-                       (a.details as any)?.source?.includes('CLIENT');
+      const isClient = a.actorType === 'CLIENT' ||
+        a.actorRole === 'TAXPAYER_USER' ||
+        a.actorRole === 'CLIENT' ||
+        (a.details as any)?.source === 'TAXPAYER_CLIENT_PORTAL' ||
+        (a.details as any)?.source?.includes('CLIENT');
 
       const clientName = `${a.application?.customer?.firstName || ''} ${a.application?.customer?.lastName || ''}`.trim() || a.application?.customer?.email || 'Taxpayer Client';
       const clientEmail = (a.details as any)?.clientEmail || a.application?.customer?.email || a.actorUser?.email || '';
 
-      const staffName = a.actorUser 
+      const staffName = a.actorUser
         ? `${a.actorUser.firstName || ''} ${a.actorUser.lastName || ''}`.trim() || a.actorUser.email?.split('@')[0]
         : 'System Actor';
       const staffEmail = a.actorUser?.email || '';
@@ -3042,8 +3153,8 @@ export class DocumenterService {
     const formattedStageHistories = stageHistories.map((s) => {
       const isClient = s.movedByUser?.role === Role.TAXPAYER_USER;
       const clientName = `${s.application?.customer?.firstName || ''} ${s.application?.customer?.lastName || ''}`.trim() || s.application?.customer?.email || 'Taxpayer Client';
-      const staffName = s.movedByUser 
-        ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email?.split('@')[0] 
+      const staffName = s.movedByUser
+        ? `${s.movedByUser.firstName || ''} ${s.movedByUser.lastName || ''}`.trim() || s.movedByUser.email?.split('@')[0]
         : 'System';
 
       return {
@@ -3066,7 +3177,7 @@ export class DocumenterService {
 
     const formattedCallLogs = callLogs.map((c) => {
       const clientName = `${c.application?.customer?.firstName || ''} ${c.application?.customer?.lastName || ''}`.trim() || c.application?.customer?.email || 'Taxpayer Client';
-      const staffName = c.agent 
+      const staffName = c.agent
         ? `${c.agent.firstName || ''} ${c.agent.lastName || ''}`.trim() || c.agent.email?.split('@')[0]
         : 'Calling Agent';
 

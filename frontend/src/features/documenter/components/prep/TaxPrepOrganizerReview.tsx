@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Users, Building2, LayoutGrid, Edit3, Eye, Save, ArrowLeft, ArrowRight, CheckCircle2, Clock, Globe } from 'lucide-react';
-import { 
+import {
   isModuleCompleted,
   validateModule1,
   validateModule2,
@@ -16,7 +16,7 @@ import {
   validateBusinessExpenses,
 } from '@/features/customer/components/organizer/utils/organizer-validation';
 import { OrganizerModuleContent } from '@/features/customer/components/organizer/OrganizerModuleContent';
-import { 
+import {
   getModulesForFilingType,
 } from '@/features/customer/components/organizer/OrganizerModuleSidebar';
 import { Button } from '@/shared/components/Button';
@@ -69,7 +69,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const [viewMode, setViewMode] = useState<'INSPECTOR' | 'GRID' | 'AGENT_EDIT'>(canEdit ? 'AGENT_EDIT' : 'INSPECTOR');
   const [selectedModId, setSelectedModId] = useState<string>(initialModId);
   const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});
-  
+
   // Local state for Agent Editing on Call
   const [localOrganizer, setLocalOrganizer] = useState<any>(() => {
     const raw = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
@@ -83,6 +83,12 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     };
   });
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!canEdit && viewMode === 'AGENT_EDIT') {
+      setViewMode('INSPECTOR');
+    }
+  }, [canEdit, viewMode]);
 
   useEffect(() => {
     const raw = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
@@ -187,17 +193,17 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     try {
       setIsSaving(true);
       const existingSubmitted: string[] = localOrganizer.submittedModules || [initialModId];
-      const extraKeys = selectedModId === 'm1' 
-        ? ['m1', 'm2', 'm3', 'm9'] 
+      const extraKeys = selectedModId === 'm1'
+        ? ['m1', 'm2', 'm3', 'm9']
         : selectedModId === 'm_income'
           ? ['m4', 'm5', 'm6', 'm_income']
           : selectedModId === 'm_expenses'
             ? ['m8', 'm_expenses']
-            : selectedModId === 'm_income_expenses' 
+            : selectedModId === 'm_income_expenses'
               ? ['m4', 'm5', 'm6', 'm8', 'm_income', 'm_expenses', 'm_income_expenses']
               : [selectedModId];
       const submittedModules = Array.from(new Set([...existingSubmitted, ...extraKeys]));
-      
+
       const payload = {
         ...localOrganizer,
         submittedModules,
@@ -260,11 +266,10 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               <button
                 type="button"
                 onClick={() => setViewMode('AGENT_EDIT')}
-                className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-                  viewMode === 'AGENT_EDIT'
+                className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'AGENT_EDIT'
                     ? 'bg-[#16A34A] text-white shadow-2xs'
                     : 'text-slate-600 hover:text-black'
-                }`}
+                  }`}
                 title="Fill / edit fields on call"
               >
                 <Edit3 className="w-3 h-3" />
@@ -275,11 +280,10 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('INSPECTOR')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-                viewMode === 'INSPECTOR'
+              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'INSPECTOR'
                   ? 'bg-[#16A34A] text-white shadow-2xs'
                   : 'text-slate-600 hover:text-black'
-              }`}
+                }`}
               title="Review & Audit responses"
             >
               <Eye className="w-3 h-3" />
@@ -289,11 +293,10 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             <button
               type="button"
               onClick={() => setViewMode('GRID')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-                viewMode === 'GRID'
+              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'GRID'
                   ? 'bg-[#16A34A] text-white shadow-2xs'
                   : 'text-slate-600 hover:text-black'
-              }`}
+                }`}
               title="Grid overview"
             >
               <LayoutGrid className="w-3 h-3" />
@@ -301,15 +304,17 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             </button>
           </div>
 
-          <Button
-            size="sm"
-            onClick={handleSaveOrganizerOnCall}
-            disabled={isSaving}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span>{isSaving ? 'Saving to DB...' : 'Save All Drafts'}</span>
-          </Button>
+          {canEdit && (
+            <Button
+              size="sm"
+              onClick={handleSaveOrganizerOnCall}
+              disabled={isSaving}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
+            >
+              <Save className="w-3.5 h-3.5" />
+              <span>{isSaving ? 'Saving to DB...' : 'Save All Drafts'}</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -351,6 +356,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             onSave={handleSaveOrganizerOnCall}
             currentModIndex={currentModIndex}
             saving={isSaving}
+            readOnly={!canEdit}
             filingType={effectiveFilingType}
           />
         </div>
@@ -447,6 +453,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               selectedTaxYear={activeTaxYear}
               lockTaxYear={true}
               isOrganizerMode={true}
+              readOnly={!canEdit}
             />
           )}
 
@@ -578,9 +585,8 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                 <div>
                   <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                        isDone ? 'bg-emerald-50 text-[#16A34A] border border-emerald-200' : 'bg-slate-100 text-slate-400'
-                      }`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${isDone ? 'bg-emerald-50 text-[#16A34A] border border-emerald-200' : 'bg-slate-100 text-slate-400'
+                        }`}>
                         <Icon className="w-3.5 h-3.5" />
                       </div>
                       <h5 className="text-xs font-bold text-slate-900 truncate group-hover:text-[#16A34A] transition-colors">
@@ -598,9 +604,8 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                   </div>
 
                   <div className="pt-2">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${
-                      isDone ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
-                    }`}>
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${isDone ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+                      }`}>
                       {isDone ? 'Submitted & Verified ✓' : 'Draft In Progress'}
                     </span>
                   </div>

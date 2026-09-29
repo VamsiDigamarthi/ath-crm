@@ -22,9 +22,10 @@ import { ManagerQueueScreen } from '@/features/documenter/screens/ManagerQueueSc
 import { DocumenterAgentDashboardScreen } from '@/features/documenter/screens/DocumenterAgentDashboardScreen';
 import { DocumenterAgentQueueScreen } from '@/features/documenter/screens/DocumenterAgentQueueScreen';
 import { DocumenterAgentCallbacksScreen } from '@/features/documenter/screens/DocumenterAgentCallbacksScreen';
+import { DocumenterAgentFallbackScreen } from '@/features/documenter/screens/DocumenterAgentFallbackScreen';
 import { DocumenterAgentPrepScreen } from '@/features/documenter/screens/DocumenterAgentPrepScreen';
 import { Taxpayer360DetailScreen } from '@/features/documenter/screens/Taxpayer360DetailScreen';
-import { AuditLogsScreen } from '@/features/documenter/screens/AuditLogsScreen';
+// import { AuditLogsScreen } from '@/features/documenter/screens/AuditLogsScreen';
 import { DocumenterLayout } from '@/features/documenter/layouts/DocumenterLayout';
 import { PrepReviewLayout } from '@/features/prep-review/layouts/PrepReviewLayout';
 import { PrepManagerDashboardScreen } from '@/features/prep-review/screens/PrepManagerDashboardScreen';
@@ -305,6 +306,10 @@ export const router = createBrowserRouter([
             element: <DocumenterAgentCallbacksScreen />,
           },
           {
+            path: 'agent/fallback',
+            element: <DocumenterAgentFallbackScreen />,
+          },
+          {
             path: 'agent/documents',
             element: <DocumenterAgentPrepScreen />,
           },
@@ -312,6 +317,7 @@ export const router = createBrowserRouter([
             path: 'agent/prep',
             element: <Navigate to="/documenter/agent/documents" replace />,
           },
+          /*
           {
             path: 'manager/audit-logs',
             element: <AuditLogsScreen />,
@@ -324,6 +330,7 @@ export const router = createBrowserRouter([
             path: 'audit-logs',
             element: <AuditLogsScreen />,
           },
+          */
           {
             path: 'agent/lead/:id',
             element: <Taxpayer360DetailScreen />,

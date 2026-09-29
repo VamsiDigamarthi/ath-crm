@@ -56,6 +56,7 @@ export const DocumenterDepartmentScreen: React.FC = () => {
     activeLeadForStartFiling,
     handleOpenCallModal,
     handleOpenAssignModal,
+    handleOpenStartFilingModal,
     handleStartFiling,
     handleCloseModals,
     handleSaveCallDisposition,
@@ -67,10 +68,11 @@ export const DocumenterDepartmentScreen: React.FC = () => {
       getDocumenterColumns({
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
+        onOpenStartFilingModal: handleOpenStartFilingModal,
         isAdmin: true,
         isManagerView: true,
       }),
-    [handleOpenCallModal, handleOpenAssignModal]
+    [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal]
   );
 
   // Super Admin Department Supervision Tabs

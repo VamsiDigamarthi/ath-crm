@@ -25,6 +25,7 @@ interface OrganizerModuleContentProps {
   errors?: Record<string, string>;
   clearError?: (field: string) => void;
   className?: string;
+  readOnly?: boolean;
   filingType?: string;
 }
 
@@ -41,6 +42,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
   errors = {},
   clearError,
   className,
+  readOnly = false,
   filingType,
 }) => {
   if (!organizerData) {
@@ -202,6 +204,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             selectedTaxYear={selectedTaxYear}
             lockTaxYear={true}
             isOrganizerMode={true}
+            readOnly={readOnly}
             filingType={filingType}
           />
         )}
@@ -221,26 +224,39 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
         </Button>
 
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onSave}
-            disabled={saving}
-            className="border-slate-300 text-black hover:bg-slate-50 text-xs flex items-center gap-1.5 cursor-pointer rounded-md"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span>{saving ? 'Saving...' : 'Save Draft'}</span>
-          </Button>
+          {!readOnly ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onSave}
+                disabled={saving}
+                className="border-slate-300 text-black hover:bg-slate-50 text-xs flex items-center gap-1.5 cursor-pointer rounded-md"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Saving...' : 'Save Draft'}</span>
+              </Button>
 
-          <Button
-            size="sm"
-            onClick={onNext}
-            disabled={saving}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4 rounded-md"
-          >
-            <span>Save &amp; Next</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Button>
+              <Button
+                size="sm"
+                onClick={onNext}
+                disabled={saving}
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4 rounded-md"
+              >
+                <span>Save &amp; Next</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              onClick={onNext}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4 rounded-md"
+            >
+              <span>Next</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -12,12 +12,13 @@ import {
   DollarSign,
   FileCheck2,
   UserPlus,
-  UserCheck,
   Settings,
   Bell,
   Mail,
   Globe,
   Tag,
+  FolderKanban,
+  Database,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -46,9 +47,9 @@ export const AdminLayout: React.FC = () => {
     { id: 'prospects', label: 'Bulk Lead Import', icon: FileSpreadsheet, section: 'Operations', path: '/admin/prospects' },
     { id: 'self-signups', label: 'Direct Sign-ups', icon: Globe, section: 'Operations', path: '/admin/self-signups' },
     { id: 'returned-leads', label: 'Returned Leads', icon: RotateCcw, section: 'Operations', path: '/admin/returned-leads' },
-    { id: 'all-taxpayers', label: 'All Taxpayers Hub', icon: Users, section: 'Management', path: '/admin/all-taxpayers' },
+    { id: 'all-taxpayers', label: 'Data', icon: Database, section: 'Management', path: '/admin/all-taxpayers' },
     { id: 'coupons', label: 'Discount Coupons', icon: Tag, section: 'Management', path: '/admin/coupons' },
-    { id: 'customers', label: 'Client Directory', icon: UserCheck, section: 'Management', path: '/admin/customers' },
+    { id: 'customers', label: 'Files', icon: FolderKanban, section: 'Management', path: '/admin/customers' },
     { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', path: '/admin/employees' },
     { id: 'email-templates', label: 'Email Templates', icon: Mail, section: 'Management', path: '/admin/email-templates' },
     { id: 'documenter', label: 'Documenter Dept', icon: Users, section: 'Operations', path: '/admin/documenter' },
@@ -93,11 +94,11 @@ export const AdminLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-slate-100 text-slate-800 font-sans selection:bg-emerald-500 selection:text-white overflow-hidden">
+    <div className="flex h-screen w-full bg-[#F8FAFC] text-slate-800 font-sans selection:bg-emerald-500 selection:text-white overflow-hidden">
       {/* Left Sidebar */}
       <AppSidebar
         width={240}
-        variant="light"
+        variant="dark"
         accentColor="#16A34A"
         brand={{
           title: 'TaxCRM Engine',
@@ -116,9 +117,9 @@ export const AdminLayout: React.FC = () => {
       />
 
       {/* Right Container (Header + Routed Content Body) */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-100">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F8FAFC]">
         {/* Top Header Bar */}
-        <header className="h-16 flex items-center justify-end px-6 bg-white border-b border-slate-300 shrink-0 gap-3">
+        <header className="h-16 flex items-center justify-end px-6 bg-white border-b border-slate-200 shrink-0 gap-3">
           <NotificationBellPopover />
 
           {/* Reusable Header User Profile Pill */}
