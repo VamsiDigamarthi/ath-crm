@@ -933,6 +933,16 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
       const m9 = organizerData.m9_directDeposit;
       return Boolean(m9 && m9.bankName && m9.routingNumber && m9.accountNumber && m9.accountOwnerName);
     }
+    case 'm_income': {
+      return (
+        isModuleCompleted('m4', organizerData) ||
+        isModuleCompleted('m5', organizerData) ||
+        isModuleCompleted('m6', organizerData)
+      );
+    }
+    case 'm_expenses': {
+      return isModuleCompleted('m8', organizerData);
+    }
     case 'm_income_expenses': {
       return (
         isModuleCompleted('m4', organizerData) ||
@@ -941,10 +951,165 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
         isModuleCompleted('m8', organizerData)
       );
     }
+    case 'b1_companyInfo': {
+      const b1 = organizerData.b1_companyInfo;
+      return Boolean(b1 && b1.businessName && b1.ein);
+    }
+    case 'b2_businessIncome': {
+      const b2 = organizerData.b2_businessIncome;
+      return Boolean(
+        b2 &&
+        ((b2.clientIncome1099 && b2.clientIncome1099.length > 0) ||
+          (b2.grossSalesNot1099 ?? 0) > 0 ||
+          (b2.interestIncome ?? 0) > 0 ||
+          (b2.dividendIncome ?? 0) > 0 ||
+          (b2.otherIncomeAmount ?? 0) > 0)
+      );
+    }
+    case 'b3_businessExpenses': {
+      const b3 = organizerData.b3_businessExpenses;
+      return Boolean(
+        b3 &&
+        ((b3.officerCompensation ?? 0) > 0 ||
+          (b3.employeeWages ?? 0) > 0 ||
+          (b3.contractorPayments ?? 0) > 0 ||
+          (b3.rentProperty ?? 0) > 0 ||
+          (b3.advertisingMarketing ?? 0) > 0 ||
+          (b3.legalProfessionalFees ?? 0) > 0 ||
+          (b3.hasVehicleExpenses && (b3.vehicles?.length ?? 0) > 0) ||
+          (b3.hasEquipmentPurchases && (b3.equipmentAssets?.length ?? 0) > 0) ||
+          (b3.hasHomeOffice && (b3.homeOffice?.officeSquareFootage ?? 0) > 0))
+      );
+    }
     case 'm_vault': {
       return false;
     }
     default:
       return false;
   }
+};
+
+/**
+ * Validates Business Module 1: Company Information & Partners
+ */
+export const validateBusinessCompanyInfo = (data?: OrganizerData['b1_companyInfo']): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) {
+    return { businessName: 'Company Information is required' };
+  }
+
+  const name = (data.businessName || '').trim();
+  if (!name) {
+    errors.businessName = 'Legal Business Name is required';
+  } else if (name.length < 2) {
+    errors.businessName = 'Business Name must be at least 2 characters';
+  }
+
+  const ein = (data.ein || '').trim();
+  if (!ein) {
+    errors.ein = 'Employer Identification Number (EIN) is required';
+  } else if (!/^\d{2}-?\d{7}$/.test(ein)) {
+    errors.ein = 'Please enter a valid 9-digit EIN (e.g. 12-3456789)';
+  }
+
+  if (!data.entityType) {
+    errors.entityType = 'Business Entity Type is required';
+  }
+
+  if (!data.address?.trim()) {
+    errors.address = 'Street Address is required';
+  }
+
+  if (!data.city?.trim()) {
+    errors.city = 'City is required';
+  }
+
+  if (!data.state?.trim()) {
+    errors.state = 'State is required';
+  }
+
+  if (!data.zipCode?.trim()) {
+    errors.zipCode = 'ZIP Code is required';
+  }
+
+  if (!data.contactName?.trim()) {
+    errors.contactName = 'Authorized Contact Name is required';
+  }
+
+  if (!data.contactEmail?.trim()) {
+    errors.contactEmail = 'Contact Email is required';
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contactEmail.trim())) {
+    errors.contactEmail = 'Please enter a valid email address';
+  }
+
+  if (!data.contactPhone?.trim()) {
+    errors.contactPhone = 'Contact Phone is required';
+  }
+
+  // Validate partners if present
+  if (data.partners && data.partners.length > 0) {
+    let totalOwnership = 0;
+    data.partners.forEach((partner, idx) => {
+      if (!partner.name?.trim()) {
+        errors[`partner_${idx}_name`] = `Partner #${idx + 1} Name is required`;
+      }
+      const pct = Number(partner.ownershipPercentage) || 0;
+      if (pct < 0 || pct > 100) {
+        errors[`partner_${idx}_ownership`] = `Partner #${idx + 1} ownership must be between 0% and 100%`;
+      }
+      totalOwnership += pct;
+    });
+    if (totalOwnership > 100) {
+      errors.totalOwnership = `Total partner ownership cannot exceed 100% (currently ${totalOwnership}%)`;
+    }
+  }
+
+  return errors;
+};
+
+/**
+ * Validates Business Module 2: Income
+ */
+export const validateBusinessIncome = (data?: OrganizerData['b2_businessIncome']): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) return errors;
+
+  if (data.clientIncome1099 && data.clientIncome1099.length > 0) {
+    data.clientIncome1099.forEach((item, idx) => {
+      if (!item.clientName?.trim()) {
+        errors[`client_${idx}_name`] = `Client #${idx + 1} Name is required`;
+      }
+      if (item.grossAmount !== undefined && item.grossAmount < 0) {
+        errors[`client_${idx}_amount`] = 'Amount cannot be negative';
+      }
+    });
+  }
+
+  return errors;
+};
+
+/**
+ * Validates Business Module 3: Expenses
+ */
+export const validateBusinessExpenses = (data?: OrganizerData['b3_businessExpenses']): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) return errors;
+
+  if (data.hasVehicleExpenses && data.vehicles && data.vehicles.length > 0) {
+    data.vehicles.forEach((veh, idx) => {
+      if (!veh.vehicleDescription?.trim()) {
+        errors[`vehicle_${idx}_desc`] = `Vehicle #${idx + 1} description is required`;
+      }
+    });
+  }
+
+  if (data.hasEquipmentPurchases && data.equipmentAssets && data.equipmentAssets.length > 0) {
+    data.equipmentAssets.forEach((asset, idx) => {
+      if (!asset.description?.trim()) {
+        errors[`asset_${idx}_desc`] = `Asset #${idx + 1} description is required`;
+      }
+    });
+  }
+
+  return errors;
 };

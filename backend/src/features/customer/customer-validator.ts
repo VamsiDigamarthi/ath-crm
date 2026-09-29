@@ -493,8 +493,12 @@ export const saveOrganizerSchema = z.object({
       m7_foreign: m7ForeignSchema.optional(),
       m8_deductions: m8DeductionsSchema.optional(),
       m9_directDeposit: m9DirectDepositSchema.optional(),
-    }),
-  }),
+      b1_companyInfo: z.record(z.string(), z.any()).optional(),
+      b2_businessIncome: z.record(z.string(), z.any()).optional(),
+      b3_businessExpenses: z.record(z.string(), z.any()).optional(),
+      submittedModules: z.array(z.string()).optional(),
+    }).passthrough(),
+  }).passthrough(),
 });
 
 /**

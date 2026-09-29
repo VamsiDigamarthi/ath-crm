@@ -624,6 +624,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             leadId={currentLead.id}
             customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
             taxDraftSummary={currentLead.taxDraftSummary}
+            filingType={currentLead.filingType || (currentLead.taxDraftSummary as any)?.filingType}
             onOrganizerSaved={fetchLeadDetails}
             allowEdit={!isReadOnly}
             readOnly={isReadOnly}

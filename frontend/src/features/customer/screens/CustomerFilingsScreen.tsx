@@ -38,25 +38,34 @@ export const CustomerFilingsScreen: React.FC = () => {
     }
 
     if (applications.length > 0) {
-      return applications.map((app: any) => ({
-        id: app.id,
-        taxYear: Number(app.taxYear),
-        filingType: app.filingType || 'INDIVIDUAL',
-        currentStage: app.currentStage || 'RAW_PROSPECT',
-        isCompleted: app.currentStage === 'FILING_SUCCESS',
-        isActive: app.currentStage !== 'FILING_SUCCESS' && app.currentStage !== 'DROPPED_CANCELLED',
-        totalRefund: 0,
-        totalBalanceDue: 0,
-        fedRefund: 0,
-        fedDue: 0,
-        stateRefund: 0,
-        stateDue: 0,
-        documentsCount: 0,
-        organizerPercent: 0,
-        assignedSpecialist: 'Assigned Specialist',
-        updatedAt: app.updatedAt || new Date().toISOString(),
-        createdAt: app.createdAt || new Date().toISOString(),
-      }));
+      return applications.map((app: any) => {
+        const appDraft = (app.taxDraftSummary as any) || {};
+        const aFedRefund = Number(appDraft.fedRefund ?? appDraft.federalRefund ?? appDraft.federalTaxRefund ?? 0);
+        const aFedDue = Number(appDraft.balanceDue ?? appDraft.federalBalanceDue ?? 0);
+        const aStateRefund = Number(appDraft.stateRefund ?? appDraft.stateTaxRefund ?? 0);
+        const aStateDue = Number(appDraft.stateBalanceDue ?? 0);
+        const aTotalRefund = aFedRefund + aStateRefund;
+        const aTotalBalanceDue = aFedDue + aStateDue;
+        return {
+          id: app.id,
+          taxYear: Number(app.taxYear),
+          filingType: app.filingType || 'INDIVIDUAL',
+          currentStage: app.currentStage || 'RAW_PROSPECT',
+          isCompleted: app.currentStage === 'FILING_SUCCESS',
+          isActive: app.currentStage !== 'FILING_SUCCESS' && app.currentStage !== 'DROPPED_CANCELLED',
+          totalRefund: aTotalRefund,
+          totalBalanceDue: aTotalBalanceDue,
+          fedRefund: aFedRefund,
+          fedDue: aFedDue,
+          stateRefund: aStateRefund,
+          stateDue: aStateDue,
+          documentsCount: app.documents?.length || 0,
+          organizerPercent: 0,
+          assignedSpecialist: 'Assigned Specialist',
+          updatedAt: app.updatedAt || new Date().toISOString(),
+          createdAt: app.createdAt || new Date().toISOString(),
+        };
+      });
     }
 
     return [];
@@ -147,6 +156,42 @@ export const CustomerFilingsScreen: React.FC = () => {
     {
       header: 'Status',
       render: (item) => getStageBadge(item.currentStage, item.isCompleted),
+    },
+    {
+      header: 'Estimated Refund',
+      render: (item) => {
+        const hasRefund = (item.totalRefund || 0) > 0;
+        return (
+          <div>
+            <div className={`font-bold text-sm ${hasRefund ? 'text-[#16A34A]' : 'text-slate-700'}`}>
+              {hasRefund ? `$${item.totalRefund.toLocaleString()}` : '$0'}
+            </div>
+            <span className="text-[11px] text-black font-medium block">
+              {hasRefund
+                ? `Fed: $${(item.fedRefund || 0).toLocaleString()} | State: $${(item.stateRefund || 0).toLocaleString()}`
+                : 'Intake calculation in progress'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Due Amount',
+      render: (item) => {
+        const hasDue = (item.totalBalanceDue || 0) > 0;
+        return (
+          <div>
+            <div className={`font-bold text-sm ${hasDue ? 'text-amber-700' : 'text-slate-700'}`}>
+              {hasDue ? `$${item.totalBalanceDue.toLocaleString()}` : '$0'}
+            </div>
+            <span className="text-[11px] text-black font-medium block">
+              {hasDue
+                ? `Fed: $${(item.fedDue || 0).toLocaleString()} | State: $${(item.stateDue || 0).toLocaleString()}`
+                : 'No balance due'}
+            </span>
+          </div>
+        );
+      },
     },
     {
       header: 'Date',

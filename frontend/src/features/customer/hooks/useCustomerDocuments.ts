@@ -34,7 +34,8 @@ export const isDriveLinkDoc = (doc: CustomerDocumentItem): boolean => {
   );
 };
 
-export const useCustomerDocuments = (taxYearParam?: string | number) => {
+export const useCustomerDocuments = (taxYearParam?: string | number, filingTypeParam?: string) => {
+  const isBusiness = filingTypeParam?.toUpperCase() === 'BUSINESS';
   const [selectedYear, setSelectedYear] = useState<string>(
     taxYearParam ? taxYearParam.toString() : '2025'
   );
@@ -52,7 +53,15 @@ export const useCustomerDocuments = (taxYearParam?: string | number) => {
   const [error, setError] = useState<string | null>(null);
 
   // 4 Document Types Tab state: 'INDIVIDUAL' | 'BUSINESS' | 'TAX_COMPLIANCE' | 'TAX_AUDIT'
-  const [activeDocType, setActiveDocType] = useState<DocumentTypeId>('INDIVIDUAL');
+  const [activeDocType, setActiveDocType] = useState<DocumentTypeId>(isBusiness ? 'BUSINESS' : 'INDIVIDUAL');
+
+  useEffect(() => {
+    if (isBusiness && (activeDocType === 'INDIVIDUAL' || activeDocType === 'TAX_COMPLIANCE')) {
+      setActiveDocType('BUSINESS');
+    } else if (!isBusiness && activeDocType === 'BUSINESS') {
+      setActiveDocType('INDIVIDUAL');
+    }
+  }, [isBusiness]);
 
   // Vault Sub-Tab state: 'ALL' | 'FILES' | 'LINKS'
   const [activeVaultTab, setActiveVaultTab] = useState<'ALL' | 'FILES' | 'LINKS'>('ALL');

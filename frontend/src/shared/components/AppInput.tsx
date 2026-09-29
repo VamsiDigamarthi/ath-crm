@@ -23,6 +23,7 @@ export interface AppInputProps {
   className?: string
   maxLength?: number
   autoComplete?: string
+  helperText?: React.ReactNode
 }
 
 const SIZE_CLS = {
@@ -58,6 +59,7 @@ export function AppInput({
   className,
   maxLength,
   autoComplete,
+  helperText,
 }: AppInputProps) {
   const [showPassword, setShowPassword] = useState(false)
   const inputType = type === 'password' ? (showPassword ? 'text' : 'password') : type
@@ -126,7 +128,11 @@ export function AppInput({
         ) : null}
       </div>
 
-      {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
+      {error ? (
+        <p className="text-[11px] text-rose-500 font-medium">{error}</p>
+      ) : helperText ? (
+        <p className="text-[11px] text-slate-500">{helperText}</p>
+      ) : null}
     </div>
   )
 }

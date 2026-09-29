@@ -5,14 +5,18 @@ import { type OrganizerData } from '../../services/customer-api';
 import { Module1Demographics } from './modules/Module1Demographics';
 import { Module3Presence } from './modules/Module3Presence';
 import { Module7Foreign } from './modules/Module7Foreign';
-import { ModuleIncomeExpenses } from './modules/ModuleIncomeExpenses';
+import { ModuleIncome } from './modules/ModuleIncome';
+import { ModuleExpenses } from './modules/ModuleExpenses';
 import { CustomerDocumentVault } from '../CustomerDocumentVault';
+import { BusinessGeneralInfo } from './business/BusinessGeneralInfo';
+import { BusinessIncome } from './business/BusinessIncome';
+import { BusinessExpenses } from './business/BusinessExpenses';
 
 interface OrganizerModuleContentProps {
   selectedModId: string;
   selectedTaxYear: number;
   organizerData: OrganizerData | null;
-  updateModuleField: <K extends keyof OrganizerData>(moduleKey: K, field: keyof OrganizerData[K], value: any) => void;
+  updateModuleField: <K extends keyof OrganizerData>(moduleKey: K, field: keyof NonNullable<OrganizerData[K]>, value: any) => void;
   onNext: () => void;
   onPrev: () => void;
   onSave: () => void;
@@ -22,6 +26,7 @@ interface OrganizerModuleContentProps {
   clearError?: (field: string) => void;
   className?: string;
   readOnly?: boolean;
+  filingType?: string;
 }
 
 export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
@@ -38,6 +43,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
   clearError,
   className,
   readOnly = false,
+  filingType,
 }) => {
   if (!organizerData) {
     return (
@@ -47,23 +53,64 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
     );
   }
 
-  const isAccordion = selectedModId === 'm1';
+  const isAccordion =
+    selectedModId === 'm1' ||
+    selectedModId === 'b1_companyInfo' ||
+    selectedModId === 'b2_businessIncome' ||
+    selectedModId === 'b3_businessExpenses';
 
   if (isAccordion) {
     return (
       <div className={className || "w-full space-y-4 font-sans"}>
-        {/* Module Accordions */}
-        <Module1Demographics
-          data={organizerData?.m1_demographics || ({} as any)}
-          updateField={(field, val) => updateModuleField('m1_demographics', field, val)}
-          m2Data={organizerData?.m2_dependents || ({} as any)}
-          updateM2Field={(field, val) => updateModuleField('m2_dependents', field, val)}
-          m9Data={organizerData?.m9_directDeposit || ({} as any)}
-          updateM9Field={(field, val) => updateModuleField('m9_directDeposit', field, val)}
-          selectedTaxYear={selectedTaxYear}
-          errors={errors}
-          clearError={clearError}
-        />
+        {/* Individual Accordion 1 */}
+        {selectedModId === 'm1' && (
+          <Module1Demographics
+            data={organizerData?.m1_demographics || ({} as any)}
+            updateField={(field, val) => updateModuleField('m1_demographics', field, val)}
+            m2Data={organizerData?.m2_dependents || ({} as any)}
+            updateM2Field={(field, val) => updateModuleField('m2_dependents', field, val)}
+            m3Data={organizerData?.m3_presence || ({} as any)}
+            updateM3Field={(field, val) => updateModuleField('m3_presence', field, val)}
+            m9Data={organizerData?.m9_directDeposit || ({} as any)}
+            updateM9Field={(field, val) => updateModuleField('m9_directDeposit', field, val)}
+            selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
+          />
+        )}
+
+        {/* Business Accordion 1: General Information */}
+        {selectedModId === 'b1_companyInfo' && (
+          <BusinessGeneralInfo
+            data={organizerData?.b1_companyInfo || ({} as any)}
+            updateField={(field, val) => updateModuleField('b1_companyInfo', field, val)}
+            selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
+          />
+        )}
+
+        {/* Business Accordion 2: Income */}
+        {selectedModId === 'b2_businessIncome' && (
+          <BusinessIncome
+            data={organizerData?.b2_businessIncome || ({} as any)}
+            updateField={(field, val) => updateModuleField('b2_businessIncome', field, val)}
+            selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
+          />
+        )}
+
+        {/* Business Accordion 3: Expenses */}
+        {selectedModId === 'b3_businessExpenses' && (
+          <BusinessExpenses
+            data={organizerData?.b3_businessExpenses || ({} as any)}
+            updateField={(field, val) => updateModuleField('b3_businessExpenses', field, val)}
+            selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
+          />
+        )}
 
         {/* Navigation & Action Footer Card */}
         <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs flex items-center justify-between gap-3">
@@ -128,8 +175,18 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
           />
         )}
 
-        {(selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6' || selectedModId === 'm8') && (
-          <ModuleIncomeExpenses
+        {(selectedModId === 'm_income' || selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6') && (
+          <ModuleIncome
+            organizerData={organizerData}
+            updateModuleField={updateModuleField}
+            selectedTaxYear={selectedTaxYear}
+            errors={errors}
+            clearError={clearError}
+          />
+        )}
+
+        {(selectedModId === 'm_expenses' || selectedModId === 'm8') && (
+          <ModuleExpenses
             organizerData={organizerData}
             updateModuleField={updateModuleField}
             selectedTaxYear={selectedTaxYear}
@@ -144,6 +201,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             lockTaxYear={true}
             isOrganizerMode={true}
             readOnly={readOnly}
+            filingType={filingType}
           />
         )}
       </div>
