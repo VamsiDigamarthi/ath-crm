@@ -10,6 +10,7 @@ import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatus
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import {
   ArrowLeft,
+  ArrowRight,
   User,
   Mail,
   Phone,
@@ -46,6 +47,8 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
   const [isYearLoading, setIsYearLoading] = useState(false);
   const [data, setData] = useState<TaxpayerYearDetailsResponse | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedYearToInspect, setSelectedYearToInspect] = useState<number | null>(null);
+  const [isYearConfirmed, setIsYearConfirmed] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'FINANCIALS' | 'DOCUMENTS' | 'TEAM' | 'TIMELINE' | 'CALL_LOGS'>('FINANCIALS');
   const [docCategoryFilter, setDocCategoryFilter] = useState<string>('ALL');
 
@@ -59,8 +62,10 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
       }
       const response = await MasterTaxpayersApiService.getTaxpayerYearDetails(id, year);
       setData(response);
-      if (!year && response.yearDetails?.taxYear) {
-        setSelectedYear(response.yearDetails.taxYear);
+      const activeYear = year || response.yearDetails?.taxYear || response.taxYearsList?.[0]?.year;
+      if (activeYear) {
+        setSelectedYear(activeYear);
+        setSelectedYearToInspect((prev) => prev ?? activeYear);
       }
     } catch (err: any) {
       console.error('Failed to fetch taxpayer year details:', err);
@@ -78,7 +83,17 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
   const handleYearChange = (year: number) => {
     if (year === selectedYear) return;
     setSelectedYear(year);
+    setSelectedYearToInspect(year);
     fetchDetails(year);
+  };
+
+  const handleConfirmYear = (year: number) => {
+    setSelectedYear(year);
+    setSelectedYearToInspect(year);
+    setIsYearConfirmed(true);
+    if (data?.yearDetails?.taxYear !== year) {
+      fetchDetails(year);
+    }
   };
 
   const renderStageBadge = (stage: string) => {
@@ -173,11 +188,11 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
       <div className="w-full p-8">
         <Button
           variant="outline"
-          onClick={() => navigate('/admin/all-taxpayers')}
+          onClick={() => navigate(-1)}
           className="mb-6 flex items-center gap-2 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to All Taxpayers Hub
+          Back
         </Button>
         <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-sm">
           <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
@@ -218,11 +233,11 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate('/admin/all-taxpayers')}
+            onClick={() => navigate(-1)}
             className="h-9 px-3 border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold rounded-xl flex items-center gap-2 shadow-xs cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Taxpayers Hub</span>
+            <span>Back</span>
           </Button>
           <div className="h-4 w-px bg-slate-200 hidden sm:block" />
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
@@ -348,84 +363,247 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Multi-Tax-Year Selector Bar */}
-      <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-md">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
-          <div>
-            <div className="text-xs font-black tracking-wider uppercase text-emerald-400 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4" />
-              <span>Select Filing Tax Year (A-to-Z Specs, Docs &amp; Audit Logs)</span>
+      {/* 3. Tax Year Selection Screen vs Full Active Year Details */}
+      {!isYearConfirmed ? (
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-sm space-y-6 animate-in fade-in duration-200">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Calendar className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>Select Tax Year to Inspect</span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      {taxYearsList.length} Return Year(s) Available
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Please select a tax filing year below and click <strong>&quot;Open Return Details&quot;</strong> to inspect all calculations, uploaded documents, team assignments, and IRS filing status.
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              This taxpayer has <strong>{taxYearsList.length || 1} tax return year(s)</strong> on record. Click any tax year below to load its full financial data, documents, assigned team, and timeline.
-            </p>
-          </div>
 
-          <div className="text-xs font-mono text-emerald-400 font-bold bg-slate-800/90 px-3 py-1.5 rounded-lg border border-slate-700 self-start md:self-auto">
-            Active: TY {currentTaxYear}
-          </div>
-        </div>
-
-        {/* Year Cards Carousel / Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-          {taxYearsList.map((ty) => {
-            const isSelected = ty.year === currentTaxYear;
-            return (
-              <button
-                key={ty.year}
-                type="button"
-                onClick={() => handleYearChange(ty.year)}
-                disabled={isYearLoading && isSelected}
-                className={`text-left p-3.5 rounded-xl transition-all cursor-pointer border relative overflow-hidden ${
-                  isSelected
-                    ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/20 font-bold'
-                    : 'bg-slate-800/80 hover:bg-slate-800 text-white border-slate-700/80 hover:border-slate-600'
-                }`}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                size="md"
+                disabled={!selectedYearToInspect}
+                onClick={() => selectedYearToInspect && handleConfirmYear(selectedYearToInspect)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 cursor-pointer rounded-xl px-5 py-2.5 shadow-sm transition-all"
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className={`text-base font-black ${isSelected ? 'text-slate-950' : 'text-white'}`}>
-                    TY {ty.year}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                <span>Open TY {selectedYearToInspect || ''} Return Details</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {taxYearsList.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <Calendar className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm font-semibold">No tax filing years found for this taxpayer.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {taxYearsList.map((ty) => {
+                const isSelected = ty.year === selectedYearToInspect;
+                const hasDue = (ty.federalTaxDue && ty.federalTaxDue > 0);
+                return (
+                  <div
+                    key={ty.year}
+                    onClick={() => setSelectedYearToInspect(ty.year)}
+                    onDoubleClick={() => handleConfirmYear(ty.year)}
+                    className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between gap-4 ${
                       isSelected
-                        ? 'bg-slate-950 text-emerald-400'
-                        : ty.status === 'COMPLETED'
-                        ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700'
-                        : ty.status === 'IN_PROGRESS'
-                        ? 'bg-amber-900/60 text-amber-300 border border-amber-700'
-                        : 'bg-slate-700 text-slate-300'
+                        ? 'border-emerald-600 bg-emerald-50/40 shadow-md ring-4 ring-emerald-500/10'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50 shadow-xs'
                     }`}
                   >
-                    {ty.status === 'COMPLETED' ? 'Filed' : ty.status === 'IN_PROGRESS' ? 'In Progress' : 'Dropped'}
-                  </span>
-                </div>
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Tax Return Year
+                        </div>
+                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+                          TY {ty.year}
+                        </div>
+                      </div>
 
-                <div className="flex items-center justify-between text-xs">
-                  <span className={isSelected ? 'text-slate-900 font-medium' : 'text-slate-400'}>
-                    {ty.formType || 'FORM_1040'}
-                  </span>
-                  {ty.federalRefund !== undefined && (
-                    <span className={`font-mono text-xs font-bold ${isSelected ? 'text-slate-950' : 'text-emerald-400'}`}>
-                      {formatMoney(ty.federalRefund)}
-                    </span>
-                  )}
-                </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                          ty.status === 'COMPLETED'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : ty.status === 'IN_PROGRESS'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}
+                      >
+                        {ty.status === 'COMPLETED' ? 'Filed & Accepted' : ty.status === 'IN_PROGRESS' ? 'In Progress' : 'Draft / Dropped'}
+                      </span>
+                    </div>
 
-                {isSelected && (
-                  <div className="mt-2 pt-2 border-t border-slate-950/20 flex items-center justify-between text-[11px] font-bold text-slate-950">
-                    <span className="flex items-center gap-1">
-                      <Check className="w-3 h-3 stroke-[3]" />
-                      Currently Viewing
-                    </span>
-                    {isYearLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                    {/* Middle specs */}
+                    <div className="space-y-2 py-3 border-y border-slate-100 text-xs">
+                      <div className="flex items-center justify-between text-slate-600">
+                        <span>Filing Form:</span>
+                        <strong className="text-slate-800 font-semibold">{ty.formType || 'Form 1040 (Individual)'}</strong>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Estimated Outcome:</span>
+                        {hasDue ? (
+                          <strong className="text-rose-600 font-bold">
+                            Due: -${ty.federalTaxDue?.toLocaleString()}
+                          </strong>
+                        ) : ty.federalRefund !== undefined ? (
+                          <strong className="text-emerald-700 font-bold">
+                            Refund: +${ty.federalRefund?.toLocaleString()}
+                          </strong>
+                        ) : (
+                          <span className="text-slate-400 italic">Pending Calculation</span>
+                        )}
+                      </div>
+                      {ty.currentStage && (
+                        <div className="flex items-center justify-between text-slate-500 text-[11px]">
+                          <span>Current Stage:</span>
+                          <span className="font-semibold text-slate-700">{ty.currentStage.replace(/_/g, ' ')}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Selection footer */}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'border-emerald-600 bg-emerald-600 text-white'
+                              : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                        <span className={`text-xs font-semibold ${isSelected ? 'text-emerald-800' : 'text-slate-500'}`}>
+                          {isSelected ? 'Selected' : 'Click to select'}
+                        </span>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleConfirmYear(ty.year);
+                        }}
+                        className={`text-xs font-bold rounded-lg cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700 border-emerald-600 shadow-2xs'
+                            : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>Open →</span>
+                      </Button>
+                    </div>
                   </div>
-                )}
-              </button>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
+      ) : (
+        <>
+          {/* 3. Multi-Tax-Year Selector Bar (Active Viewing Mode) */}
+          <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-md">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+              <div>
+                <div className="text-xs font-black tracking-wider uppercase text-emerald-400 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4" />
+                  <span>Currently Inspecting: TY {currentTaxYear} Return</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Showing full specifications, documents, and audit logs for <strong>Tax Year {currentTaxYear}</strong>. Click any other year below to switch, or click &ldquo;Change Tax Year&rdquo; to return to the selection menu.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsYearConfirmed(false)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-xl px-3 py-1.5 transition-all shadow-xs"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Change Tax Year</span>
+                </Button>
+
+                <div className="text-xs font-bold text-emerald-400 bg-slate-800/90 px-3 py-1.5 rounded-lg border border-slate-700 self-start md:self-auto">
+                  Active: TY {currentTaxYear}
+                </div>
+              </div>
+            </div>
+
+            {/* Year Cards Carousel / Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              {taxYearsList.map((ty) => {
+                const isSelected = ty.year === currentTaxYear;
+                return (
+                  <button
+                    key={ty.year}
+                    type="button"
+                    onClick={() => handleYearChange(ty.year)}
+                    disabled={isYearLoading && isSelected}
+                    className={`text-left p-3.5 rounded-xl transition-all cursor-pointer border relative overflow-hidden ${
+                      isSelected
+                        ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/20 font-bold'
+                        : 'bg-slate-800/80 hover:bg-slate-800 text-white border-slate-700/80 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className={`text-base font-black ${isSelected ? 'text-slate-950' : 'text-white'}`}>
+                        TY {ty.year}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                          isSelected
+                            ? 'bg-slate-950 text-emerald-400'
+                            : ty.status === 'COMPLETED'
+                            ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700'
+                            : ty.status === 'IN_PROGRESS'
+                            ? 'bg-amber-900/60 text-amber-300 border border-amber-700'
+                            : 'bg-slate-700 text-slate-300'
+                        }`}
+                      >
+                        {ty.status === 'COMPLETED' ? 'Filed' : ty.status === 'IN_PROGRESS' ? 'In Progress' : 'Dropped'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={isSelected ? 'text-slate-900 font-medium' : 'text-slate-400'}>
+                        {ty.formType || 'FORM_1040'}
+                      </span>
+                      {ty.federalRefund !== undefined && (
+                        <span className={`text-xs font-bold ${isSelected ? 'text-slate-950' : 'text-emerald-400'}`}>
+                          {formatMoney(ty.federalRefund)}
+                        </span>
+                      )}
+                    </div>
+
+                    {isSelected && (
+                      <div className="mt-2 pt-2 border-t border-slate-950/20 flex items-center justify-between text-[11px] font-bold text-slate-950">
+                        <span className="flex items-center gap-1">
+                          <Check className="w-3 h-3 stroke-[3]" />
+                          Currently Viewing
+                        </span>
+                        {isYearLoading && <RefreshCw className="w-3 h-3 animate-spin" />}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
       {/* 4. Active Year Stage & Quick Metrics Strip */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1103,6 +1281,8 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

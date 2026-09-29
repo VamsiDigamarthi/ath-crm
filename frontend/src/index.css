@@ -71,17 +71,23 @@
 
 @layer base {
   *, ::before, ::after {
-    font-family: 'Poppins', sans-serif !important;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     @apply border-border;
   }
-  html, body, button, input, select, textarea, table, th, td, div, span, p, h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', sans-serif !important;
+  html, body, #root, button, input, select, textarea, table, th, td, tr, thead, tbody, div, span, p, h1, h2, h3, h4, h5, h6, a, label, strong, b, em, i {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   }
   html, body {
     color: #000000 !important;
     background-color: #f8fafc !important;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     @apply bg-slate-50 text-foreground antialiased;
   }
+}
+
+/* Global Poppins Font Enforcement */
+* {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
 /* Rich Text Editor & Email Template Typography Styles */

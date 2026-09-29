@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   CheckCircle2, 
@@ -18,8 +19,7 @@ import {
   History, 
   FileSpreadsheet,
   ChevronUp,
-  ChevronDown,
-  FolderKanban,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
@@ -46,12 +46,15 @@ const AVAILABLE_COLUMNS: ColumnConfigItem[] = [
 ];
 
 export const AdminCustomerDirectoryScreen: React.FC = () => {
-  // 1. Collapsible Top Metric Summary Cards State (Persisted)
+  const navigate = useNavigate();
+
+  // 1. Collapsible Top Metric Summary Cards State (Persisted, Default Collapsed)
   const [isStatsCollapsed, setIsStatsCollapsed] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('ath_admin_files_stats_collapsed') === 'true';
+      const saved = localStorage.getItem('ath_admin_files_stats_collapsed');
+      return saved !== null ? saved === 'true' : true;
     } catch {
-      return false;
+      return true;
     }
   });
 
@@ -103,7 +106,7 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
 
   const [customerForNewTaxYear, setCustomerForNewTaxYear] = useState<AdminCustomerItem | null>(null);
 
-  // 3. Filter Categories for 2-Column Flyout
+  // 3. Filter Categories for 2-Column Flyout (Payment Status, IRS Filing Status, Tax Year & Priority)
   const filterCategories = useMemo<FilterCategory[]>(() => {
     return [
       {
@@ -111,8 +114,18 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
         label: 'Payment Status',
         options: [
           { label: 'All Files', value: 'ALL' },
-          { label: 'Paid Files', value: 'PAID' },
-          { label: 'Unpaid Files', value: 'UNPAID' },
+          { label: `Paid Files (${stats.totalPaid || 0})`, value: 'PAID' },
+          { label: `Unpaid Files (${stats.totalUnpaid || 0})`, value: 'UNPAID' },
+        ],
+      },
+      {
+        id: 'filingStatus',
+        label: 'IRS Filing Status',
+        options: [
+          { label: 'All Filing Statuses', value: 'ALL' },
+          { label: `IRS Accepted (${stats.totalAccepted || 0})`, value: 'ACCEPTED' },
+          { label: `IRS Rejected (${stats.totalRejected || 0})`, value: 'REJECTED' },
+          { label: `In Transmission (${stats.totalInProgress || 0})`, value: 'IN_PROGRESS' },
         ],
       },
       {
@@ -134,20 +147,27 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
         ],
       },
     ];
-  }, [taxYearOptions]);
+  }, [stats, taxYearOptions]);
 
   // Active filters mapping for flyout
   const activeFilters = useMemo<Record<string, string[]>>(() => ({
     payment: [selectedPaymentStatus],
+    filingStatus: [selectedFilingStatus],
     taxYear: [selectedTaxYear],
     priority: selectedPriority === 'ALL' ? ['ALL'] : selectedPriority.split(','),
-  }), [selectedPaymentStatus, selectedTaxYear, selectedPriority]);
+  }), [selectedPaymentStatus, selectedFilingStatus, selectedTaxYear, selectedPriority]);
 
   const handleApplyFilters = (newFilters: Record<string, string[]>) => {
     // Sync payment
     const newPayment = (newFilters.payment?.[0] as 'ALL' | 'PAID' | 'UNPAID') || 'ALL';
     if (newPayment !== selectedPaymentStatus) {
       handlePaymentStatusChange(newPayment);
+    }
+
+    // Sync filing status
+    const newStatus = (newFilters.filingStatus?.[0] as 'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS') || 'ALL';
+    if (newStatus !== selectedFilingStatus) {
+      handleStatusChange(newStatus);
     }
 
     // Sync tax year
@@ -166,21 +186,20 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
 
   const handleResetFilters = () => {
     handlePaymentStatusChange('ALL');
+    handleStatusChange('ALL');
     handleYearChange('ALL');
     handlePriorityChange('ALL');
-    handleStatusChange('ALL');
     handleSearchChange('');
   };
 
   return (
     <div className="space-y-4 font-sans pb-12 animate-in fade-in duration-150">
-      {/* 1. Header Banner */}
+      {/* 1. Header Banner (No file icon in title) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <FolderKanban className="w-6 h-6 text-emerald-600" />
-              <span>Files & Clients Directory</span>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Files & Clients Directory
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-emerald-600" />
@@ -254,191 +273,69 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 3. Sleek Enterprise Toolbar (Clean Flat Layout matching Documenter agent standard) */}
-      <div className="space-y-3">
-        {/* Top-Level Payment Status Filter Pills (Main First Level: All, Paid, Unpaid) */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">
-              Payment:
-            </span>
-            <button
-              type="button"
-              onClick={() => handlePaymentStatusChange('ALL')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                selectedPaymentStatus === 'ALL'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100 bg-slate-50'
-              }`}
-            >
-              <span>All</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                selectedPaymentStatus === 'ALL' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-700'
-              }`}>
-                {stats.totalPaid + stats.totalUnpaid || data?.pagination?.total || 0}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handlePaymentStatusChange('PAID')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                selectedPaymentStatus === 'PAID'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-              <span>Paid</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                selectedPaymentStatus === 'PAID' ? 'bg-emerald-700 text-white' : 'bg-emerald-100 text-emerald-800'
-              }`}>
-                {stats.totalPaid || 0}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handlePaymentStatusChange('UNPAID')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                selectedPaymentStatus === 'UNPAID'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
-              <span>Unpaid</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                selectedPaymentStatus === 'UNPAID' ? 'bg-amber-700 text-white' : 'bg-amber-100 text-amber-800'
-              }`}>
-                {stats.totalUnpaid || 0}
-              </span>
-            </button>
-          </div>
-
-          {/* Quick Active Status Subtitle Indicator */}
-          <div className="text-xs text-slate-500 font-medium hidden md:block">
-            Showing <strong className="text-slate-800">{selectedPaymentStatus === 'ALL' ? 'all client files' : selectedPaymentStatus === 'PAID' ? 'paid client files' : 'unpaid client files'}</strong> ({data?.pagination?.total || 0} total)
-          </div>
+      {/* 3. Sleek Enterprise Toolbar (Clean Flat Layout) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        {/* Left: Search Input */}
+        <div className="w-full sm:w-80 md:w-96">
+          <AppSearchInput
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search files by client name, email, phone, SSN..."
+            debounceMs={300}
+            className="w-full"
+          />
         </div>
 
-        {/* Action Toolbar: Search + Quick Sub-Filters + Filter Flyout + Columns + Collapse + Refresh */}
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 pt-1">
-          {/* Left: Search Input + Contextual IRS Filing Status Pills */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2.5 flex-1 min-w-0">
-            <div className="w-full sm:w-72 shrink-0">
-              <AppSearchInput
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder="Search files by client name, email, phone, SSN..."
-                debounceMs={300}
-                className="w-full"
-              />
-            </div>
+        {/* Right: Filters Flyout + Columns Config + Collapse Toggle + Refresh */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {/* Advanced 2-Column Filter Flyout */}
+          <AppFilterFlyout
+            categories={filterCategories}
+            selectedFilters={activeFilters}
+            onApply={handleApplyFilters}
+            onReset={handleResetFilters}
+          />
 
-            {/* Contextual IRS Filing Status Pills with dynamic badges */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
-              <button
-                type="button"
-                onClick={() => handleStatusChange('ALL')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                  selectedFilingStatus === 'ALL'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:bg-slate-100 bg-white border border-slate-200'
-                }`}
-              >
-                All Statuses
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStatusChange('ACCEPTED')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                  selectedFilingStatus === 'ACCEPTED'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>IRS Accepted ({stats.totalAccepted})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStatusChange('REJECTED')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                  selectedFilingStatus === 'REJECTED'
-                    ? 'bg-rose-600 text-white shadow-xs'
-                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
-                }`}
-              >
-                <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                <span>IRS Rejected ({stats.totalRejected})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStatusChange('IN_PROGRESS')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                  selectedFilingStatus === 'IN_PROGRESS'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/60'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5 text-amber-600" />
-                <span>In Transmission ({stats.totalInProgress})</span>
-              </button>
-            </div>
-          </div>
+          {/* Dynamic Column Visibility Configuration */}
+          <AppColumnConfigDropdown
+            columns={AVAILABLE_COLUMNS}
+            visibleColumnIds={visibleColumnIds}
+            onChange={setVisibleColumnIds}
+            storageKey="ath_admin_files_visible_columns"
+          />
 
-          {/* Right: Filters Flyout + Columns Config + Collapse Toggle + Refresh */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-            {/* 2-Column Advanced Filter Flyout */}
-            <AppFilterFlyout
-              categories={filterCategories}
-              selectedFilters={activeFilters}
-              onApply={handleApplyFilters}
-              onReset={handleResetFilters}
-            />
+          {/* Expand/Collapse KPI Cards Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleStats}
+            className="h-9 border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer rounded-xl bg-white hover:bg-slate-50 flex items-center gap-1.5 shadow-2xs"
+            title={isStatsCollapsed ? 'Expand Summary Cards' : 'Collapse Summary Cards'}
+          >
+            {isStatsCollapsed ? (
+              <>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden sm:inline">Expand Cards</span>
+              </>
+            ) : (
+              <>
+                <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden sm:inline">Collapse</span>
+              </>
+            )}
+          </Button>
 
-            {/* Dynamic Column Visibility Configuration */}
-            <AppColumnConfigDropdown
-              columns={AVAILABLE_COLUMNS}
-              visibleColumnIds={visibleColumnIds}
-              onChange={setVisibleColumnIds}
-              storageKey="ath_admin_files_visible_columns"
-            />
-
-            {/* Expand/Collapse KPI Cards Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleStats}
-              className="h-9 border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer rounded-xl bg-white hover:bg-slate-50 flex items-center gap-1.5 shadow-2xs"
-              title={isStatsCollapsed ? 'Expand Summary Cards' : 'Collapse Summary Cards'}
-            >
-              {isStatsCollapsed ? (
-                <>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="hidden sm:inline">Expand Cards</span>
-                </>
-              ) : (
-                <>
-                  <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="hidden sm:inline">Collapse</span>
-                </>
-              )}
-            </Button>
-
-            {/* Refresh Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchCustomers}
-              disabled={loading}
-              className="h-9 border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-xl bg-white hover:bg-slate-50 shadow-2xs"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-600' : 'text-slate-500'}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </Button>
-          </div>
+          {/* Refresh Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchCustomers}
+            disabled={loading}
+            className="h-9 border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer rounded-xl bg-white hover:bg-slate-50 shadow-2xs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-600' : 'text-slate-500'}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
         </div>
       </div>
 
@@ -458,7 +355,7 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                   <th className="py-3.5 px-4">Tax Return Summary</th>
                 )}
                 {visibleColumnIds.includes('team') && (
-                  <th className="py-3.5 px-4">Assigned Team</th>
+                  <th className="py-3.5 px-4">Assigned Specialists</th>
                 )}
                 {visibleColumnIds.includes('fee') && (
                   <th className="py-3.5 px-4">Service Fee & PIN</th>
@@ -487,7 +384,7 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                     <AppEmptyState
                       icon={Users}
                       title="No Files or Client Records Found"
-                      description="No records match your active Payment, Tax Year, or IRS Filing Status filter criteria."
+                      description="No records match your active search or filter criteria."
                       action={{
                         label: "Reset All Filters",
                         onClick: handleResetFilters
@@ -504,36 +401,25 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                     <tr 
                       key={c.id} 
                       className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
-                      onClick={() => setSelectedCustomer(c)}
+                      onClick={() => navigate(`/admin/all-taxpayers/${c.customerId || c.id}`)}
                     >
-                      {/* 1. Client Info */}
+                      {/* 1. Client Info (No Avatar square box) */}
                       {visibleColumnIds.includes('taxpayer') && (
                         <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shadow-xs ${
-                              app?.irsStatus === 'ACCEPTED'
-                                ? 'bg-emerald-500 text-white'
-                                : app?.irsStatus === 'REJECTED'
-                                ? 'bg-rose-500 text-white'
-                                : 'bg-slate-800 text-white'
-                            }`}>
-                              {c.firstName[0] || 'C'}{c.lastName?.[0] || ''}
+                          <div>
+                            <div className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center gap-1.5 flex-wrap">
+                              <span>{c.fullName}</span>
+                              <ClientPaymentStatusChip lead={c} size="xs" />
+                              <span title="Verified Client">
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              </span>
                             </div>
-                            <div>
-                              <div className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors flex items-center gap-1.5 flex-wrap">
-                                <span>{c.fullName}</span>
-                                <ClientPaymentStatusChip lead={c} size="xs" />
-                                <span title="Verified Client">
-                                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                                <span>SSN: {c.ssnMasked}</span>
-                                <span>•</span>
-                                <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium text-[10px]">
-                                  {c.visaType}
-                                </span>
-                              </div>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                              <span>SSN: {c.ssnMasked}</span>
+                              <span>•</span>
+                              <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium text-[10px]">
+                                {c.visaType}
+                              </span>
                             </div>
                           </div>
                         </td>
@@ -641,7 +527,7 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                                 <span>IRS Accepted</span>
                               </span>
                               {app.certificateId && (
-                                <div className="text-[10px] text-emerald-700 font-mono">
+                                <div className="text-[10px] text-emerald-700 font-semibold">
                                   Cert: {app.certificateId}
                                 </div>
                               )}
@@ -653,7 +539,7 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                                 <span>IRS Rejected</span>
                               </span>
                               {app.rejectionCode && (
-                                <div className="text-[10px] text-rose-600 font-medium font-mono">
+                                <div className="text-[10px] text-rose-600 font-medium">
                                   Code: {app.rejectionCode}
                                 </div>
                               )}
@@ -705,12 +591,12 @@ export const AdminCustomerDirectoryScreen: React.FC = () => {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedCustomer(c);
+                                navigate(`/admin/all-taxpayers/${c.customerId || c.id}`);
                               }}
-                              className="border-slate-200 text-xs font-bold flex items-center gap-1 cursor-pointer rounded-xl bg-white hover:bg-slate-50"
+                              className="w-8 h-8 p-0 border-slate-200 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 cursor-pointer rounded-lg bg-white shadow-2xs flex items-center justify-center transition-all"
+                              title="Inspect 360 Taxpayer Profile"
                             >
-                              <Eye className="w-3.5 h-3.5 text-slate-600" />
-                              <span>Inspect</span>
+                              <Eye className="w-4 h-4" />
                             </Button>
                           </div>
                         </td>
