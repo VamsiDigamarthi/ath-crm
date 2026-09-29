@@ -7,6 +7,7 @@ export interface AdminCustomerQueryOptions {
   search?: string;
   taxYear?: number;
   filingStatus?: 'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS';
+  paymentStatus?: 'ALL' | 'PAID' | 'UNPAID';
   priority?: string;
   page?: number;
   limit?: number;
@@ -14,22 +15,49 @@ export interface AdminCustomerQueryOptions {
 
 export class CustomerDirectoryService {
   /**
-   * Get all converted customers/clients for admin with year filtering, filing acceptance status, search, and KPI metrics
+   * Get all customer/client files for admin with payment filtering, year filtering, filing acceptance status, search, and KPI metrics
    */
   public static async getCustomers(options: AdminCustomerQueryOptions) {
     const page = Math.max(1, Number(options.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(options.limit) || 10));
     const skip = (page - 1) * limit;
 
-    // Converted clients: officially converted, in filing queue/progress/success/rejected, or has paid quote
-    const convertedFilter: any = {
+    const paidCondition: any = {
       OR: [
         { isConvertedCustomer: true },
         {
           applications: {
             some: {
+              OR: [
+                { quotes: { some: { status: 'PAID' } } },
+                {
+                  currentStage: {
+                    in: [
+                      ApplicationStage.FILING_QUEUE,
+                      ApplicationStage.FILING_IN_PROGRESS,
+                      ApplicationStage.FILING_SUCCESS,
+                      ApplicationStage.FILING_FAILED,
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    };
+
+    const unpaidCondition: any = {
+      AND: [
+        { isConvertedCustomer: false },
+        {
+          applications: {
+            every: {
+              quotes: {
+                none: { status: 'PAID' },
+              },
               currentStage: {
-                in: [
+                notIn: [
                   ApplicationStage.FILING_QUEUE,
                   ApplicationStage.FILING_IN_PROGRESS,
                   ApplicationStage.FILING_SUCCESS,
@@ -39,17 +67,16 @@ export class CustomerDirectoryService {
             },
           },
         },
-        {
-          applications: {
-            some: {
-              quotes: {
-                some: { status: 'PAID' },
-              },
-            },
-          },
-        },
       ],
     };
+
+    // Determine payment filter condition
+    let paymentFilter: any = null;
+    if (options.paymentStatus === 'PAID') {
+      paymentFilter = paidCondition;
+    } else if (options.paymentStatus === 'UNPAID') {
+      paymentFilter = unpaidCondition;
+    }
 
     // Filter by Tax Year if selected
     const taxYearFilter = options.taxYear
@@ -92,15 +119,20 @@ export class CustomerDirectoryService {
         }
       : null;
 
-    const andConditions = [
-      convertedFilter,
+    // Common contextual base conditions without filingStatus filter (for status pills counts)
+    const baseConditions = [
+      ...(paymentFilter ? [paymentFilter] : []),
       ...(taxYearFilter ? [taxYearFilter] : []),
       ...(priorityFilter ? [priorityFilter] : []),
-      ...(filingStatusFilter ? [filingStatusFilter] : []),
       ...(searchFilter ? [searchFilter] : []),
     ];
 
-    const whereClause: any = { AND: andConditions };
+    const whereClause: any = {
+      AND: [
+        ...baseConditions,
+        ...(filingStatusFilter ? [filingStatusFilter] : []),
+      ],
+    };
 
     const [
       totalCount, 
@@ -109,7 +141,8 @@ export class CustomerDirectoryService {
       totalAcceptedCount, 
       totalRejectedCount,
       totalInProgressCount,
-      totalConvertedOverallCount
+      totalPaidCount,
+      totalUnpaidCount,
     ] = await Promise.all([
       prisma.customerProfile.count({ where: whereClause }),
       prisma.customerProfile.findMany({
@@ -140,10 +173,50 @@ export class CustomerDirectoryService {
         distinct: ['taxYear'],
         orderBy: { taxYear: 'desc' },
       }),
-      prisma.taxApplication.count({ where: { currentStage: 'FILING_SUCCESS' } }),
-      prisma.taxApplication.count({ where: { currentStage: 'FILING_FAILED' } }),
-      prisma.taxApplication.count({ where: { currentStage: { in: ['FILING_QUEUE', 'FILING_IN_PROGRESS'] } } }),
-      prisma.customerProfile.count({ where: convertedFilter }),
+      prisma.customerProfile.count({
+        where: {
+          AND: [
+            ...baseConditions,
+            { applications: { some: { currentStage: 'FILING_SUCCESS' } } },
+          ],
+        },
+      }),
+      prisma.customerProfile.count({
+        where: {
+          AND: [
+            ...baseConditions,
+            { applications: { some: { currentStage: 'FILING_FAILED' } } },
+          ],
+        },
+      }),
+      prisma.customerProfile.count({
+        where: {
+          AND: [
+            ...baseConditions,
+            { applications: { some: { currentStage: { in: ['FILING_QUEUE', 'FILING_IN_PROGRESS'] } } } },
+          ],
+        },
+      }),
+      prisma.customerProfile.count({
+        where: {
+          AND: [
+            ...(taxYearFilter ? [taxYearFilter] : []),
+            ...(priorityFilter ? [priorityFilter] : []),
+            ...(searchFilter ? [searchFilter] : []),
+            paidCondition,
+          ],
+        },
+      }),
+      prisma.customerProfile.count({
+        where: {
+          AND: [
+            ...(taxYearFilter ? [taxYearFilter] : []),
+            ...(priorityFilter ? [priorityFilter] : []),
+            ...(searchFilter ? [searchFilter] : []),
+            unpaidCondition,
+          ],
+        },
+      }),
     ]);
 
     // Build fully dynamic list of tax years based on current calendar year + DB historical records
@@ -290,12 +363,14 @@ export class CustomerDirectoryService {
         totalPages: Math.ceil(totalCount / limit) || 1,
       },
       stats: {
-        totalCustomers: totalConvertedOverallCount,
-        totalConverted: totalConvertedOverallCount,
+        totalCustomers: totalCount,
+        totalConverted: totalPaidCount,
         totalAccepted: totalAcceptedCount,
         totalRejected: totalRejectedCount,
         totalInProgress: totalInProgressCount,
-        totalFeesCollected: Math.max(totalFeesCollected, totalConvertedOverallCount * 227),
+        totalPaid: totalPaidCount,
+        totalUnpaid: totalUnpaidCount,
+        totalFeesCollected: Math.max(totalFeesCollected, totalPaidCount * 227),
       },
     };
   }

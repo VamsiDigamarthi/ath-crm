@@ -127,6 +127,7 @@ export const adminService = {
     search?: string;
     taxYear?: number;
     filingStatus?: 'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS';
+    paymentStatus?: 'ALL' | 'PAID' | 'UNPAID';
     priority?: string;
     page?: number;
     limit?: number;

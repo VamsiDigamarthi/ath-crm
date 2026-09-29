@@ -112,13 +112,15 @@ export const bulkOnboardEmployees = async (req: Request, res: Response) => {
 };
 
 export const getCustomers = async (req: Request, res: Response) => {
-  const { search, taxYear, filingStatus, page, limit } = req.query;
+  const { search, taxYear, filingStatus, paymentStatus, priority, page, limit } = req.query;
 
   const { CustomerDirectoryService } = await import("./customer-directory-service.js");
   const result = await CustomerDirectoryService.getCustomers({
     search: typeof search === 'string' ? search : undefined,
     taxYear: taxYear ? Number(taxYear) : undefined,
     filingStatus: typeof filingStatus === 'string' ? (filingStatus as any) : undefined,
+    paymentStatus: typeof paymentStatus === 'string' ? (paymentStatus as any) : undefined,
+    priority: typeof priority === 'string' ? priority : undefined,
     page: page ? Number(page) : undefined,
     limit: limit ? Number(limit) : undefined,
   });

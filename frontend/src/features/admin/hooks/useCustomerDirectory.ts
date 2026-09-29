@@ -8,6 +8,7 @@ export function useCustomerDirectory() {
   const [loading, setLoading] = useState<boolean>(true);
   const [data, setData] = useState<AdminCustomerResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
   const [selectedTaxYear, setSelectedTaxYear] = useState<string>('ALL');
   const [selectedFilingStatus, setSelectedFilingStatus] = useState<'ALL' | 'ACCEPTED' | 'REJECTED' | 'IN_PROGRESS'>('ALL');
   const [selectedPriority, setSelectedPriority] = useState<string>('ALL');
@@ -19,6 +20,7 @@ export function useCustomerDirectory() {
       setLoading(true);
       const res = await adminService.getCustomers({
         search: searchQuery || undefined,
+        paymentStatus: selectedPaymentStatus !== 'ALL' ? selectedPaymentStatus : undefined,
         taxYear: selectedTaxYear !== 'ALL' ? Number(selectedTaxYear) : undefined,
         filingStatus: selectedFilingStatus !== 'ALL' ? selectedFilingStatus : undefined,
         priority: selectedPriority !== 'ALL' ? selectedPriority : undefined,
@@ -34,7 +36,7 @@ export function useCustomerDirectory() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedTaxYear, selectedFilingStatus, selectedPriority, page]);
+  }, [searchQuery, selectedPaymentStatus, selectedTaxYear, selectedFilingStatus, selectedPriority, page]);
 
   useEffect(() => {
     fetchCustomers();
@@ -42,6 +44,11 @@ export function useCustomerDirectory() {
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
+    setPage(1);
+  }, []);
+
+  const handlePaymentStatusChange = useCallback((payStatus: 'ALL' | 'PAID' | 'UNPAID') => {
+    setSelectedPaymentStatus(payStatus);
     setPage(1);
   }, []);
 
@@ -71,6 +78,8 @@ export function useCustomerDirectory() {
       totalAccepted: 0,
       totalRejected: 0,
       totalInProgress: 0,
+      totalPaid: 0,
+      totalUnpaid: 0,
       totalFeesCollected: 0,
     };
   }, [data]);
@@ -90,12 +99,12 @@ export function useCustomerDirectory() {
     ];
   }, [data?.availableTaxYears]);
 
-
   return {
     loading,
     data,
     stats,
     searchQuery,
+    selectedPaymentStatus,
     selectedTaxYear,
     selectedFilingStatus,
     selectedPriority,
@@ -104,6 +113,7 @@ export function useCustomerDirectory() {
     taxYearOptions,
     setSelectedCustomer,
     handleSearchChange,
+    handlePaymentStatusChange,
     handleYearChange,
     handleStatusChange,
     handlePriorityChange,
