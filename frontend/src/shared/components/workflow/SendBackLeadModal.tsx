@@ -41,7 +41,7 @@ export interface SendBackLeadModalProps {
 const COMMON_REVERT_REASONS = [
   { id: 'MISSING_DOCUMENTS', label: 'Documents missed at Documents team / P-Team (W-2, 1099, Receipts)', desc: 'W-2s, 1099s, or receipts not uploaded or missed' },
   { id: 'STATE_RETURN_ADDITION_CORRECTION', label: 'State Tax Return Addition / Correction', desc: 'Add new state return, update multi-state allocation, or adjust state withholdings' },
-  { id: 'INCOMPLETE_ORGANIZER', label: 'Incomplete Tax Organizer', desc: 'Missing answers for residency, dependents, or foreign assets' },
+  { id: 'INCOMPLETE_ORGANIZER', label: 'Incomplete Tax Info and Files', desc: 'Missing answers for residency, dependents, or foreign assets' },
   { id: 'DATA_DISCREPANCY', label: 'Data Discrepancy / Validation Error', desc: 'Uploaded documents mismatch entered figures or SSN' },
   { id: 'TAXPAYER_CLARIFICATION', label: 'Taxpayer Clarification Needed', desc: 'Need direct client confirmation on marital status or state residency' },
   { id: 'OTHER', label: 'Other Special Instructions', desc: 'Custom reasons specified in notes below' },

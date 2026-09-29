@@ -56,7 +56,7 @@ export const useCustomerDocuments = (taxYearParam?: string | number, filingTypeP
   const [activeDocType, setActiveDocType] = useState<DocumentTypeId>(isBusiness ? 'BUSINESS' : 'INDIVIDUAL');
 
   useEffect(() => {
-    if (isBusiness && (activeDocType === 'INDIVIDUAL' || activeDocType === 'TAX_COMPLIANCE')) {
+    if (isBusiness && activeDocType === 'INDIVIDUAL') {
       setActiveDocType('BUSINESS');
     } else if (!isBusiness && activeDocType === 'BUSINESS') {
       setActiveDocType('INDIVIDUAL');

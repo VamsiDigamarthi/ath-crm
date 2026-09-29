@@ -63,7 +63,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
-              {isBusiness ? 'Business Tax Organizer' : 'Tax Organizer'}
+              {isBusiness ? 'Business Tax Info and Files' : 'Tax Info and Files'}
             </h2>
             <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
               {progressPercent}% Complete
@@ -81,7 +81,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
           </div>
           <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
             {isBusiness
-              ? `ATH Tax Services corporate and partnership intake wizard. Complete all 4 sections for TY ${selectedTaxYear || '2025'}.`
+              ? `ATH Tax Services corporate and partnership intake wizard. Complete all 5 sections for TY ${selectedTaxYear || '2025'}.`
               : `ATH Tax Services IRS-compliant intake wizard. Complete all 5 sections to maximize your TY ${selectedTaxYear || '2025'} deductions.`
             }
           </p>

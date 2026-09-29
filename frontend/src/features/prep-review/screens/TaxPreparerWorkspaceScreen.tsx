@@ -797,7 +797,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-600" />
             <span className="font-bold text-slate-900 text-sm">
-              Complete Tax Organizer Audit Dossier — {taxpayerName}
+              Complete Tax Info and Files Audit Dossier — {taxpayerName}
             </span>
           </div>
         }

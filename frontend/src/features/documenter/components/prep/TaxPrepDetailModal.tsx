@@ -133,7 +133,7 @@ export const TaxPrepDetailModal: React.FC<TaxPrepDetailModalProps> = ({
           tabs={[
             { id: 'CALCULATOR', label: 'Tax Draft Estimator' },
             { id: 'DOCUMENTS', label: 'Client Documents Vault' },
-            { id: 'ORGANIZER', label: 'Tax Organizer' },
+            { id: 'ORGANIZER', label: 'Tax Info and Files' },
           ]}
           activeTab={activeTab}
           onChange={(tab) => setActiveTab(tab as any)}

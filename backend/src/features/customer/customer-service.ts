@@ -790,13 +790,26 @@ export class CustomerService {
         daycareAmount: 0,
         employerReimbursedAmount: 0,
       },
-      m3_presence: organizer.m3_presence || {
+      m3_presence: {
         days2025: undefined,
         days2024: undefined,
         days2023: undefined,
         visaType: profile.visaType || 'H-1B',
-        statesResidedHistory: [],
         cityCountyTaxesRequired: false,
+        ...(organizer.m3_presence || {}),
+        statesResidedHistory: (organizer.m3_presence?.statesResidedHistory && organizer.m3_presence.statesResidedHistory.length > 0)
+          ? organizer.m3_presence.statesResidedHistory
+          : [
+              {
+                taxYear: activeApp.taxYear ? parseInt(String(activeApp.taxYear), 10) : 2026,
+                state: m1Saved.state || profile.state || 'TX',
+                fromDate: '',
+                toDate: '',
+                spouseState: m1Saved.state || profile.state || 'TX',
+                spouseFromDate: '',
+                spouseToDate: '',
+              },
+            ],
       },
       m4_wages: organizer.m4_wages || {
         hasW2: true,
@@ -820,12 +833,26 @@ export class CustomerService {
         esppRsuReported: false,
         lossCarryforward: 0,
       },
-      m7_foreign: organizer.m7_foreign || {
+      m7_foreign: {
         hasFbar: false,
+        hasFbarOver10k: 'NO',
+        spouseFbarOver10k: 'NO',
+        hasFatcaOver50k: 'NO',
+        needsFatcaFiling: 'NO',
+        spouseFatcaOver50k: 'NO',
         indianBankName: '',
         peakBalanceInr: 0,
         foreignInterestInr: 0,
         foreignSalaryInr: 0,
+        foreignDividendInr: 0,
+        foreignRentalInr: 0,
+        otherForeignIncomeSource: '',
+        otherForeignIncomeInr: 0,
+        foreignTaxesPaidInr: 0,
+        notesToPreparer: '',
+        referrals: [],
+        foreignAccountsList: [],
+        ...(organizer.m7_foreign || {}),
       },
       m8_deductions: organizer.m8_deductions || {
         hsaContribution: 0,
@@ -947,7 +974,7 @@ export class CustomerService {
     const effectiveSavedSet = new Set<string>();
 
     if (isBusiness) {
-      ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses'].forEach((m) => {
+      ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7'].forEach((m) => {
         if (submittedModules.includes(m)) {
           effectiveSavedSet.add(m);
         }
@@ -963,7 +990,7 @@ export class CustomerService {
       });
     }
     const completedCount = effectiveSavedSet.size;
-    const totalModules = isBusiness ? 3 : 6;
+    const totalModules = isBusiness ? 4 : 6;
     const progressPercent = Math.min(100, Math.round((completedCount / totalModules) * 100));
 
     const updatedSummary = {

@@ -158,6 +158,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData?.m3_presence || ({} as any)}
             updateField={(field, val) => updateModuleField('m3_presence', field, val)}
             selectedTaxYear={selectedTaxYear}
+            defaultState={organizerData?.m1_demographics?.state || ''}
             errors={errors}
             clearError={clearError}
           />
@@ -168,6 +169,9 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             data={organizerData?.m7_foreign || ({} as any)}
             updateField={(field, val) => updateModuleField('m7_foreign', field, val)}
             selectedTaxYear={selectedTaxYear}
+            m1Data={organizerData?.m1_demographics}
+            m2Data={organizerData?.m2_dependents}
+            b1Data={organizerData?.b1_companyInfo}
             errors={errors}
             clearError={clearError}
           />

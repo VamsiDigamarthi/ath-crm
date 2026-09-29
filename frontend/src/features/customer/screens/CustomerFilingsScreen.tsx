@@ -238,7 +238,7 @@ export const CustomerFilingsScreen: React.FC = () => {
             My Filings
           </h2>
           <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
-            Manage your personal and business tax returns, track status, and complete your tax organizers.
+            Manage your personal and business tax returns, track status, and complete your tax info and files.
           </p>
         </div>
 

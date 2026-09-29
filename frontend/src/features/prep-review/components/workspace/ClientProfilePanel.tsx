@@ -191,9 +191,16 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
 
   // Real Data Extraction - Module 7
   const foreignAccountsList = Array.isArray(m7.foreignAccountsList) ? m7.foreignAccountsList : (Array.isArray(m7.accounts) ? m7.accounts : []);
+  const sumAccountsPeakUsd = foreignAccountsList.reduce((sum: number, acc: any) => {
+    if (acc.maxValueUsd) return sum + Number(acc.maxValueUsd);
+    const peak = Number(acc.maxValue || acc.maxBalanceInr || 0);
+    return sum + (acc.currencyType === 'INR' ? Math.round(peak / 84) : peak);
+  }, 0);
   const maxForeignValueInr = parseNum(m7.maxAggregateValueInr ?? m7.maxAggregateValue);
-  const maxForeignValueUsd = maxForeignValueInr !== null ? Math.round(maxForeignValueInr / 84) : parseNum(m7.maxAggregateValueUsd);
-  const isFbarRequired = m7.hasFbarOver10k === 'YES' || (maxForeignValueUsd !== null && maxForeignValueUsd > 10000) || m7.hasFbar === true;
+  const maxForeignValueUsd = maxForeignValueInr !== null 
+    ? Math.round(maxForeignValueInr / 84) 
+    : (parseNum(m7.maxAggregateValueUsd) ?? (sumAccountsPeakUsd > 0 ? sumAccountsPeakUsd : null));
+  const isFbarRequired = m7.hasFbarOver10k === 'YES' || m7.spouseFbarOver10k === 'YES' || (maxForeignValueUsd !== null && maxForeignValueUsd > 10000) || m7.hasFbar === true;
   const isM7Provided = Boolean(foreignAccountsList.length > 0 || maxForeignValueInr !== null || m7.hasForeignAccounts !== undefined || submittedModules.includes('m7'));
 
   // Real Data Extraction - Module 8
@@ -328,7 +335,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-400" />
               <h4 className="font-bold text-xs sm:text-sm text-white tracking-tight">
-                Tax Organizer Dossier
+                Tax Info and Files Dossier
               </h4>
             </div>
             <p className="text-[11px] text-slate-300 mt-0.5">
@@ -356,7 +363,7 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
                 size="sm"
                 onClick={onOpenOrganizerModal}
                 className="bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold h-7 px-2.5 flex items-center gap-1 shadow-xs cursor-pointer ml-1"
-                title="Open full-screen tax organizer audit form"
+                title="Open full-screen Tax Info and Files audit form"
               >
                 <ExternalLink className="w-3 h-3" />
                 <span>Full Modal</span>
