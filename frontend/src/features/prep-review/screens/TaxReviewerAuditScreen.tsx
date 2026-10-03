@@ -18,11 +18,13 @@ import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
+import { useAuthStore } from '@/features/auth/store/auth-store';
 
 export const TaxReviewerAuditScreen: React.FC = () => {
   const navigate = useNavigate();
   const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
   const [isAuditCollapsed, setIsAuditCollapsed] = useState(true);
+  const { user: currentUser } = useAuthStore();
   const {
     isLoading,
     isSubmitting,
@@ -111,7 +113,10 @@ export const TaxReviewerAuditScreen: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsRevisionModalOpen(true)}
+            onClick={() => {
+              if (!revisionNotes.trim() && auditorRemarks.trim()) setRevisionNotes(auditorRemarks);
+              setIsRevisionModalOpen(true);
+            }}
             disabled={!isQAReviewActive}
             className={`text-xs font-medium flex items-center gap-1.5 ${!isQAReviewActive ? 'text-slate-400 cursor-not-allowed' : 'cursor-pointer'}`}
             title={!isQAReviewActive ? 'Available once the preparer submits for QA' : 'Send back to preparer for corrections'}
@@ -169,7 +174,10 @@ export const TaxReviewerAuditScreen: React.FC = () => {
           </div>
           <div className="text-sm lg:text-right shrink-0">
             <div className="text-xs text-slate-500">Preparer</div>
-            <div className="font-medium text-slate-900 mt-0.5">{assignedPreparer?.name || 'Unassigned'}</div>
+            <div className="font-medium text-slate-900 mt-0.5">
+              {assignedPreparer?.name || 'Unassigned'}
+              {assignedPreparer?.id && assignedPreparer.id === currentUser?.id && <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-[#15803D]">Self-review</span>}
+            </div>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-slate-100 divide-y sm:divide-y-0 lg:divide-x divide-slate-100">
@@ -240,7 +248,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
                   <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
                     <div>
                       <div className="text-sm font-semibold text-slate-900">QA notes</div>
-                      <div className="text-xs text-slate-500">Saved with your sign-off or revision request.</div>
+                      <div className="text-xs text-slate-500">Shared with the preparer when you sign off or request a revision.</div>
                     </div>
                     <AppTextarea
                       value={auditorRemarks}

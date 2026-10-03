@@ -3,12 +3,22 @@ import { ApplicationStage, Role, NotificationCategory, NotificationPriority, Aud
 import { StorageService } from '../../utils/storage-service.js';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { BadRequestError } from '../../errors/bad-request-error.js';
+import { PermissionService } from '../permissions/permission-service.js';
 
 export class PrepReviewService {
   /**
    * Fetch all Tax Preparation & QA Review Department personnel with 100% real database workloads
    */
   public static async listStaffMembers() {
+    const selfReviewIds = new Set(
+      (
+        await prisma.userPermission.findMany({
+          where: { permission: 'PREP_ALLOW_SELF_REVIEW' },
+          select: { userId: true },
+        })
+      ).map((g) => g.userId)
+    );
+
     const staff = await prisma.user.findMany({
       where: {
         isActive: true,
@@ -28,12 +38,16 @@ export class PrepReviewService {
           select: {
             id: true,
             currentStage: true,
+            filingType: true,
+            taxDraftSummary: true,
           },
         },
         assignedReviewApps: {
           select: {
             id: true,
             currentStage: true,
+            filingType: true,
+            taxDraftSummary: true,
           },
         },
       },
@@ -63,6 +77,23 @@ export class PrepReviewService {
       const prepActiveCount = member.assignedPrepApps.filter((a) => activeStages.includes(a.currentStage)).length;
       const reviewActiveCount = member.assignedReviewApps.filter((a) => activeStages.includes(a.currentStage)).length;
       const activeCaseload = prepActiveCount + reviewActiveCount;
+
+      const formOf = (a: { filingType: string; taxDraftSummary: unknown }) => {
+        const raw = String((a.taxDraftSummary as any)?.formType || '').toUpperCase().replace(/FORM[_\s-]*/, '').replace(/[\s_-]/g, '');
+        const known = ['1040NR', '1040X', '1040', '1065', '1120S', '1120'];
+        const hit = known.find((k) => raw === k);
+        if (hit) return hit;
+        const ft = String(a.filingType || '').toUpperCase();
+        if (ft === 'BUSINESS' || ft === 'CORPORATE') return '1120';
+        return '1040';
+      };
+      const activeByForm: Record<string, number> = {};
+      [...member.assignedPrepApps, ...member.assignedReviewApps]
+        .filter((a) => activeStages.includes(a.currentStage))
+        .forEach((a) => {
+          const f = formOf(a);
+          activeByForm[f] = (activeByForm[f] || 0) + 1;
+        });
 
       const totalAssignedPrep = member.assignedPrepApps.length;
       const totalAssignedReview = member.assignedReviewApps.length;
@@ -105,6 +136,8 @@ export class PrepReviewService {
         avgTurnaroundHours: completedThisMonth > 0 ? (isReviewer ? 1.8 : 3.2) : 0,
         accuracyRate: 100,
         isAvailable: member.isActive,
+        activeByForm,
+        canSelfReview: selfReviewIds.has(member.id),
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail}`,
       };
     });
@@ -473,8 +506,22 @@ export class PrepReviewService {
     if (!preparerId) {
       throw new Error('Preparer ID is required');
     }
-    if (reviewerId && preparerId === reviewerId) {
-      throw new Error('4-Eyes Compliance Violation: The same staff member cannot prepare and review the same return.');
+    const selfReviewAllowed = await PermissionService.hasPermission(preparerId, 'PREP_ALLOW_SELF_REVIEW');
+    if (reviewerId && preparerId === reviewerId && !selfReviewAllowed) {
+      throw new BadRequestError(
+        '4-Eyes rule: the same staff member cannot prepare and review the same return unless "Allow self-review" is enabled for them.'
+      );
+    }
+    if (!reviewerId && !selfReviewAllowed) {
+      const clash = await prisma.taxApplication.findFirst({
+        where: { id: { in: applicationIds }, assignedReviewAgentId: preparerId },
+        select: { id: true },
+      });
+      if (clash) {
+        throw new BadRequestError(
+          '4-Eyes rule: this person is already the QA reviewer on one of these returns. Choose a different preparer or enable "Allow self-review".'
+        );
+      }
     }
 
     return await prisma.$transaction(async (tx) => {

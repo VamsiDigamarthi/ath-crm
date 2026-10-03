@@ -100,6 +100,8 @@ export function useTaxReviewerAudit() {
       const draft = data.taxDraftSummary;
       if (draft?.qaAuditorRemarks) {
         setAuditorRemarks(draft.qaAuditorRemarks);
+      } else if (draft.qaRemarks || draft.revisionNotes) {
+        setAuditorRemarks(draft.qaRemarks || draft.revisionNotes);
       }
       if (draft?.complianceChecks) {
         setChecks(draft.complianceChecks);

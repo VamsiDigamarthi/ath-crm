@@ -86,9 +86,11 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
         accessorFn: (row) => row.assignedReviewer?.name || 'Unassigned',
         cell: ({ row }) => {
           const rev = row.original.assignedReviewer;
+          const isSelf = Boolean(rev?.id && rev.id === row.original.assignedPreparer?.id);
           return (
-            <span className="text-xs font-normal text-slate-700">
-              {rev?.name || 'Unassigned'}
+            <span className="text-xs font-normal text-slate-700 whitespace-nowrap">
+              {isSelf ? 'You' : rev?.name || 'Unassigned'}
+              {isSelf && <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-[#15803D]">Self-review</span>}
             </span>
           );
         },

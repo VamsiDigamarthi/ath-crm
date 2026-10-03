@@ -79,7 +79,13 @@ export const PrepReviewLayout: React.FC = () => {
         accentColor="#16A34A"
         brand={{
           title: 'TaxCRM Engine',
-          subtitle: isManager ? 'Prep Manager Portal' : 'Tax Specialist Portal',
+          subtitle: isManager
+            ? 'Prep Manager Portal'
+            : user?.role === 'TAX_REVIEWER'
+            ? 'Reviewer'
+            : user?.role === 'TAX_PREPARER'
+            ? 'Preparer'
+            : 'Tax Specialist Portal',
           logo: (
             <div className="w-7 h-7 rounded-md bg-[#16A34A] flex items-center justify-center text-white font-bold">
               <Calculator className="w-4 h-4 text-white" />

@@ -3,15 +3,7 @@ import { usePrepStaffScorecards } from '../hooks/usePrepStaffScorecards';
 import { PrepStaffWorkloadTable } from '../components/manager/PrepStaffWorkloadTable';
 import { PrepAutoDistributeModal } from '../components/manager/PrepAutoDistributeModal';
 import { Button } from '@/shared/components/Button';
-import { 
-  Users, 
-  RefreshCw, 
-  Zap, 
-  ShieldCheck, 
-  Activity, 
-  CheckCircle2,
-  Calculator
-} from 'lucide-react';
+import { RefreshCw, Zap } from 'lucide-react';
 
 export const PrepStaffScorecardsScreen: React.FC = () => {
   const {
@@ -24,55 +16,54 @@ export const PrepStaffScorecardsScreen: React.FC = () => {
     setIsAutoDistributeOpen,
   } = usePrepStaffScorecards();
 
-  const activeStaffCount = staff.filter((s) => s.role !== 'PREP_MANAGER').length;
+  // const activeStaffCount = staff.filter((s) => s.role !== 'PREP_MANAGER').length;
 
   return (
-    <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
-      {/* 1. Header & Live Team Capacity Action (Exact Documenter Manager Style) */}
+    <div className="space-y-6 pb-12 font-sans">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Tax Operations Staff &amp; Capacity Matrix
-            </h2>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Manager Supervision
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Monitor real-time preparation throughput, individual caseload capacity, QA review velocity, and balance return distribution.
-          </p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Staff & Capacity</h2>
+          <p className="text-sm text-slate-500 mt-1">Caseload and throughput for preparers and QA reviewers.</p>
         </div>
-
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchStaffData}
-            disabled={isLoading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+          <Button variant="outline" size="md" onClick={fetchStaffData} disabled={isLoading} title="Refresh" className="px-3 cursor-pointer">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
-
           {stats.unassigned > 0 && (
             <Button
-              size="sm"
+              size="md"
               onClick={() => setIsAutoDistributeOpen(true)}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold flex items-center gap-2 cursor-pointer"
             >
-              <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-              <span>Auto Split Pool ({stats.unassigned})</span>
+              <Zap className="w-4 h-4" />
+              Auto-assign ({stats.unassigned})
             </Button>
           )}
         </div>
       </div>
 
-      {/* 2. Top 4 Metric KPI Cards for Tax Operations */}
+      {/* Summary strip (hidden)
+      <div className="bg-white border border-slate-200 rounded-xl grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+        {[
+          { label: 'Active staff', value: activeStaffCount, hint: 'Preparers & QA reviewers' },
+          { label: 'Under preparation', value: stats.underPrep, hint: 'Returns being drafted' },
+          { label: 'In QA review', value: stats.qaReview, hint: 'Waiting for audit' },
+          { label: 'Total returns', value: stats.all, hint: `${stats.unassigned} unassigned` },
+        ].map((item) => (
+          <div key={item.label} className="p-5 min-w-0">
+            <div className="text-xs font-medium text-slate-500">{item.label}</div>
+            <div className="text-xl font-bold text-slate-900 mt-1">{item.value ?? 0}</div>
+            <div className="text-xs text-slate-400 mt-0.5">{item.hint}</div>
+          </div>
+        ))}
+      </div>
+      */}
+
+      {/* Previous KPI cards (kept for reference)
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Active Tax Staff */}
+        
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
@@ -93,7 +84,7 @@ export const PrepStaffScorecardsScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 2: Under Preparation (1040) */}
+        
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
@@ -113,7 +104,7 @@ export const PrepStaffScorecardsScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 3: In QA Audit Review */}
+        
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
@@ -133,7 +124,7 @@ export const PrepStaffScorecardsScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 4: Total Department Returns */}
+        
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
@@ -153,6 +144,7 @@ export const PrepStaffScorecardsScreen: React.FC = () => {
           </div>
         </div>
       </div>
+      */}
 
       {/* 3. Staff Workload & Capacity Table */}
       <PrepStaffWorkloadTable

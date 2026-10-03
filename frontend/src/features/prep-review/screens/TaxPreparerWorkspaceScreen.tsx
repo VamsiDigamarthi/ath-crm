@@ -20,6 +20,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
 import { ReturnItemsSummary } from '../components/workspace/ReturnItemsSummary';
 import { DrakeTaxUploadCard } from '../components/workspace/DrakeTaxUploadCard';
+import { useAuthStore } from '@/features/auth/store/auth-store';
 
 export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
   const [isRequestDocsModalOpen, setIsRequestDocsModalOpen] = useState(false);
   const [isAuditCollapsed, setIsAuditCollapsed] = useState(true);
+  const { user: currentUser } = useAuthStore();
   const {
     isLoading,
     isSaving,
@@ -330,7 +332,10 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
 
           <div className="text-sm lg:text-right shrink-0">
             <div className="text-xs text-slate-500">QA reviewer</div>
-            <div className="font-medium text-slate-900 mt-0.5">{assignedReviewer?.name || 'Unassigned'}</div>
+            <div className="font-medium text-slate-900 mt-0.5">
+              {assignedReviewer?.name || 'Unassigned'}
+              {assignedReviewer?.id && assignedReviewer.id === currentUser?.id && <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-[#15803D]">Self-review</span>}
+            </div>
           </div>
         </div>
 
@@ -600,14 +605,24 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
                   onDelete={handleDeleteDrakeFile}
                   onPreview={setSelectedDocForPreview}
                 />
-              </div>
-            ),
-          },
-          {
-            id: 'REVIEW_NOTES',
-            label: 'Review & Notes',
-            content: (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+              {(() => {
+                  const draft = (taxDraftSummary as any) || {};
+                  const qaNote = draft.status === 'REVISION_REQUESTED' ? draft.revisionNotes : draft.qaRemarks || draft.revisionNotes;
+                  if (!qaNote) return null;
+                  const isRevision = draft.status === 'REVISION_REQUESTED';
+                  return (
+                    <div className={`p-4 rounded-xl border ${isRevision ? 'border-rose-200 bg-rose-50/50' : 'border-slate-200 bg-white'}`}>
+                      <div className="text-sm font-semibold text-slate-900">
+                        Notes from QA reviewer
+                        <span className={`ml-2 text-xs font-medium ${isRevision ? 'text-rose-700' : 'text-[#15803D]'}`}>
+                          {isRevision ? `Revision requested${draft.discrepancyCategory ? ` · ${String(draft.discrepancyCategory).replace(/_/g, ' ').toLowerCase()}` : ''}` : draft.status === 'QA_APPROVED' ? 'Signed off' : ''}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-700 mt-1.5 whitespace-pre-wrap">{qaNote}</p>
+                    </div>
+                  );
+                })()}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
                 <div className="bg-white px-4 py-3 rounded-xl border border-slate-200">
                   <div className="text-xs text-slate-500">QA reviewer</div>
                   <div className="text-sm font-semibold text-slate-900 mt-0.5">{assignedReviewer?.name || 'Unassigned'}</div>
@@ -628,6 +643,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
                     placeholder="e.g. Verified W-2 box 1 vs box 16, checked dual-state apportionment..."
                   />
                 </div>
+              </div>
               </div>
             ),
           },

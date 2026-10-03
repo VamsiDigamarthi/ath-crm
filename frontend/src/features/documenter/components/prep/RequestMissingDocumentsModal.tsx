@@ -29,6 +29,7 @@ const CATEGORIES_BY_TYPE = [
   {
     type: 'INDIVIDUAL',
     title: '1. Individual Documents',
+    tabLabel: 'Individual',
     icon: '👤',
     categories: [
       'W-2 Wage Statement (Employer)',
@@ -53,6 +54,7 @@ const CATEGORIES_BY_TYPE = [
   {
     type: 'BUSINESS',
     title: '2. Business Documents',
+    tabLabel: 'Business',
     icon: '💼',
     categories: [
       'Schedule C Business Profit & Loss Ledger',
@@ -69,7 +71,8 @@ const CATEGORIES_BY_TYPE = [
   },
   {
     type: 'TAX_COMPLIANCE',
-    title: '3. Tax compliance FBAR/FATCA/Other',
+    title: '3. FBAR',
+    tabLabel: 'FBAR',
     icon: '🛡️',
     categories: [
       'FBAR FinCEN 114 Foreign Indian Bank Accounts',
@@ -86,7 +89,8 @@ const CATEGORIES_BY_TYPE = [
   },
   {
     type: 'TAX_AUDIT',
-    title: '4. Tax Audit',
+    title: '4. Notices & Audits',
+    tabLabel: 'Notices & Audits',
     icon: '⚖️',
     categories: [
       'IRS Notice / Audit Inquiry Letter (CP2000, CP501)',
@@ -227,7 +231,7 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
               Notify {customerName} for Required Tax Documents
             </div>
             <div className="text-purple-700 text-[11px] mt-0.5">
-              Select documents across <strong>Individual</strong>, <strong>Business</strong>, <strong>Tax Compliance</strong> &amp; <strong>Tax Audit</strong> categories.
+              Select documents across <strong>Individual</strong>, <strong>Business</strong>, <strong>FBAR</strong> &amp; <strong>Notices &amp; Audits</strong> categories.
               {customerEmail && (
                 <span className="block mt-0.5 font-medium text-slate-600">
                   Target Email: <strong>{customerEmail}</strong>
@@ -280,7 +284,7 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
                   }`}
                 >
                   <span className="shrink-0">{g.icon}</span>
-                  <span className="truncate">{g.title.split('. ')[1]?.split(' ')[0] || g.type}</span>
+                  <span className="truncate">{g.tabLabel || g.type}</span>
                   {count > 0 && (
                     <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-800">
                       {count}

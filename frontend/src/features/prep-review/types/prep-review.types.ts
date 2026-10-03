@@ -90,6 +90,8 @@ export interface PrepReviewLead {
 
 export interface PrepStaffMember {
   id: string;
+  activeByForm?: Record<string, number>;
+  canSelfReview?: boolean;
   name: string;
   email: string;
   mobile: string;

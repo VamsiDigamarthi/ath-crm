@@ -28,7 +28,7 @@ export const PrepStaffWorkloadTable: React.FC<PrepStaffWorkloadTableProps> = ({
     () => [
       {
         id: 'staff',
-        header: 'SPECIALIST',
+        header: 'Specialist',
         accessorFn: (row) => `${row.name} ${row.email}`,
         cell: ({ row }) => (
           <TaxpayerCell
@@ -39,46 +39,41 @@ export const PrepStaffWorkloadTable: React.FC<PrepStaffWorkloadTableProps> = ({
       },
       {
         id: 'role',
-        header: 'ROLE',
+        header: 'Role',
         accessorKey: 'role',
         cell: ({ row }) => {
           const isReviewer = row.original.role === 'TAX_REVIEWER';
           return (
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border ${
-                isReviewer
-                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              }`}
-            >
-              {isReviewer ? 'Senior QA Reviewer' : 'Tax Preparer'}
+            <span className="inline-flex items-center gap-1.5 text-sm text-slate-700">
+              <span className={`w-1.5 h-1.5 rounded-full ${isReviewer ? 'bg-purple-500' : 'bg-[#16A34A]'}`} />
+              {isReviewer ? 'QA reviewer' : 'Tax preparer'}
             </span>
           );
         },
       },
       {
         id: 'caseload',
-        header: 'ACTIVE CASELOAD',
+        header: 'Active caseload',
         accessorKey: 'activeCaseload',
         cell: ({ row }) => (
-          <span className="text-xs font-semibold text-zinc-900">
-            {row.original.activeCaseload || 0} Files
+          <span className="text-sm text-slate-700">
+            <span className="font-semibold text-slate-900">{row.original.activeCaseload || 0}</span> active
           </span>
         ),
       },
       {
         id: 'completed',
-        header: 'COMPLETED THIS MONTH',
+        header: 'Completed this month',
         accessorKey: 'completedThisMonth',
         cell: ({ row }) => (
-          <span className="text-xs font-semibold text-emerald-700">
-            {row.original.completedThisMonth || 0} Completed
+          <span className="text-sm text-slate-700">
+            <span className="font-semibold text-slate-900">{row.original.completedThisMonth || 0}</span> completed
           </span>
         ),
       },
       {
         id: 'actions',
-        header: 'ACTION',
+        header: '',
         enableSorting: false,
         enableHiding: false,
         meta: {
@@ -120,8 +115,6 @@ export const PrepStaffWorkloadTable: React.FC<PrepStaffWorkloadTableProps> = ({
   return (
     <div className="space-y-4 font-sans">
       <UnifiedTable<PrepStaffMember>
-        title="TAX PREPARERS & QA AUDITORS WORKLOAD"
-        subtitle="Monitor active calculation caseload, daily returns audited, and staff turnaround."
         data={nonManagerStaff}
         columns={columns}
         isLoading={isLoading}

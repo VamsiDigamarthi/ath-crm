@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+const FORM_ORDER = ['1040', '1040NR', '1040X', '1065', '1120', '1120S'];
+
 const TIME_OPTIONS = [
   { label: '09:00 AM (Morning)', value: '09:00 AM' },
   { label: '11:00 AM', value: '11:00 AM' },
@@ -81,7 +83,9 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
     toast.success('Auto-paired least loaded Preparer & Reviewer! ⚡');
   };
 
-  const isFourEyesViolation = selectedPreparerId && selectedReviewerId && selectedPreparerId === selectedReviewerId;
+  const preparerCanSelfReview = Boolean(staff.find((s) => s.id === selectedPreparerId)?.canSelfReview);
+  const isSelfReview = Boolean(selectedPreparerId && selectedReviewerId && selectedPreparerId === selectedReviewerId);
+  const isFourEyesViolation = isSelfReview && !preparerCanSelfReview;
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,7 +200,16 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
                           {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 inline" />}
                         </div>
                         <div className="text-[11px] text-slate-500 font-medium">
-                          {member.roleLabel} • <span className="font-bold text-slate-700">{load} Active Returns</span>
+                          {member.roleLabel} • <span className="font-bold text-slate-700">{load} active</span>
+                          {load > 0 && (
+                            <span className="block mt-1 space-x-1">
+                              {FORM_ORDER.filter((f) => member.activeByForm?.[f]).map((f) => (
+                                <span key={f} className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                                  {f}: {member.activeByForm?.[f]}
+                                </span>
+                              ))}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -237,7 +250,7 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
             <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
               {operationalStaff.map((member) => {
                 const isSelected = selectedReviewerId === member.id;
-                const isPreparer = selectedPreparerId === member.id;
+                const isPreparer = selectedPreparerId === member.id && !member.canSelfReview;
                 const load = Number(member.activeCaseload) || 0;
 
                 return (
@@ -268,7 +281,16 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
                           {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 inline" />}
                         </div>
                         <div className="text-[11px] text-slate-500 font-medium">
-                          {member.roleLabel} • <span className="font-bold text-slate-700">{load} Active Returns</span>
+                          {member.roleLabel} • <span className="font-bold text-slate-700">{load} active</span>
+                          {load > 0 && (
+                            <span className="block mt-1 space-x-1">
+                              {FORM_ORDER.filter((f) => member.activeByForm?.[f]).map((f) => (
+                                <span key={f} className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                                  {f}: {member.activeByForm?.[f]}
+                                </span>
+                              ))}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -310,7 +332,7 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
               </span>
             </div>
             <span className="text-[10px] font-bold text-[#16A34A] bg-white px-2 py-0.5 rounded border border-emerald-200">
-              4-Eyes Validated ✓
+              {isSelfReview ? 'Self-review allowed' : '4-Eyes Validated ✓'}
             </span>
           </div>
         ) : null}

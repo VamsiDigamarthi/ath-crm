@@ -18,6 +18,7 @@ import {
 import { Button } from '@/shared/components/Button';
 import { AppSelect } from '@/shared/components/AppSelect';
 import { type CustomerDocumentItem } from '../../services/customer-api';
+import { groupByUploadTime } from '../../utils/document-timeline';
 import { isDriveLinkDoc } from '../../hooks/useCustomerDocuments';
 import { CustomerDocumentPreviewModal } from './CustomerDocumentPreviewModal';
 import { 
@@ -155,7 +156,20 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-black font-medium">
-                {filteredDocs.map((doc) => {
+                {groupByUploadTime(filteredDocs).map((group) => (
+                  <React.Fragment key={group.key}>
+                    <tr className="bg-white">
+                      <td colSpan={6} className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-px bg-slate-200" />
+                          <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold whitespace-nowrap">
+                            {group.label}
+                          </span>
+                          <div className="flex-1 h-px bg-slate-200" />
+                        </div>
+                      </td>
+                    </tr>
+                {group.items.map((doc) => {
                   const isLink = isDriveLinkDoc(doc);
                   return (
                     <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
@@ -293,6 +307,8 @@ export const VaultDocumentsTable: React.FC<VaultDocumentsTableProps> = ({
                     </tr>
                   );
                 })}
+                  </React.Fragment>
+                ))}
               </tbody>
             </table>
           </div>

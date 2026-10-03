@@ -16,6 +16,13 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     module: "Tax Preparation",
     roles: [Role.TAX_PREPARER, Role.TAX_REVIEWER],
   },
+  {
+    key: "PREP_ALLOW_SELF_REVIEW",
+    label: "Allow self-review",
+    description: "Allows this person to be both the preparer and the QA reviewer on the same tax return. By default a second person must review (4-eyes rule).",
+    module: "Tax Preparation",
+    roles: [Role.TAX_PREPARER, Role.TAX_REVIEWER],
+  },
 ];
 
 export const findPermission = (key: string) => PERMISSION_CATALOG.find((p) => p.key === key);
