@@ -77,7 +77,7 @@ export const DocumenterDepartmentScreen: React.FC = () => {
 
   // Super Admin Department Supervision Tabs
   const tabs = [
-    { id: 'RAW_PROSPECTS' as DocumenterTab, label: 'Raw Ingested Leads', count: stats.rawProspects || 0, icon: UserPlus },
+    { id: 'RAW_PROSPECTS' as DocumenterTab, label: 'New Leads', count: stats.rawProspects || 0, icon: UserPlus },
     { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
     { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
     { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },

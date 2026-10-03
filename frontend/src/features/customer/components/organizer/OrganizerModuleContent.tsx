@@ -27,6 +27,7 @@ interface OrganizerModuleContentProps {
   className?: string;
   readOnly?: boolean;
   filingType?: string;
+  leadId?: string;
 }
 
 export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
@@ -44,6 +45,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
   className,
   readOnly = false,
   filingType,
+  leadId,
 }) => {
   if (!organizerData) {
     return (
@@ -206,6 +208,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             isOrganizerMode={true}
             readOnly={readOnly}
             filingType={filingType}
+            leadId={leadId}
           />
         )}
       </div>

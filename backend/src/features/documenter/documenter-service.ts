@@ -603,6 +603,7 @@ export class DocumenterService {
       prisma.taxApplication.count({
         where: {
           ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { assignedDocAgentId: currentUserId } : {}),
+          currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] },
           callLogs: {
             some: {
               callbackScheduledAt: { not: null },
@@ -642,6 +643,9 @@ export class DocumenterService {
         where: {
           ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { agentId: currentUserId } : {}),
           callbackScheduledAt: { gte: new Date() },
+          application: {
+            currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] },
+          },
         },
         orderBy: { callbackScheduledAt: 'asc' },
         select: { callbackScheduledAt: true },
@@ -1248,8 +1252,13 @@ export class DocumenterService {
       throw new Error('Target staff member not found or inactive');
     }
 
-    if (targetAgent.role !== Role.DOC_AGENT) {
-      throw new Error('Tax leads can only be assigned to Documenter Calling Agents (DOC_AGENT). Managers and Team Leads are excluded from lead assignment.');
+    if (
+      targetAgent.role !== Role.DOC_AGENT &&
+      targetAgent.role !== Role.SALES_AGENT &&
+      targetAgent.role !== Role.DOC_TEAM_LEAD &&
+      targetAgent.role !== Role.DOC_MANAGER
+    ) {
+      throw new Error('Tax leads can only be assigned to active Documenter staff or Sales Closers.');
     }
 
     const targetAgentName = targetAgent.firstName
@@ -1955,6 +1964,17 @@ export class DocumenterService {
         include: {
           customer: true,
           assignedPrepAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+      });
+
+      // Clear any pending scheduled callbacks since the lead is now transferred to Preparation Department
+      await tx.callLog.updateMany({
+        where: {
+          applicationId: app.id,
+          callbackScheduledAt: { not: null },
+        },
+        data: {
+          callbackScheduledAt: null,
         },
       });
 
@@ -2721,58 +2741,86 @@ export class DocumenterService {
       emailDelivered = true;
     }
 
-    // 3. In-App Notification & Email to the Document Agent who handled/verified this lead
-    let docAgentUser = app.assignedDocAgentId
-      ? await prisma.user.findUnique({ where: { id: app.assignedDocAgentId }, select: { id: true, firstName: true, lastName: true, email: true, role: true } })
-      : null;
+    // 3. In-App Notification & Email to the currently active assigned staff member for this stage
+    let activeAssignedUserId: string | null = null;
+    let activeActionUrl = `/documenter?leadId=${app.id}`;
+    let activeActionLabel = 'View Lead in Documenter';
 
-    if (!docAgentUser) {
-      const docHistory = await prisma.stageHistory.findFirst({
-        where: {
-          applicationId: app.id,
-          movedByUser: {
-            role: { in: [Role.DOC_AGENT, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD] },
-          },
-        },
-        include: {
-          movedByUser: {
-            select: { id: true, firstName: true, lastName: true, email: true, role: true },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (docHistory?.movedByUser) {
-        docAgentUser = docHistory.movedByUser;
-      }
+    const currentStage = app.currentStage;
+    const draftSummary: any = (app.taxDraftSummary as any) || {};
+    const draftStatus = draftSummary.status;
+
+    if (
+      currentStage === ApplicationStage.RAW_PROSPECT ||
+      currentStage === ApplicationStage.DOC_OUTREACH ||
+      currentStage === ApplicationStage.DOC_PREP
+    ) {
+      activeAssignedUserId = app.assignedDocAgentId || null;
+      activeActionUrl = `/documenter?leadId=${app.id}`;
+      activeActionLabel = 'View Lead in Documenter';
+    } else if (
+      currentStage === ApplicationStage.CORRECTION_NEEDED ||
+      draftStatus === 'UNDER_PREPARATION' ||
+      draftStatus === 'REVISION_REQUESTED'
+    ) {
+      activeAssignedUserId = app.assignedPrepAgentId || null;
+      activeActionUrl = `/prep-review/preparer/workspace/${app.id}`;
+      activeActionLabel = 'View Workspace';
+    } else if (draftStatus === 'SUBMITTED_FOR_QA') {
+      activeAssignedUserId = app.assignedReviewAgentId || null;
+      activeActionUrl = `/prep-review/reviewer/audit/${app.id}`;
+      activeActionLabel = 'View QA Audit';
+    } else if (
+      currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
+      currentStage === ApplicationStage.SALES_PITCHING
+    ) {
+      activeAssignedUserId = app.assignedSalesAgentId || null;
+      activeActionUrl = `/sales/agent/pitch/${app.id}`;
+      activeActionLabel = 'View Pitch Workspace';
+    } else if (
+      currentStage === ApplicationStage.FILING_QUEUE ||
+      currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+      currentStage === ApplicationStage.FILING_FAILED
+    ) {
+      activeAssignedUserId = app.assignedFileOpId || null;
+      activeActionUrl = `/filing/workspace/${app.id}`;
+      activeActionLabel = 'View Transmission Desk';
     }
 
-    if (docAgentUser && docAgentUser.id !== agentUserId) {
-      const docAgentName = `${docAgentUser.firstName || ''} ${docAgentUser.lastName || ''}`.trim() || 'Document Agent';
+    let activeAgentUser = activeAssignedUserId
+      ? await prisma.user.findUnique({
+          where: { id: activeAssignedUserId },
+          select: { id: true, firstName: true, lastName: true, email: true, role: true },
+        })
+      : null;
 
-      // 3a. In-App Notification to Document Agent
+    if (activeAgentUser && activeAgentUser.id !== agentUserId) {
+      const activeAgentName = `${activeAgentUser.firstName || ''} ${activeAgentUser.lastName || ''}`.trim() || 'Staff Agent';
+
+      // 3a. In-App Notification to currently active assigned agent
       await prisma.notification.create({
         data: {
-          recipientUserId: docAgentUser.id,
+          recipientUserId: activeAgentUser.id,
           applicationId: app.id,
-          title: `Missing Documents Requested: ${customerName}`,
-          message: `${actorName} (${agentUser?.role || 'Tax Operations'}) requested missing documents from client ${customerName} (TY${app.taxYear}):\n${categoryListFormatted}${noteFormatted}`,
+          title: `Missing Documents Requested: ${customerName} (TY${app.taxYear || 2025})`,
+          message: `${actorName} (${agentUser?.role || 'Tax Operations'}) requested missing documents from client ${customerName} (TY${app.taxYear || 2025}):\n${categoryListFormatted}${noteFormatted}`,
           category: NotificationCategory.DOCUMENTER,
           priority: NotificationPriority.HIGH,
-          actionUrl: `/documenter?leadId=${app.id}`,
-          actionLabel: 'View Lead in Documenter',
+          actionUrl: activeActionUrl,
+          actionLabel: activeActionLabel,
           relatedLeadName: customerName,
         },
       });
 
-      // 3b. Email to Document Agent
-      if (sendEmail && docAgentUser.email) {
+      // 3b. Email to currently active assigned agent
+      if (sendEmail && activeAgentUser.email) {
         const docAgentEmailHtml = `
           <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
             <div style="background: linear-gradient(135deg, #7c3aed, #6d28d9); padding: 18px; border-radius: 8px; text-align: center; color: white; margin-bottom: 20px;">
               <h2 style="margin: 0; font-size: 20px;">Missing Documents Alert</h2>
-              <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Client: ${customerName} • TY${app.taxYear}</p>
+              <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Client: ${customerName} • TY${app.taxYear || 2025}</p>
             </div>
-            <p>Hello <strong>${docAgentName}</strong>,</p>
+            <p>Hello <strong>${activeAgentName}</strong>,</p>
             <p><strong>${actorName}</strong> (${agentUser?.role || 'Tax Operations'}) has requested additional missing documents from client <strong>${customerName}</strong>:</p>
             <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #7c3aed; margin: 16px 0;">
               <h4 style="margin: 0 0 10px 0; color: #0f172a; font-size: 14px;">Requested Documents:</h4>
@@ -2788,14 +2836,13 @@ export class DocumenterService {
         `;
 
         await EmailService.sendEmail({
-          to: docAgentUser.email,
-          subject: `[Missing Documents Alert] ${actorName} requested documents for ${customerName}`,
-          text: `Hello ${docAgentName},\n\n${actorName} requested missing documents for ${customerName}:\n${categoryListFormatted}${noteFormatted}`,
+          to: activeAgentUser.email,
+          subject: `[Missing Documents Alert] ${actorName} requested documents for ${customerName} (TY${app.taxYear || 2025})`,
+          text: `Hello ${activeAgentName},\n\n${actorName} requested missing documents for ${customerName}:\n${categoryListFormatted}${noteFormatted}`,
           html: docAgentEmailHtml,
         });
+        docAgentNotified = true;
       }
-
-      docAgentNotified = true;
     }
 
     const channelsUsed = [

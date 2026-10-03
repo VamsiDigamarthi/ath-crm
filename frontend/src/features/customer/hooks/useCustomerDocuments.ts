@@ -34,7 +34,11 @@ export const isDriveLinkDoc = (doc: CustomerDocumentItem): boolean => {
   );
 };
 
-export const useCustomerDocuments = (taxYearParam?: string | number, filingTypeParam?: string) => {
+export const useCustomerDocuments = (
+  taxYearParam?: string | number,
+  filingTypeParam?: string,
+  leadIdParam?: string
+) => {
   const isBusiness = filingTypeParam?.toUpperCase() === 'BUSINESS';
   const [selectedYear, setSelectedYear] = useState<string>(
     taxYearParam ? taxYearParam.toString() : '2025'
@@ -101,7 +105,7 @@ export const useCustomerDocuments = (taxYearParam?: string | number, filingTypeP
 
     const loadDocuments = async () => {
       try {
-        const res = await customerApi.getDocuments(selectedYear);
+        const res = await customerApi.getDocuments(selectedYear, leadIdParam);
         if (isMounted && res.data) {
           setData(res.data);
           setError(null);
@@ -124,7 +128,7 @@ export const useCustomerDocuments = (taxYearParam?: string | number, filingTypeP
     return () => {
       isMounted = false;
     };
-  }, [selectedYear, refreshKey]);
+  }, [selectedYear, refreshKey, leadIdParam]);
 
   // Stage multiple files from input or drop, scoped to activeDocType
   const stageFiles = (files: FileList | File[]) => {
@@ -205,7 +209,8 @@ export const useCustomerDocuments = (taxYearParam?: string | number, filingTypeP
         files,
         categoriesMap,
         selectedYear,
-        (pct) => setUploadProgress(pct)
+        (pct) => setUploadProgress(pct),
+        leadIdParam
       );
 
       toast.success(`Successfully uploaded ${stagedFiles.length} document(s)! 📁✨`);
@@ -234,6 +239,7 @@ export const useCustomerDocuments = (taxYearParam?: string | number, filingTypeP
       await customerApi.uploadDriveLink({
         ...payload,
         taxYear: selectedYear,
+        leadId: leadIdParam,
       });
 
       toast.success('Google Drive / Cloud Link attached successfully! 🔗✨');
@@ -253,7 +259,7 @@ export const useCustomerDocuments = (taxYearParam?: string | number, filingTypeP
   // Delete a document or link
   const deleteDocument = async (id: string, fileName: string) => {
     try {
-      await customerApi.deleteDocument(id);
+      await customerApi.deleteDocument(id, leadIdParam);
       toast.success(`"${fileName}" deleted successfully`);
       await refetch();
     } catch (err: unknown) {
@@ -267,7 +273,7 @@ export const useCustomerDocuments = (taxYearParam?: string | number, filingTypeP
   const downloadDocument = async (id: string, fileName: string) => {
     try {
       toast.loading(`Downloading ${fileName}...`, { id: 'doc-download' });
-      await customerApi.downloadDocument(id, fileName);
+      await customerApi.downloadDocument(id, fileName, leadIdParam);
       toast.success('Download complete!', { id: 'doc-download' });
     } catch {
       toast.error('Failed to download document', { id: 'doc-download' });

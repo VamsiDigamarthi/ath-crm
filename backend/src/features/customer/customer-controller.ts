@@ -14,7 +14,8 @@ export class CustomerController {
     }
 
     const taxYear = req.query.taxYear as string | undefined;
-    const dashboardData = await CustomerService.getDashboard(req.currentUser.id, taxYear);
+    const leadId = (req.query.leadId || req.query.applicationId || req.query.customerId) as string | undefined;
+    const dashboardData = await CustomerService.getDashboard(req.currentUser.id, taxYear, leadId, req.currentUser);
 
     return SuccessHandler.handle(res, 'Customer dashboard data fetched successfully', dashboardData);
   }
@@ -29,7 +30,8 @@ export class CustomerController {
     }
 
     const taxYear = req.query.taxYear as string | undefined;
-    const documentsData = await CustomerService.getDocuments(req.currentUser.id, taxYear);
+    const leadId = (req.query.leadId || req.query.applicationId || req.query.customerId) as string | undefined;
+    const documentsData = await CustomerService.getDocuments(req.currentUser.id, taxYear, leadId, req.currentUser);
 
     return SuccessHandler.handle(res, 'Documents fetched successfully', documentsData);
   }
@@ -48,12 +50,15 @@ export class CustomerController {
       return res.status(400).json({ success: false, message: 'No file was uploaded' });
     }
 
-    const { documentCategory, taxYear } = req.body;
+    const { documentCategory, taxYear, leadId: bodyLeadId, applicationId, customerId } = req.body;
+    const leadId = (bodyLeadId || applicationId || customerId || req.query.leadId || req.query.applicationId) as string | undefined;
     const uploadedDoc = await CustomerService.uploadDocument(
       req.currentUser.id,
       file,
       documentCategory,
-      taxYear
+      taxYear,
+      leadId,
+      req.currentUser
     );
 
     return SuccessHandler.handle(res, 'Document uploaded successfully', uploadedDoc, 201);
@@ -68,14 +73,16 @@ export class CustomerController {
       throw new NotAuthorizedError();
     }
 
-    const { linkUrl, title, documentCategory, remarks, taxYear } = req.body;
+    const { linkUrl, title, documentCategory, remarks, taxYear, leadId: bodyLeadId, applicationId, customerId } = req.body;
+    const leadId = (bodyLeadId || applicationId || customerId || req.query.leadId || req.query.applicationId) as string | undefined;
     const document = await CustomerService.uploadDriveLink(req.currentUser.id, {
       linkUrl,
       title,
       documentCategory,
       remarks,
       taxYear,
-    });
+      leadId,
+    }, req.currentUser);
 
     return SuccessHandler.handle(res, 'Drive link attached successfully', document, 201);
   }
@@ -94,12 +101,15 @@ export class CustomerController {
       return res.status(400).json({ success: false, message: 'No files were uploaded' });
     }
 
-    const { categories, taxYear } = req.body;
+    const { categories, taxYear, leadId: bodyLeadId, applicationId, customerId } = req.body;
+    const leadId = (bodyLeadId || applicationId || customerId || req.query.leadId || req.query.applicationId) as string | undefined;
     const uploadedDocs = await CustomerService.uploadMultipleDocuments(
       req.currentUser.id,
       files,
       categories,
-      taxYear
+      taxYear,
+      leadId,
+      req.currentUser
     );
 
     return SuccessHandler.handle(res, 'Documents uploaded successfully', uploadedDocs, 201);
@@ -115,7 +125,7 @@ export class CustomerController {
     }
 
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const result = await CustomerService.deleteDocument(req.currentUser.id, id);
+    const result = await CustomerService.deleteDocument(req.currentUser.id, id, req.currentUser);
 
     return SuccessHandler.handle(res, 'Document deleted successfully', result);
   }
@@ -130,7 +140,7 @@ export class CustomerController {
     }
 
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const downloadInfo = await CustomerService.getDocumentDownloadInfo(req.currentUser.id, id);
+    const downloadInfo = await CustomerService.getDocumentDownloadInfo(req.currentUser.id, id, req.currentUser);
 
     if (downloadInfo.isExternalLink && (downloadInfo as any).url) {
       return res.redirect((downloadInfo as any).url);
@@ -149,7 +159,8 @@ export class CustomerController {
     }
 
     const taxYear = req.query.taxYear as string | undefined;
-    const organizerData = await CustomerService.getOrganizer(req.currentUser.id, taxYear);
+    const leadId = (req.query.leadId || req.query.applicationId || req.query.customerId) as string | undefined;
+    const organizerData = await CustomerService.getOrganizer(req.currentUser.id, taxYear, leadId, req.currentUser);
 
     return SuccessHandler.handle(res, 'Organizer data fetched successfully', organizerData);
   }
@@ -163,7 +174,8 @@ export class CustomerController {
       throw new NotAuthorizedError();
     }
 
-    const result = await CustomerService.saveOrganizer(req.currentUser.id, req.body);
+    const leadId = (req.body.leadId || req.body.applicationId || req.query.leadId || req.query.applicationId) as string | undefined;
+    const result = await CustomerService.saveOrganizer(req.currentUser.id, req.body, req.body.taxYear, leadId, req.currentUser);
 
     return SuccessHandler.handle(res, 'Organizer saved successfully', result);
   }

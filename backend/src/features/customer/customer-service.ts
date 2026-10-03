@@ -7,11 +7,183 @@ import { sanitizeObject } from './customer-validator.js';
 
 export class CustomerService {
   /**
+   * Robust helper to reliably resolve a customer profile and active tax application.
+   * Handles:
+   * 1) Explicit leadId / applicationId / customerId (e.g. from staff workspace)
+   * 2) userId lookup
+   * 3) email fallback lookup & linking
+   * 4) Staff fallback to recent application
+   * 5) Taxpayer auto-profile creation
+   * 6) Auto-creating tax application for requested taxYear if missing
+   */
+  static async resolveCustomerAndApp(
+    userId: string,
+    taxYearQuery?: string | number,
+    leadId?: string,
+    currentUser?: any
+  ) {
+    const selectedYear = taxYearQuery ? parseInt(String(taxYearQuery), 10) : 2025;
+
+    // 1. If leadId is explicitly provided (e.g. from Staff workspace or query param)
+    if (leadId) {
+      // Check if leadId is a TaxApplication ID
+      const app = await prisma.taxApplication.findUnique({
+        where: { id: leadId },
+        include: {
+          customer: true,
+          documents: {
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+
+      if (app) {
+        return { profile: app.customer, activeApp: app, selectedYear: app.taxYear };
+      }
+
+      // Check if leadId is a CustomerProfile ID
+      const cust = await prisma.customerProfile.findUnique({
+        where: { id: leadId },
+        include: {
+          applications: {
+            include: {
+              documents: {
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+            orderBy: { taxYear: 'desc' },
+          },
+        },
+      });
+
+      if (cust) {
+        let matchedApp = cust.applications.find((a) => a.taxYear === selectedYear) || cust.applications[0];
+        if (!matchedApp) {
+          matchedApp = await prisma.taxApplication.create({
+            data: {
+              customerId: cust.id,
+              taxYear: selectedYear,
+              currentStage: 'DOC_OUTREACH',
+              filingType: 'INDIVIDUAL',
+            },
+            include: {
+              customer: true,
+              documents: true,
+            },
+          });
+        }
+        return { profile: cust, activeApp: matchedApp, selectedYear };
+      }
+    }
+
+    // 2. Lookup customer profile by userId
+    let profile = await prisma.customerProfile.findFirst({
+      where: { userId },
+      include: {
+        applications: {
+          include: {
+            documents: {
+              orderBy: { createdAt: 'desc' },
+            },
+          },
+          orderBy: { taxYear: 'desc' },
+        },
+      },
+    });
+
+    // 3. Fallback: Lookup by email if available
+    if (!profile && currentUser?.email) {
+      profile = await prisma.customerProfile.findFirst({
+        where: { email: currentUser.email },
+        include: {
+          applications: {
+            include: {
+              documents: {
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+            orderBy: { taxYear: 'desc' },
+          },
+        },
+      });
+
+      if (profile && !profile.userId) {
+        await prisma.customerProfile.update({
+          where: { id: profile.id },
+          data: { userId },
+        });
+      }
+    }
+
+    // 4. Fallback for staff users who didn't pass leadId: find the most recent active application or lead
+    const isStaff = currentUser?.role && currentUser.role !== 'TAXPAYER_USER' && currentUser.role !== 'CLIENT';
+    if (!profile && isStaff) {
+      const recentApp = await prisma.taxApplication.findFirst({
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          customer: true,
+          documents: {
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+      });
+
+      if (recentApp) {
+        return { profile: recentApp.customer, activeApp: recentApp, selectedYear: recentApp.taxYear };
+      }
+    }
+
+    // 5. If still no profile and user is a customer, auto-create customerProfile
+    if (!profile) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      profile = await prisma.customerProfile.create({
+        data: {
+          userId,
+          email: user?.email || currentUser?.email || `user_${userId}@athcrm.com`,
+          firstName: user?.firstName || 'Taxpayer',
+          lastName: user?.lastName || 'Client',
+          phone: user?.mobile || '',
+          visaType: 'OTHER',
+          maritalStatus: 'SINGLE',
+        },
+        include: {
+          applications: {
+            include: {
+              documents: {
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+            orderBy: { taxYear: 'desc' },
+          },
+        },
+      });
+    }
+
+    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
+    if (!activeApp) {
+      activeApp = await prisma.taxApplication.create({
+        data: {
+          customerId: profile.id,
+          taxYear: selectedYear,
+          currentStage: 'DOC_OUTREACH',
+          filingType: 'INDIVIDUAL',
+        },
+        include: {
+          customer: true,
+          documents: true,
+        },
+      });
+    }
+
+    return { profile, activeApp, selectedYear };
+  }
+
+  /**
    * Get complete real-time dashboard data for logged in taxpayer user
    */
-  static async getDashboard(userId: string, taxYearQuery?: string) {
+  static async getDashboard(userId: string, taxYearQuery?: string, leadId?: string, currentUser?: any) {
     // 1. Find customer profile linked to this user
-    const profile = await prisma.customerProfile.findFirst({
+    let profile = await prisma.customerProfile.findFirst({
       where: { userId },
       include: {
         applications: {
@@ -45,15 +217,82 @@ export class CustomerService {
       },
     });
 
+    if (!profile && currentUser?.email) {
+      profile = await prisma.customerProfile.findFirst({
+        where: { email: currentUser.email },
+        include: {
+          applications: {
+            include: {
+              assignedDocAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+              assignedPrepAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+              assignedReviewAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+              assignedSalesAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+              assignedFileOp: { select: { id: true, firstName: true, lastName: true, email: true } },
+              documents: { select: { id: true, fileName: true, documentCategory: true, verificationStatus: true, createdAt: true } },
+              quotes: { select: { id: true, quoteAmount: true, discountAmount: true, status: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+            },
+            orderBy: { taxYear: 'desc' },
+          },
+        },
+      });
+      if (profile && !profile.userId) {
+        await prisma.customerProfile.update({
+          where: { id: profile.id },
+          data: { userId },
+        });
+      }
+    }
+
     if (!profile) {
-      throw new NotFoundError('Taxpayer customer profile not found for this account.');
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      profile = await prisma.customerProfile.create({
+        data: {
+          userId,
+          email: user?.email || currentUser?.email || `user_${userId}@athcrm.com`,
+          firstName: user?.firstName || 'Taxpayer',
+          lastName: user?.lastName || 'Client',
+          phone: user?.mobile || '',
+          visaType: 'OTHER',
+          maritalStatus: 'SINGLE',
+        },
+        include: {
+          applications: {
+            include: {
+              assignedDocAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+              assignedPrepAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+              assignedReviewAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+              assignedSalesAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+              assignedFileOp: { select: { id: true, firstName: true, lastName: true, email: true } },
+              documents: { select: { id: true, fileName: true, documentCategory: true, verificationStatus: true, createdAt: true } },
+              quotes: { select: { id: true, quoteAmount: true, discountAmount: true, status: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+            },
+            orderBy: { taxYear: 'desc' },
+          },
+        },
+      });
     }
 
     const selectedYear = taxYearQuery ? parseInt(taxYearQuery, 10) : 2025;
-    const activeApp = profile.applications.find((a) => a.taxYear === selectedYear) || profile.applications[0];
+    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear) || profile.applications[0];
 
     if (!activeApp) {
-      throw new NotFoundError(`No tax return found for tax year ${selectedYear}.`);
+      activeApp = await prisma.taxApplication.create({
+        data: {
+          customerId: profile.id,
+          taxYear: selectedYear,
+          currentStage: 'DOC_OUTREACH',
+          filingType: 'INDIVIDUAL',
+        },
+        include: {
+          assignedDocAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+          assignedPrepAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+          assignedReviewAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+          assignedSalesAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
+          assignedFileOp: { select: { id: true, firstName: true, lastName: true, email: true } },
+          documents: { select: { id: true, fileName: true, documentCategory: true, verificationStatus: true, createdAt: true } },
+          quotes: { select: { id: true, quoteAmount: true, discountAmount: true, status: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+        },
+      });
     }
 
     // Parse draft summary
@@ -214,37 +453,10 @@ export class CustomerService {
   /**
    * Get all uploaded documents for a taxpayer's specific tax year application
    */
-  static async getDocuments(userId: string, taxYearQuery?: string) {
-    const profile = await prisma.customerProfile.findFirst({
-      where: { userId },
-      include: {
-        applications: {
-          include: {
-            documents: {
-              orderBy: { createdAt: 'desc' },
-            },
-          },
-          orderBy: { taxYear: 'desc' },
-        },
-      },
-    });
+  static async getDocuments(userId: string, taxYearQuery?: string, leadId?: string, currentUser?: any) {
+    const { profile, activeApp, selectedYear } = await this.resolveCustomerAndApp(userId, taxYearQuery, leadId, currentUser);
 
-    if (!profile) {
-      throw new NotFoundError('Taxpayer customer profile not found');
-    }
-
-    const selectedYear = taxYearQuery ? parseInt(taxYearQuery, 10) : 2025;
-    const activeApp = profile.applications.find((a) => a.taxYear === selectedYear) || profile.applications[0];
-
-    if (!activeApp) {
-      return {
-        taxYear: selectedYear,
-        isConvertedCustomer: profile.isConvertedCustomer,
-        documents: [],
-      };
-    }
-
-    const docs = activeApp.documents.map((doc) => ({
+    const docs = (activeApp.documents || []).map((doc: any) => ({
       id: doc.id,
       applicationId: doc.applicationId,
       fileName: doc.fileName,
@@ -256,7 +468,7 @@ export class CustomerService {
     }));
 
     return {
-      taxYear: activeApp.taxYear,
+      taxYear: selectedYear,
       applicationId: activeApp.id,
       currentStage: activeApp.currentStage,
       isConvertedCustomer: profile.isConvertedCustomer,
@@ -271,38 +483,16 @@ export class CustomerService {
     userId: string,
     file: Express.Multer.File,
     documentCategory: string,
-    taxYearQuery?: string
+    taxYearQuery?: string,
+    leadId?: string,
+    currentUser?: any
   ) {
-    const profile = await prisma.customerProfile.findFirst({
-      where: { userId },
-      include: {
-        applications: {
-          orderBy: { taxYear: 'desc' },
-        },
-      },
-    });
-
-    if (!profile) {
-      throw new NotFoundError('Taxpayer customer profile not found');
-    }
-
-    const selectedYear = taxYearQuery ? parseInt(taxYearQuery, 10) : 2025;
-    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
-
-    // If application doesn't exist for this year, create it in DOC_OUTREACH
-    if (!activeApp) {
-      activeApp = await prisma.taxApplication.create({
-        data: {
-          customerId: profile.id,
-          taxYear: selectedYear,
-          currentStage: 'DOC_OUTREACH',
-          filingType: 'INDIVIDUAL',
-        },
-      });
-    }
+    const { profile, activeApp, selectedYear } = await this.resolveCustomerAndApp(userId, taxYearQuery, leadId, currentUser);
 
     // Save file via Abstract Storage Service
     const storageResult = await StorageService.saveFile(file, `taxpayer_${profile.id}_ty${selectedYear}`);
+
+    const isStaff = currentUser?.role && currentUser.role !== 'TAXPAYER_USER' && currentUser.role !== 'CLIENT';
 
     // Insert TaxDocument record
     const newDoc = await prisma.taxDocument.create({
@@ -312,7 +502,7 @@ export class CustomerService {
         fileName: file.originalname,
         filePath: storageResult.filePath,
         documentCategory: documentCategory || 'W2_WAGES',
-        verificationStatus: 'PENDING',
+        verificationStatus: isStaff ? 'VERIFIED' : 'PENDING',
       },
     });
 
@@ -327,14 +517,14 @@ export class CustomerService {
     };
     const catLabel = categoryLabels[newDoc.documentCategory] || newDoc.documentCategory;
 
-    // Record AuditLog for Client Document Upload
+    // Record AuditLog for Document Upload
     await prisma.auditLog.create({
       data: {
         applicationId: activeApp.id,
         actorId: userId,
-        actorType: 'CLIENT',
-        actorName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client',
-        actorRole: 'TAXPAYER_USER',
+        actorType: isStaff ? 'AGENT' : 'CLIENT',
+        actorName: `${currentUser?.firstName || profile.firstName || ''} ${currentUser?.lastName || profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client',
+        actorRole: currentUser?.role || 'TAXPAYER_USER',
         action: 'DOCUMENT_UPLOAD',
         moduleKey: 'DOCUMENT_VAULT',
         details: {
@@ -343,8 +533,8 @@ export class CustomerService {
           documentCategory: newDoc.documentCategory,
           categoryLabel: catLabel,
           fileSize: storageResult.fileSize,
-          source: 'TAXPAYER_CLIENT_PORTAL',
-          remarks: `Taxpayer uploaded document "${file.originalname}" (${catLabel}) to Document Vault.`,
+          source: isStaff ? 'STAFF_WORKSPACE' : 'TAXPAYER_CLIENT_PORTAL',
+          remarks: `${isStaff ? 'Staff' : 'Taxpayer'} uploaded document "${file.originalname}" (${catLabel}) to Document Vault.`,
           clientEmail: profile.email,
           clientName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email,
           timestamp: new Date().toISOString(),
@@ -364,9 +554,9 @@ export class CustomerService {
   }
 
   /**
-   * Delete an uploaded document (if pending review)
+   * Delete an uploaded document (if pending review or staff action)
    */
-  static async deleteDocument(userId: string, documentId: string) {
+  static async deleteDocument(userId: string, documentId: string, currentUser?: any) {
     const doc = await prisma.taxDocument.findUnique({
       where: { id: documentId },
       include: {
@@ -380,34 +570,38 @@ export class CustomerService {
       throw new NotFoundError('Document not found');
     }
 
-    // Verify ownership
-    if (doc.application.customer.userId !== userId && doc.uploadedByUserId !== userId) {
+    const isStaff = currentUser?.role && currentUser.role !== 'TAXPAYER_USER' && currentUser.role !== 'CLIENT';
+
+    // Verify ownership or staff role
+    if (!isStaff && doc.application.customer.userId !== userId && doc.uploadedByUserId !== userId) {
       throw new BadRequestError('You do not have permission to delete this document');
     }
 
-    // Delete from storage
-    await StorageService.deleteFile(doc.filePath);
+    // Delete from storage if physical file
+    if (!doc.filePath.startsWith('http://') && !doc.filePath.startsWith('https://')) {
+      await StorageService.deleteFile(doc.filePath);
+    }
 
     // Delete from DB
     await prisma.taxDocument.delete({
       where: { id: documentId },
     });
 
-    // Record AuditLog for Client Document Deletion
+    // Record AuditLog for Document Deletion
     await prisma.auditLog.create({
       data: {
         applicationId: doc.applicationId,
         actorId: userId,
-        actorType: 'CLIENT',
-        actorName: `${doc.application.customer.firstName || ''} ${doc.application.customer.lastName || ''}`.trim() || doc.application.customer.email,
-        actorRole: 'TAXPAYER_USER',
+        actorType: isStaff ? 'AGENT' : 'CLIENT',
+        actorName: `${currentUser?.firstName || doc.application.customer.firstName || ''} ${currentUser?.lastName || doc.application.customer.lastName || ''}`.trim() || doc.application.customer.email,
+        actorRole: currentUser?.role || 'TAXPAYER_USER',
         action: 'DOCUMENT_DELETE',
         moduleKey: 'DOCUMENT_VAULT',
         details: {
           deletedFileName: doc.fileName,
           documentCategory: doc.documentCategory,
-          source: 'TAXPAYER_CLIENT_PORTAL',
-          remarks: `Taxpayer deleted document "${doc.fileName}" from Document Vault.`,
+          source: isStaff ? 'STAFF_WORKSPACE' : 'TAXPAYER_CLIENT_PORTAL',
+          remarks: `${isStaff ? 'Staff' : 'Taxpayer'} deleted document "${doc.fileName}" from Document Vault.`,
           clientEmail: doc.application.customer.email,
           clientName: `${doc.application.customer.firstName || ''} ${doc.application.customer.lastName || ''}`.trim() || doc.application.customer.email,
           timestamp: new Date().toISOString(),
@@ -419,7 +613,7 @@ export class CustomerService {
   }
 
   /**
-   * Upload an external Drive / Cloud link by taxpayer client
+   * Upload an external Drive / Cloud link
    */
   static async uploadDriveLink(
     userId: string,
@@ -429,9 +623,11 @@ export class CustomerService {
       documentCategory?: string;
       remarks?: string;
       taxYear?: string | number;
-    }
+      leadId?: string;
+    },
+    currentUser?: any
   ) {
-    const { linkUrl, title, documentCategory, remarks, taxYear: taxYearQuery } = payload;
+    const { linkUrl, title, documentCategory, remarks, taxYear: taxYearQuery, leadId } = payload;
     if (!linkUrl || !linkUrl.trim()) {
       throw new BadRequestError('Drive link URL is required');
     }
@@ -441,32 +637,8 @@ export class CustomerService {
       throw new BadRequestError('Invalid URL. Drive link must begin with http:// or https://');
     }
 
-    const profile = await prisma.customerProfile.findFirst({
-      where: { userId },
-      include: {
-        applications: {
-          orderBy: { taxYear: 'desc' },
-        },
-      },
-    });
-
-    if (!profile) {
-      throw new NotFoundError('Taxpayer customer profile not found');
-    }
-
-    const selectedYear = taxYearQuery ? parseInt(String(taxYearQuery), 10) : 2025;
-    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
-
-    if (!activeApp) {
-      activeApp = await prisma.taxApplication.create({
-        data: {
-          customerId: profile.id,
-          taxYear: selectedYear,
-          currentStage: 'DOC_OUTREACH',
-          filingType: 'INDIVIDUAL',
-        },
-      });
-    }
+    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYearQuery, leadId, currentUser);
+    const isStaff = currentUser?.role && currentUser.role !== 'TAXPAYER_USER' && currentUser.role !== 'CLIENT';
 
     const categoryLabels: Record<string, string> = {
       W2_WAGES: 'W-2 Wages',
@@ -507,7 +679,6 @@ export class CustomerService {
       }
     }
 
-    // Insert TaxDocument record with PENDING verification for staff review
     const newDoc = await prisma.taxDocument.create({
       data: {
         applicationId: activeApp.id,
@@ -515,20 +686,20 @@ export class CustomerService {
         fileName: docTitle,
         filePath: trimmedUrl,
         documentCategory: cat,
-        verificationStatus: 'PENDING',
+        verificationStatus: isStaff ? 'VERIFIED' : 'PENDING',
       },
     });
 
-    const clientName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client';
+    const actorName = `${currentUser?.firstName || profile.firstName || ''} ${currentUser?.lastName || profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client';
 
-    // Record AuditLog for Client Drive Link Upload
+    // Record AuditLog
     await prisma.auditLog.create({
       data: {
         applicationId: activeApp.id,
         actorId: userId,
-        actorType: 'CLIENT',
-        actorName: clientName,
-        actorRole: 'TAXPAYER_USER',
+        actorType: isStaff ? 'AGENT' : 'CLIENT',
+        actorName,
+        actorRole: currentUser?.role || 'TAXPAYER_USER',
         action: 'DOCUMENT_UPLOAD',
         moduleKey: 'DOCUMENT_VAULT',
         details: {
@@ -538,10 +709,10 @@ export class CustomerService {
           categoryLabel: catLabel,
           linkUrl: trimmedUrl,
           isDriveLink: true,
-          source: 'TAXPAYER_CLIENT_PORTAL',
-          remarks: remarks?.trim() || `Taxpayer ${clientName} attached Drive Link "${newDoc.fileName}" to Document Vault.`,
+          source: isStaff ? 'STAFF_WORKSPACE' : 'TAXPAYER_CLIENT_PORTAL',
+          remarks: remarks?.trim() || `${isStaff ? 'Staff' : 'Taxpayer'} ${actorName} attached Drive Link "${newDoc.fileName}" to Document Vault.`,
           clientEmail: profile.email,
-          clientName,
+          clientName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email,
           timestamp: new Date().toISOString(),
         },
       },
@@ -565,38 +736,15 @@ export class CustomerService {
     userId: string,
     files: Express.Multer.File[],
     categoriesMap: Record<string, string> | string,
-    taxYearQuery?: string
+    taxYearQuery?: string,
+    leadId?: string,
+    currentUser?: any
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestError('No files were uploaded');
     }
 
-    const profile = await prisma.customerProfile.findFirst({
-      where: { userId },
-      include: {
-        applications: {
-          orderBy: { taxYear: 'desc' },
-        },
-      },
-    });
-
-    if (!profile) {
-      throw new NotFoundError('Taxpayer customer profile not found');
-    }
-
-    const selectedYear = taxYearQuery ? parseInt(String(taxYearQuery), 10) : 2025;
-    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
-
-    if (!activeApp) {
-      activeApp = await prisma.taxApplication.create({
-        data: {
-          customerId: profile.id,
-          taxYear: selectedYear,
-          currentStage: 'DOC_OUTREACH',
-          filingType: 'INDIVIDUAL',
-        },
-      });
-    }
+    const { profile, activeApp, selectedYear } = await this.resolveCustomerAndApp(userId, taxYearQuery, leadId, currentUser);
 
     let parsedCategories: Record<string, string> = {};
     if (typeof categoriesMap === 'string') {
@@ -609,6 +757,7 @@ export class CustomerService {
       parsedCategories = categoriesMap;
     }
 
+    const isStaff = currentUser?.role && currentUser.role !== 'TAXPAYER_USER' && currentUser.role !== 'CLIENT';
     const clientName = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer Client';
     const uploadedDocs = [];
 
@@ -623,7 +772,7 @@ export class CustomerService {
           fileName: file.originalname,
           filePath: storageResult.filePath,
           documentCategory: category,
-          verificationStatus: 'PENDING',
+          verificationStatus: isStaff ? 'VERIFIED' : 'PENDING',
         },
       });
 
@@ -631,9 +780,9 @@ export class CustomerService {
         data: {
           applicationId: activeApp.id,
           actorId: userId,
-          actorType: 'CLIENT',
-          actorName: clientName,
-          actorRole: 'TAXPAYER_USER',
+          actorType: isStaff ? 'AGENT' : 'CLIENT',
+          actorName: `${currentUser?.firstName || profile.firstName || ''} ${currentUser?.lastName || profile.lastName || ''}`.trim() || clientName,
+          actorRole: currentUser?.role || 'TAXPAYER_USER',
           action: 'DOCUMENT_UPLOAD',
           moduleKey: 'DOCUMENT_VAULT',
           details: {
@@ -641,8 +790,8 @@ export class CustomerService {
             fileName: file.originalname,
             documentCategory: category,
             fileSize: storageResult.fileSize,
-            source: 'TAXPAYER_CLIENT_PORTAL',
-            remarks: `Taxpayer uploaded document "${file.originalname}" (${category}) via batch upload.`,
+            source: isStaff ? 'STAFF_WORKSPACE' : 'TAXPAYER_CLIENT_PORTAL',
+            remarks: `${isStaff ? 'Staff' : 'Taxpayer'} uploaded document "${file.originalname}" (${category}) via batch upload.`,
             clientEmail: profile.email,
             clientName,
             timestamp: new Date().toISOString(),
@@ -668,7 +817,7 @@ export class CustomerService {
   /**
    * Get document file path for download
    */
-  static async getDocumentDownloadInfo(userId: string, documentId: string) {
+  static async getDocumentDownloadInfo(userId: string, documentId: string, currentUser?: any) {
     const doc = await prisma.taxDocument.findUnique({
       where: { id: documentId },
       include: {
@@ -682,7 +831,9 @@ export class CustomerService {
       throw new NotFoundError('Document not found');
     }
 
-    if (doc.application.customer.userId !== userId && doc.uploadedByUserId !== userId) {
+    const isStaff = currentUser?.role && currentUser.role !== 'TAXPAYER_USER' && currentUser.role !== 'CLIENT';
+
+    if (!isStaff && doc.application.customer.userId !== userId && doc.uploadedByUserId !== userId) {
       throw new BadRequestError('Unauthorized document access');
     }
 
@@ -710,38 +861,20 @@ export class CustomerService {
   /**
    * Get 9-Module Organizer data for active tax return
    */
-  static async getOrganizer(userId: string, taxYearQuery?: string) {
-    const profile = await prisma.customerProfile.findFirst({
-      where: { userId },
-      include: {
-        user: true,
-        applications: {
-          orderBy: { taxYear: 'desc' },
-        },
-      },
-    });
+  static async getOrganizer(userId: string, taxYearQuery?: string, leadId?: string, currentUser?: any) {
+    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYearQuery, leadId, currentUser);
 
-    if (!profile) {
-      throw new NotFoundError('Taxpayer customer profile not found');
-    }
-
-    const selectedYear = taxYearQuery ? parseInt(taxYearQuery, 10) : 2025;
-    const activeApp = profile.applications.find((a) => a.taxYear === selectedYear) || profile.applications[0];
-
-    if (!activeApp) {
-      throw new NotFoundError(`No tax return found for year ${selectedYear}`);
-    }
-
+    const user = profile.userId ? await prisma.user.findUnique({ where: { id: profile.userId } }) : null;
     const draft = (activeApp.taxDraftSummary as any) || {};
     const organizer = draft.organizer || {};
     const m1Saved = organizer.m1_demographics || {};
 
-    const firstName = m1Saved.firstName || profile.firstName || profile.user?.firstName || 'Arjun';
+    const firstName = m1Saved.firstName || profile.firstName || user?.firstName || 'Arjun';
     const middleName = m1Saved.middleName !== undefined ? m1Saved.middleName : (profile.middleName || '');
-    const lastName = m1Saved.lastName || profile.lastName || profile.user?.lastName || 'Varma';
+    const lastName = m1Saved.lastName || profile.lastName || user?.lastName || 'Varma';
     const fullName = m1Saved.fullName || [firstName, middleName, lastName].filter(Boolean).join(' ');
-    const email = m1Saved.email || profile.email || profile.user?.email || 'arjun.varma@gmail.com';
-    const phone = m1Saved.phone || profile.phone || profile.user?.mobile || '+1 (713) 555-0138';
+    const email = m1Saved.email || profile.email || user?.email || 'arjun.varma@gmail.com';
+    const phone = m1Saved.phone || profile.phone || user?.mobile || '+1 (713) 555-0138';
 
     // Strictly load submittedModules from saved draft. Default only to ['m1'] if user has filled demographics
     const submittedModules: string[] = Array.isArray(organizer.submittedModules)
@@ -824,7 +957,23 @@ export class CustomerService {
         hasInterestDividends: false,
         bankName: '',
         interestAmount: 0,
+        interestFedTaxWithheld: 0,
         dividendAmount: 0,
+        dividendFedTaxWithheld: 0,
+        form1099OidAmount: 0,
+        form1099OidFedTaxWithheld: 0,
+      },
+      m10_retirement: organizer.m10_retirement || {
+        hasRetirementDistribution: false,
+        payerName: '',
+        distributionType: 'NORMAL',
+        grossDistribution: 0,
+        taxableAmount: 0,
+        fedTaxWithheld: 0,
+        stateTaxWithheld: 0,
+        earlyWithdrawalReason: 'NO_EXCEPTION',
+        reasonExplanation: '',
+        isRothIra: false,
       },
       m6_stocks: organizer.m6_stocks || {
         tradedStocks: false,
@@ -899,36 +1048,11 @@ export class CustomerService {
   /**
    * Save / update 9-module organizer data with XSS sanitization and PostgreSQL sync
    */
-  static async saveOrganizer(userId: string, dataOrBody: any, taxYearParam?: number | string) {
+  static async saveOrganizer(userId: string, dataOrBody: any, taxYearParam?: number | string, leadId?: string, currentUser?: any) {
     const taxYear = dataOrBody?.taxYear || taxYearParam || 2025;
     const organizerData = dataOrBody?.organizerData || dataOrBody;
 
-    const profile = await prisma.customerProfile.findFirst({
-      where: { userId },
-      include: {
-        applications: {
-          orderBy: { taxYear: 'desc' },
-        },
-      },
-    });
-
-    if (!profile) {
-      throw new NotFoundError('Taxpayer customer profile not found');
-    }
-
-    const selectedYear = parseInt(taxYear.toString(), 10) || 2025;
-    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
-
-    if (!activeApp) {
-      activeApp = await prisma.taxApplication.create({
-        data: {
-          customerId: profile.id,
-          taxYear: selectedYear,
-          currentStage: 'DOC_PREP',
-          filingType: 'INDIVIDUAL',
-        },
-      });
-    }
+    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYear, leadId, currentUser);
 
     // 1. Sanitize all incoming fields against XSS & script injection
     const cleanOrganizerData = sanitizeObject(organizerData);

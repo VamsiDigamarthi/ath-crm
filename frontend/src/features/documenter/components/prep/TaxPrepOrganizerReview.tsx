@@ -7,6 +7,7 @@ import {
   validateModule3,
   validateModule4,
   validateModule5,
+  validateModule10Retirement,
   validateModule6,
   validateModule7,
   validateModule8,
@@ -32,6 +33,7 @@ import { ReviewModule2Dependents } from './review-modules/ReviewModule2Dependent
 import { ReviewModule3Presence } from './review-modules/ReviewModule3Presence';
 import { ReviewModule4Wages } from './review-modules/ReviewModule4Wages';
 import { ReviewModule5Interest } from './review-modules/ReviewModule5Interest';
+import { ReviewModule10Retirement } from './review-modules/ReviewModule10Retirement';
 import { ReviewModule6Stocks } from './review-modules/ReviewModule6Stocks';
 import { ReviewModule7Foreign } from './review-modules/ReviewModule7Foreign';
 import { ReviewModule8Deductions } from './review-modules/ReviewModule8Deductions';
@@ -142,20 +144,24 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     } else if (selectedModId === 'm_income') {
       const e4 = validateModule4(localOrganizer.m4_wages, activeTaxYear);
       const e5 = validateModule5(localOrganizer.m5_interest, activeTaxYear);
+      const e10 = validateModule10Retirement(localOrganizer.m10_retirement, activeTaxYear);
       const e6 = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
-      errs = { ...e4, ...e5, ...e6 };
+      errs = { ...e4, ...e5, ...e10, ...e6 };
     } else if (selectedModId === 'm_expenses') {
       errs = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
     } else if (selectedModId === 'm_income_expenses') {
       const e4 = validateModule4(localOrganizer.m4_wages, activeTaxYear);
       const e5 = validateModule5(localOrganizer.m5_interest, activeTaxYear);
+      const e10 = validateModule10Retirement(localOrganizer.m10_retirement, activeTaxYear);
       const e6 = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
       const e8 = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
-      errs = { ...e4, ...e5, ...e6, ...e8 };
+      errs = { ...e4, ...e5, ...e10, ...e6, ...e8 };
     } else if (selectedModId === 'm4') {
       errs = validateModule4(localOrganizer.m4_wages, activeTaxYear);
     } else if (selectedModId === 'm5') {
       errs = validateModule5(localOrganizer.m5_interest, activeTaxYear);
+    } else if (selectedModId === 'm10') {
+      errs = validateModule10Retirement(localOrganizer.m10_retirement, activeTaxYear);
     } else if (selectedModId === 'm6') {
       errs = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
     } else if (selectedModId === 'm7') {
@@ -230,6 +236,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const m3 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m3_presence || {};
   const m4 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m4_wages || {};
   const m5 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m5_interest || {};
+  const m10 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m10_retirement || {};
   const m6 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m6_stocks || {};
   const m7 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m7_foreign || {};
   const m8 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m8_deductions || {};
@@ -454,10 +461,12 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               lockTaxYear={true}
               isOrganizerMode={true}
               readOnly={!canEdit}
+              leadId={leadId}
+              filingType={effectiveFilingType}
             />
           )}
 
-          {(selectedModId === 'm_income' || selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6') && (
+          {(selectedModId === 'm_income' || selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm10' || selectedModId === 'm6') && (
             <div className="space-y-6">
               {/* Part 1: W-2 Wages */}
               <div className="space-y-2">
@@ -477,10 +486,19 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                 <ReviewModule5Interest m5={m5} />
               </div>
 
-              {/* Part 3: 1099-B Stocks & Gains */}
+              {/* Part 3: Form 1099-R IRA & Retirement Distributions */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Part 3</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Part 3</span>
+                  <h4 className="text-xs font-bold text-slate-800">Form 1099-R IRA &amp; Retirement Distributions / Early Withdrawals</h4>
+                </div>
+                <ReviewModule10Retirement m10={m10} />
+              </div>
+
+              {/* Part 4: 1099-B Stocks & Gains */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Part 4</span>
                   <h4 className="text-xs font-bold text-slate-800">1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</h4>
                 </div>
                 <ReviewModule6Stocks m6={m6} />
@@ -523,6 +541,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                 currentModIndex={currentModIndex}
                 saving={isSaving}
                 filingType={effectiveFilingType}
+                leadId={leadId}
               />
             </div>
           )}

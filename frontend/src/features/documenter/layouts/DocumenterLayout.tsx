@@ -36,7 +36,7 @@ export const DocumenterLayout: React.FC = () => {
     }
   };
 
-  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'ADMIN';
+  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'ADMIN';
 
   // Role-specific Navigation Items
   const navItems = isManager

@@ -78,7 +78,7 @@ export const ManagerQueueScreen: React.FC = () => {
 
   const tabs = [
     { id: 'MY_LEADS' as DocumenterTab, label: 'My Assigned Leads', count: stats.myLeads || 0, icon: UserCheck },
-    { id: 'RAW_PROSPECTS' as DocumenterTab, label: 'Raw Ingested Leads', count: stats.rawProspects || 0, icon: UserPlus },
+    { id: 'RAW_PROSPECTS' as DocumenterTab, label: 'New Leads', count: stats.rawProspects || 0, icon: UserPlus },
     { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
     { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
     { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
@@ -234,7 +234,7 @@ export const ManagerQueueScreen: React.FC = () => {
         isLoading={isLoading}
         emptyText={
           activeTab === 'RAW_PROSPECTS'
-            ? 'No raw ingested leads awaiting tax filing intake.'
+            ? 'No new leads awaiting tax filing intake.'
             : activeTab === 'UNASSIGNED'
             ? 'All leads have been distributed to staff, or no new bulk leads are unassigned.'
             : 'No leads match the selected filter criteria.'

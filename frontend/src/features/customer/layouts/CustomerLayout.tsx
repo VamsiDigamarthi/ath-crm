@@ -105,7 +105,7 @@ export const CustomerLayout: React.FC = () => {
       {/* 1. AppSidebar matching Admin & Manager level UI/UX */}
       <AppSidebar
         width={240}
-        variant="light"
+        variant="dark"
         accentColor="#16A34A"
         brand={{
           title: 'TaxCRM Engine',

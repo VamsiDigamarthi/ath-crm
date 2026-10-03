@@ -9,6 +9,7 @@ import {
   validateModule3, 
   validateModule4, 
   validateModule5, 
+  validateModule10Retirement,
   validateModule6, 
   validateModule7, 
   validateModule8, 
@@ -20,7 +21,11 @@ import {
 } from '../components/organizer/utils/organizer-validation';
 import toast from 'react-hot-toast';
 
-export const useCustomerOrganizer = (taxYearParam?: string, filingTypeParam?: string) => {
+export const useCustomerOrganizer = (
+  taxYearParam?: string,
+  filingTypeParam?: string,
+  leadIdParam?: string
+) => {
   const isBusiness = filingTypeParam?.toUpperCase() === 'BUSINESS';
   const defaultModId = isBusiness ? 'b1_companyInfo' : 'm1';
 
@@ -55,7 +60,7 @@ export const useCustomerOrganizer = (taxYearParam?: string, filingTypeParam?: st
   const fetchOrganizer = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await customerApi.getOrganizer(selectedTaxYear.toString());
+      const res = await customerApi.getOrganizer(selectedTaxYear.toString(), isBusiness ? 'BUSINESS' : 'INDIVIDUAL', leadIdParam);
       if (res.data) {
         const org = res.data.organizer;
         if (org && org.m3_presence) {
@@ -258,12 +263,14 @@ export const useCustomerOrganizer = (taxYearParam?: string, filingTypeParam?: st
       selectedModId === 'm_income' ||
       selectedModId === 'm4' ||
       selectedModId === 'm5' ||
+      selectedModId === 'm10' ||
       selectedModId === 'm6'
     ) {
       const e4 = validateModule4(organizerData.m4_wages, selectedTaxYear);
       const e5 = validateModule5(organizerData.m5_interest, selectedTaxYear);
+      const e10 = validateModule10Retirement(organizerData.m10_retirement, selectedTaxYear);
       const e6 = validateModule6(organizerData.m6_stocks, selectedTaxYear);
-      const allErrors = { ...e4, ...e5, ...e6 };
+      const allErrors = { ...e4, ...e5, ...e10, ...e6 };
       if (Object.keys(allErrors).length > 0) {
         setValidationErrors(allErrors);
         const errorFieldNames = Object.keys(allErrors);
@@ -285,9 +292,10 @@ export const useCustomerOrganizer = (taxYearParam?: string, filingTypeParam?: st
     if (selectedModId === 'm_income_expenses') {
       const e4 = validateModule4(organizerData.m4_wages, selectedTaxYear);
       const e5 = validateModule5(organizerData.m5_interest, selectedTaxYear);
+      const e10 = validateModule10Retirement(organizerData.m10_retirement, selectedTaxYear);
       const e6 = validateModule6(organizerData.m6_stocks, selectedTaxYear);
       const e8 = validateModule8(organizerData.m8_deductions, selectedTaxYear);
-      const allErrors = { ...e4, ...e5, ...e6, ...e8 };
+      const allErrors = { ...e4, ...e5, ...e10, ...e6, ...e8 };
       if (Object.keys(allErrors).length > 0) {
         setValidationErrors(allErrors);
         const errorFieldNames = Object.keys(allErrors);
@@ -313,11 +321,11 @@ export const useCustomerOrganizer = (taxYearParam?: string, filingTypeParam?: st
     try {
       setSaving(true);
       const extraKeys = selectedModId === 'm_income' 
-        ? ['m4', 'm5', 'm6', 'm_income'] 
+        ? ['m4', 'm5', 'm10', 'm6', 'm_income'] 
         : selectedModId === 'm_expenses'
           ? ['m8', 'm_expenses']
           : selectedModId === 'm_income_expenses'
-            ? ['m4', 'm5', 'm6', 'm8', 'm_income', 'm_expenses', 'm_income_expenses']
+            ? ['m4', 'm5', 'm10', 'm6', 'm8', 'm_income', 'm_expenses', 'm_income_expenses']
             : selectedModId === 'm1'
               ? ['m1', 'm2', 'm3', 'm9']
               : [selectedModId];
@@ -330,7 +338,7 @@ export const useCustomerOrganizer = (taxYearParam?: string, filingTypeParam?: st
       };
       setOrganizerData(dataToSave);
 
-      const res = await customerApi.saveOrganizer(selectedTaxYear, dataToSave);
+      const res = await customerApi.saveOrganizer(selectedTaxYear, dataToSave, leadIdParam);
       if (res.data) {
         setProgressPercent(res.data.progressPercent);
         setCompletedCount(res.data.completedCount);

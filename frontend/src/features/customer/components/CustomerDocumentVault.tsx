@@ -15,20 +15,24 @@ interface CustomerDocumentVaultProps {
   isOrganizerMode?: boolean;
   readOnly?: boolean;
   filingType?: string;
+  leadId?: string;
 }
 
 export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
   selectedTaxYear: propTaxYear,
   readOnly = false,
   filingType: propFilingType,
+  leadId,
 }) => {
   const [searchParams] = useSearchParams();
   const context = useOutletContext<{
     selectedTaxYear?: string;
     customerProfile?: any;
+    leadId?: string;
   }>() || {};
 
   const effectiveTaxYear = propTaxYear !== undefined ? propTaxYear.toString() : context.selectedTaxYear;
+  const effectiveLeadId = leadId || context.leadId;
 
   const urlType = searchParams.get('type') || searchParams.get('filingType');
   const matchedApp = context.customerProfile?.applications?.find(
@@ -93,7 +97,7 @@ export const CustomerDocumentVault: React.FC<CustomerDocumentVaultProps> = ({
     setIsDriveLinkModalOpen,
     isSubmittingLink,
     handleUploadDriveLink,
-  } = useCustomerDocuments(effectiveTaxYear, effectiveFilingType);
+  } = useCustomerDocuments(effectiveTaxYear, effectiveFilingType, effectiveLeadId);
 
   // Tabs for All Items, Files, and Drive Links within active document type
   const vaultTabs: TabItem[] = [

@@ -20,6 +20,11 @@ import {
   startFiling,
   getAuditLogsFeed,
 } from './documenter-controller.js';
+import {
+  getSelfSignups,
+  assignSelfSignupsBulk,
+  autoRoundRobinSelfSignups,
+} from '../admin/admin-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
 import { uploadTaxDocument } from '../../middlewares/file-upload-middleware.js';
@@ -37,10 +42,20 @@ const DOCUMENTER_ROLES = [
   Role.TAX_REVIEWER,
   Role.TAX_PREPARER,
   Role.SALES_MANAGER,
+  Role.SALES_TEAM_LEAD,
   Role.SALES_AGENT,
   Role.FILE_OP_MANAGER,
   Role.FILE_OP_TEAM_LEAD,
   Role.FILE_OP_AGENT,
+];
+
+const MANAGER_ASSIGN_ROLES = [
+  Role.ADMIN,
+  Role.DOC_MANAGER,
+  Role.DOC_TEAM_LEAD,
+  Role.PREP_MANAGER,
+  Role.SALES_MANAGER,
+  Role.FILE_OP_MANAGER,
 ];
 
 // 1. Get paginated leads with tab stats
@@ -79,7 +94,7 @@ router.get(
 router.post(
   '/assign-bulk',
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
+  authorize(...MANAGER_ASSIGN_ROLES),
   assignLeadsBulk
 );
 
@@ -87,8 +102,30 @@ router.post(
 router.post(
   '/assign-round-robin',
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
+  authorize(...MANAGER_ASSIGN_ROLES),
   autoRoundRobinAssign
+);
+
+// 4a. Direct Online Self-Signups Management (Doc Manager & Staff)
+router.get(
+  '/self-signups',
+  requireAuth,
+  authorize(...DOCUMENTER_ROLES),
+  getSelfSignups
+);
+
+router.post(
+  '/self-signups/assign-bulk',
+  requireAuth,
+  authorize(...MANAGER_ASSIGN_ROLES),
+  assignSelfSignupsBulk
+);
+
+router.post(
+  '/self-signups/assign-round-robin',
+  requireAuth,
+  authorize(...MANAGER_ASSIGN_ROLES),
+  autoRoundRobinSelfSignups
 );
 
 // 4b. Return Not-Interested leads to Admin / Unassigned Pool (Agents, Managers, Admin)
