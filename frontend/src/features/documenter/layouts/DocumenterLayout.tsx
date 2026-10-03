@@ -103,8 +103,8 @@ export const DocumenterLayout: React.FC = () => {
     if (currentPath.includes('/documenter/agent/documents') || currentPath.includes('/documenter/agent/prep')) return 'agent_documents';
     if (currentPath === '/documenter/agent' || currentPath === '/documenter/agent/') return 'agent_dashboard';
 
-    // When viewing a lead detail screen (/documenter/agent/lead/:id or /documenter/lead/:id)
-    if (currentPath.includes('/lead/')) {
+    // When viewing a lead detail screen (/documenter/agent/lead/:id or /documenter/agent/taxpayer-360/:id)
+    if (currentPath.includes('/lead/') || currentPath.includes('/taxpayer-360/')) {
       if (fromQuery === 'documents' || fromQuery === 'agent_documents') return 'agent_documents';
       if (fromQuery === 'queue' || fromQuery === 'agent_queue') return 'agent_queue';
       if (fromQuery === 'callbacks' || fromQuery === 'agent_callbacks') return 'agent_callbacks';

@@ -83,7 +83,7 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => navigate(`/documenter/agent/taxpayer-360/${row.original.id}`)}
+              onClick={() => navigate(`/documenter/agent/lead/${row.original.id}?tab=ORGANIZER&from=documents`, { state: { from: 'documents' } })}
               className="h-7 px-2.5 text-[11px] font-normal border-zinc-200 text-zinc-700 hover:bg-zinc-50 cursor-pointer"
             >
               <Eye className="w-3 h-3 text-zinc-500 mr-1" />
@@ -121,7 +121,7 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
         isLoading={isLoading}
         searchPlaceholder="Search taxpayers by name, email, phone..."
         onExportExcel={handleExport}
-        onRowClick={(item) => navigate(`/documenter/agent/taxpayer-360/${item.id}`)}
+        onRowClick={(item) => navigate(`/documenter/agent/lead/${item.id}?tab=ORGANIZER&from=documents`, { state: { from: 'documents' } })}
         emptyText="No leads currently in document preparation."
       />
     </div>
