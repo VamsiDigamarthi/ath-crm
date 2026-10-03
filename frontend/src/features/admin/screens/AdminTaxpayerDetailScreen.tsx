@@ -5,6 +5,7 @@ import {
   type TaxpayerYearDetailsResponse 
 } from '../services/master-taxpayers-service';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
@@ -628,73 +629,18 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
       </div>
 
       {/* 5. 5-Tab Navigation Bar */}
-      <div className="border-b border-slate-200 bg-white rounded-2xl p-1.5 shadow-xs">
-        <div className="flex flex-wrap items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('FINANCIALS')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'FINANCIALS'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Calculator className="w-4 h-4" />
-            <span>1. Form Specs &amp; Financials</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('DOCUMENTS')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'DOCUMENTS'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>2. Uploaded Documents ({yearDetails?.documents?.length || 0})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('TEAM')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'TEAM'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>3. Assigned Operations Team</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('TIMELINE')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'TIMELINE'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>4. Stage Transition Audit Logs ({yearDetails?.stageHistories?.length || 0})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('CALL_LOGS')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'CALL_LOGS'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <PhoneCall className="w-4 h-4" />
-            <span>5. Call Logs &amp; Notes ({yearDetails?.callLogs?.length || 0})</span>
-          </button>
-        </div>
+      <div className="bg-white rounded-2xl p-2 border border-slate-200 shadow-xs">
+        <AppTabs
+          tabs={[
+            { id: 'FINANCIALS', label: '1. Form Specs & Financials', icon: Calculator },
+            { id: 'DOCUMENTS', label: '2. Uploaded Documents', count: yearDetails?.documents?.length || 0, icon: FileText },
+            { id: 'TEAM', label: '3. Assigned Operations Team', icon: UserCheck },
+            { id: 'TIMELINE', label: '4. Stage Transition Audit Logs', count: yearDetails?.stageHistories?.length || 0, icon: Clock },
+            { id: 'CALL_LOGS', label: '5. Call Logs & Notes', count: yearDetails?.callLogs?.length || 0, icon: PhoneCall },
+          ]}
+          activeTab={activeTab}
+          onChange={(tab) => setActiveTab(tab as any)}
+        />
       </div>
 
       {/* 6. TAB CONTENT AREA */}
@@ -828,23 +774,20 @@ export const AdminTaxpayerDetailScreen: React.FC = () => {
               </p>
             </div>
 
-            {/* Category Filter Pills */}
-            <div className="flex flex-wrap gap-1.5">
-              {['ALL', 'INCOME_W2', 'TAX_1099', 'IDENTITY_DOC', 'FORM_8879', 'DRAFT_RETURN'].map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setDocCategoryFilter(cat)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                    docCategoryFilter === cat
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {cat.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
+            {/* Category Filter AppTabs */}
+            <AppTabs
+              tabs={[
+                { id: 'ALL', label: 'All Docs' },
+                { id: 'INCOME_W2', label: 'Income W2' },
+                { id: 'TAX_1099', label: 'Tax 1099' },
+                { id: 'IDENTITY_DOC', label: 'Identity Doc' },
+                { id: 'FORM_8879', label: 'Form 8879' },
+                { id: 'DRAFT_RETURN', label: 'Draft Return' },
+              ]}
+              activeTab={docCategoryFilter}
+              onChange={(cat) => setDocCategoryFilter(cat)}
+              size="sm"
+            />
           </div>
 
           {filteredDocuments.length === 0 ? (

@@ -1,10 +1,11 @@
-import React from 'react';
-import { Calculator, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
+import React, { useMemo } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Calculator, ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { AppEmptyState } from '@/shared/components/AppEmptyState';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
 import { PrepStageBadge } from '../common/PrepStageBadge';
-import { PriorityBadge } from '@/shared/components/PriorityBadge';
-import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { PrepReviewLead } from '../../types/prep-review.types';
 
 interface PreparerQueueTableProps {
@@ -18,182 +19,144 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
   isLoading,
   onOpenWorkspace,
 }) => {
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-12 flex flex-col items-center justify-center gap-3">
-        <div className="w-8 h-8 rounded-full border-3 border-emerald-500 border-t-transparent animate-spin" />
-        <span className="text-xs font-semibold text-slate-500">Loading your assigned 1040 returns...</span>
-      </div>
-    );
-  }
+  const columns = useMemo<ColumnDef<PrepReviewLead, any>[]>(
+    () => [
+      {
+        id: 'taxpayer',
+        header: 'TAXPAYER',
+        accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
+        cell: ({ row }) => (
+          <TaxpayerCell
+            name={row.original.taxpayerName}
+            email={row.original.taxpayerEmail}
+          />
+        ),
+      },
+      {
+        id: 'taxYear',
+        header: 'TY',
+        accessorFn: (row) => `TY ${row.taxYear || 2025}`,
+        cell: ({ row }) => (
+          <span className="text-xs font-medium text-slate-700">
+            {row.original.taxYear || 2025}
+          </span>
+        ),
+      },
+      {
+        id: 'filingStatus',
+        header: 'FILING STATUS',
+        accessorKey: 'maritalStatus',
+        cell: ({ row }) => (
+          <span className="text-xs font-normal text-slate-700">
+            {row.original.maritalStatus || 'Single'}
+          </span>
+        ),
+      },
+      {
+        id: 'state',
+        header: 'STATE',
+        accessorKey: 'stateOfResidence',
+        cell: ({ row }) => (
+          <span className="text-xs font-normal text-slate-700">
+            {row.original.stateOfResidence || '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'docs',
+        header: 'DOCS',
+        accessorFn: (row) => `${row.verifiedDocumentsCount || 0}/${row.documentsCount || 0}`,
+        cell: ({ row }) => {
+          const verified = row.original.verifiedDocumentsCount || 0;
+          const total = row.original.documentsCount || 0;
+          return (
+            <span className="text-xs font-normal text-slate-700">
+              {verified}/{total} verified
+            </span>
+          );
+        },
+      },
+      {
+        id: 'reviewer',
+        header: 'QA REVIEWER',
+        accessorFn: (row) => row.assignedReviewer?.name || 'Unassigned',
+        cell: ({ row }) => {
+          const rev = row.original.assignedReviewer;
+          return (
+            <span className="text-xs font-normal text-slate-700">
+              {rev?.name || 'Unassigned'}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'stage',
+        header: 'STAGE',
+        accessorKey: 'currentStage',
+        meta: {
+          filterType: 'enum',
+          filterOptions: [
+            { label: 'In Tax Prep', value: 'DOC_PREP' },
+            { label: 'QA Review', value: 'QA_REVIEW' },
+            { label: 'Correction Needed', value: 'CORRECTION_NEEDED' },
+          ],
+        },
+        cell: ({ row }) => <PrepStageBadge stage={row.original.currentStage} />,
+      },
+      {
+        id: 'actions',
+        header: 'ACTION',
+        enableSorting: false,
+        enableHiding: false,
+        meta: {
+          disableMenu: true,
+          disableFilter: true,
+        },
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              onClick={() => onOpenWorkspace(row.original.id || row.original.applicationId)}
+              className="h-7 px-2.5 text-[11px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
+            >
+              <Calculator className="w-3 h-3" />
+              <span>Draft 1040</span>
+              <ArrowRight className="w-3 h-3" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [onOpenWorkspace]
+  );
 
-  if (returns.length === 0) {
-    return (
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-12">
-        <AppEmptyState
-          icon={Calculator}
-          title="No Tax Returns in this Filter"
-          description="You currently have no tax returns in this stage. Check the other tabs or wait for manager allocations."
-        />
-      </div>
+  const handleExportExcel = () => {
+    exportTableToExcel(
+      returns,
+      [
+        { header: 'Taxpayer Name', key: 'taxpayerName' },
+        { header: 'Email', key: 'taxpayerEmail' },
+        { header: 'Tax Year', key: 'taxYear' },
+        { header: 'Filing Status', key: 'maritalStatus' },
+        { header: 'State', key: 'stateOfResidence' },
+        { header: 'QA Reviewer', key: 'rev', format: (r) => r.assignedReviewer?.name || 'Unassigned' },
+        { header: 'Stage', key: 'currentStage' },
+      ],
+      'preparer_assigned_returns'
     );
-  }
+  };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
-            <tr>
-              <th className="py-3.5 px-4">Taxpayer Client</th>
-              <th className="py-3.5 px-4">Filing Status &amp; Visa</th>
-              <th className="py-3.5 px-4">Documents Vault</th>
-              <th className="py-3.5 px-4">Designated QA Reviewer</th>
-              <th className="py-3.5 px-4">Target SLA Time</th>
-              <th className="py-3.5 px-4 text-center">Lifecycle Stage</th>
-              <th className="py-3.5 px-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {returns.map((item) => {
-              const taxpayerName = item.taxpayerName?.trim() || '-';
-              const taxpayerInitial = taxpayerName !== '-' ? taxpayerName[0].toUpperCase() : 'T';
-              const taxpayerEmail = item.taxpayerEmail || '-';
-              const location = item.stateOfResidence || '-';
-              const filingStatus = item.maritalStatus || '-';
-              const visaType = item.visaType || '-';
-              const reviewerName = item.assignedReviewer?.name || '-';
-              const reviewerInitial = reviewerName !== '-' ? reviewerName[0].toUpperCase() : 'Q';
-              const verifiedDocs = item.verifiedDocumentsCount || 0;
-              const totalDocs = item.documentsCount || 0;
-              const hasMultipleYears = Boolean(item.allApplications && item.allApplications.length > 1);
-
-              // Format Target SLA Time
-              const slaTime = (item as any).targetDueDate 
-                ? new Date((item as any).targetDueDate).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                : item.dueByDate || 'Standard 24h SLA';
-
-              return (
-                <tr key={item.id || item.applicationId} className="hover:bg-slate-50/70 transition-colors">
-                  {/* Taxpayer Client */}
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs bg-blue-100 border border-blue-200 text-blue-800">
-                        {taxpayerInitial}
-                      </div>
-                      <div>
-                        <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5 flex-wrap">
-                          <span>{taxpayerName}</span>
-                          <ClientPaymentStatusChip lead={item} size="xs" />
-                          {hasMultipleYears ? (
-                            <div className="inline-flex items-center gap-1">
-                              {item.allApplications?.map((app) => (
-                                <button
-                                  key={app.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onOpenWorkspace(app.id);
-                                  }}
-                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors cursor-pointer ${
-                                    app.id === (item.id || item.applicationId)
-                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
-                                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                                  }`}
-                                  title={`Switch to TY ${app.taxYear} (${app.filingType || 'INDIVIDUAL'})`}
-                                >
-                                  TY {app.taxYear}
-                                </button>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                              TY {item.taxYear || 2025}
-                            </span>
-                          )}
-                          {item.priority && (
-                            <PriorityBadge priority={item.priority} size="sm" />
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                          {taxpayerEmail} {location !== '-' ? `• ${location}` : ''}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Filing Status & Visa */}
-                  <td className="py-3.5 px-4">
-                    <div className="font-bold text-xs text-slate-800">{filingStatus}</div>
-                    <div className="text-[11px] text-slate-500 font-medium">{visaType}</div>
-                  </td>
-
-                  {/* Documents Vault */}
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
-                        <span>{verifiedDocs} Verified</span>
-                      </span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-medium mt-0.5">
-                      {totalDocs} total vault files
-                    </div>
-                  </td>
-
-                  {/* Designated QA Reviewer */}
-                  <td className="py-3.5 px-4">
-                    {reviewerName !== '-' ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-700 text-[10px] font-bold flex items-center justify-center border border-purple-200">
-                          {reviewerInitial}
-                        </div>
-                        <div>
-                          <div className="font-bold text-xs text-slate-900">{reviewerName}</div>
-                          <div className="text-[10px] text-purple-600 font-medium">Senior QA Reviewer</div>
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-slate-400 font-medium text-xs">-</span>
-                    )}
-                  </td>
-
-                  {/* Target SLA Time */}
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                      <Clock className="w-3.5 h-3.5 text-amber-500" />
-                      <span>{slaTime}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-medium">Standard 24h SLA</div>
-                  </td>
-
-                  {/* Lifecycle Stage */}
-                  <td className="py-3.5 px-4 text-center">
-                    <PrepStageBadge 
-                      stage={item.prepStage || item.currentStage} 
-                      assignedPreparerName={item.assignedPreparer?.name}
-                      assignedCloserName={item.assignedSalesAgent?.name}
-                      assignedFileOpName={item.assignedFileOp?.name}
-                    />
-                  </td>
-
-                  {/* Action */}
-                  <td className="py-3.5 px-4 text-right">
-                    <Button
-                      size="sm"
-                      onClick={() => onOpenWorkspace(item.id || item.applicationId)}
-                      className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold px-3.5 h-8 flex items-center gap-1.5 shadow-2xs cursor-pointer ml-auto"
-                    >
-                      <Calculator className="w-3.5 h-3.5" />
-                      <span>Open 1040 Workspace</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <UnifiedTable<PrepReviewLead>
+      columns={columns}
+      data={returns}
+      title="TAX PREPARATION WORKBENCH"
+      subtitle="Draft IRS Form 1040, state returns, itemized deductions, and submit for 4-Eyes QA certification."
+      isLoading={isLoading}
+      searchPlaceholder="Search taxpayer, email, state, status..."
+      onExportExcel={handleExportExcel}
+      onRowClick={(item) => onOpenWorkspace(item.id || item.applicationId)}
+      emptyText="No assigned returns in this queue. Great job!"
+    />
   );
 };

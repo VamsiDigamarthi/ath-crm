@@ -7,6 +7,7 @@ import {
   validateModule3,
   validateModule4,
   validateModule5,
+  validateModule10Retirement,
   validateModule6,
   validateModule7,
   validateModule8,
@@ -32,6 +33,7 @@ import { ReviewModule2Dependents } from './review-modules/ReviewModule2Dependent
 import { ReviewModule3Presence } from './review-modules/ReviewModule3Presence';
 import { ReviewModule4Wages } from './review-modules/ReviewModule4Wages';
 import { ReviewModule5Interest } from './review-modules/ReviewModule5Interest';
+import { ReviewModule10Retirement } from './review-modules/ReviewModule10Retirement';
 import { ReviewModule6Stocks } from './review-modules/ReviewModule6Stocks';
 import { ReviewModule7Foreign } from './review-modules/ReviewModule7Foreign';
 import { ReviewModule8Deductions } from './review-modules/ReviewModule8Deductions';
@@ -45,6 +47,7 @@ interface TaxPrepOrganizerReviewProps {
   allowEdit?: boolean;
   readOnly?: boolean;
   filingType?: string;
+  hideHeader?: boolean;
 }
 
 export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
@@ -55,6 +58,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   allowEdit = true,
   readOnly = false,
   filingType,
+  hideHeader = false,
 }) => {
   const canEdit = allowEdit && !readOnly;
   const organizer = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
@@ -142,20 +146,24 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     } else if (selectedModId === 'm_income') {
       const e4 = validateModule4(localOrganizer.m4_wages, activeTaxYear);
       const e5 = validateModule5(localOrganizer.m5_interest, activeTaxYear);
+      const e10 = validateModule10Retirement(localOrganizer.m10_retirement, activeTaxYear);
       const e6 = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
-      errs = { ...e4, ...e5, ...e6 };
+      errs = { ...e4, ...e5, ...e10, ...e6 };
     } else if (selectedModId === 'm_expenses') {
       errs = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
     } else if (selectedModId === 'm_income_expenses') {
       const e4 = validateModule4(localOrganizer.m4_wages, activeTaxYear);
       const e5 = validateModule5(localOrganizer.m5_interest, activeTaxYear);
+      const e10 = validateModule10Retirement(localOrganizer.m10_retirement, activeTaxYear);
       const e6 = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
       const e8 = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
-      errs = { ...e4, ...e5, ...e6, ...e8 };
+      errs = { ...e4, ...e5, ...e10, ...e6, ...e8 };
     } else if (selectedModId === 'm4') {
       errs = validateModule4(localOrganizer.m4_wages, activeTaxYear);
     } else if (selectedModId === 'm5') {
       errs = validateModule5(localOrganizer.m5_interest, activeTaxYear);
+    } else if (selectedModId === 'm10') {
+      errs = validateModule10Retirement(localOrganizer.m10_retirement, activeTaxYear);
     } else if (selectedModId === 'm6') {
       errs = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
     } else if (selectedModId === 'm7') {
@@ -230,6 +238,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const m3 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m3_presence || {};
   const m4 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m4_wages || {};
   const m5 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m5_interest || {};
+  const m10 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m10_retirement || {};
   const m6 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m6_stocks || {};
   const m7 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m7_foreign || {};
   const m8 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m8_deductions || {};
@@ -244,79 +253,65 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   return (
     <div className="space-y-6 font-sans animate-in fade-in duration-150">
       {/* 1. Header Bar matching Client Side Tax Organizer */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
-              Tax Info and Files {viewMode === 'AGENT_EDIT' ? '' : '— Audit'}
-            </h2>
-            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
-              {progressPercent}% Complete
-            </span>
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
+                Tax Info and Files {viewMode === 'AGENT_EDIT' ? '' : '— Audit'}
+              </h2>
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
+                {progressPercent}% Complete
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
+              ATH Tax Services IRS-compliant intake wizard. Entering responses for {customerName}.
+            </p>
           </div>
-          <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
-            ATH Tax Services IRS-compliant intake wizard. Entering responses for {customerName}.
-          </p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          {/* Mode Toggles */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {/* Mode Tabs */}
+            <AppTabs
+              tabs={[
+                ...(canEdit
+                  ? [
+                      {
+                        id: 'AGENT_EDIT',
+                        label: 'Live Entry',
+                        icon: Edit3,
+                      },
+                    ]
+                  : []),
+                {
+                  id: 'INSPECTOR',
+                  label: 'Review',
+                  icon: Eye,
+                },
+                {
+                  id: 'GRID',
+                  label: 'Grid',
+                  icon: LayoutGrid,
+                },
+              ]}
+              activeTab={viewMode}
+              onChange={(mode) => setViewMode(mode as any)}
+              className="border-b-0"
+            />
+
             {canEdit && (
-              <button
-                type="button"
-                onClick={() => setViewMode('AGENT_EDIT')}
-                className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'AGENT_EDIT'
-                    ? 'bg-[#16A34A] text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-black'
-                  }`}
-                title="Fill / edit fields on call"
+              <Button
+                size="sm"
+                onClick={handleSaveOrganizerOnCall}
+                disabled={isSaving}
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
               >
-                <Edit3 className="w-3 h-3" />
-                <span>Live Entry</span>
-              </button>
+                <Save className="w-3.5 h-3.5" />
+                <span>{isSaving ? 'Saving to DB...' : 'Save All Drafts'}</span>
+              </Button>
             )}
-
-            <button
-              type="button"
-              onClick={() => setViewMode('INSPECTOR')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'INSPECTOR'
-                  ? 'bg-[#16A34A] text-white shadow-2xs'
-                  : 'text-slate-600 hover:text-black'
-                }`}
-              title="Review & Audit responses"
-            >
-              <Eye className="w-3 h-3" />
-              <span>Review</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setViewMode('GRID')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'GRID'
-                  ? 'bg-[#16A34A] text-white shadow-2xs'
-                  : 'text-slate-600 hover:text-black'
-                }`}
-              title="Grid overview"
-            >
-              <LayoutGrid className="w-3 h-3" />
-              <span>Grid</span>
-            </button>
           </div>
-
-          {canEdit && (
-            <Button
-              size="sm"
-              onClick={handleSaveOrganizerOnCall}
-              disabled={isSaving}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{isSaving ? 'Saving to DB...' : 'Save All Drafts'}</span>
-            </Button>
-          )}
         </div>
-      </div>
+      )}
 
       {/* 2. Top Horizontal 5-Module Navigator Bar */}
       <AppTabs
@@ -454,10 +449,12 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
               lockTaxYear={true}
               isOrganizerMode={true}
               readOnly={!canEdit}
+              leadId={leadId}
+              filingType={effectiveFilingType}
             />
           )}
 
-          {(selectedModId === 'm_income' || selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm6') && (
+          {(selectedModId === 'm_income' || selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm10' || selectedModId === 'm6') && (
             <div className="space-y-6">
               {/* Part 1: W-2 Wages */}
               <div className="space-y-2">
@@ -477,10 +474,19 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                 <ReviewModule5Interest m5={m5} />
               </div>
 
-              {/* Part 3: 1099-B Stocks & Gains */}
+              {/* Part 3: Form 1099-R IRA & Retirement Distributions */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Part 3</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Part 3</span>
+                  <h4 className="text-xs font-bold text-slate-800">Form 1099-R IRA &amp; Retirement Distributions / Early Withdrawals</h4>
+                </div>
+                <ReviewModule10Retirement m10={m10} />
+              </div>
+
+              {/* Part 4: 1099-B Stocks & Gains */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Part 4</span>
                   <h4 className="text-xs font-bold text-slate-800">1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</h4>
                 </div>
                 <ReviewModule6Stocks m6={m6} />
@@ -523,6 +529,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
                 currentModIndex={currentModIndex}
                 saving={isSaving}
                 filingType={effectiveFilingType}
+                leadId={leadId}
               />
             </div>
           )}

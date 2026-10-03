@@ -3,6 +3,7 @@ import { usePrepReviewManager } from '../hooks/usePrepReviewManager';
 import { PrepManagerQueueTable } from '../components/manager/PrepManagerQueueTable';
 import { PrepAssignLeadDrawer } from '../components/manager/PrepAssignLeadDrawer';
 import { PrepAutoDistributeModal } from '../components/manager/PrepAutoDistributeModal';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import {
   ShieldCheck,
@@ -114,33 +115,16 @@ export const PrepDepartmentScreen: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl">
-            <button
-              type="button"
-              onClick={() => setViewMode('QUEUE')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'QUEUE'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ListFilter className="w-3.5 h-3.5" />
-              <span>Pipeline Queue</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('ANALYTICS')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'ANALYTICS'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>Velocity &amp; Charts</span>
-            </button>
-          </div>
+          {/* View Mode Toggle AppTabs */}
+          <AppTabs
+            tabs={[
+              { id: 'QUEUE', label: 'Pipeline Queue', icon: ListFilter },
+              { id: 'ANALYTICS', label: 'Velocity & Charts', icon: BarChart3 },
+            ]}
+            activeTab={viewMode}
+            onChange={(id) => setViewMode(id as any)}
+            size="sm"
+          />
 
           <Button
             variant="outline"

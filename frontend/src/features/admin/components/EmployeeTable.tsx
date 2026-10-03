@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import { AppTable } from '@/shared/components/AppTable';
-import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { Button } from '@/shared/components/Button';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { UserPlus, Users, DollarSign, FileCheck, ShieldCheck, Calculator } from 'lucide-react';
 import type { EmployeeItem, DepartmentType } from '../types/employee.types';
 import { getEmployeeColumns } from '../columns/employee-columns';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
 
 interface EmployeeTableProps {
   employees: EmployeeItem[];
@@ -17,7 +18,6 @@ interface EmployeeTableProps {
   onOpenBulkModal?: () => void;
   onEditEmployee: (employee: EmployeeItem) => void;
   onToggleStatus: (employee: EmployeeItem) => void;
-  // Pagination
   currentPage: number;
   totalPages: number;
   totalItems: number;
@@ -35,7 +35,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   activeDepartment,
   onDepartmentChange,
   onOpenAddDrawer,
-  onOpenBulkModal: _onOpenBulkModal,
   onEditEmployee,
   onToggleStatus,
   currentPage,
@@ -55,152 +54,68 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
     [onEditEmployee, onToggleStatus]
   );
 
+  const departmentTabs = useMemo(() => [
+    { id: 'ALL' as DepartmentType, label: `All Staff (${totalEmployeesCount})`, icon: Users },
+    { id: 'DOC' as DepartmentType, label: 'Documenters', icon: Users },
+    { id: 'PREP_REVIEW' as DepartmentType, label: 'Tax Prep & Review', icon: Calculator },
+    { id: 'SALES' as DepartmentType, label: 'Sales Team', icon: DollarSign },
+    { id: 'FILE_OP' as DepartmentType, label: 'File Operators', icon: FileCheck },
+    { id: 'ADMIN' as DepartmentType, label: 'Admins', icon: ShieldCheck },
+  ], [totalEmployeesCount]);
+
+  const handleExportExcel = () => {
+    exportTableToExcel(
+      employees,
+      [
+        { header: 'Employee Name', key: 'fullName' },
+        { header: 'Email', key: 'email' },
+        { header: 'Role', key: 'roleLabel' },
+        { header: 'Department', key: 'department' },
+        { header: 'Phone', key: 'mobile' },
+        { header: 'Status', key: 'status', format: (e) => (e.isActive ? 'Active' : 'Inactive') },
+      ],
+      'employee_directory'
+    );
+  };
+
   return (
     <div className="space-y-4">
-      {/* Search & Actions Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-        {/* Left: Search & Department Tabs */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
-          <div className="w-full sm:w-72">
-            <AppSearchInput
-              value={searchQuery}
-              onChange={onSearchChange}
-              placeholder="Search by name, email, phone, role..."
-            />
-          </div>
+      {/* Top Department Switcher Tabs */}
+      <AppTabs
+        tabs={departmentTabs}
+        activeTab={activeDepartment}
+        onChange={(dept) => onDepartmentChange(dept as DepartmentType)}
+      />
 
-          {/* Department Filter Pills */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeDepartment === 'ALL'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All Staff ({totalEmployeesCount})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('DOC')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'DOC'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              Documenters
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('PREP_REVIEW')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'PREP_REVIEW'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Calculator className="w-3.5 h-3.5" />
-              Tax Prep &amp; Review
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('SALES')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'SALES'
-                  ? 'bg-white text-purple-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <DollarSign className="w-3.5 h-3.5" />
-              Sales Team
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('FILE_OP')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'FILE_OP'
-                  ? 'bg-white text-[#16A34A] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <FileCheck className="w-3.5 h-3.5" />
-              File Operators
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('ADMIN')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'ADMIN'
-                  ? 'bg-white text-slate-800 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Admins
-            </button>
-          </div>
-        </div>
-
-        {/* Right: Add Staff Action Button */}
-        <div className="flex items-center gap-3 justify-end">
-          {/* <Button
-            type="button"
-            variant="outline"
-            size="md"
-            onClick={onOpenBulkModal}
-            className="border-slate-300 text-slate-700 hover:bg-slate-50"
-          >
-            <UploadCloud className="w-4 h-4 mr-2 text-slate-500" />
-            Bulk Onboard Staff
-          </Button> */}
-
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            onClick={onOpenAddDrawer}
-            className="px-5 shadow-sm"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Add Staff Member
-          </Button>
-        </div>
-      </div>
-
-      {/* Directory Table with Built-in Server Pagination */}
-      <AppTable<EmployeeItem>
-        title="Staff & Team Member Directory"
-        description="Manage active operational personnel, department assignments, and login permissions."
+      <UnifiedTable<EmployeeItem>
         columns={columns}
         data={employees}
+        title="STAFF & EMPLOYEE DIRECTORY"
+        subtitle="Track and manage records, roles, login credentials, and department assignments for all employees."
         isLoading={isLoading}
-        selectable={false}
-        searchable={false}
-        density="comfortable"
-        striped
-        rowClassName={(row) =>
-          !row.isActive
-            ? 'opacity-60 bg-slate-100/80 hover:opacity-90 transition-opacity'
-            : undefined
-        }
-        pagination={{
+        searchPlaceholder="Search by name, email, phone, designation..."
+        searchValue={searchQuery}
+        onSearchChange={onSearchChange}
+        serverPagination={{
           currentPage,
           totalPages,
-          totalItems,
-          itemsPerPage,
+          totalEntries: totalItems,
+          pageSize: itemsPerPage,
           onPageChange,
-          onPerPageChange,
-          perPageOptions: [5, 10, 20, 50],
+          onPageSizeChange: onPerPageChange,
         }}
+        onExportExcel={handleExportExcel}
+        extraHeaderActions={
+          <Button
+            type="button"
+            size="sm"
+            onClick={onOpenAddDrawer}
+            className="h-8 px-3 text-xs font-medium bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>Add Staff Member</span>
+          </Button>
+        }
         emptyText="No staff members found matching active filters."
       />
     </div>

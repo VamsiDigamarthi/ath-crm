@@ -1,13 +1,12 @@
 import React, { useMemo } from 'react';
-import { AppTable } from '@/shared/components/AppTable';
-import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { Button } from '@/shared/components/Button';
 import { Send, Trash2 } from 'lucide-react';
 import type { ParsedLeadRow, BulkImportStatsData, ApplicationPriority } from '../types/bulk-import.types';
 import type { StatusFilterType } from '../hooks/useLeadTableFilters';
 import { getBulkImportColumns } from '../columns/bulk-import-columns';
-import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 
 interface BulkImportTableProps {
   rows: ParsedLeadRow[];
@@ -32,15 +31,9 @@ interface BulkImportTableProps {
 
 export const BulkImportTable: React.FC<BulkImportTableProps> = ({
   rows,
-  totalRawRows,
   stats,
   selectedRows,
-  searchQuery,
-  onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
-  priorityFilter,
-  onPriorityFilterChange,
+  onSelectionChange,
   onDeleteSelected,
   onProceedIngestion,
   onConfirmIngestion,
@@ -49,120 +42,78 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
   isIngesting,
   taxYear,
 }) => {
-  // Memoized column definitions extracted to modular TableColumns file
   const columns = useMemo(() => getBulkImportColumns(), []);
+
+  const handleExport = () => {
+    exportTableToExcel(
+      rows,
+      [
+        { header: 'Taxpayer', key: 'fullName', format: (r) => r.fullName || `${r.firstName || ''} ${r.lastName || ''}` },
+        { header: 'Email', key: 'email' },
+        { header: 'Phone', key: 'phone' },
+        { header: 'Row Number', key: 'rowNumber' },
+        { header: 'Validation Status', key: 'validationStatus' },
+        { header: 'Validation Message', key: 'validationMessage' },
+      ],
+      'bulk_leads_preview'
+    );
+  };
 
   return (
     <div className="space-y-4">
-      {/* Top Filter & Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-        {/* Left Side: Search & Filter Tabs */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 flex-wrap">
-          <div className="w-full sm:w-72">
-            <AppSearchInput
-              value={searchQuery}
-              onChange={onSearchChange}
-              placeholder="Search by name, email, phone, city..."
-            />
-          </div>
-
-          <PriorityFilterSelect
-            value={priorityFilter}
-            onChange={onPriorityFilterChange}
-          />
-
-          {/* Status Filter Pills */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => onStatusFilterChange('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                statusFilter === 'ALL'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All Records ({totalRawRows})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onStatusFilterChange('VALID')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                statusFilter === 'VALID'
-                  ? 'bg-white text-[#16A34A] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Ready ({stats.valid})
-            </button>
-
-            {stats.invalid > 0 && (
-              <button
-                type="button"
-                onClick={() => onStatusFilterChange('INVALID')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  statusFilter === 'INVALID'
-                    ? 'bg-white text-rose-600 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Needs Review ({stats.invalid})
-              </button>
-            )}
-          </div>
+      {/* Top Action Bar */}
+      <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200">
+        <div className="text-xs text-zinc-600 font-medium">
+          Tax Year: <strong className="text-zinc-900 font-semibold">TY{taxYear}</strong> &bull; Total: <strong className="text-zinc-900">{rows.length}</strong> &bull; Valid: <strong className="text-emerald-700">{stats.valid}</strong> &bull; Invalid: <strong className="text-rose-600">{stats.invalid}</strong>
         </div>
 
-        {/* Right Side: Primary Import Button & Batch Operations */}
-        <div className="flex items-center gap-3 justify-end">
+        <div className="flex items-center gap-2">
           {selectedRows.length > 0 && (
             <Button
               type="button"
               variant="outline"
-              size="md"
+              size="sm"
               onClick={onDeleteSelected}
-              className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
+              className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 cursor-pointer"
             >
-              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+              <Trash2 className="w-3.5 h-3.5 mr-1" />
               Remove Selected ({selectedRows.length})
             </Button>
           )}
 
           <Button
             type="button"
-            variant="primary"
-            size="md"
-            loading={isIngesting}
-            disabled={stats.valid === 0}
+            size="sm"
+            disabled={stats.valid === 0 || isIngesting}
             onClick={onProceedIngestion}
-            className="px-5 shadow-sm"
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium px-4 cursor-pointer"
           >
-            <Send className="w-4 h-4 mr-2" />
+            <Send className="w-3.5 h-3.5 mr-1.5" />
             Import {stats.valid} Leads
           </Button>
         </div>
       </div>
 
-      {/* Reusable AppTable with Pagination, Status Indicators, and Sorting (No Checkboxes) */}
-      <AppTable<ParsedLeadRow>
-        title="Parsed Lead Dataset Preview"
-        description={`Displaying records from CSV upload for Tax Year ${taxYear}. Records will be deduplicated against master customer profiles upon server ingestion.`}
-        columns={columns}
+      <UnifiedTable<ParsedLeadRow>
+        title="PARSED LEAD DATASET PREVIEW"
+        subtitle={`Records parsed from CSV file for Tax Year ${taxYear}. Records will be deduplicated upon ingestion.`}
         data={rows}
-        selectable={false}
-        searchable={false} /* Handled above by dedicated AppSearchInput */
-        density="comfortable"
-        striped
-        emptyText="No matching lead records found for current filters."
+        columns={columns}
+        isLoading={false}
+        enableSelection={true}
+        selectedRows={selectedRows}
+        onSelectionChange={onSelectionChange}
+        searchPlaceholder="Search parsed leads by name, email, phone..."
+        onExportExcel={handleExport}
+        emptyText="No matching parsed records found."
       />
 
-      {/* Confirmation Dialog */}
       <AppConfirmDialog
         isOpen={showConfirmModal}
         onClose={onCloseConfirmModal}
         onConfirm={onConfirmIngestion}
         title="Confirm Lead Import Pipeline"
-        description={`You are about to submit ${stats.valid} lead records to the server for Tax Year ${taxYear}. The server deduplication engine will check existing SSN/email profiles and route new records to the Documenter Outreach queue.`}
+        description={`You are about to submit ${stats.valid} lead records to the server for Tax Year ${taxYear}.`}
         confirmLabel={`Import ${stats.valid} Leads`}
         variant="success"
         isLoading={isIngesting}

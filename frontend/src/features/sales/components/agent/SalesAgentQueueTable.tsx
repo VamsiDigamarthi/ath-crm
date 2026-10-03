@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { ColumnDef } from '@tanstack/react-table';
 import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
 import { SalesStageBadge } from '../common/SalesStageBadge';
-import { PriorityBadge } from '@/shared/components/PriorityBadge';
-import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
-import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
-import { calculateReturnComplexity } from '../../utils/complexity-evaluator';
 import { SalesReturnToAdminModal } from '../common/SalesReturnToAdminModal';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
+import { SYSTEM_PAYMENT_STATUSES } from '@/shared/constants/system-enums';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface SalesAgentQueueTableProps {
@@ -17,426 +17,239 @@ interface SalesAgentQueueTableProps {
   onRefresh?: () => void;
 }
 
-export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ leads, isLoading = false, onRefresh }) => {
+export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
+  leads,
+  isLoading = false,
+  onRefresh,
+}) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'ALL' | 'AWAITING' | 'QUOTED' | 'PAID' | 'REVERTED'>('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('ALL');
-  const [complexityFilter, setComplexityFilter] = useState<string>('ALL');
-
   const [selectedLeadForReturn, setSelectedLeadForReturn] = useState<SalesLeadItem | null>(null);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
 
-  const isReturnReverted = (lead: SalesLeadItem) => {
-    const draftStatus = (lead.taxDraftSummary as any)?.status;
-    const lastRevert = (lead.taxDraftSummary as any)?.lastRevert;
-    return (
-      lead.currentStage === 'CORRECTION_NEEDED' ||
-      lead.currentStage === 'DOC_OUTREACH' ||
-      lead.currentStage === 'DOC_PREP' ||
-      draftStatus === 'REVISION_REQUESTED' ||
-      draftStatus === 'REVERTED_TO_DOCUMENTER' ||
-      Boolean(lastRevert && !lastRevert.resolved)
+  const columns = useMemo<ColumnDef<SalesLeadItem, any>[]>(
+    () => [
+      {
+        id: 'taxpayer',
+        header: 'TAXPAYER',
+        accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
+        cell: ({ row }) => (
+          <TaxpayerCell
+            name={row.original.taxpayerName}
+            email={row.original.taxpayerEmail}
+          />
+        ),
+      },
+      {
+        id: 'taxYear',
+        header: 'TY',
+        accessorFn: (row) => `TY ${row.taxYear || 2025}`,
+        cell: ({ row }) => (
+          <span className="text-xs font-medium text-slate-700">
+            {row.original.taxYear || 2025}
+          </span>
+        ),
+      },
+      {
+        id: 'state',
+        header: 'STATE',
+        accessorKey: 'stateOfResidence',
+        cell: ({ row }) => (
+          <span className="text-xs font-normal text-slate-700">
+            {row.original.stateOfResidence || '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'refund',
+        header: '1040 REFUND',
+        accessorFn: (row) => row.federalRefund || row.balanceDue || 0,
+        cell: ({ row }) => {
+          const fed = Number(row.original.federalRefund) || 0;
+          const due = Number(row.original.balanceDue) || 0;
+          if (fed > 0) {
+            return (
+              <span className="text-xs font-medium text-emerald-600">
+                +${fed.toLocaleString()}
+              </span>
+            );
+          }
+          if (due > 0) {
+            return (
+              <span className="text-xs font-medium text-rose-600">
+                -${due.toLocaleString()}
+              </span>
+            );
+          }
+          return <span className="text-xs font-normal text-slate-500">$0</span>;
+        },
+      },
+      {
+        id: 'quotedFee',
+        header: 'QUOTED FEE',
+        accessorFn: (row) => row.feeBreakdown?.totalServiceFee || 0,
+        cell: ({ row }) => {
+          const fee = Number(row.original.feeBreakdown?.totalServiceFee) || 0;
+          const isQuoted = Boolean(row.original.feeBreakdown?.isQuoted);
+          return (
+            <span className={`text-xs ${isQuoted ? 'font-medium text-slate-900' : 'font-normal text-slate-500'}`}>
+              {fee > 0 ? `$${fee}` : 'Unquoted'}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'payment',
+        header: 'PAYMENT',
+        accessorKey: 'paymentStatus',
+        meta: {
+          filterType: 'enum',
+          filterOptions: SYSTEM_PAYMENT_STATUSES,
+        },
+        cell: ({ row }) => {
+          const status = row.original.paymentStatus || 'UNPAID';
+          const isPaid = status === 'PAID';
+          return (
+            <span
+              className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded ${
+                isPaid
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : status === 'PAYMENT_LINK_SENT'
+                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                  : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {status.replace(/_/g, ' ')}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'esign',
+        header: '8879 SIGN',
+        accessorKey: 'esignStatus',
+        meta: {
+          filterType: 'enum',
+          filterOptions: [
+            { label: 'Signed', value: 'SIGNED' },
+            { label: 'Sent', value: 'SENT' },
+            { label: 'Not Sent', value: 'NOT_SENT' },
+          ],
+        },
+        cell: ({ row }) => {
+          const status = row.original.esignStatus || 'NOT_SENT';
+          const isSigned = status === 'SIGNED';
+          return (
+            <span
+              className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded ${
+                isSigned
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : status === 'SENT'
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                  : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {status.replace(/_/g, ' ')}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'stage',
+        header: 'SALES STAGE',
+        accessorKey: 'currentStage',
+        meta: {
+          filterType: 'enum',
+          filterOptions: [
+            { label: 'Sales Pitch Queue', value: 'SALES_PITCH_QUEUE' },
+            { label: 'Sales Pitching', value: 'SALES_PITCHING' },
+            { label: 'Payment Pending', value: 'PAYMENT_PENDING' },
+            { label: 'Correction Needed', value: 'CORRECTION_NEEDED' },
+            { label: 'Paid - Filing Queue', value: 'FILING_QUEUE' },
+          ],
+        },
+        cell: ({ row }) => <SalesStageBadge stage={row.original.currentStage} />,
+      },
+      {
+        id: 'actions',
+        header: 'ACTION',
+        enableSorting: false,
+        enableHiding: false,
+        meta: {
+          disableMenu: true,
+          disableFilter: true,
+        },
+        cell: ({ row }) => {
+          const lead = row.original;
+          const isReverted =
+            lead.currentStage === 'CORRECTION_NEEDED' ||
+            (lead.taxDraftSummary as any)?.status === 'REVISION_REQUESTED';
+
+          return (
+            <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedLeadForReturn(lead);
+                  setIsReturnModalOpen(true);
+                }}
+                className="h-7 px-2 text-[11px] font-normal border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                title="Return lead to Super Admin"
+              >
+                <RotateCcw className="w-3 h-3 text-rose-500" />
+                <span className="hidden xl:inline">Return</span>
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={() => navigate(`/sales/agent/pitch/${lead.id || lead.applicationId}`)}
+                className={`h-7 px-2.5 text-[11px] text-white font-medium flex items-center gap-1 shadow-2xs cursor-pointer ${
+                  isReverted ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                {isReverted ? <RotateCcw className="w-3 h-3" /> : <PhoneCall className="w-3 h-3" />}
+                <span>{isReverted ? 'View' : 'Pitch'}</span>
+                <ArrowRight className="w-3 h-3" />
+              </Button>
+            </div>
+          );
+        },
+      },
+    ],
+    [navigate]
+  );
+
+  const handleExportExcel = () => {
+    exportTableToExcel(
+      leads,
+      [
+        { header: 'Taxpayer Name', key: 'taxpayerName' },
+        { header: 'Taxpayer Email', key: 'taxpayerEmail' },
+        { header: 'Tax Year', key: 'taxYear' },
+        { header: 'State', key: 'stateOfResidence' },
+        { header: 'Federal Refund', key: 'federalRefund', format: (l) => l.federalRefund || 0 },
+        { header: 'Balance Due', key: 'balanceDue', format: (l) => l.balanceDue || 0 },
+        { header: 'Quoted Fee', key: 'fee', format: (l) => l.feeBreakdown?.totalServiceFee || 0 },
+        { header: 'Payment Status', key: 'paymentStatus' },
+        { header: 'Form 8879 Status', key: 'esignStatus' },
+        { header: 'Stage', key: 'currentStage' },
+      ],
+      'sales_agent_queue'
     );
   };
-
-  const isPaidOrClosed = (lead: SalesLeadItem) => {
-    if (isReturnReverted(lead)) return false;
-    return (
-      lead.paymentStatus === 'PAID' ||
-      lead.currentStage === 'PAID_AND_AUTHORIZED' ||
-      lead.currentStage === 'FILING_QUEUE' ||
-      lead.currentStage === 'FILING_IN_PROGRESS' ||
-      lead.currentStage === 'FILING_SUCCESS'
-    );
-  };
-
-  const isQuotedOrPaymentPending = (lead: SalesLeadItem) => {
-    if (isReturnReverted(lead) || isPaidOrClosed(lead)) return false;
-    return (
-      lead.currentStage === 'QUOTATION_SENT' ||
-      lead.currentStage === 'PAYMENT_PENDING' ||
-      lead.paymentStatus === 'PAYMENT_LINK_SENT' ||
-      Boolean(lead.feeBreakdown?.isQuoted)
-    );
-  };
-
-  const isAwaitingPitch = (lead: SalesLeadItem) => {
-    if (isReturnReverted(lead) || isPaidOrClosed(lead) || isQuotedOrPaymentPending(lead)) return false;
-    return true;
-  };
-
-  const counts = useMemo(() => {
-    let awaiting = 0;
-    let quoted = 0;
-    let paid = 0;
-    let reverted = 0;
-
-    leads.forEach((lead) => {
-      if (isReturnReverted(lead)) reverted++;
-      else if (isPaidOrClosed(lead)) paid++;
-      else if (isQuotedOrPaymentPending(lead)) quoted++;
-      else awaiting++;
-    });
-
-    return {
-      all: leads.length,
-      awaiting,
-      quoted,
-      paid,
-      reverted,
-    };
-  }, [leads]);
-
-  const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
-      if (activeTab === 'AWAITING' && !isAwaitingPitch(lead)) return false;
-      if (activeTab === 'QUOTED' && !isQuotedOrPaymentPending(lead)) return false;
-      if (activeTab === 'PAID' && !isPaidOrClosed(lead)) return false;
-      if (activeTab === 'REVERTED' && !isReturnReverted(lead)) return false;
-
-      // Priority Filter
-      if (priorityFilter !== 'ALL' && (lead.priority || 'NO_PRIORITY') !== priorityFilter) return false;
-
-      // Complexity Filter
-      if (complexityFilter !== 'ALL') {
-        const comp = calculateReturnComplexity(lead);
-        if (comp.tier !== complexityFilter) return false;
-      }
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return (
-          (lead.taxpayerName || '').toLowerCase().includes(q) ||
-          (lead.taxpayerEmail || '').toLowerCase().includes(q) ||
-          (lead.taxpayerPhone || '').toLowerCase().includes(q) ||
-          (lead.stateOfResidence || '').toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [leads, activeTab, priorityFilter, complexityFilter, searchQuery]);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-      {/* 1. Header Bar: Title on Left, Search Input & Next Priority Action on Right */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 sm:p-5 border-b border-slate-100 bg-white">
-        <div>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-            <PhoneCall className="w-4 h-4 text-[#16A34A]" />
-            <span>My Assigned Tax Returns &amp; Client Pitch Deck</span>
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Review certified 1040 refund amounts, call taxpayers, quote custom filing fees, and process payment links.
-          </p>
-        </div>
-
-        {/* Search Input & Action Button on Right */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="w-64 sm:w-72">
-            <AppSearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search taxpayer, phone, email..."
-            />
-          </div>
-
-          <PriorityFilterSelect
-            value={priorityFilter}
-            onChange={setPriorityFilter}
-          />
-
-          {/* Complexity Filter Dropdown */}
-          <select
-            value={complexityFilter}
-            onChange={(e) => setComplexityFilter(e.target.value)}
-            className="h-8.5 text-xs font-bold bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs"
-          >
-            <option value="ALL">All Complexity</option>
-            <option value="BASIC">🟢 Basic (W-2)</option>
-            <option value="MODERATE">🟡 Moderate (1099/Stocks)</option>
-            <option value="COMPLEX">🟠 Complex (Sch C/Rental)</option>
-            <option value="SPECIALIZED">🔴 Specialized (Foreign/PFIC)</option>
-          </select>
-
-          {filteredLeads.length > 0 && (
-            <Button
-              size="sm"
-              onClick={() => navigate(`/sales/agent/pitch/${filteredLeads[0].id || filteredLeads[0].applicationId}`)}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 h-8.5 px-3.5 cursor-pointer shadow-2xs"
-            >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>Open Next Priority Pitch</span>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* 2. Filter Tabs Ribbon (Below Header) */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-100 bg-white overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveTab('ALL')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'ALL'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 bg-slate-50'
-          }`}
-        >
-          All Assigned ({counts.all})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('AWAITING')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'AWAITING'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/60'
-          }`}
-        >
-          <span>Awaiting Pitch</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-bold">
-            {counts.awaiting}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('QUOTED')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'QUOTED'
-              ? 'bg-purple-600 text-white shadow-xs'
-              : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/60'
-          }`}
-        >
-          <span>Quoted</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-bold">
-            {counts.quoted}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('PAID')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'PAID'
-              ? 'bg-[#16A34A] text-white shadow-xs'
-              : 'text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60'
-          }`}
-        >
-          <span>Paid &amp; E-Signed</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-bold">
-            {counts.paid}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('REVERTED')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'REVERTED'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300'
-          }`}
-        >
-          <RotateCcw className="w-3 h-3 text-amber-600" />
-          <span>Sent Back for Revision</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-            activeTab === 'REVERTED' ? 'bg-white/20 text-white' : 'bg-amber-200 text-amber-900'
-          }`}>
-            {counts.reverted}
-          </span>
-        </button>
-      </div>
-
-      {/* 3. Table: Full Width Edge-to-Edge Flush with Outer Card */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
-          <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
-            <tr>
-              <th className="py-3.5 px-4">Taxpayer Client</th>
-              <th className="py-3.5 px-4">State &amp; Visa</th>
-              <th className="py-3.5 px-4">Return Complexity</th>
-              <th className="py-3.5 px-4">Certified 1040 Refund</th>
-              <th className="py-3.5 px-4">Quoted Service Fee</th>
-              <th className="py-3.5 px-4">E-Sign &amp; Payment</th>
-              <th className="py-3.5 px-4">Sales Stage</th>
-              <th className="py-3.5 px-4 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {isLoading ? (
-              <tr>
-                <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                    <span>Loading live sales pitch queue...</span>
-                  </div>
-                </td>
-              </tr>
-            ) : filteredLeads.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
-                  No returns found in this filter tab.
-                </td>
-              </tr>
-            ) : (
-              filteredLeads.map((lead) => {
-                const isReverted = isReturnReverted(lead);
-                const lastRevert = (lead.taxDraftSummary as any)?.lastRevert;
-
-                return (
-                  <tr key={lead.id || lead.applicationId} className={`hover:bg-slate-50/70 transition-colors ${isReverted ? 'bg-amber-50/30' : ''}`}>
-                    {/* Taxpayer Client */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5 flex-wrap">
-                        <span>{lead.taxpayerName}</span>
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                          TY {lead.taxYear || 2025}
-                        </span>
-                        {lead.priority && (
-                          <PriorityBadge priority={lead.priority} size="sm" />
-                        )}
-                      </div>
-                      <div className="text-[11px] text-slate-500 font-medium">{lead.taxpayerEmail}</div>
-                      <div className="text-[10px] text-slate-400">{lead.taxpayerPhone}</div>
-                      {isReverted && lastRevert && (
-                        <div className="mt-1 text-[10px] text-amber-800 font-semibold bg-amber-100/80 px-2 py-0.5 rounded border border-amber-200 inline-block max-w-xs truncate" title={lastRevert.revertNotes}>
-                          Revert: {lastRevert.reasonCategory?.replace(/_/g, ' ') || 'Revision Needed'}
-                        </div>
-                      )}
-                    </td>
-
-                    {/* State & Visa */}
-                    <td className="py-3.5 px-4">
-                      <div className="text-slate-800 font-semibold text-xs">{lead.stateOfResidence}</div>
-                      <div className="text-[10px] text-slate-500 font-medium">{lead.visaType}</div>
-                    </td>
-
-                    {/* Return Complexity Score & Factors */}
-                    <td className="py-3.5 px-4">
-                      <ReturnComplexityBadge lead={lead} size="md" />
-                    </td>
-
-                    {/* Certified 1040 Refund */}
-                    <td className="py-3.5 px-4">
-                      {Number(lead.federalRefund) > 0 ? (
-                        <span className="font-bold text-[#16A34A] text-xs bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
-                          +${Number(lead.federalRefund).toLocaleString()} Fed Refund
-                        </span>
-                      ) : Number(lead.balanceDue) > 0 ? (
-                        <span className="font-bold text-rose-600 text-xs bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 inline-block">
-                          -${Number(lead.balanceDue).toLocaleString()} Tax Due
-                        </span>
-                      ) : (
-                        <span className="font-bold text-slate-600 text-xs bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 inline-block">
-                          $0 Fed Balance
-                        </span>
-                      )}
-                      <div className="text-[10px] text-slate-400 mt-0.5">QA by {lead.qaAuditorName || 'Senior Reviewer'}</div>
-                    </td>
-
-                    {/* Quoted Fee */}
-                    <td className="py-3.5 px-4">
-                      {lead.feeBreakdown?.isQuoted ? (
-                        <>
-                          <div className="font-bold text-slate-900 text-xs">
-                            ${lead.feeBreakdown.totalServiceFee}
-                          </div>
-                          <div className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            <span>Quoted &amp; Sent</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                            <span>{lead.feeBreakdown?.totalServiceFee > 0 ? `$${lead.feeBreakdown.totalServiceFee}` : '$0'}</span>
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200 font-bold">
-                              Unquoted
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-medium mt-0.5">
-                            {lead.feeBreakdown?.selectedStates?.length > 0
-                              ? `Fed + ${lead.feeBreakdown.selectedStates.length} State`
-                              : 'Federal Only'}
-                          </div>
-                        </>
-                      )}
-                    </td>
-
-                    {/* E-Sign & Payment Status */}
-                    <td className="py-3.5 px-4">
-                      <div className="flex flex-col gap-1 items-start">
-                        <span
-                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                            lead.paymentStatus === 'PAID'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : lead.paymentStatus === 'PAYMENT_LINK_SENT'
-                                ? 'bg-purple-100 text-purple-800'
-                                : 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          Payment: {lead.paymentStatus || 'UNPAID'}
-                        </span>
-
-                        <span
-                          className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
-                            lead.esignStatus === 'SIGNED'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : lead.esignStatus === 'SENT'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          8879: {lead.esignStatus || 'NOT_SENT'}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Sales Stage */}
-                    <td className="py-3.5 px-4">
-                      <SalesStageBadge stage={lead.currentStage} />
-                    </td>
-
-                    {/* Action */}
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedLeadForReturn(lead);
-                            setIsReturnModalOpen(true);
-                          }}
-                          className="border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 text-xs font-semibold flex items-center gap-1 cursor-pointer h-8 px-2"
-                          title="Release / Return lead back to Super Admin Pool"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
-                          <span className="hidden xl:inline">Return</span>
-                        </Button>
-
-                        <Button
-                          size="sm"
-                          onClick={() => navigate(`/sales/agent/pitch/${lead.id || lead.applicationId}`)}
-                          className={`text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer ${
-                            isReverted ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'
-                          }`}
-                        >
-                          {isReverted ? <RotateCcw className="w-3.5 h-3.5" /> : <PhoneCall className="w-3.5 h-3.5" />}
-                          <span>{isReverted ? 'View Pitch Live' : 'Open Pitch Deck'}</span>
-                          <ArrowRight className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+    <>
+      <UnifiedTable<SalesLeadItem>
+        columns={columns}
+        data={leads}
+        title="SALES CLOSER QUEUE"
+        subtitle="Review certified 1040 refund amounts, call taxpayers, quote custom filing fees, and process payment links."
+        isLoading={isLoading}
+        searchPlaceholder="Search taxpayer, email, state, status..."
+        onExportExcel={handleExportExcel}
+        onRowClick={(item) => navigate(`/sales/agent/pitch/${item.id || item.applicationId}`)}
+      />
 
       {/* Return to Admin Modal */}
       {selectedLeadForReturn && (
@@ -450,12 +263,10 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
           taxpayerName={selectedLeadForReturn.taxpayerName}
           taxYear={selectedLeadForReturn.taxYear || 2025}
           onReturnSuccess={() => {
-            if (onRefresh) {
-              onRefresh();
-            }
+            if (onRefresh) onRefresh();
           }}
         />
       )}
-    </div>
+    </>
   );
 };

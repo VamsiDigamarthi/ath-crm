@@ -45,7 +45,7 @@ export const AdminDashboardScreen: React.FC = () => {
       {/* Compact Width Left Sidebar with aligned h-16 Brand header */}
       <AppSidebar
         width={240}
-        variant="light"
+        variant="dark"
         accentColor="#16A34A"
         brand={{
           title: 'TaxCRM Engine',

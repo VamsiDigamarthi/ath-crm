@@ -67,7 +67,7 @@ import { useAuthStore } from '@/features/auth/store/auth-store';
 
 const DocumenterIndexRedirect: React.FC = () => {
   const { user } = useAuthStore();
-  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'ADMIN';
+  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'ADMIN';
   return <Navigate to={isManager ? '/documenter/manager' : '/documenter/agent'} replace />;
 };
 

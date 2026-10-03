@@ -99,14 +99,18 @@ export interface CustomerDocumentsResponse {
 }
 
 export const customerApi = {
-  getDashboard: async (taxYear?: string): Promise<{ success: boolean; data: CustomerDashboardResponse }> => {
-    const params = taxYear ? { taxYear } : {};
+  getDashboard: async (taxYear?: string, leadId?: string): Promise<{ success: boolean; data: CustomerDashboardResponse }> => {
+    const params: Record<string, any> = {};
+    if (taxYear) params.taxYear = taxYear;
+    if (leadId) params.leadId = leadId;
     const res: any = await apiClient.get('/customer/dashboard', { params });
     return res;
   },
 
-  getDocuments: async (taxYear?: string): Promise<{ success: boolean; data: CustomerDocumentsResponse }> => {
-    const params = taxYear ? { taxYear } : {};
+  getDocuments: async (taxYear?: string, leadId?: string): Promise<{ success: boolean; data: CustomerDocumentsResponse }> => {
+    const params: Record<string, any> = {};
+    if (taxYear) params.taxYear = taxYear;
+    if (leadId) params.leadId = leadId;
     const res: any = await apiClient.get('/customer/documents', { params });
     return res;
   },
@@ -115,12 +119,14 @@ export const customerApi = {
     file: File,
     documentCategory: string,
     taxYear?: string,
-    onProgress?: (pct: number) => void
+    onProgress?: (pct: number) => void,
+    leadId?: string
   ): Promise<{ success: boolean; data: CustomerDocumentItem }> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('documentCategory', documentCategory);
     if (taxYear) formData.append('taxYear', taxYear);
+    if (leadId) formData.append('leadId', leadId);
 
     const res: any = await apiClient.post('/customer/documents/upload', formData, {
       headers: {
@@ -140,12 +146,14 @@ export const customerApi = {
     files: File[],
     categories: Record<string, string>,
     taxYear?: string,
-    onProgress?: (pct: number) => void
+    onProgress?: (pct: number) => void,
+    leadId?: string
   ): Promise<{ success: boolean; data: CustomerDocumentItem[] }> => {
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));
     formData.append('categories', JSON.stringify(categories));
     if (taxYear) formData.append('taxYear', taxYear);
+    if (leadId) formData.append('leadId', leadId);
 
     const res: any = await apiClient.post('/customer/documents/upload-multiple', formData, {
       headers: {
@@ -167,18 +175,22 @@ export const customerApi = {
     documentCategory?: string;
     remarks?: string;
     taxYear?: string | number;
+    leadId?: string;
   }): Promise<{ success: boolean; data: CustomerDocumentItem }> => {
     const res: any = await apiClient.post('/customer/documents/drive-links', payload);
     return res;
   },
 
-  deleteDocument: async (id: string): Promise<{ success: boolean; message: string }> => {
-    const res: any = await apiClient.delete(`/customer/documents/${id}`);
+  deleteDocument: async (id: string, leadId?: string): Promise<{ success: boolean; message: string }> => {
+    const params = leadId ? { leadId } : undefined;
+    const res: any = await apiClient.delete(`/customer/documents/${id}`, { params });
     return res;
   },
 
-  downloadDocument: async (id: string, fileName: string): Promise<void> => {
+  downloadDocument: async (id: string, fileName: string, leadId?: string): Promise<void> => {
+    const params = leadId ? { leadId } : undefined;
     const response: any = await apiClient.get(`/customer/documents/${id}/download`, {
+      params,
       responseType: 'blob',
     });
 
@@ -192,19 +204,22 @@ export const customerApi = {
     window.URL.revokeObjectURL(url);
   },
 
-  getOrganizer: async (taxYear?: string): Promise<{ success: boolean; data: OrganizerResponse }> => {
-    const params = taxYear ? { taxYear } : {};
+  getOrganizer: async (taxYear?: string, filingType?: string, leadId?: string): Promise<{ success: boolean; data: OrganizerResponse }> => {
+    const params: Record<string, any> = {};
+    if (taxYear) params.taxYear = taxYear;
+    if (filingType) params.filingType = filingType;
+    if (leadId) params.leadId = leadId;
     const res: any = await apiClient.get('/customer/organizer', { params });
     return res;
   },
 
-  saveOrganizer: async (taxYear: number, organizerData: OrganizerData): Promise<{ success: boolean; data: any }> => {
-    const res: any = await apiClient.put('/customer/organizer', { taxYear, organizerData });
+  saveOrganizer: async (taxYear: number, organizerData: OrganizerData, leadId?: string): Promise<{ success: boolean; data: any }> => {
+    const res: any = await apiClient.put('/customer/organizer', { taxYear, organizerData, leadId });
     return res;
   },
 
-  startTaxYearReturn: async (taxYear: number, filingType: 'INDIVIDUAL' | 'BUSINESS' = 'INDIVIDUAL'): Promise<{ success: boolean; data: any; message: string }> => {
-    const res: any = await apiClient.post('/customer/tax-years', { taxYear, filingType });
+  startTaxYearReturn: async (taxYear: number, filingType: 'INDIVIDUAL' | 'BUSINESS' = 'INDIVIDUAL', leadId?: string): Promise<{ success: boolean; data: any; message: string }> => {
+    const res: any = await apiClient.post('/customer/tax-years', { taxYear, filingType, leadId });
     return res;
   },
 };
@@ -238,6 +253,11 @@ export interface OrganizerData {
     firstPortOfEntryDate?: string;
     stayMoreThan6Months2026?: 'YES' | 'NO';
     monthsStayedInUs2025?: number;
+    spouseSameAddressAsTaxpayer?: boolean;
+    spouseResidentialAddress?: string;
+    spouseCity?: string;
+    spouseState?: string;
+    spouseZipCode?: string;
   };
   m2_dependents: {
     hasSpouse?: boolean;
@@ -252,6 +272,11 @@ export interface OrganizerData {
     spouseWorkPhone?: string;
     spouseEmail?: string;
     spouseRelationship?: string;
+    spouseSameAddressAsTaxpayer?: boolean;
+    spouseResidentialAddress?: string;
+    spouseCity?: string;
+    spouseState?: string;
+    spouseZipCode?: string;
     spouseList?: Array<{
       firstName: string;
       middleName?: string;
@@ -263,6 +288,11 @@ export interface OrganizerData {
       workPhone?: string;
       email?: string;
       relationship: string;
+      sameAddressAsTaxpayer?: boolean;
+      residentialAddress?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
     }>;
     hasDependents: boolean;
     childCount: number;
@@ -377,8 +407,11 @@ export interface OrganizerData {
     hasInterestDividends: boolean;
     bankName?: string;
     interestAmount?: number;
+    interestFedTaxWithheld?: number;
     dividendAmount?: number;
+    dividendFedTaxWithheld?: number;
     form1099OidAmount?: number;
+    form1099OidFedTaxWithheld?: number;
     interestAccounts?: Array<{
       bankName: string;
       interestAmount: number;
@@ -389,6 +422,27 @@ export interface OrganizerData {
       ordinaryDividends: number;
       qualifiedDividends: number;
       capitalGainDistributions?: number;
+      box4Withholding?: number;
+    }>;
+  };
+  m10_retirement?: {
+    hasRetirementDistribution: boolean;
+    payerName?: string;
+    distributionType?: 'NORMAL' | 'EARLY_NO_EXCEPTION' | 'EARLY_EXCEPTION' | 'ROLLOVER' | 'ROTH_CONVERSION' | 'DISABILITY' | 'DEATH' | 'OTHER' | string;
+    grossDistribution?: number;
+    taxableAmount?: number;
+    fedTaxWithheld?: number;
+    stateTaxWithheld?: number;
+    earlyWithdrawalReason?: 'NO_EXCEPTION' | 'FIRST_HOME' | 'HIGHER_ED' | 'MEDICAL_EXPENSES' | 'HEALTH_INSURANCE_UNEMPLOYED' | 'BIRTH_ADOPTION' | 'DISABILITY' | 'SEPP' | 'IRS_LEVY' | 'MILITARY_RESERVIST' | 'OTHER' | string;
+    reasonExplanation?: string;
+    isRothIra?: boolean;
+    distributionsList?: Array<{
+      payerName: string;
+      distributionType: string;
+      grossAmount: number;
+      fedTaxWithheld: number;
+      earlyWithdrawalReason?: string;
+      reasonExplanation?: string;
     }>;
   };
   m6_stocks: {

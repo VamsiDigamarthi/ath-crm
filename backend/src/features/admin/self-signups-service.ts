@@ -257,7 +257,7 @@ export class SelfSignupsService {
       // Active Documenter staff for assignment
       prisma.user.findMany({
         where: {
-          role: { in: [Role.DOC_AGENT, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD] },
+          role: { in: [Role.DOC_AGENT, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.SALES_AGENT] },
           isActive: true,
         },
         select: {

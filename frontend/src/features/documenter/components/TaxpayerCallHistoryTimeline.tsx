@@ -14,6 +14,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
+import { AppTabs } from '@/shared/components/AppTabs';
 import type { CallLogItem } from '../types/documenter.types';
 
 interface TaxpayerCallHistoryTimelineProps {
@@ -150,40 +151,28 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Filter Pills */}
-          <div className="inline-flex p-1 rounded-lg bg-slate-100 border border-slate-200 text-xs">
-            <button
-              onClick={() => setFilterType('ALL')}
-              className={`px-2.5 py-1 rounded-md font-bold transition-all ${
-                filterType === 'ALL'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All ({callLogs.length})
-            </button>
-            <button
-              onClick={() => setFilterType('CONNECTED')}
-              className={`px-2.5 py-1 rounded-md font-bold transition-all ${
-                filterType === 'CONNECTED'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Connected
-            </button>
-            <button
-              onClick={() => setFilterType('CALLBACKS')}
-              className={`px-2.5 py-1 rounded-md font-bold transition-all ${
-                filterType === 'CALLBACKS'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Callbacks
-            </button>
-          </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
+          {/* Filter Tabs */}
+          <AppTabs
+            tabs={[
+              {
+                id: 'ALL',
+                label: 'All Calls',
+                count: callLogs.length,
+              },
+              {
+                id: 'CONNECTED',
+                label: 'Connected',
+              },
+              {
+                id: 'CALLBACKS',
+                label: 'Callbacks',
+              },
+            ]}
+            activeTab={filterType}
+            onChange={(tab) => setFilterType(tab as any)}
+            className="border-b-0"
+          />
 
           {!readOnly && (
             <>

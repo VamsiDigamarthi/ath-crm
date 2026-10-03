@@ -26,7 +26,7 @@ http://localhost:5173/customer/organizer?year=2027&type=INDIVIDUAL
 1) Min 1 row auto open ,if 2026 is current year in general info tab
 2) Fbar and fatca info need the bank information types from https://bsaefiling.fincen.gov/file/fbar/html
 3) Do you need Fatca to be filed ? question (single > 50k usd) (married > 100k usd) 
-4) Fbar and Fatca tab to be added in business filing too
+4) Fbar and Fatca tab to be added in   filing too
 5) In fbar and fatca show some general info of spouse and self with close accordion function
 7) Edit button in all the tabs so they will be aware to lock them
 8) STepper info view in the client taxyear detail view http://localhost:5173/customer/organizer?year=2027&type=INDIVIDUAL from https://theworknova.esconsulting.cloud/talent-360/requirements/8c04e500-f850-4c86-99d4-d54abcec085e

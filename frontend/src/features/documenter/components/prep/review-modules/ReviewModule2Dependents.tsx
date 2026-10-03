@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, User, Receipt, Eye, EyeOff, Briefcase, Phone, Mail, Globe, Calendar, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Users, User, Receipt, Eye, EyeOff, Briefcase, Phone, Mail, Globe, Calendar, ShieldCheck, HeartHandshake, Home } from 'lucide-react';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 
 interface ReviewModule2DependentsProps {
@@ -33,6 +33,11 @@ export const ReviewModule2Dependents: React.FC<ReviewModule2DependentsProps> = (
         workPhone: m2.spouseWorkPhone || '',
         email: m2.spouseEmail || '',
         relationship: m2.spouseRelationship || 'Spouse',
+        sameAddressAsTaxpayer: m2.spouseSameAddressAsTaxpayer !== undefined ? m2.spouseSameAddressAsTaxpayer : true,
+        residentialAddress: m2.spouseResidentialAddress || '',
+        city: m2.spouseCity || '',
+        state: m2.spouseState || '',
+        zipCode: m2.spouseZipCode || '',
       }] : []);
 
   const dependents = m2.dependentsList || [];
@@ -186,6 +191,28 @@ export const ReviewModule2Dependents: React.FC<ReviewModule2DependentsProps> = (
                         {val(sp.email)}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Spouse Residential Address Details */}
+                  <div className="p-3 rounded-lg bg-slate-50/80 border border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Home className="w-4 h-4 text-slate-500 shrink-0" />
+                      <div>
+                        <span className="text-slate-400 font-medium block text-[10px]">Spouse Residential Address</span>
+                        <span className="font-bold text-slate-800">
+                          {sp.sameAddressAsTaxpayer !== false
+                            ? 'Same as primary taxpayer address'
+                            : (sp.residentialAddress
+                              ? `${sp.residentialAddress}, ${sp.city || ''}, ${sp.state || ''} ${sp.zipCode || ''}`
+                              : 'Separate address not provided')}
+                        </span>
+                      </div>
+                    </div>
+                    {sp.sameAddressAsTaxpayer !== false && (
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                        Shared Household
+                      </span>
+                    )}
                   </div>
                 </div>
               );

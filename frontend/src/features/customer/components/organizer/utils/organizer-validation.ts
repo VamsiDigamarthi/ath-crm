@@ -1,5 +1,6 @@
 import { type OrganizerData } from '../../../services/customer-api';
 import { parseUsDate } from './organizer-date-helpers';
+import { isValidUsState } from '@/shared/constants/us-states';
 
 export type ValidationErrorMap = Record<string, string>;
 
@@ -136,8 +137,8 @@ export const validateModule1 = (data?: OrganizerData['m1_demographics']): Valida
   const state = (data.state || '').trim();
   if (!state) {
     errors.state = 'State is required';
-  } else if (state.length !== 2) {
-    errors.state = 'State must be a 2-letter code (e.g. TX, CA)';
+  } else if (!isValidUsState(state)) {
+    errors.state = 'Please select a valid US state';
   }
 
   // 13. ZIP Code
@@ -224,6 +225,11 @@ export const validateModule2 = (
         dob: data.spouseDob || '',
         ssn: data.spouseSsn || '',
         occupation: data.spouseOccupation || '',
+        sameAddressAsTaxpayer: data.spouseSameAddressAsTaxpayer !== undefined ? data.spouseSameAddressAsTaxpayer : true,
+        residentialAddress: data.spouseResidentialAddress || '',
+        city: data.spouseCity || '',
+        state: data.spouseState || '',
+        zipCode: data.spouseZipCode || '',
       };
 
   const hasAnySpouseField = !!(sp.firstName || sp.lastName || sp.dob || sp.ssn || sp.occupation);
@@ -270,6 +276,30 @@ export const validateModule2 = (
     const occupation = (sp.occupation || '').trim();
     if (!occupation) {
       errors.spouse_0_occupation = 'Spouse Occupation is required (e.g. Financial Analyst or Homemaker)';
+    }
+
+    // Validate separate spouse address if user unchecked "same address as taxpayer"
+    if (sp.sameAddressAsTaxpayer === false) {
+      const spAddr = (sp.residentialAddress || '').trim();
+      if (!spAddr) {
+        errors.spouse_0_residentialAddress = 'Spouse street address is required';
+      }
+      const spCity = (sp.city || '').trim();
+      if (!spCity) {
+        errors.spouse_0_city = 'Spouse city is required';
+      }
+      const spState = (sp.state || '').trim();
+      if (!spState) {
+        errors.spouse_0_state = 'Spouse state is required';
+      } else if (!isValidUsState(spState)) {
+        errors.spouse_0_state = 'Please select a valid US state for spouse';
+      }
+      const spZip = (sp.zipCode || '').trim();
+      if (!spZip) {
+        errors.spouse_0_zipCode = 'Spouse ZIP code is required';
+      } else if (!/^\d{5}(-\d{4})?$/.test(spZip)) {
+        errors.spouse_0_zipCode = 'Please enter a valid 5-digit US ZIP code';
+      }
     }
   }
 
@@ -408,9 +438,13 @@ export const validateModule3 = (
   historyList.forEach((row, idx) => {
     const st = (row.state || '').trim();
     if (!st) {
-      errors[`state_${idx}_state`] = 'Taxpayer State is required (e.g. TX, CA, NY)';
-    } else if (st.length > 2) {
-      errors[`state_${idx}_state`] = 'Please enter 2-letter state code (e.g. TX)';
+      errors[`state_${idx}_state`] = 'Taxpayer State is required';
+    } else if (!isValidUsState(st)) {
+      errors[`state_${idx}_state`] = 'Please select a valid US state';
+    }
+
+    if (row.spouseState && row.spouseState.trim() && !isValidUsState(row.spouseState)) {
+      errors[`state_${idx}_spouseState`] = 'Please select a valid US state for spouse';
     }
 
     if (!row.fromDate || !row.fromDate.trim()) {
@@ -567,17 +601,77 @@ export const validateModule5 = (
     }
   }
 
-  // 3. Dividend Amount Validation
+  // 3. 1099-INT Federal Tax Withheld Validation
+  if (data.interestFedTaxWithheld !== undefined && data.interestFedTaxWithheld !== null) {
+    if (isNaN(data.interestFedTaxWithheld) || data.interestFedTaxWithheld < 0) {
+      errors.interestFedTaxWithheld = '1099-INT Federal Tax Withheld cannot be negative';
+    }
+  }
+
+  // 4. Dividend Amount Validation
   if (data.dividendAmount !== undefined && data.dividendAmount !== null) {
     if (isNaN(data.dividendAmount) || data.dividendAmount < 0) {
       errors.dividendAmount = 'Dividend income cannot be negative';
     }
   }
 
-  // 4. 1099-OID Amount Validation
+  // 5. 1099-DIV Federal Tax Withheld Validation
+  if (data.dividendFedTaxWithheld !== undefined && data.dividendFedTaxWithheld !== null) {
+    if (isNaN(data.dividendFedTaxWithheld) || data.dividendFedTaxWithheld < 0) {
+      errors.dividendFedTaxWithheld = '1099-DIV Federal Tax Withheld cannot be negative';
+    }
+  }
+
+  // 6. 1099-OID Amount Validation
   if (data.form1099OidAmount !== undefined && data.form1099OidAmount !== null) {
     if (isNaN(data.form1099OidAmount) || data.form1099OidAmount < 0) {
       errors.form1099OidAmount = '1099-OID amount cannot be negative';
+    }
+  }
+
+  // 7. 1099-OID Federal Tax Withheld Validation
+  if (data.form1099OidFedTaxWithheld !== undefined && data.form1099OidFedTaxWithheld !== null) {
+    if (isNaN(data.form1099OidFedTaxWithheld) || data.form1099OidFedTaxWithheld < 0) {
+      errors.form1099OidFedTaxWithheld = '1099-OID Federal Tax Withheld cannot be negative';
+    }
+  }
+
+  return errors;
+};
+
+/**
+ * Validates Module 10: Form 1099-R IRA & Retirement Distributions
+ */
+export const validateModule10Retirement = (
+  data?: OrganizerData['m10_retirement'],
+  _selectedTaxYear: number = 2025
+): ValidationErrorMap => {
+  const errors: ValidationErrorMap = {};
+  if (!data) return errors;
+
+  // 1. Payer / Custodian Name Validation
+  const payer = (data.payerName || '').trim();
+  if (payer) {
+    if (containsXssOrHtml(payer)) {
+      errors.payerName = 'HTML tags or script injections are strictly forbidden!';
+    } else if (payer.length < 2) {
+      errors.payerName = 'Payer / Custodian name must be at least 2 characters';
+    }
+  }
+
+  // 2. Gross Distribution Validation
+  if (data.grossDistribution !== undefined && data.grossDistribution !== null) {
+    if (isNaN(data.grossDistribution) || data.grossDistribution < 0) {
+      errors.grossDistribution = 'Gross distribution amount cannot be negative';
+    } else if (data.grossDistribution > 0 && !payer) {
+      errors.payerName = 'Payer / Custodian name is required when distribution amount is reported';
+    }
+  }
+
+  // 3. Federal Tax Withheld Validation
+  if (data.fedTaxWithheld !== undefined && data.fedTaxWithheld !== null) {
+    if (isNaN(data.fedTaxWithheld) || data.fedTaxWithheld < 0) {
+      errors.fedTaxWithheld = 'IRA Federal Tax Withheld cannot be negative';
     }
   }
 
@@ -888,6 +982,10 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
       const m5 = organizerData.m5_interest;
       return Boolean(m5 && (Boolean(m5.bankName) || (m5.interestAmount ?? 0) > 0 || (m5.dividendAmount ?? 0) > 0 || (m5.form1099OidAmount ?? 0) > 0));
     }
+    case 'm10': {
+      const m10 = organizerData.m10_retirement;
+      return Boolean(m10 && (Boolean(m10.payerName) || (m10.grossDistribution ?? 0) > 0 || (m10.fedTaxWithheld ?? 0) > 0));
+    }
     case 'm6': {
       const m6 = organizerData.m6_stocks;
       return Boolean(
@@ -938,6 +1036,7 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
       return (
         isModuleCompleted('m4', organizerData) ||
         isModuleCompleted('m5', organizerData) ||
+        isModuleCompleted('m10', organizerData) ||
         isModuleCompleted('m6', organizerData)
       );
     }
@@ -948,6 +1047,7 @@ export const isModuleCompleted = (modId: string, organizerData?: OrganizerData |
       return (
         isModuleCompleted('m4', organizerData) ||
         isModuleCompleted('m5', organizerData) ||
+        isModuleCompleted('m10', organizerData) ||
         isModuleCompleted('m6', organizerData) ||
         isModuleCompleted('m8', organizerData)
       );
@@ -1027,6 +1127,8 @@ export const validateBusinessCompanyInfo = (data?: OrganizerData['b1_companyInfo
 
   if (!data.state?.trim()) {
     errors.state = 'State is required';
+  } else if (!isValidUsState(data.state)) {
+    errors.state = 'Please select a valid US state';
   }
 
   if (!data.zipCode?.trim()) {

@@ -39,7 +39,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
             className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1.5 transition-colors cursor-pointer mb-2"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>{isManager ? 'Back to Department Queue' : 'Back to Pitch Queue'}</span>
+            <span>{isManager ? 'Back to Department Queue' : 'Back to Outreach Pending'}</span>
           </button>
 
           <div className="flex flex-wrap items-center gap-2">

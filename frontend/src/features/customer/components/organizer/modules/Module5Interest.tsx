@@ -22,10 +22,11 @@ export const Module5Interest: React.FC<Module5Props> = ({
 
   return (
     <div className="space-y-4 font-sans">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* 1. Primary Institution / Bank Name */}
+      <div>
         <AppInput
           label="Primary 1099-INT Bank / Payer Name"
-          placeholder="e.g. Marcus by Goldman Sachs / Chase / Discover"
+          placeholder="e.g. Marcus by Goldman Sachs / Chase / Discover / Vanguard"
           leftIcon={<Building2 className="w-4 h-4 text-slate-400" />}
           error={errors.bankName}
           value={d.bankName || ''}
@@ -34,7 +35,10 @@ export const Module5Interest: React.FC<Module5Props> = ({
             if (clearError) clearError('bankName');
           }}
         />
+      </div>
 
+      {/* 2. 1099-INT Interest & Federal Withholding */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <AppInput
           label="1099-INT Total Interest Income ($)"
           type="number"
@@ -51,6 +55,24 @@ export const Module5Interest: React.FC<Module5Props> = ({
         />
 
         <AppInput
+          label="1099-INT Federal Tax Withheld ($)"
+          type="number"
+          placeholder="0"
+          leftIcon={<DollarSign className="w-4 h-4 text-slate-400" />}
+          error={errors.interestFedTaxWithheld}
+          value={d.interestFedTaxWithheld !== undefined && d.interestFedTaxWithheld !== null && d.interestFedTaxWithheld > 0 ? d.interestFedTaxWithheld.toString() : ''}
+          onChange={(e) => {
+            const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+            const nonNeg = isNaN(val) ? 0 : Math.max(0, val);
+            updateField('interestFedTaxWithheld', nonNeg);
+            if (clearError) clearError('interestFedTaxWithheld');
+          }}
+        />
+      </div>
+
+      {/* 3. 1099-DIV Dividends & Federal Withholding */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <AppInput
           label="1099-DIV Dividend Income ($)"
           type="number"
           placeholder="e.g. 640"
@@ -66,6 +88,24 @@ export const Module5Interest: React.FC<Module5Props> = ({
         />
 
         <AppInput
+          label="1099-DIV Federal Tax Withheld ($)"
+          type="number"
+          placeholder="0"
+          leftIcon={<DollarSign className="w-4 h-4 text-slate-400" />}
+          error={errors.dividendFedTaxWithheld}
+          value={d.dividendFedTaxWithheld !== undefined && d.dividendFedTaxWithheld !== null && d.dividendFedTaxWithheld > 0 ? d.dividendFedTaxWithheld.toString() : ''}
+          onChange={(e) => {
+            const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+            const nonNeg = isNaN(val) ? 0 : Math.max(0, val);
+            updateField('dividendFedTaxWithheld', nonNeg);
+            if (clearError) clearError('dividendFedTaxWithheld');
+          }}
+        />
+      </div>
+
+      {/* 4. Form 1099-OID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <AppInput
           label="Form 1099-OID (Original Issue Discount) ($)"
           type="number"
           placeholder="0"
@@ -77,6 +117,21 @@ export const Module5Interest: React.FC<Module5Props> = ({
             const nonNeg = isNaN(val) ? 0 : Math.max(0, val);
             updateField('form1099OidAmount', nonNeg);
             if (clearError) clearError('form1099OidAmount');
+          }}
+        />
+
+        <AppInput
+          label="Form 1099-OID Federal Tax Withheld ($)"
+          type="number"
+          placeholder="0"
+          leftIcon={<DollarSign className="w-4 h-4 text-slate-400" />}
+          error={errors.form1099OidFedTaxWithheld}
+          value={d.form1099OidFedTaxWithheld !== undefined && d.form1099OidFedTaxWithheld !== null && d.form1099OidFedTaxWithheld > 0 ? d.form1099OidFedTaxWithheld.toString() : ''}
+          onChange={(e) => {
+            const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+            const nonNeg = isNaN(val) ? 0 : Math.max(0, val);
+            updateField('form1099OidFedTaxWithheld', nonNeg);
+            if (clearError) clearError('form1099OidFedTaxWithheld');
           }}
         />
       </div>

@@ -30,23 +30,39 @@ function formatTimeAgo(date: Date | string): string {
 export class NotificationService {
   /**
    * Fetches real, persistent database notifications from the `Notification` table
-   * targeted specifically for the authenticated user and their assigned role.
-   * Admins can view all department notifications across the platform.
+   * targeted specifically for the authenticated user.
+   * - Individual staff agents only receive notifications specifically targeted to their user ID.
+   * - Department Managers & Admins also receive queue & department-level management alerts.
+   * - Admins can optionally pass scope='all' to view company-wide activity.
    */
   public static async getNotificationsForUser(
     user: { id: string; role: string; email?: string },
     options?: { scope?: string }
   ): Promise<ServerNotificationItem[]> {
+    if (!user || !user.id) {
+      return [];
+    }
+
     // Only if admin explicitly requests scope === 'all', show company-wide activity
     const isGlobalScope = user.role === 'ADMIN' && options?.scope === 'all';
+
+    const isManagementRole = [
+      'ADMIN',
+      'DOC_MANAGER',
+      'DOC_TEAM_LEAD',
+      'PREP_MANAGER',
+      'SALES_MANAGER',
+      'FILE_OP_MANAGER',
+    ].includes(user.role);
 
     const whereClause = isGlobalScope
       ? {}
       : {
           OR: [
-            ...(user.id ? [{ recipientUserId: user.id }] : []),
-            ...(user.role ? [{ targetRole: user.role as any, recipientUserId: null }] : []),
-            { targetRole: null, recipientUserId: null },
+            { recipientUserId: user.id },
+            ...(isManagementRole && user.role
+              ? [{ targetRole: user.role as any, recipientUserId: null }]
+              : []),
           ],
         };
 
@@ -89,16 +105,30 @@ export class NotificationService {
     user: { id: string; role: string },
     options?: { scope?: string }
   ) {
+    if (!user || !user.id) {
+      return { count: 0 };
+    }
+
     const isGlobalScope = user.role === 'ADMIN' && options?.scope === 'all';
+
+    const isManagementRole = [
+      'ADMIN',
+      'DOC_MANAGER',
+      'DOC_TEAM_LEAD',
+      'PREP_MANAGER',
+      'SALES_MANAGER',
+      'FILE_OP_MANAGER',
+    ].includes(user.role);
 
     const whereClause = isGlobalScope
       ? { isRead: false }
       : {
           isRead: false,
           OR: [
-            ...(user.id ? [{ recipientUserId: user.id }] : []),
-            ...(user.role ? [{ targetRole: user.role as any, recipientUserId: null }] : []),
-            { targetRole: null, recipientUserId: null },
+            { recipientUserId: user.id },
+            ...(isManagementRole && user.role
+              ? [{ targetRole: user.role as any, recipientUserId: null }]
+              : []),
           ],
         };
 

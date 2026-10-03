@@ -85,7 +85,7 @@ export const SalesAgentDashboardScreen: React.FC = () => {
             className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <PhoneCall className="w-3.5 h-3.5" />
-            <span>Go to My Pitch Queue ({stats.assignedLeads})</span>
+            <span>Go to Outreach Pending ({stats.assignedLeads})</span>
             <ArrowRight className="w-3 h-3" />
           </Button>
         </div>

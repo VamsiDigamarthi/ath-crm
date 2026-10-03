@@ -9,20 +9,20 @@ const THEMES: Record<'light' | 'dark', SidebarTheme> = {
   light: {
     bg:           'bg-white',
     border:       'border-slate-200',
-    text:         'text-slate-800 font-medium',
+    text:         'text-slate-600 font-normal',
     textMuted:    'text-slate-500 font-normal',
     hover:        'hover:bg-slate-100 hover:text-slate-900',
-    sectionLabel: 'text-slate-500 font-extrabold uppercase tracking-wider text-[10px]',
+    sectionLabel: 'text-slate-400 font-medium uppercase tracking-wider text-[10px]',
     divider:      'border-slate-200',
     iconBg:       'bg-slate-100',
   },
   dark: {
     bg:           'bg-[#0F172A]',
     border:       'border-slate-800',
-    text:         'text-slate-300 font-medium',
+    text:         'text-slate-300 font-normal',
     textMuted:    'text-slate-400 font-normal',
     hover:        'hover:bg-slate-800/80 hover:text-white',
-    sectionLabel: 'text-slate-400 font-extrabold uppercase tracking-wider text-[10px]',
+    sectionLabel: 'text-slate-400 font-medium uppercase tracking-wider text-[10px]',
     divider:      'border-slate-800/80',
     iconBg:       'bg-slate-800',
   },
@@ -112,7 +112,7 @@ export function AppSidebar({
           <div key={si} className={si > 0 ? 'pt-3' : ''}>
             {sec.label && !collapsed && (
               <div className={cn(
-                'px-3 pb-1 text-[10px] font-semibold tracking-widest',
+                'px-3 pb-1 text-[10px] font-medium tracking-wider',
                 theme.sectionLabel,
               )}>
                 {sec.label}

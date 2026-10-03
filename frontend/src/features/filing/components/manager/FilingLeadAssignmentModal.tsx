@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { 
   Zap, 
@@ -109,32 +110,22 @@ export const FilingLeadAssignmentModal: React.FC<FilingLeadAssignmentModalProps>
     >
       <div className="space-y-4 py-1">
         {/* Mode Selector Tabs */}
-        <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200">
-          <button
-            type="button"
-            onClick={() => setAssignmentMode('DIRECT')}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              assignmentMode === 'DIRECT'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>Direct Specialist Assignment</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setAssignmentMode('ROUND_ROBIN')}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              assignmentMode === 'ROUND_ROBIN'
-                ? 'bg-white text-[#16A34A] shadow-xs'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>1-Click Auto Round-Robin</span>
-          </button>
-        </div>
+        <AppTabs
+          tabs={[
+            {
+              id: 'DIRECT',
+              label: 'Direct Specialist Assignment',
+              icon: UserCheck,
+            },
+            {
+              id: 'ROUND_ROBIN',
+              label: '1-Click Auto Round-Robin',
+              icon: Zap,
+            },
+          ]}
+          activeTab={assignmentMode}
+          onChange={(mode) => setAssignmentMode(mode as any)}
+        />
 
         {assignmentMode === 'ROUND_ROBIN' ? (
           <div className="p-5 rounded-xl bg-emerald-50/60 border border-emerald-200 text-center space-y-2">

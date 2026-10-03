@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { RotateCcw, Calendar } from 'lucide-react';
+import { RotateCcw, Calendar, FileSpreadsheet, Calculator } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
 import { PitchNegotiationBar } from '../components/pitch/PitchNegotiationBar';
 import { PitchTaxDraftSummaryCard } from '../components/pitch/PitchTaxDraftSummaryCard';
 import { PitchFeeCalculator } from '../components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
+import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
@@ -26,6 +28,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
 
   const [lead, setLead] = useState<SalesLeadItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'PITCH' | 'ORGANIZER'>('PITCH');
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isEsignModalOpen, setIsEsignModalOpen] = useState(false);
@@ -334,129 +337,170 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 1.1 Closer Pitch Status & Fee Negotiation Toolbar */}
-      <PitchNegotiationBar
-        lead={lead}
-        onUpdateSuccess={async (updated) => {
-          setLead((prev) => (prev ? { ...prev, ...updated } : prev));
-          const refreshed = await salesService.getLeadById(appId);
-          if (refreshed) {
-            setLead(refreshed);
-          }
-        }}
+      {/* 1.1 Workspace Navigation Tabs (Pitch Engine vs Tax info and Files) */}
+      <AppTabs
+        tabs={[
+          {
+            id: 'PITCH',
+            label: 'Tax Pitch, QA Audit & Fee Negotiation',
+            icon: Calculator,
+          },
+          {
+            id: 'ORGANIZER',
+            label: 'Tax info and Files',
+            icon: FileSpreadsheet,
+          },
+        ]}
+        activeTab={activeWorkspaceTab}
+        onChange={(tab) => setActiveWorkspaceTab(tab as any)}
       />
 
-      {/* 1.2 Revert Alert Banner */}
-      {isReverted && lastRevert && (
-        <div className="bg-amber-50/70 border border-amber-300/80 rounded-xl p-3.5 sm:p-4 text-amber-950 shadow-2xs animate-in fade-in duration-200">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200 mt-0.5">
-              <RotateCcw className="w-4 h-4 text-amber-700" />
-            </div>
-            <div className="space-y-2 flex-1 min-w-0">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2 font-bold text-xs sm:text-sm text-amber-950">
-                  <span>Return Reverted by {lastRevert.sourceDepartment === 'FILING' ? 'IRS Filing Operations' : lastRevert.sourceDepartment}:</span>
-                  {lastRevert.reasonCategory && (
-                    <span className="px-2 py-0.5 rounded-md bg-amber-200/90 text-amber-950 text-[10px] font-bold border border-amber-300">
-                      {lastRevert.reasonCategory.replace(/_/g, ' ')}
-                    </span>
-                  )}
-                </div>
-                <div className="text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
-                  {lastRevert.revertedByName && (
-                    <span>By <strong>{lastRevert.revertedByName}</strong> ({lastRevert.revertedByRole || 'Filing Specialist'})</span>
-                  )}
-                  {lastRevert.revertedAt && (
-                    <span>• {new Date(lastRevert.revertedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Specialist's Note Box */}
-              <div className="bg-white/95 p-3 rounded-lg border border-amber-200 shadow-2xs space-y-1">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-                  Filing Specialist Revert Instructions &amp; Feedback:
-                </div>
-                <p className="text-xs font-semibold text-slate-900 leading-relaxed">
-                  "{lastRevert.revertNotes || 'Filing Operations requested clarification or re-authorization.'}"
-                </p>
-                {lastRevert.missingDocumentTypes && lastRevert.missingDocumentTypes.length > 0 && (
-                  <div className="pt-1.5 flex flex-wrap items-center gap-1.5 border-t border-amber-100">
-                    <span className="text-[10px] font-bold text-amber-900">Requested Items:</span>
-                    {lastRevert.missingDocumentTypes.map((doc: string, idx: number) => (
-                      <span key={idx} className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-200">
-                        {doc}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Action guidance */}
-              <div className="pt-0.5 text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
-                <span>👉 <strong>Closer Action Required:</strong> Contact client to review the requested data/notes above. Once addressed, collect any updated authorization and click <strong>"Dispatch to IRS E-Filing Queue 🚀"</strong> below.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Main Two-Column Pitching Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left 7 Cols: Tax Calculations & Interactive Fee Engine */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Section A: Complete Tax Preparer Form 1040 Schedule & Deductions Breakdown */}
-          <PitchTaxDraftSummaryCard lead={lead} />
-
-          {/* Section B: Interactive Fee Quotation & Pricing Engine */}
-          <PitchFeeCalculator
-            feeBreakdown={lead.feeBreakdown}
-            onUpdateFeeBreakdown={handleUpdateFeeBreakdown}
-            onOpenPaymentModal={() => setIsPaymentModalOpen(true)}
-            onOpenEsignModal={() => setIsEsignModalOpen(true)}
-            paymentStatus={lead.paymentStatus}
-            paidAmount={lead.paidAmount}
-            remainingBalance={lead.remainingBalance}
-            paymentHistory={lead.paymentHistory}
-            esignStatus={lead.esignStatus}
-            applicationId={lead.id || lead.applicationId}
-            customerId={lead.taxpayerId || (lead as any).customerId}
-            isLocked={isLocked}
-            lockReason={lockReason}
-          />
-        </div>
-
-        {/* Right 5 Cols: Phone Call Controller, Talking Points & Filing Handoff */}
-        <div className="lg:col-span-5 space-y-6">
-          <PitchCallAssistant
+      {/* VIEW 1: TAX PITCH, QA AUDIT & FEE NEGOTIATION */}
+      {activeWorkspaceTab === 'PITCH' && (
+        <div className="space-y-6">
+          {/* 1.1 Closer Pitch Status & Fee Negotiation Toolbar */}
+          <PitchNegotiationBar
             lead={lead}
-            paymentStatus={lead.paymentStatus}
-            esignStatus={lead.esignStatus}
-            onNotesSaved={async () => {
+            onUpdateSuccess={async (updated) => {
+              setLead((prev) => (prev ? { ...prev, ...updated } : prev));
               const refreshed = await salesService.getLeadById(appId);
               if (refreshed) {
                 setLead(refreshed);
               }
             }}
-            onDispatchToFiling={(notes) => {
-              setPendingDispatchNotes(notes || '');
-              setIsDispatchConfirmOpen(true);
-            }}
+          />
+
+          {/* 1.2 Revert Alert Banner */}
+          {isReverted && lastRevert && (
+            <div className="bg-amber-50/70 border border-amber-300/80 rounded-xl p-3.5 sm:p-4 text-amber-950 shadow-2xs animate-in fade-in duration-200">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200 mt-0.5">
+                  <RotateCcw className="w-4 h-4 text-amber-700" />
+                </div>
+                <div className="space-y-2 flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2 font-bold text-xs sm:text-sm text-amber-950">
+                      <span>Return Reverted by {lastRevert.sourceDepartment === 'FILING' ? 'IRS Filing Operations' : lastRevert.sourceDepartment}:</span>
+                      {lastRevert.reasonCategory && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-200/90 text-amber-950 text-[10px] font-bold border border-amber-300">
+                          {lastRevert.reasonCategory.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
+                      {lastRevert.revertedByName && (
+                        <span>By <strong>{lastRevert.revertedByName}</strong> ({lastRevert.revertedByRole || 'Filing Specialist'})</span>
+                      )}
+                      {lastRevert.revertedAt && (
+                        <span>• {new Date(lastRevert.revertedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Specialist's Note Box */}
+                  <div className="bg-white/95 p-3 rounded-lg border border-amber-200 shadow-2xs space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                      Filing Specialist Revert Instructions &amp; Feedback:
+                    </div>
+                    <p className="text-xs font-semibold text-slate-900 leading-relaxed">
+                      "{lastRevert.revertNotes || 'Filing Operations requested clarification or re-authorization.'}"
+                    </p>
+                    {lastRevert.missingDocumentTypes && lastRevert.missingDocumentTypes.length > 0 && (
+                      <div className="pt-1.5 flex flex-wrap items-center gap-1.5 border-t border-amber-100">
+                        <span className="text-[10px] font-bold text-amber-900">Requested Items:</span>
+                        {lastRevert.missingDocumentTypes.map((doc: string, idx: number) => (
+                          <span key={idx} className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-200">
+                            {doc}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action guidance */}
+                  <div className="pt-0.5 text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
+                    <span>👉 <strong>Closer Action Required:</strong> Contact client to review the requested data/notes above. Once addressed, collect any updated authorization and click <strong>"Dispatch to IRS E-Filing Queue 🚀"</strong> below.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 2. Main Two-Column Pitching Workspace */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left 7 Cols: Tax Calculations & Interactive Fee Engine */}
+            <div className="lg:col-span-7 space-y-6">
+              {/* Section A: Complete Tax Preparer Form 1040 Schedule & Deductions Breakdown */}
+              <PitchTaxDraftSummaryCard
+                lead={lead}
+                onViewOrganizer={() => setActiveWorkspaceTab('ORGANIZER')}
+              />
+
+              {/* Section B: Interactive Fee Quotation & Pricing Engine */}
+              <PitchFeeCalculator
+                feeBreakdown={lead.feeBreakdown}
+                onUpdateFeeBreakdown={handleUpdateFeeBreakdown}
+                onOpenPaymentModal={() => setIsPaymentModalOpen(true)}
+                onOpenEsignModal={() => setIsEsignModalOpen(true)}
+                paymentStatus={lead.paymentStatus}
+                paidAmount={lead.paidAmount}
+                remainingBalance={lead.remainingBalance}
+                paymentHistory={lead.paymentHistory}
+                esignStatus={lead.esignStatus}
+                applicationId={lead.id || lead.applicationId}
+                customerId={lead.taxpayerId || (lead as any).customerId}
+                isLocked={isLocked}
+                lockReason={lockReason}
+              />
+            </div>
+
+            {/* Right 5 Cols: Phone Call Controller, Talking Points & Filing Handoff */}
+            <div className="lg:col-span-5 space-y-6">
+              <PitchCallAssistant
+                lead={lead}
+                paymentStatus={lead.paymentStatus}
+                esignStatus={lead.esignStatus}
+                onNotesSaved={async () => {
+                  const refreshed = await salesService.getLeadById(appId);
+                  if (refreshed) {
+                    setLead(refreshed);
+                  }
+                }}
+                onDispatchToFiling={(notes) => {
+                  setPendingDispatchNotes(notes || '');
+                  setIsDispatchConfirmOpen(true);
+                }}
+              />
+            </div>
+          </div>
+
+          {/* 3. Full Lead Audit Trail & Lifecycle Activity Stream (Matching Reviewer Screen) */}
+          <LeadAuditTrailSection
+            leadId={lead.id || lead.applicationId}
+            taxpayerName={lead.taxpayerName}
+            taxpayerEmail={lead.taxpayerEmail}
+            currentStage={lead.currentStage}
+            stageHistories={(lead.stageHistories as any) || []}
+            callLogs={(lead.callLogs as any) || []}
+            auditLogs={(lead.auditLogs as any) || []}
           />
         </div>
-      </div>
+      )}
 
-      {/* 3. Full Lead Audit Trail & Lifecycle Activity Stream (Matching Reviewer Screen) */}
-      <LeadAuditTrailSection
-        leadId={lead.id || lead.applicationId}
-        taxpayerName={lead.taxpayerName}
-        taxpayerEmail={lead.taxpayerEmail}
-        currentStage={lead.currentStage}
-        stageHistories={(lead.stageHistories as any) || []}
-        callLogs={(lead.callLogs as any) || []}
-        auditLogs={(lead.auditLogs as any) || []}
-      />
+      {/* VIEW 2: TAX INFO AND FILES */}
+      {activeWorkspaceTab === 'ORGANIZER' && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-4">
+          <TaxPrepOrganizerReview
+            leadId={appId}
+            customerName={lead.taxpayerName}
+            taxDraftSummary={lead.taxDraftSummary}
+            allowEdit={false}
+            readOnly={true}
+            filingType={(lead as any).filingType as string | undefined}
+            hideHeader={true}
+          />
+        </div>
+      )}
 
       {/* 4. Checkout Modals (Stripe Simulation & E-Sign 8879) */}
       <PitchPaymentAndEsignModals

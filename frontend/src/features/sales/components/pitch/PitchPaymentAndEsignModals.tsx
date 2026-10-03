@@ -21,6 +21,7 @@ import {
   Tag
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { salesService } from '../../services/sales-service';
 import type { SalesLeadItem, PaymentHistoryItem } from '../../types/sales.types';
 import toast from 'react-hot-toast';
@@ -299,31 +300,24 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setPaymentView('PAY')}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                    paymentView === 'PAY'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  Collect Payment
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentView('HISTORY')}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer ${
-                    paymentView === 'HISTORY'
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  <History className="w-3 h-3" />
-                  <span>Ledger ({historyItems.length})</span>
-                </button>
-              </div>
+              <AppTabs
+                tabs={[
+                  {
+                    id: 'PAY',
+                    label: 'Collect Payment',
+                    icon: CreditCard,
+                  },
+                  {
+                    id: 'HISTORY',
+                    label: 'Payment Ledger',
+                    icon: History,
+                    count: historyItems.length,
+                  },
+                ]}
+                activeTab={paymentView}
+                onChange={(view) => setPaymentView(view as any)}
+                className="border-b-0"
+              />
             </div>
 
             {/* View 1: Collect Payment (Side-by-Side 2-Column Responsive Layout) */}
