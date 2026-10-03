@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Search, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AppPagination, type AppPaginationProps } from './AppPagination'
@@ -90,6 +90,25 @@ export function AppTable<T extends Record<string, unknown>>({
 }: AppTableProps<T>) {
 
   const [search, setSearch]       = useState('')
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Left/Right arrow keys scroll wide tables horizontally (ignored while typing in a field)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+      const target = e.target as HTMLElement | null
+      if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return
+      const el = scrollRef.current
+      if (!el || el.scrollWidth <= el.clientWidth) return
+      const rect = el.getBoundingClientRect()
+      if (rect.bottom < 0 || rect.top > window.innerHeight) return
+      e.preventDefault()
+      el.scrollBy({ left: e.key === 'ArrowRight' ? 240 : -240, behavior: 'smooth' })
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
   const [selected, setSelected]   = useState<Set<number>>(new Set())
 
   // Filter
@@ -240,7 +259,7 @@ export function AppTable<T extends Record<string, unknown>>({
       )}
 
       {/* Table Container */}
-      <div className="flex-1 overflow-x-auto">
+      <div ref={scrollRef} className="flex-1 overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className={cn('border-b border-slate-200 bg-slate-50 text-[11px] font-bold text-black uppercase tracking-wider', stickyHeader && 'sticky top-0 z-10 bg-slate-100 shadow-xs')}>

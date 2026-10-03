@@ -30,5 +30,12 @@ export const registerTaxpayerSchema = z.object({
     taxYear: z.union([z.number(), z.string()]).transform((val) => Number(val) || new Date().getFullYear()).optional(),
     visaType: z.string().min(1, "Visa or residency status is required").optional(),
     ssnTin: z.string().optional().nullable(),
+    referralCode: z.string().trim().max(20).optional().nullable(),
+  }),
+});
+
+export const referralCodeParamSchema = z.object({
+  params: z.object({
+    code: z.string().trim().min(3).max(20),
   }),
 });

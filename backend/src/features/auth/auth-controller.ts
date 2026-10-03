@@ -5,6 +5,7 @@ import { BadRequestError } from "../../errors/bad-request-error.js";
 import { SuccessHandler } from "../../utils/success-handler.js";
 import { EmailService } from "../../utils/email-service.js";
 import { otpEmailQueue } from "../queue/email-queue.js";
+import { generateUniqueReferralCode } from "../../utils/referral.js";
 import { Role, ApplicationStage, ApplicationPriority, AuditActorType, AuditActionType, NotificationCategory, NotificationPriority } from "@prisma/client";
 
 export const requestOtp = async (req: Request, res: Response) => {
@@ -204,6 +205,7 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
     taxYear,
     visaType,
     ssnTin,
+    referralCode,
   } = req.body;
 
   const currentYear = new Date().getFullYear();
@@ -240,6 +242,19 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
     );
   }
 
+  // 1b. Validate referral code against an existing lead
+  const cleanReferralCode = referralCode?.trim().toUpperCase() || null;
+  let referrer: { id: string; firstName: string; lastName: string } | null = null;
+  if (cleanReferralCode) {
+    referrer = await prisma.customerProfile.findUnique({
+      where: { referralCode: cleanReferralCode },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    if (!referrer) {
+      throw new BadRequestError("Invalid referral code. Please check the code and try again.");
+    }
+  }
+
   // 2. Insert new User account
   const user = await prisma.user.create({
     data: {
@@ -263,6 +278,8 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
       ssnTin: cleanSsn,
       visaType: visaType?.trim() || 'Standard',
       maritalStatus: 'Single',
+      referralCode: await generateUniqueReferralCode(cleanFirstName),
+      referredByCustomerId: referrer?.id || null,
     },
   });
 
@@ -299,7 +316,7 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
         applicationId: application.id,
         toStage: ApplicationStage.RAW_PROSPECT,
         movedByUserId: user.id,
-        remarks: `Taxpayer self-registered online via Public Client Portal (Source: SELF_SIGNUP, Method: ONLINE_PORTAL, Tax Year: ${targetTaxYear})`,
+        remarks: `Taxpayer self-registered online via Public Client Portal (Source: SELF_SIGNUP, Method: ONLINE_PORTAL, Tax Year: ${targetTaxYear})${referrer ? ` • Referred by ${referrer.firstName} ${referrer.lastName}` : ''}`,
       },
     });
   } catch (err) {
@@ -425,5 +442,26 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
       role: user.role,
     },
     application,
+  });
+};
+
+/**
+ * Public: checks a lead referral code and returns the referrer's display name only
+ */
+export const checkReferralCode = async (req: Request, res: Response) => {
+  const code = String(req.params.code || "").trim().toUpperCase();
+  const referrer = await prisma.customerProfile.findUnique({
+    where: { referralCode: code },
+    select: { firstName: true, lastName: true },
+  });
+
+  if (!referrer) {
+    throw new BadRequestError("Invalid referral code");
+  }
+
+  const lastInitial = referrer.lastName ? ` ${referrer.lastName.charAt(0)}.` : "";
+  return SuccessHandler.handle(res, "Referral code is valid", {
+    valid: true,
+    referrerName: `${referrer.firstName}${lastInitial}`,
   });
 };

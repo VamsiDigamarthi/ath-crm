@@ -12,10 +12,12 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  Gift,
 } from 'lucide-react';
 import { registerTaxpayerSchema, type RegisterTaxpayerInput } from '../validations/auth-schema';
 import { authService } from '../services/auth-service';
 import { useAuthStore } from '../store/auth-store';
+import { useReferralCodeCheck } from '../hooks/useReferralCodeCheck';
 import { AppInput } from '@/shared/components/AppInput';
 import { Button } from '@/shared/components/Button';
 import toast from 'react-hot-toast';
@@ -65,8 +67,11 @@ export const TaxpayerSignupForm: React.FC = () => {
       taxYear: CURRENT_TAX_YEAR,
       visaType: 'H1B',
       ssnTin: '',
+      referralCode: '',
     },
   });
+
+  const referralCheck = useReferralCodeCheck(watch('referralCode'));
 
   // Format Phone as (XXX) XXX-XXXX
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,6 +101,10 @@ export const TaxpayerSignupForm: React.FC = () => {
 
   const onSubmit = async (data: RegisterTaxpayerInput) => {
     setErrorMessage(null);
+    if (data.referralCode && referralCheck.status === 'invalid') {
+      toast.error('Please enter a valid referral code or leave it empty');
+      return;
+    }
     try {
       const payload = {
         firstName: data.firstName.trim(),
@@ -105,6 +114,7 @@ export const TaxpayerSignupForm: React.FC = () => {
         taxYear: Number(data.taxYear) || CURRENT_TAX_YEAR,
         visaType: data.visaType,
         ssnTin: data.ssnTin?.trim() || null,
+        referralCode: data.referralCode?.trim().toUpperCase() || null,
       };
 
       const res: any = await authService.registerTaxpayer(payload);
@@ -297,6 +307,26 @@ export const TaxpayerSignupForm: React.FC = () => {
           value={watch('ssnTin') || ''}
           onChange={handleSsnChange}
           error={errors.ssnTin?.message}
+        />
+
+        {/* Referral Code (Optional) */}
+        <AppInput
+          label="Referral Code (Optional)"
+          labelSize="sm"
+          placeholder="e.g. ROHIT196"
+          leftIcon={<Gift className="w-4 h-4 text-gray-400" />}
+          size="md"
+          maxLength={20}
+          value={watch('referralCode') || ''}
+          onChange={(e) => setValue('referralCode', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), { shouldValidate: true })}
+          error={referralCheck.status === 'invalid' ? 'This referral code is not valid' : errors.referralCode?.message}
+          helperText={
+            referralCheck.status === 'checking' ? (
+              <span className="text-slate-400">Checking code...</span>
+            ) : referralCheck.status === 'valid' ? (
+              <span className="text-[#15803D] font-medium">Referred by {referralCheck.referrerName}</span>
+            ) : undefined
+          }
         />
 
         {/* Submit Button */}

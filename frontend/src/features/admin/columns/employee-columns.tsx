@@ -1,15 +1,5 @@
 import type { ColumnDef } from '@/shared/components/AppTable';
-import { AppCopyButton } from '@/shared/components/AppCopyButton';
-import { 
-  Users, 
-  DollarSign, 
-  FileCheck, 
-  ShieldCheck, 
-  Calculator,
-  Edit3, 
-  Power,
-  Mail
-} from 'lucide-react';
+import { Edit3, Power } from 'lucide-react';
 import type { EmployeeItem } from '../types/employee.types';
 
 interface ColumnActionsProps {
@@ -17,199 +7,105 @@ interface ColumnActionsProps {
   onToggleStatus: (employee: EmployeeItem) => void;
 }
 
-/**
- * Renders tailored department badge with icon
- */
-export const renderDepartmentBadge = (department: string, roleLabel: string) => {
-  switch (department) {
-    case 'DOC':
-      return (
-        <div className="flex flex-col gap-1 items-start">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
-            <Users className="w-3.5 h-3.5 text-blue-600" />
-            Documenter
-          </span>
-          <span className="text-[11px] font-medium text-slate-500 pl-0.5">{roleLabel}</span>
-        </div>
-      );
-    case 'PREP_REVIEW':
-      return (
-        <div className="flex flex-col gap-1 items-start">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
-            <Calculator className="w-3.5 h-3.5 text-indigo-600" />
-            Tax Prep &amp; Review
-          </span>
-          <span className="text-[11px] font-medium text-slate-500 pl-0.5">{roleLabel}</span>
-        </div>
-      );
-    case 'SALES':
-      return (
-        <div className="flex flex-col gap-1 items-start">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
-            <DollarSign className="w-3.5 h-3.5 text-purple-600" />
-            Sales Dept
-          </span>
-          <span className="text-[11px] font-medium text-slate-500 pl-0.5">{roleLabel}</span>
-        </div>
-      );
-    case 'FILE_OP':
-      return (
-        <div className="flex flex-col gap-1 items-start">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200 shadow-2xs">
-            <FileCheck className="w-3.5 h-3.5 text-[#16A34A]" />
-            File Operator
-          </span>
-          <span className="text-[11px] font-medium text-slate-500 pl-0.5">{roleLabel}</span>
-        </div>
-      );
-    case 'ADMIN':
-    default:
-      return (
-        <div className="flex flex-col gap-1 items-start">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-slate-600" />
-            Administration
-          </span>
-          <span className="text-[11px] font-medium text-slate-500 pl-0.5">{roleLabel}</span>
-        </div>
-      );
-  }
+const DEPARTMENT_META: Record<EmployeeItem['department'], { label: string; dot: string }> = {
+  DOC: { label: 'Documenter', dot: 'bg-blue-500' },
+  PREP_REVIEW: { label: 'Tax Prep & Review', dot: 'bg-indigo-500' },
+  SALES: { label: 'Sales', dot: 'bg-purple-500' },
+  FILE_OP: { label: 'Filing', dot: 'bg-[#16A34A]' },
+  ADMIN: { label: 'Administration', dot: 'bg-slate-500' },
 };
 
 /**
- * Returns strongly typed column definitions for Employee Directory Table with Status and Edit/Toggle actions
+ * Returns column definitions for the Staff directory table
  */
 export const getEmployeeColumns = (actions: ColumnActionsProps): ColumnDef<EmployeeItem>[] => [
   {
-    header: 'Staff Member',
+    header: 'Member',
     accessorKey: 'fullName',
     sortable: true,
     render: (row) => (
-      <div className="flex items-center gap-3">
-        <div className="relative">
-          <img
-            src={row.avatar}
-            alt={row.fullName}
-            className="w-10 h-10 rounded-full border border-slate-200 bg-slate-100 object-cover shadow-2xs"
-          />
-          <span
-            className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-              row.isActive ? 'bg-[#16A34A]' : 'bg-slate-400'
-            }`}
-            title={row.isActive ? 'Active Staff' : 'Inactive Staff'}
-          />
-        </div>
-        <div>
-          <div className="font-bold text-slate-900 text-xs sm:text-sm">
-            {row.fullName}
-          </div>
-          <div className="text-[11px] text-slate-400">
-            Joined {row.createdAt}
-          </div>
+      <div className="min-w-0">
+        <div className="font-semibold text-slate-900 text-sm truncate">{row.fullName}</div>
+        <div className="text-xs text-slate-500 truncate" title={row.email}>
+          {row.email}
         </div>
       </div>
     ),
   },
   {
-    header: 'Contact Information',
-    accessorKey: 'email',
-    render: (row) => (
-      <div className="space-y-1 text-xs">
-        <div className="flex items-center gap-1.5 text-slate-700">
-          <span className="truncate max-w-[180px]" title={row.email}>
-            {row.email}
-          </span>
-          <AppCopyButton text={row.email} size="sm" />
-        </div>
-        <div className="flex items-center gap-1.5 text-slate-500">
-          <span>{row.mobile}</span>
-          <AppCopyButton text={row.mobile} size="sm" />
-        </div>
-        {row.smtpEmail && (
-          <div className="flex items-center gap-1 pt-0.5">
-            <span 
-              className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/80" 
-              title={`SMTP Outbound Email: ${row.smtpEmail}`}
-            >
-              <Mail className="w-2.5 h-2.5 text-[#16A34A]" />
-              SMTP: {row.smtpEmail}
-            </span>
-          </div>
-        )}
-      </div>
-    ),
-  },
-  {
-    header: 'Department & Role',
+    header: 'Role',
     accessorKey: 'department',
-    render: (row) => renderDepartmentBadge(row.department, row.roleLabel),
+    render: (row) => {
+      const meta = DEPARTMENT_META[row.department] ?? DEPARTMENT_META.ADMIN;
+      return (
+        <div>
+          <div className="text-sm font-medium text-slate-800">{row.roleLabel}</div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+            {meta.label}
+          </div>
+        </div>
+      );
+    },
   },
   {
-    header: 'Active Cases',
+    header: 'Phone',
+    accessorKey: 'mobile',
+    render: (row) => <span className="text-sm text-slate-600">{row.mobile || '—'}</span>,
+  },
+  {
+    header: 'Cases',
     accessorKey: 'assignedCasesCount',
     render: (row) => (
-      <div className="space-y-1">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
-          {row.assignedCasesCount} active leads
-        </span>
-        <div className="text-[10px] font-medium text-slate-500">
-          {row.department === 'DOC'
-            ? `${row.completedCasesCount} completed intakes`
-            : `${row.completedCasesCount} completed filings`}
-        </div>
+      <div className="text-sm text-slate-700">
+        <span className="font-semibold text-slate-900">{row.assignedCasesCount}</span> active
+        <span className="text-slate-400"> · {row.completedCasesCount} done</span>
       </div>
     ),
   },
   {
-    header: 'Account Status',
+    header: 'Status',
     accessorKey: 'isActive',
     render: (row) => (
       <span
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
-          row.isActive
-            ? 'bg-emerald-50 text-[#16A34A] border-emerald-200'
-            : 'bg-slate-100 text-slate-600 border-slate-200'
+        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
+          row.isActive ? 'bg-emerald-50 text-[#15803D]' : 'bg-slate-100 text-slate-500'
         }`}
       >
-        <span
-          className={`w-1.5 h-1.5 rounded-full ${
-            row.isActive ? 'bg-[#16A34A]' : 'bg-slate-400'
-          }`}
-        />
+        <span className={`w-1.5 h-1.5 rounded-full ${row.isActive ? 'bg-[#16A34A]' : 'bg-slate-400'}`} />
         {row.isActive ? 'Active' : 'Inactive'}
       </span>
     ),
   },
   {
-    header: 'Actions',
-    width: '100px',
+    header: '',
+    width: '90px',
     render: (row) => (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-1">
         <button
           type="button"
           disabled={!row.isActive}
           onClick={() => row.isActive && actions.onEdit(row)}
-          className={`p-1.5 rounded-lg border transition-all shadow-2xs ${
+          className={`p-2 rounded-lg transition-colors ${
             row.isActive
-              ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-slate-200/80 bg-white cursor-pointer'
-              : 'text-slate-300 bg-slate-100/60 border-slate-200/40 cursor-not-allowed opacity-50'
+              ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer'
+              : 'text-slate-300 cursor-not-allowed'
           }`}
-          title={row.isActive ? 'Edit Staff Member' : 'Cannot edit inactive staff (Activate first)'}
+          title={row.isActive ? 'Edit' : 'Activate to edit'}
         >
-          <Edit3 className="w-3.5 h-3.5" />
+          <Edit3 className="w-4 h-4" />
         </button>
-
         <button
           type="button"
           onClick={() => actions.onToggleStatus(row)}
-          className={`p-1.5 rounded-lg transition-all border shadow-2xs cursor-pointer ${
+          className={`p-2 rounded-lg transition-colors cursor-pointer ${
             row.isActive
-              ? 'text-slate-400 hover:text-rose-600 hover:bg-rose-50 border-slate-200/80 bg-white'
-              : 'text-[#16A34A] hover:bg-emerald-50 border-emerald-200/80 bg-emerald-50/40'
+              ? 'text-slate-500 hover:text-rose-600 hover:bg-rose-50'
+              : 'text-[#16A34A] hover:bg-emerald-50'
           }`}
-          title={row.isActive ? 'Deactivate Staff (Set Inactive)' : 'Activate Staff (Set Active)'}
+          title={row.isActive ? 'Deactivate' : 'Activate'}
         >
-          <Power className="w-3.5 h-3.5" />
+          <Power className="w-4 h-4" />
         </button>
       </div>
     ),

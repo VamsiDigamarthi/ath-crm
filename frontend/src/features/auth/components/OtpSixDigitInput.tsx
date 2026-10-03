@@ -133,69 +133,37 @@ export const OtpSixDigitInput: React.FC<OtpSixDigitInputProps> = ({
   };
 
   return (
-    <div className="space-y-2.5 font-sans">
-      {/* 6-Digit Box Layout */}
-      <div 
-        className="flex items-center justify-between gap-1.5 sm:gap-2.5 max-w-sm mx-auto"
-        onPaste={handlePaste}
-      >
+    <div className="space-y-1.5 font-sans">
+      <div className="grid grid-cols-6 gap-2" onPaste={handlePaste}>
         {digits.map((digit, idx) => {
           const isFilled = Boolean(digit);
           const hasError = Boolean(error);
 
           return (
-            <React.Fragment key={idx}>
-              {/* Center Divider Dot/Dash between 3rd and 4th box */}
-              {idx === 3 && (
-                <div className="w-2 sm:w-3 h-0.5 bg-slate-300 rounded-full shrink-0" />
-              )}
-
-              <div className="relative flex-1 aspect-[4/5] max-w-[54px]">
-                <input
-                  ref={(el) => {
-                    inputRefs.current[idx] = el;
-                  }}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  autoComplete="one-time-code"
-                  maxLength={1}
-                  disabled={disabled}
-                  value={digit}
-                  onChange={(e) => handleChange(idx, e)}
-                  onKeyDown={(e) => handleKeyDown(idx, e)}
-                  onFocus={(e) => e.target.select()}
-                  className={`w-full h-full text-center text-xl sm:text-2xl font-black font-mono rounded-xl sm:rounded-2xl transition-all duration-200 outline-none select-none ${
-                    disabled ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : ''
-                  } ${
-                    hasError
-                      ? 'border-2 border-rose-500 bg-rose-50/40 text-rose-900 ring-4 ring-rose-500/15 animate-shake'
-                      : isFilled
-                      ? 'border-2 border-[#16A34A] bg-emerald-50/40 text-slate-900 shadow-xs shadow-emerald-600/10'
-                      : 'border-2 border-slate-200 bg-slate-50/70 text-slate-800 hover:border-slate-300 focus:border-[#16A34A] focus:bg-white focus:ring-4 focus:ring-emerald-500/15 focus:scale-105 shadow-2xs'
-                  }`}
-                  placeholder="•"
-                />
-
-                {/* Subtle active indicator dot inside empty active box */}
-                {!isFilled && !hasError && (
-                  <span className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300/80" />
-                  </span>
-                )}
-              </div>
-            </React.Fragment>
+            <input
+              key={idx}
+              ref={(el) => {
+                inputRefs.current[idx] = el;
+              }}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="one-time-code"
+              maxLength={1}
+              disabled={disabled}
+              value={digit}
+              onChange={(e) => handleChange(idx, e)}
+              onKeyDown={(e) => handleKeyDown(idx, e)}
+              onFocus={(e) => e.target.select()}
+              className={`w-full h-10 text-center text-sm font-semibold text-black rounded-lg border bg-white outline-none transition-colors focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/15 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed ${
+                hasError ? 'border-rose-500' : isFilled ? 'border-[#16A34A]' : 'border-gray-300'
+              }`}
+            />
           );
         })}
       </div>
 
-      {/* Error Message */}
-      {error && (
-        <p className="text-xs font-bold text-rose-600 text-center flex items-center justify-center gap-1.5 animate-fadeIn">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
-          <span>{error}</span>
-        </p>
-      )}
+      {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
     </div>
   );
 };

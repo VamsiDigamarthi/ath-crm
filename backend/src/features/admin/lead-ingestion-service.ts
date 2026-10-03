@@ -1,6 +1,7 @@
 import { prisma } from "../../config/db.js";
 import { ApplicationStage, Role } from "@prisma/client";
 import { normalizeVisaType } from "./admin-validator.js";
+import { generateUniqueReferralCode } from "../../utils/referral.js";
 
 export interface LeadImportItem {
   firstName: string;
@@ -116,6 +117,9 @@ export class LeadIngestionService {
         });
       }
     }
+
+    // Referral codes handed out in this upload (not yet visible outside the transaction)
+    const batchReferralCodes = new Set<string>();
 
     // Process in chunks to prevent database memory spikes and locking
     for (let i = 0; i < cleanedLeads.length; i += BATCH_SIZE) {
@@ -347,6 +351,7 @@ export class LeadIngestionService {
                 state: lead.state?.trim() || null,
                 zipCode: lead.zipCode?.trim() || null,
                 isConvertedCustomer: false,
+                referralCode: await generateUniqueReferralCode(firstName, batchReferralCodes),
               },
             });
 

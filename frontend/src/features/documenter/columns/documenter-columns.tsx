@@ -5,7 +5,6 @@ import { Button } from '@/shared/components/Button';
 import {
   PhoneCall,
   UserCheck,
-  UserX,
   Globe,
   Clock,
   CheckCircle2,
@@ -212,27 +211,20 @@ export const getDocumenterColumns = ({
       cellClassName: 'min-w-[280px]',
       render: (item) => {
         const c = item.customer;
-        const initial = c.firstName?.[0] || 'T';
         const isCallingOnly = isLeadInCallingOnlyMode(item);
 
         const content = (
-          <>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-emerald-100 group-hover:to-teal-200 border border-slate-200 group-hover:border-emerald-300 text-slate-700 group-hover:text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs transition-all">
-              {initial}
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-slate-900 group-hover:text-[#16A34A] transition-colors flex items-center gap-1.5 flex-wrap">
+              <span>{c.fullName || `${c.firstName} ${c.middleName ? c.middleName + ' ' : ''}${c.lastName}`}</span>
+              <ClientPaymentStatusChip lead={item} size="xs" />
+              {renderDualRoleBadge(item)}
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-[#16A34A] transition-colors flex items-center gap-1.5 flex-wrap">
-                <span className="font-bold text-slate-900">{c.fullName || `${c.firstName} ${c.middleName ? c.middleName + ' ' : ''}${c.lastName}`}</span>
-                {renderVisaBadge(c.visaType)}
-                <ClientPaymentStatusChip lead={item} size="xs" />
-                {renderDualRoleBadge(item)}
-              </div>
-              <div className="text-[11px] text-slate-500 font-normal mt-0.5 truncate max-w-[230px]">
-                {c.occupation ? `${c.occupation}` : 'Individual Taxpayer'}
-                {c.dob ? ` • DOB: ${c.dob}` : ''}
-              </div>
+            <div className="text-xs text-slate-500 mt-0.5 truncate max-w-[240px]" title={c.email || undefined}>
+              {c.email || 'No email'}
+              {c.visaType ? ` · ${c.visaType}` : ''}
             </div>
-          </>
+          </div>
         );
 
         if (isCallingOnly) {
@@ -256,21 +248,15 @@ export const getDocumenterColumns = ({
       },
     },
     {
-      header: 'Contact Information',
-      accessorKey: 'customer.email',
-      width: '220px',
-      headerClassName: 'min-w-[220px]',
-      cellClassName: 'min-w-[220px]',
+      header: 'Phone',
+      accessorKey: 'customer.phone',
+      width: '170px',
+      headerClassName: 'min-w-[170px]',
+      cellClassName: 'min-w-[170px]',
       render: (item) => (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-slate-800">{item.customer.email || 'No email provided'}</span>
-            {item.customer.email && <AppCopyButton text={item.customer.email} size="sm" />}
-          </div>
-          <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
-            <span>{item.customer.phone}</span>
-            <AppCopyButton text={item.customer.phone} size="sm" />
-          </div>
+        <div className="flex items-center gap-1 text-sm text-slate-700">
+          <span className="whitespace-nowrap">{item.customer.phone || '—'}</span>
+          {item.customer.phone && <AppCopyButton text={item.customer.phone} size="sm" />}
         </div>
       ),
     },
@@ -344,7 +330,7 @@ export const getDocumenterColumns = ({
 
   if (!hideAssignedStaff) {
     baseColumns.push({
-      header: 'Assigned Staff',
+      header: 'Assigned to',
       accessorKey: 'assignedDocAgent.email',
       width: '160px',
       headerClassName: 'min-w-[160px]',
@@ -352,24 +338,20 @@ export const getDocumenterColumns = ({
       render: (item) => {
         if (!item.assignedDocAgent) {
           return (
-            <div className="space-y-0.5">
+            <div>
               {isAdmin ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-200 whitespace-nowrap">
-                  <UserX className="w-3 h-3 text-slate-400" />
-                  Unassigned
-                </span>
+                <span className="text-sm text-slate-400">Unassigned</span>
               ) : (
                 <button
                   onClick={() => onOpenAssignModal(item)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer whitespace-nowrap"
+                  className="text-sm font-semibold text-[#16A34A] hover:text-[#15803D] cursor-pointer whitespace-nowrap"
                 >
-                  <UserX className="w-3 h-3 text-amber-600" />
-                  Unassigned (Click)
+                  Assign
                 </button>
               )}
               {item.previousDocAgent && (
-                <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
-                  <span>Prev: {item.previousDocAgent.name || item.previousDocAgent.email.split('@')[0]} (TY{item.previousDocAgent.taxYear})</span>
+                <div className="text-xs text-slate-500 mt-0.5 whitespace-nowrap">
+                  Prev: {item.previousDocAgent.name || item.previousDocAgent.email.split('@')[0]} (TY{item.previousDocAgent.taxYear})
                 </div>
               )}
             </div>
@@ -377,18 +359,9 @@ export const getDocumenterColumns = ({
         }
 
         return (
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-emerald-100 border border-emerald-200 text-[#16A34A] text-[10px] font-bold flex items-center justify-center shrink-0">
-              {item.assignedDocAgent.email[0].toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-800 truncate">
-                {item.assignedDocAgent.email.split('@')[0]}
-              </div>
-              <div className="text-[10px] text-slate-400 font-medium">
-                {item.assignedDocAgent.role.replace('DOC_', '')}
-              </div>
-            </div>
+          <div className="min-w-0">
+            <div className="text-sm text-slate-800 truncate">{item.assignedDocAgent.email.split('@')[0]}</div>
+            <div className="text-xs text-slate-500 mt-0.5">{item.assignedDocAgent.role.replace('DOC_', '').replace(/_/g, ' ').toLowerCase()}</div>
           </div>
         );
       },
@@ -397,7 +370,7 @@ export const getDocumenterColumns = ({
 
   baseColumns.push(
     {
-      header: 'Outreach Stage',
+      header: 'Stage',
       accessorKey: 'currentStage',
       width: '140px',
       headerClassName: 'min-w-[140px]',
@@ -405,9 +378,9 @@ export const getDocumenterColumns = ({
       render: (item) => {
         if (item.isRawProspect || item.id?.startsWith('raw-')) {
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
-              <Clock className="w-3 h-3 text-blue-600" />
-              Raw Prospect
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+              New lead
             </span>
           );
         }
@@ -415,7 +388,7 @@ export const getDocumenterColumns = ({
       },
     },
     {
-      header: 'Last Call Status',
+      header: 'Last call',
       accessorKey: 'lastCallLog.disposition',
       width: '180px',
       headerClassName: 'min-w-[180px]',
@@ -423,31 +396,31 @@ export const getDocumenterColumns = ({
       render: (item) => {
         const log = item.lastCallLog || (item as any).callLogs?.[0];
         if (!log) {
-          return <span className="text-xs text-slate-400 font-medium">No calls yet</span>;
+          return <span className="text-sm text-slate-400">No calls yet</span>;
         }
 
         const formatDispLabel = (disp: string) => {
           switch (disp) {
             case 'CONNECTED_INTERESTED':
-              return { label: 'Connected: Interested', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+              return { label: 'Interested', dot: 'bg-[#16A34A]' };
             case 'CONNECTED_CALLBACK':
-              return { label: 'Scheduled Callback', color: 'text-purple-700 bg-purple-50 border-purple-200' };
+              return { label: 'Callback scheduled', dot: 'bg-purple-500' };
             case 'CONNECTED_NOT_INTERESTED':
-              return { label: 'Not Interested', color: 'text-slate-600 bg-slate-100 border-slate-200' };
+              return { label: 'Not interested', dot: 'bg-slate-400' };
             case 'NO_ANSWER_VOICEMAIL':
-              return { label: 'No Answer / Voicemail', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+              return { label: 'No answer', dot: 'bg-amber-500' };
             case 'INVALID_DISCONNECTED':
-              return { label: 'Invalid / Wrong No', color: 'text-rose-700 bg-rose-50 border-rose-200' };
+              return { label: 'Invalid number', dot: 'bg-rose-500' };
             case 'CLIENT_NOT_QUALIFIED':
-              return { label: 'Client Not Qualified', color: 'text-purple-700 bg-purple-50 border-purple-200' };
+              return { label: 'Not qualified', dot: 'bg-slate-400' };
             case 'FALLBACK':
-              return { label: 'Fall Back', color: 'text-slate-700 bg-slate-100 border-slate-300' };
+              return { label: 'Fall back', dot: 'bg-slate-400' };
             default:
-              return { label: disp.replace(/_/g, ' '), color: 'text-slate-700 bg-slate-100 border-slate-200' };
+              return { label: disp.replace(/_/g, ' ').toLowerCase(), dot: 'bg-slate-400' };
           }
         };
 
-        const { label, color } = formatDispLabel(log.disposition);
+        const { label, dot } = formatDispLabel(log.disposition);
         const subDisp = log.subDisposition || (
           log.callSummary?.startsWith('[') && log.callSummary.includes(']')
             ? log.callSummary.slice(1, log.callSummary.indexOf(']'))
@@ -460,28 +433,22 @@ export const getDocumenterColumns = ({
           : null;
 
         return (
-          <div className="text-xs space-y-1">
-            <div className="flex flex-wrap items-center gap-1">
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border whitespace-nowrap ${color}`}>
-                {label}
-              </span>
-              {subDisp && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap">
-                  {subDisp}
-                </span>
-              )}
+          <div className="max-w-[200px]">
+            <div className="flex items-center gap-1.5 text-sm text-slate-800 whitespace-nowrap">
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+              {label}
             </div>
-            {log.callbackScheduledAt && (
-              <div className="text-[10px] text-purple-700 font-bold flex items-center gap-1 whitespace-nowrap">
-                <Clock className="w-3 h-3 text-purple-500" />
-                <span>
-                  {new Date(log.callbackScheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({new Date(log.callbackScheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}){log.callbackTimezone ? ` • ${log.callbackTimezone}` : ''}
-                </span>
+            {(subDisp || log.callbackScheduledAt) && (
+              <div className="text-xs text-slate-500 mt-0.5 truncate">
+                {subDisp}
+                {subDisp && log.callbackScheduledAt ? ' · ' : ''}
+                {log.callbackScheduledAt &&
+                  `${new Date(log.callbackScheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} ${new Date(log.callbackScheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${log.callbackTimezone ? ` ${log.callbackTimezone}` : ''}`}
               </div>
             )}
             {cleanSummary && (
-              <div className="text-[11px] text-slate-500 truncate max-w-[180px] font-medium" title={cleanSummary}>
-                "{cleanSummary}"
+              <div className="text-xs text-slate-400 truncate mt-0.5" title={cleanSummary}>
+                {cleanSummary}
               </div>
             )}
           </div>
@@ -489,7 +456,7 @@ export const getDocumenterColumns = ({
       },
     },
     {
-      header: 'Actions',
+      header: '',
       accessorKey: 'id',
       width: '180px',
       headerClassName: 'text-right min-w-[180px]',
@@ -505,10 +472,10 @@ export const getDocumenterColumns = ({
               <Button
                 size="sm"
                 onClick={() => onOpenStartFilingModal(item)}
-                className="h-8 px-2.5 rounded-lg text-xs font-bold border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer whitespace-nowrap animate-in fade-in"
+                className="h-8 px-2.5 rounded-lg text-xs font-semibold border border-emerald-200 bg-white hover:bg-emerald-50 text-[#15803D] flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 title="Configure Tax Year & Filing Type for this interested prospect"
               >
-                <FilePlus2 className="w-3.5 h-3.5 text-emerald-700" />
+                <FilePlus2 className="w-3.5 h-3.5" />
                 <span>Configure Return</span>
               </Button>
             )}
@@ -518,7 +485,7 @@ export const getDocumenterColumns = ({
               <Link
                 to={`/documenter/agent/lead/${item.id}?from=queue`}
                 state={{ from: 'agent_queue' }}
-                className="h-8 px-2.5 rounded-lg text-xs font-semibold border border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1 shadow-2xs transition-all cursor-pointer whitespace-nowrap animate-in fade-in"
+                className="h-8 px-2.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1 cursor-pointer whitespace-nowrap"
                 title="View Lead Details & Call History"
               >
                 <Eye className="w-3.5 h-3.5" />
@@ -530,7 +497,7 @@ export const getDocumenterColumns = ({
             <Button
               size="sm"
               onClick={() => onOpenCallModal(item)}
-              className="h-8 px-3 rounded-lg text-xs font-bold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer whitespace-nowrap"
+              className="h-8 px-3 rounded-lg text-xs font-semibold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
               title="Call Prospect & Log Outcome"
             >
               <PhoneCall className="w-3.5 h-3.5" />
@@ -543,10 +510,10 @@ export const getDocumenterColumns = ({
                 size="sm"
                 variant="outline"
                 onClick={() => onOpenAssignModal(item)}
-                className="h-8 px-2.5 rounded-lg text-xs font-bold border-slate-200 hover:border-emerald-300 bg-white hover:bg-emerald-50 text-slate-700 hover:text-[#16A34A] flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
+                className="h-8 px-2.5 rounded-lg text-xs font-semibold border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 title="Assign Lead to Agent"
               >
-                <UserCheck className="w-3.5 h-3.5 text-[#16A34A]" />
+                <UserCheck className="w-3.5 h-3.5" />
                 <span>Assign</span>
               </Button>
             )}

@@ -9,13 +9,6 @@ import type {
   CouponJustificationCategory,
   CreateCouponFormData,
 } from '../types/coupon.types';
-import {
-  DollarSign,
-  Percent,
-  Sparkles,
-  ShieldCheck,
-  Lock,
-} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface CreateCouponModalProps {
@@ -94,104 +87,93 @@ export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
 
   const selectedCategoryMeta = JUSTIFICATION_CATEGORY_LABELS[justificationCategory];
 
+  const labelCls = 'block text-sm font-medium text-slate-700 mb-1.5';
+  const inputCls =
+    'w-full h-10 px-3 rounded-lg border border-slate-300 text-sm text-slate-900 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A]';
+  const hintCls = 'text-xs text-slate-400 mt-1';
+
   return (
     <AppModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Create Manager-Approved Discount Coupon"
-      description="Authorize a tracked promotional discount code with mandatory business justification for fee collections."
-      size="xl"
+      title="New Coupon"
+      description="Each coupon is linked to you and its reason for the audit trail."
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="create-coupon-form"
+            disabled={isSubmitting}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold"
+          >
+            {isSubmitting ? 'Saving...' : 'Create Coupon'}
+          </Button>
+        </>
+      }
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Top Notification Banner */}
-        <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3.5 flex items-start gap-3 text-xs text-emerald-900">
-          <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <div className="font-bold">Manager &amp; Team Leader Audit Control Active</div>
-            <div className="text-emerald-700">
-              Every issued promo code is permanently attached to your manager identity and the authorized business justification reason.
-            </div>
-          </div>
-        </div>
-
-        {/* 1. Code & Description */}
-        <div className="space-y-4">
+      <form id="create-coupon-form" onSubmit={handleSubmit} className="space-y-5">
+        {/* Code & Campaign */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Coupon Code *
+              <label className="text-sm font-medium text-slate-700">
+                Coupon code <span className="text-rose-500">*</span>
               </label>
               <button
                 type="button"
                 onClick={generateRandomCode}
-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-[#16A34A] hover:text-[#15803D] cursor-pointer"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Auto-Generate Code</span>
+                Generate
               </button>
             </div>
             <input
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
-              placeholder="e.g. CLOSE50, PRICEMATCH75, REF-BONUS-100"
+              placeholder="e.g. CLOSE50"
               required
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono font-bold tracking-wider text-slate-900 bg-white uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              className={`${inputCls} font-semibold tracking-wide`}
             />
           </div>
-
           <div>
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-              Internal Promotion Name / Campaign Note
-            </label>
+            <label className={labelCls}>Campaign note</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. Q1 Tax Filing Same-Day Incentive Campaign"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              placeholder="Optional"
+              className={inputCls}
             />
           </div>
         </div>
 
-        {/* 2. Discount Type & Value */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+        {/* Discount Type & Value */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
-              Discount Calculation Type
-            </label>
-            <div className="grid grid-cols-2 gap-2 bg-slate-200/70 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setDiscountType('FLAT')}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  discountType === 'FLAT'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <DollarSign className="w-3.5 h-3.5" />
-                <span>Flat Amount ($)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setDiscountType('PERCENTAGE')}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  discountType === 'PERCENTAGE'
-                    ? 'bg-white text-slate-900 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Percent className="w-3.5 h-3.5" />
-                <span>Percentage (%)</span>
-              </button>
+            <label className={labelCls}>Discount type</label>
+            <div className="grid grid-cols-2 gap-1 p-1 h-10 rounded-lg bg-slate-100">
+              {(['FLAT', 'PERCENTAGE'] as CouponDiscountType[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setDiscountType(t)}
+                  className={`rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                    discountType === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {t === 'FLAT' ? 'Flat ($)' : 'Percent (%)'}
+                </button>
+              ))}
             </div>
           </div>
-
           <div>
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
-              Discount Value * ({discountType === 'FLAT' ? '$ USD' : '% Percent'})
+            <label className={labelCls}>
+              Discount value <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <input
@@ -202,165 +184,104 @@ export const CreateCouponModal: React.FC<CreateCouponModalProps> = ({
                 value={discountValue}
                 onChange={(e) => setDiscountValue(Number(e.target.value))}
                 required
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                className={`${inputCls} pr-10`}
               />
-              <span className="absolute right-3.5 top-2.5 text-xs font-bold text-slate-400">
-                {discountType === 'FLAT' ? '$ OFF' : '% OFF'}
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                {discountType === 'FLAT' ? '$' : '%'}
               </span>
             </div>
           </div>
+        </div>
 
+        {/* Fee Rules */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-              Minimum Service Fee Requirement ($)
-            </label>
+            <label className={labelCls}>Minimum fee ($)</label>
             <input
               type="number"
               min="0"
               step="10"
               value={minServiceFee}
               onChange={(e) => setMinServiceFee(Number(e.target.value))}
-              placeholder="e.g. 250"
-              className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              placeholder="0"
+              className={inputCls}
             />
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
-              Fee must be at least this amount to apply
-            </span>
+            <p className={hintCls}>Coupon applies only above this fee</p>
           </div>
-
           {discountType === 'PERCENTAGE' && (
             <div>
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                Max Cap Limit ($ Optional)
-              </label>
+              <label className={labelCls}>Max discount ($)</label>
               <input
                 type="number"
                 min="0"
                 value={maxDiscountAmount || ''}
                 onChange={(e) => setMaxDiscountAmount(e.target.value ? Number(e.target.value) : undefined)}
-                placeholder="e.g. 100"
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                placeholder="Optional"
+                className={inputCls}
               />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">
-                Upper limit ceiling for percentage discount
-              </span>
+              <p className={hintCls}>Caps the percentage discount</p>
             </div>
           )}
         </div>
 
-        {/* 3. Mandatory Manager Justification Engine */}
-        <div className="bg-slate-900 text-white p-5 rounded-2xl space-y-4 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-bold tracking-wider uppercase text-emerald-400">
-                Mandatory Business Justification (Audit Control)
-              </span>
-            </div>
-            <span className="text-[11px] text-slate-400">Strict CRM Compliance</span>
-          </div>
-
-          {/* Justification Category Dropdown */}
-          <div>
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
-              Authorized Justification Reason Category *
-            </label>
-            <select
-              value={justificationCategory}
-              onChange={(e) => setJustificationCategory(e.target.value as CouponJustificationCategory)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 text-xs font-bold text-white bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 cursor-pointer"
-            >
-              <option value="IMMEDIATE_CLOSING_INCENTIVE">⚡ Immediate Closing Incentive (Same-Day Conversion)</option>
-              <option value="PRICING_CONCERN">💰 Pricing Concern / Fee Objection (Price Match Resolution)</option>
-              <option value="INTERNAL_SERVICE_ISSUE">⚠️ Internal / Employee Service Delay (Apology &amp; Retention)</option>
-              <option value="DOCUMENT_UPLOAD_FRICTION">📄 Document Upload Friction (Portal Usability Courtesy)</option>
-              <option value="PROVIDED_REFERRALS">🤝 Provided Referrals (Multi-Client Network Bonus)</option>
-              <option value="RETURNING_LOYALTY">🌟 Returning Customer Loyalty (Multi-Year Client)</option>
-              <option value="OTHER">🛡️ Manager Authorized Exception (Custom Justification)</option>
-            </select>
-
-            {selectedCategoryMeta && (
-              <p className="text-[11px] text-slate-400 mt-1.5 italic">
-                &bull; {selectedCategoryMeta.desc}
-              </p>
-            )}
-          </div>
-
-          {/* Justification Rationale Notes */}
-          <div>
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-1.5">
-              Manager Justification &amp; Audit Notes * (Why is this discount authorized?)
-            </label>
-            <textarea
-              rows={3}
-              value={justificationNotes}
-              onChange={(e) => setJustificationNotes(e.target.value)}
-              placeholder="e.g. Client had competing $275 quote from CPA firm. Approved $50 closing discount to secure multi-state return with $4,200 refund."
-              required
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-700 text-xs text-slate-100 bg-slate-800 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400"
-            />
-            <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-              <span>Must clearly explain the business justification for the finance &amp; audit trail</span>
-              <span>{justificationNotes.length} chars (min 10)</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Limits & Expiry */}
+        {/* Limits */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-              Maximum Authorized Redemptions
-            </label>
+            <label className={labelCls}>Usage limit</label>
             <input
               type="number"
               min="1"
               max="10000"
               value={maxUsageLimit}
               onChange={(e) => setMaxUsageLimit(Number(e.target.value))}
-              className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              className={inputCls}
             />
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
-              Auto-depletes after reaching this usage count
-            </span>
           </div>
-
           <div>
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-              Expiration Date (Optional)
-            </label>
+            <label className={labelCls}>Expires on</label>
             <input
               type="datetime-local"
               value={validUntil}
               onChange={(e) => setValidUntil(e.target.value)}
-              className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              className={inputCls}
             />
-            <span className="text-[10px] text-slate-400 mt-0.5 block">
-              Leave blank for ongoing authorized campaign
-            </span>
+            <p className={hintCls}>Leave blank for no expiry</p>
           </div>
         </div>
 
-        {/* 5. Modal Footer Actions */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="cursor-pointer"
-          >
-            Cancel
-          </Button>
+        <div className="border-t border-slate-100" />
 
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer flex items-center gap-2"
+        {/* Justification */}
+        <div>
+          <label className={labelCls}>
+            Reason <span className="text-rose-500">*</span>
+          </label>
+          <select
+            value={justificationCategory}
+            onChange={(e) => setJustificationCategory(e.target.value as CouponJustificationCategory)}
+            className={`${inputCls} cursor-pointer`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>{isSubmitting ? 'Authorizing Coupon...' : 'Authorize & Save Coupon'}</span>
-          </Button>
+            {(Object.keys(JUSTIFICATION_CATEGORY_LABELS) as CouponJustificationCategory[]).map((key) => (
+              <option key={key} value={key}>
+                {JUSTIFICATION_CATEGORY_LABELS[key].label}
+              </option>
+            ))}
+          </select>
+          {selectedCategoryMeta && <p className={hintCls}>{selectedCategoryMeta.desc}</p>}
+        </div>
+
+        <div>
+          <label className={labelCls}>
+            Notes <span className="text-rose-500">*</span>
+          </label>
+          <textarea
+            rows={3}
+            value={justificationNotes}
+            onChange={(e) => setJustificationNotes(e.target.value)}
+            placeholder="Why is this discount approved?"
+            required
+            className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm text-slate-900 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A]"
+          />
         </div>
       </form>
     </AppModal>

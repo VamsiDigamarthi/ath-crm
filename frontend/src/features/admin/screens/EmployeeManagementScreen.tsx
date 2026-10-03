@@ -1,6 +1,5 @@
 import React from 'react';
 import { useEmployeeManagement } from '../hooks/useEmployeeManagement';
-import { EmployeeStatsCards } from '../components/EmployeeStatsCards';
 import { EmployeeTable } from '../components/EmployeeTable';
 import { AddEmployeeDrawer } from '../components/AddEmployeeDrawer';
 import { BulkEmployeeImportModal } from '../components/BulkEmployeeImportModal';
@@ -41,42 +40,32 @@ export const EmployeeManagementScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
-      {/* Header & Quick Action */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Staff & Team Directory
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Manage employee credentials, department roles, and active operational status across Documenters, Sales Executives, and CPA File Operators.
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Team & Staff</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            {stats.total} members · {stats.activeCount} active
           </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleOpenAddDrawer}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Add Staff Member
-          </Button>
-        </div>
+        <Button
+          size="md"
+          onClick={handleOpenAddDrawer}
+          className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold flex items-center gap-2"
+        >
+          <UserPlus className="w-4 h-4" />
+          Add Staff Member
+        </Button>
       </div>
 
-      {/* KPI Stats Overview */}
-      <EmployeeStatsCards stats={stats} />
-
-      {/* Directory Table with Pagination */}
+      {/* Directory */}
       <EmployeeTable
         employees={filteredEmployees}
-        totalEmployeesCount={stats.total}
+        stats={stats}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeDepartment={activeDepartment}
         onDepartmentChange={setActiveDepartment}
-        onOpenAddDrawer={handleOpenAddDrawer}
-        onOpenBulkModal={() => setIsBulkModalOpen(true)}
         onEditEmployee={handleOpenEditDrawer}
         onToggleStatus={handleToggleStatus}
         currentPage={currentPage}

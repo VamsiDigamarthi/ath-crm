@@ -25,6 +25,7 @@ export const registerTaxpayerSchema = z.object({
   taxYear: z.coerce.number(),
   visaType: z.string().min(1, 'Please select your visa or residency status'),
   ssnTin: z.string().trim().optional(),
+  referralCode: z.string().trim().max(20).optional(),
 });
 
 export type RegisterTaxpayerInput = z.infer<typeof registerTaxpayerSchema>;

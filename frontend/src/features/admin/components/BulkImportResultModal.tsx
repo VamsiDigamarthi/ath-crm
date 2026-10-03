@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle2, 
   X, 
-  ArrowRight, 
   Users, 
   ShieldAlert, 
   Search, 
@@ -333,20 +332,6 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
               <span>Close Report</span>
             </Button>
 
-            {validProcessed > 0 && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  onClose();
-                  navigate('/documenter/manager/queue');
-                }}
-                className="text-xs font-bold shadow-xs w-full sm:w-auto flex items-center gap-1.5"
-              >
-                <span>Go to Documenter Queue</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
-            )}
           </div>
         </div>
       </div>

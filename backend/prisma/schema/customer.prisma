@@ -17,6 +17,11 @@ model CustomerProfile {
   state               String?
   zipCode             String?
   isConvertedCustomer Boolean  @default(false)
+
+  referralCode         String?           @unique
+  referredByCustomerId String?
+  referredByCustomer   CustomerProfile?  @relation("CustomerReferrals", fields: [referredByCustomerId], references: [id], onDelete: SetNull)
+  referredCustomers    CustomerProfile[] @relation("CustomerReferrals")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -26,4 +31,5 @@ model CustomerProfile {
   @@index([ssnTin])
   @@index([email])
   @@index([phone])
+  @@index([referredByCustomerId])
 }

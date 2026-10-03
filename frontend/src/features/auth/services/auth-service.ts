@@ -24,4 +24,8 @@ export const authService = {
   registerTaxpayer: async (payload: any) => {
     return apiClient.post('/auth/register', payload);
   },
+
+  checkReferralCode: async (code: string): Promise<{ data?: { valid: boolean; referrerName: string } }> => {
+    return apiClient.get(`/auth/referral-code/${encodeURIComponent(code)}`);
+  },
 };
