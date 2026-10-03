@@ -121,21 +121,21 @@ router.get(
 router.get(
   "/returned-leads",
   requireAuth,
-  authorize(Role.ADMIN),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
   getReturnedLeads
 );
 
 router.post(
   "/returned-leads/assign-bulk",
   requireAuth,
-  authorize(Role.ADMIN),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
   assignReturnedLeadsBulk
 );
 
 router.post(
   "/returned-leads/assign-round-robin",
   requireAuth,
-  authorize(Role.ADMIN),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
   autoRoundRobinReturnedLeads
 );
 
@@ -143,21 +143,42 @@ router.post(
 router.get(
   "/self-signups",
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
+  authorize(
+    Role.ADMIN,
+    Role.DOC_MANAGER,
+    Role.DOC_TEAM_LEAD,
+    Role.PREP_MANAGER,
+    Role.SALES_MANAGER,
+    Role.FILE_OP_MANAGER
+  ),
   getSelfSignups
 );
 
 router.post(
   "/self-signups/assign-bulk",
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
+  authorize(
+    Role.ADMIN,
+    Role.DOC_MANAGER,
+    Role.DOC_TEAM_LEAD,
+    Role.PREP_MANAGER,
+    Role.SALES_MANAGER,
+    Role.FILE_OP_MANAGER
+  ),
   assignSelfSignupsBulk
 );
 
 router.post(
   "/self-signups/assign-round-robin",
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD),
+  authorize(
+    Role.ADMIN,
+    Role.DOC_MANAGER,
+    Role.DOC_TEAM_LEAD,
+    Role.PREP_MANAGER,
+    Role.SALES_MANAGER,
+    Role.FILE_OP_MANAGER
+  ),
   autoRoundRobinSelfSignups
 );
 
@@ -165,21 +186,21 @@ router.post(
 router.get(
   "/master-taxpayers",
   requireAuth,
-  authorize(Role.ADMIN),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
   getMasterTaxpayers
 );
 
 router.get(
   "/master-taxpayers/:id",
   requireAuth,
-  authorize(Role.ADMIN),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
   getTaxpayerYearDetails
 );
 
 router.get(
   "/master-taxpayers/:id/year/:taxYear",
   requireAuth,
-  authorize(Role.ADMIN),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
   getTaxpayerYearDetails
 );
 

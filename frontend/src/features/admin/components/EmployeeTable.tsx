@@ -1,20 +1,23 @@
 import React, { useMemo } from 'react';
-import { AppTable } from '@/shared/components/AppTable';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { Button } from '@/shared/components/Button';
 import { AppTabs } from '@/shared/components/AppTabs';
-import { AppSearchInput } from '@/shared/components/AppSearchInput';
-import type { EmployeeItem, EmployeeStats, DepartmentType } from '../types/employee.types';
+import { UserPlus, Users, DollarSign, FileCheck, ShieldCheck, Calculator } from 'lucide-react';
+import type { EmployeeItem, DepartmentType } from '../types/employee.types';
 import { getEmployeeColumns } from '../columns/employee-columns';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
 
 interface EmployeeTableProps {
   employees: EmployeeItem[];
-  stats: EmployeeStats;
+  totalEmployeesCount: number;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   activeDepartment: DepartmentType;
   onDepartmentChange: (dept: DepartmentType) => void;
+  onOpenAddDrawer: () => void;
+  onOpenBulkModal?: () => void;
   onEditEmployee: (employee: EmployeeItem) => void;
   onToggleStatus: (employee: EmployeeItem) => void;
-  // Pagination
   currentPage: number;
   totalPages: number;
   totalItems: number;
@@ -26,11 +29,12 @@ interface EmployeeTableProps {
 
 export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   employees,
-  stats,
+  totalEmployeesCount,
   searchQuery,
   onSearchChange,
   activeDepartment,
   onDepartmentChange,
+  onOpenAddDrawer,
   onEditEmployee,
   onToggleStatus,
   currentPage,
@@ -42,57 +46,77 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   isLoading = false,
 }) => {
   const columns = useMemo(
-    () => getEmployeeColumns({ onEdit: onEditEmployee, onToggleStatus }),
+    () =>
+      getEmployeeColumns({
+        onEdit: onEditEmployee,
+        onToggleStatus,
+      }),
     [onEditEmployee, onToggleStatus]
   );
 
-  const tabs = [
-    { id: 'ALL', label: 'All', count: stats.total },
-    { id: 'DOC', label: 'Documenter', count: stats.documenters },
-    { id: 'PREP_REVIEW', label: 'Tax Prep & Review', count: stats.prepReview || 0 },
-    { id: 'SALES', label: 'Sales', count: stats.sales },
-    { id: 'FILE_OP', label: 'Filing', count: stats.fileOperators },
-    { id: 'ADMIN', label: 'Admins', count: stats.admins },
-  ];
+  const departmentTabs = useMemo(() => [
+    { id: 'ALL' as DepartmentType, label: `All Staff (${totalEmployeesCount})`, icon: Users },
+    { id: 'DOC' as DepartmentType, label: 'Documenters', icon: Users },
+    { id: 'PREP_REVIEW' as DepartmentType, label: 'Tax Prep & Review', icon: Calculator },
+    { id: 'SALES' as DepartmentType, label: 'Sales Team', icon: DollarSign },
+    { id: 'FILE_OP' as DepartmentType, label: 'File Operators', icon: FileCheck },
+    { id: 'ADMIN' as DepartmentType, label: 'Admins', icon: ShieldCheck },
+  ], [totalEmployeesCount]);
+
+  const handleExportExcel = () => {
+    exportTableToExcel(
+      employees,
+      [
+        { header: 'Employee Name', key: 'fullName' },
+        { header: 'Email', key: 'email' },
+        { header: 'Role', key: 'roleLabel' },
+        { header: 'Department', key: 'department' },
+        { header: 'Phone', key: 'mobile' },
+        { header: 'Status', key: 'status', format: (e) => (e.isActive ? 'Active' : 'Inactive') },
+      ],
+      'employee_directory'
+    );
+  };
 
   return (
     <div className="space-y-4">
-      {/* Department Tabs & Search */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
-        <AppTabs
-          tabs={tabs}
-          activeTab={activeDepartment}
-          onChange={(id) => onDepartmentChange(id as DepartmentType)}
-          size="sm"
-          className="flex-1"
-        />
-        <div className="w-full lg:w-72 lg:pb-1.5">
-          <AppSearchInput
-            value={searchQuery}
-            onChange={onSearchChange}
-            placeholder="Search name, email, phone..."
-          />
-        </div>
-      </div>
+      {/* Top Department Switcher Tabs */}
+      <AppTabs
+        tabs={departmentTabs}
+        activeTab={activeDepartment}
+        onChange={(dept) => onDepartmentChange(dept as DepartmentType)}
+      />
 
-      <AppTable<EmployeeItem>
+      <UnifiedTable<EmployeeItem>
         columns={columns}
         data={employees}
+        title="STAFF & EMPLOYEE DIRECTORY"
+        subtitle="Track and manage records, roles, login credentials, and department assignments for all employees."
         isLoading={isLoading}
-        selectable={false}
-        searchable={false}
-        density="comfortable"
-        rowClassName={(row) => (!row.isActive ? 'opacity-60' : undefined)}
-        pagination={{
+        searchPlaceholder="Search by name, email, phone, designation..."
+        searchValue={searchQuery}
+        onSearchChange={onSearchChange}
+        serverPagination={{
           currentPage,
           totalPages,
-          totalItems,
-          itemsPerPage,
+          totalEntries: totalItems,
+          pageSize: itemsPerPage,
           onPageChange,
-          onPerPageChange,
-          perPageOptions: [5, 10, 20, 50],
+          onPageSizeChange: onPerPageChange,
         }}
-        emptyText="No staff members found."
+        onExportExcel={handleExportExcel}
+        extraHeaderActions={
+          <Button
+            type="button"
+            size="sm"
+            onClick={onOpenAddDrawer}
+            className="h-8 px-3 text-xs font-medium bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            <span>Add Staff Member</span>
+          </Button>
+        }
+        emptyText="No staff members found matching active filters."
       />
     </div>
   );

@@ -60,10 +60,22 @@ export const ManagerScorecardsScreen: React.FC = () => {
   const totalAssignedLeads = useMemo(() => {
     return callingAgents.reduce((sum, a) => sum + (Number(a.activeLoad) || 0), 0);
   }, [callingAgents]);
-  const totalTeamDials = stats.todayDials ?? 0;
-  const totalConnected = stats.todayConnected ?? 0;
-  const totalInPrep = stats.inPrep ?? 0;
-  const totalDepartmentLeads = stats.totalDepartment || (stats.unassigned + stats.activeOutreach + stats.inPrep) || 0;
+
+  const totalTeamDials = useMemo(() => {
+    return callingAgents.reduce((sum, a) => sum + (Number(a.dials) || 0), 0);
+  }, [callingAgents]);
+
+  const totalConnected = useMemo(() => {
+    return callingAgents.reduce((sum, a) => sum + (Number(a.connected) || 0), 0);
+  }, [callingAgents]);
+
+  const totalPrepConversions = useMemo(() => {
+    return callingAgents.reduce((sum, a) => sum + (Number(a.conv) || 0), 0);
+  }, [callingAgents]);
+
+  const teamContactRate = totalTeamDials > 0
+    ? `${Math.round((totalConnected / totalTeamDials) * 100)}%`
+    : '0%';
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -72,7 +84,7 @@ export const ManagerScorecardsScreen: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Calling Agent Scorecards & Workload Health
+              Calling Agent Scorecards &amp; Workload Health
             </h2>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -90,7 +102,7 @@ export const ManagerScorecardsScreen: React.FC = () => {
             size="sm"
             onClick={refreshData}
             disabled={isLoading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5"
+            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
@@ -101,7 +113,7 @@ export const ManagerScorecardsScreen: React.FC = () => {
               size="sm"
               onClick={handleAutoRoundRobin}
               disabled={isActionLoading}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
               <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
               Auto Split Pool ({stats.unassigned})
@@ -148,16 +160,16 @@ export const ManagerScorecardsScreen: React.FC = () => {
               {totalTeamDials}
             </div>
             <div className="text-xs text-blue-600 font-medium mt-1">
-              {totalConnected} Connected ({stats.contactRatePct ? `${stats.contactRatePct}%` : '0%'})
+              {totalConnected} Connected ({teamContactRate})
             </div>
           </div>
         </div>
 
-        {/* Card 3: Active Tax Prep */}
+        {/* Card 3: Tax Prep Conversions */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
-              Active Tax Prep
+              Tax Prep Conversions
             </span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
               <CheckCircle2 className="w-4 h-4" />
@@ -165,19 +177,19 @@ export const ManagerScorecardsScreen: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {totalInPrep}
+              {totalPrepConversions}
             </div>
             <div className="text-xs text-[#16A34A] font-medium mt-1">
-              Active W-2 Client Intakes
+              Transferred to Prep by Agents
             </div>
           </div>
         </div>
 
-        {/* Card 4: Total Department Leads */}
+        {/* Card 4: Total Assigned Leads */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
-              Total Department Leads
+              Total Assigned Leads
             </span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
               <Activity className="w-4 h-4" />
@@ -185,10 +197,10 @@ export const ManagerScorecardsScreen: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {totalDepartmentLeads}
+              {totalAssignedLeads}
             </div>
             <div className="text-xs text-amber-600 font-medium mt-1">
-              {stats.unassigned} Unassigned Leads
+              Active in Agent Workloads
             </div>
           </div>
         </div>

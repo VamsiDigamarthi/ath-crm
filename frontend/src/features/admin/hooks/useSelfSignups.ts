@@ -119,7 +119,12 @@ export const useSelfSignups = () => {
   };
 
   // Modals & Drawers Controls
-  const handleOpenAssignModal = () => {
+  const handleOpenAssignModal = (lead?: SelfSignupLeadItem) => {
+    if (lead) {
+      setSelectedRows([lead]);
+      setIsAssignModalOpen(true);
+      return;
+    }
     if (selectedRows.length === 0) {
       toast.error('Please select at least one lead to assign');
       return;

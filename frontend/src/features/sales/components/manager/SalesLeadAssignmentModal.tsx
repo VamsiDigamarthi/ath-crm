@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { 
   Zap, 
@@ -144,32 +145,22 @@ export const SalesLeadAssignmentModal: React.FC<SalesLeadAssignmentModalProps> =
         )}
 
         {/* Mode Selector Tabs */}
-        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
-          <button
-            type="button"
-            onClick={() => setAssignmentMode('DIRECT')}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              assignmentMode === 'DIRECT'
-                ? 'bg-white text-[#16A34A] shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <UserCheck className="w-4 h-4 text-blue-500" />
-            Direct Closer Selection ({closers.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setAssignmentMode('ROUND_ROBIN')}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              assignmentMode === 'ROUND_ROBIN'
-                ? 'bg-white text-[#16A34A] shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Zap className="w-4 h-4 text-amber-500 fill-current" />
-            Auto Round-Robin (Closers Pool)
-          </button>
-        </div>
+        <AppTabs
+          tabs={[
+            {
+              id: 'DIRECT',
+              label: `Direct Closer Selection (${closers.length})`,
+              icon: UserCheck,
+            },
+            {
+              id: 'ROUND_ROBIN',
+              label: 'Auto Round-Robin (Closers Pool)',
+              icon: Zap,
+            },
+          ]}
+          activeTab={assignmentMode}
+          onChange={(mode) => setAssignmentMode(mode as any)}
+        />
 
         {/* Mode 1: Direct Closer Selection (Strictly Frontline Sales Agents) */}
         {assignmentMode === 'DIRECT' && (

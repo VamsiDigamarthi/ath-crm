@@ -23,7 +23,7 @@ function App() {
             background: '#0F172A',
             color: '#F8FAFC',
             fontSize: '12px',
-            fontFamily: 'Poppins, sans-serif',
+            fontFamily: 'Geist, -apple-system, BlinkMacSystemFont, sans-serif',
             borderRadius: '12px',
             border: '1px solid #1E293B',
             padding: '12px 16px',

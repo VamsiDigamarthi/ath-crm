@@ -3,6 +3,7 @@ import type { PrepReviewLead, PrepStaffMember } from '../../types/prep-review.ty
 import { AppModal } from '@/shared/components/AppModal';
 import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { AppSelect } from '@/shared/components/AppSelect';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { prepReviewService } from '../../services/prep-review-service';
 import { 
@@ -322,49 +323,38 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
               <span>Preparation &amp; QA SLA Target Completion *</span>
             </label>
 
-            {/* Fast Presets */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-slate-400 font-medium mr-1">Presets:</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setTargetSla('24h');
+            {/* Fast Presets Tabs */}
+            <AppTabs
+              tabs={[
+                {
+                  id: '24h',
+                  label: '24 Hours (Standard)',
+                },
+                {
+                  id: '48h',
+                  label: '48 Hours',
+                },
+                {
+                  id: 'urgent',
+                  label: 'Same-Day Urgent',
+                },
+              ]}
+              activeTab={targetSla}
+              onChange={(sla) => {
+                setTargetSla(sla);
+                if (sla === '24h') {
                   setTargetDueDate(new Date(Date.now() + 86400000));
                   setTargetDueTime('05:00 PM');
-                }}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                  targetSla === '24h' ? 'bg-[#16A34A] text-white shadow-2xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                24 Hours (Standard)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTargetSla('48h');
+                } else if (sla === '48h') {
                   setTargetDueDate(new Date(Date.now() + 172800000));
                   setTargetDueTime('05:00 PM');
-                }}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                  targetSla === '48h' ? 'bg-[#16A34A] text-white shadow-2xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                48 Hours
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTargetSla('urgent');
+                } else if (sla === 'urgent') {
                   setTargetDueDate(new Date());
                   setTargetDueTime('09:00 PM');
-                }}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                  targetSla === 'urgent' ? 'bg-rose-600 text-white shadow-2xs' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                Same-Day Urgent
-              </button>
-            </div>
+                }
+              }}
+              className="border-b-0"
+            />
           </div>
 
           {/* Interactive Date & Time Pickers Grid */}

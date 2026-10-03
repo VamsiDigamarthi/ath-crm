@@ -4,8 +4,6 @@ import { EmployeeTable } from '../components/EmployeeTable';
 import { AddEmployeeDrawer } from '../components/AddEmployeeDrawer';
 import { BulkEmployeeImportModal } from '../components/BulkEmployeeImportModal';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
-import { UserPlus } from 'lucide-react';
-import { Button } from '@/shared/components/Button';
 
 export const EmployeeManagementScreen: React.FC = () => {
   const {
@@ -48,24 +46,18 @@ export const EmployeeManagementScreen: React.FC = () => {
             {stats.total} members · {stats.activeCount} active
           </p>
         </div>
-        <Button
-          size="md"
-          onClick={handleOpenAddDrawer}
-          className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold flex items-center gap-2"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Staff Member
-        </Button>
       </div>
 
       {/* Directory */}
       <EmployeeTable
         employees={filteredEmployees}
-        stats={stats}
+        totalEmployeesCount={stats.total}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeDepartment={activeDepartment}
         onDepartmentChange={setActiveDepartment}
+        onOpenAddDrawer={handleOpenAddDrawer}
+        onOpenBulkModal={() => setIsBulkModalOpen(true)}
         onEditEmployee={handleOpenEditDrawer}
         onToggleStatus={handleToggleStatus}
         currentPage={currentPage}

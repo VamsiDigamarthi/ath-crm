@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calculator, ShieldCheck, CheckCircle2, RotateCcw } from 'lucide-react';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import type { PreparerQueueTab } from '../../hooks/useTaxPreparerQueue';
 
@@ -36,7 +37,7 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
 }) => {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-      {/* Left: Search & Tab Filter Pills */}
+      {/* Left: Search & AppTabs */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
         <div className="w-full sm:w-72">
           <AppSearchInput
@@ -47,85 +48,20 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
           />
         </div>
 
-        {/* Dynamic Tab Filter Pills */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => onTabChange('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'ALL'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            All Returns ({counts.all || 0})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onTabChange('DRAFTING')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === 'DRAFTING'
-                ? 'bg-white text-blue-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Calculator className="w-3.5 h-3.5 text-blue-600" />
-            <span>Drafting 1040 ({counts.drafting || 0})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onTabChange('QA_SUBMITTED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === 'QA_SUBMITTED'
-                ? 'bg-white text-purple-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-            <span>Sent to QA ({counts.qaSubmitted || 0})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onTabChange('QA_APPROVED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === 'QA_APPROVED'
-                ? 'bg-white text-emerald-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
-            <span>QA Approved ({counts.qaApproved || 0})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onTabChange('REVISIONS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === 'REVISIONS'
-                ? 'bg-white text-rose-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-            <span>Revisions Needed ({counts.revisions || 0})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onTabChange('REVERTED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === 'REVERTED'
-                ? 'bg-white text-amber-800 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
-            <span>Reverted to Docs ({counts.reverted || 0})</span>
-          </button>
-        </div>
+        {/* Dynamic Tab Filter Ribbon */}
+        <AppTabs
+          tabs={[
+            { id: 'ALL', label: 'All Returns', count: counts.all || 0 },
+            { id: 'DRAFTING', label: 'Drafting 1040', count: counts.drafting || 0, icon: Calculator },
+            { id: 'QA_SUBMITTED', label: 'Sent to QA', count: counts.qaSubmitted || 0, icon: ShieldCheck },
+            { id: 'QA_APPROVED', label: 'QA Approved', count: counts.qaApproved || 0, icon: CheckCircle2 },
+            { id: 'REVISIONS', label: 'Revisions Needed', count: counts.revisions || 0, icon: RotateCcw },
+            { id: 'REVERTED', label: 'Reverted to Docs', count: counts.reverted || 0, icon: RotateCcw },
+          ]}
+          activeTab={activeTab}
+          onChange={(tab) => onTabChange(tab as PreparerQueueTab)}
+          size="sm"
+        />
       </div>
 
       {/* Right: Complexity & Priority Filter Dropdowns */}

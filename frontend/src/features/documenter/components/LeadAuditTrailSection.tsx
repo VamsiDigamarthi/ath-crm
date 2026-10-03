@@ -12,6 +12,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { AppPagination } from '@/shared/components/AppPagination';
+import { AppTabs } from '@/shared/components/AppTabs';
 import type { StageHistoryItem, AuditLogItem, CallLogItem } from '../types/documenter.types';
 
 export interface LeadAuditTrailSectionProps {
@@ -519,74 +520,39 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
         </p>
       </div>
 
-      {/* 2. Filter Pills */}
-      <div className="px-4 sm:px-5 py-2.5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2 overflow-x-auto scrollbar-none flex-wrap">
-        <button
-          onClick={() => setFilter('ALL')}
-          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-            filter === 'ALL'
-              ? 'bg-slate-900 text-white shadow-2xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-          }`}
-        >
-          <span>All Activity</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-            filter === 'ALL' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600'
-          }`}>
-            {counts.all}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setFilter('STAGES')}
-          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-            filter === 'STAGES'
-              ? 'bg-indigo-600 text-white shadow-2xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-          }`}
-        >
-          <GitCommit className="w-3 h-3" />
-          <span>Stage &amp; Ingestion Handoffs</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-            filter === 'STAGES' ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-600'
-          }`}>
-            {counts.stages}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setFilter('CALLS')}
-          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-            filter === 'CALLS'
-              ? 'bg-blue-600 text-white shadow-2xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-          }`}
-        >
-          <PhoneCall className="w-3 h-3" />
-          <span>Outreach Calls</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-            filter === 'CALLS' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'
-          }`}>
-            {counts.calls}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setFilter('AUDIT')}
-          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-            filter === 'AUDIT'
-              ? 'bg-purple-600 text-white shadow-2xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-          }`}
-        >
-          <ShieldCheck className="w-3 h-3" />
-          <span>System Audits</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-            filter === 'AUDIT' ? 'bg-purple-700 text-white' : 'bg-slate-100 text-slate-600'
-          }`}>
-            {counts.audit}
-          </span>
-        </button>
+      {/* 2. Filter AppTabs */}
+      <div className="px-4 sm:px-5 border-b border-slate-200 bg-slate-50/50">
+        <AppTabs
+          tabs={[
+            {
+              id: 'ALL',
+              label: 'All Activity',
+              icon: History,
+              count: counts.all,
+            },
+            {
+              id: 'STAGES',
+              label: 'Stage & Ingestion Handoffs',
+              icon: GitCommit,
+              count: counts.stages,
+            },
+            {
+              id: 'CALLS',
+              label: 'Outreach Calls',
+              icon: PhoneCall,
+              count: counts.calls,
+            },
+            {
+              id: 'AUDIT',
+              label: 'System Audits',
+              icon: ShieldCheck,
+              count: counts.audit,
+            },
+          ]}
+          activeTab={filter}
+          onChange={(tab) => setFilter(tab as TimelineFilter)}
+          className="border-b-0"
+        />
       </div>
 
       {/* 3. Timeline Items List */}

@@ -20,6 +20,7 @@ import { PrepComplexityBadge } from '../common/PrepComplexityBadge';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import apiClient from '@/lib/api-client';
 
@@ -251,58 +252,18 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
         )}
 
         {/* 2. Navigation Tabs */}
-        <div className="flex items-center gap-2 px-5 sm:px-6 border-b border-slate-100 bg-slate-50/50 overflow-x-auto text-xs">
-          <button
-            type="button"
-            onClick={() => setActiveTab('OVERVIEW')}
-            className={`py-3 px-3.5 font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-              activeTab === 'OVERVIEW'
-                ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/30'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Profile &amp; Allocation</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('DOCUMENTS')}
-            className={`py-3 px-3.5 font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-              activeTab === 'DOCUMENTS'
-                ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/30'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Client Documents ({documents.length || lead.verifiedDocumentsCount})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('COMPUTATION')}
-            className={`py-3 px-3.5 font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-              activeTab === 'COMPUTATION'
-                ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/30'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Calculator className="w-3.5 h-3.5" />
-            <span>1040 Calculation Summary</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('AUDIT_TRAIL')}
-            className={`py-3 px-3.5 font-bold border-b-2 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-              activeTab === 'AUDIT_TRAIL'
-                ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/30'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <History className="w-3.5 h-3.5" />
-            <span>Audit Trail &amp; History ({stageHistories.length + auditLogs.length + callLogs.length})</span>
-          </button>
+        <div className="px-5 sm:px-6 bg-slate-50/50">
+          <AppTabs
+            tabs={[
+              { id: 'OVERVIEW', label: 'Profile & Allocation', icon: User },
+              { id: 'DOCUMENTS', label: 'Client Documents', count: documents.length || lead.verifiedDocumentsCount, icon: FileText },
+              { id: 'COMPUTATION', label: '1040 Calculation Summary', icon: Calculator },
+              { id: 'AUDIT_TRAIL', label: 'Audit Trail & History', count: stageHistories.length + auditLogs.length + callLogs.length, icon: History },
+            ]}
+            activeTab={activeTab}
+            onChange={(tab) => setActiveTab(tab as any)}
+            size="sm"
+          />
         </div>
 
         {/* 3. Tab Body Content */}

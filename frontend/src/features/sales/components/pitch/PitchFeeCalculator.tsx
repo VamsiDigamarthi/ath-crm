@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Calculator, 
   Check, 
@@ -6,28 +6,24 @@ import {
   Globe, 
   Tag, 
   CreditCard, 
-  FileCheck,
-  Lock,
-  History,
-  Coins,
-  ShieldCheck,
-  Loader2
+  FileCheck, 
+  Lock, 
+  History, 
+  Coins, 
+  ShieldCheck, 
+  Loader2,
+  Search,
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { CouponsApiService } from '@/features/coupons/services/coupon-service';
 import { JUSTIFICATION_CATEGORY_LABELS } from '@/features/coupons/types/coupon.types';
+import { US_STATES } from '@/shared/constants/us-states';
 import type { SalesFeeBreakdown, SalesPaymentStatus, PaymentHistoryItem } from '../../types/sales.types';
 import toast from 'react-hot-toast';
 
-const AVAILABLE_STATES = [
-  { code: 'IL', name: 'Illinois (IL)', hasTax: true },
-  { code: 'CA', name: 'California (CA)', hasTax: true },
-  { code: 'NY', name: 'New York (NY)', hasTax: true },
-  { code: 'WA', name: 'Washington (WA - No State Income Tax)', hasTax: false },
-  { code: 'TX', name: 'Texas (TX - No State Income Tax)', hasTax: false },
-  { code: 'CT', name: 'Connecticut (CT)', hasTax: true },
-  { code: 'NJ', name: 'New Jersey (NJ)', hasTax: true },
-];
+const NO_INCOME_TAX_STATES = new Set(['AK', 'FL', 'NV', 'NH', 'SD', 'TN', 'TX', 'WA', 'WY']);
 
 interface PitchFeeCalculatorProps {
   feeBreakdown: SalesFeeBreakdown;
@@ -64,6 +60,20 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
 }) => {
   const [couponCode, setCouponCode] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [stateSearchQuery, setStateSearchQuery] = useState('');
+  const [isStateDropdownOpen, setIsStateDropdownOpen] = useState(false);
+  const stateDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (stateDropdownRef.current && !stateDropdownRef.current.contains(event.target as Node)) {
+        setIsStateDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const isPaymentVerified = paymentStatus === 'PAID' || paidAmount > 0;
   const isQuotationLocked = isLocked || isPaymentVerified;
@@ -75,25 +85,39 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
     ? remainingBalance 
     : Math.max(0, feeBreakdown.totalServiceFee - paidAmount);
 
+  const filteredStates = useMemo(() => {
+    const q = stateSearchQuery.trim().toLowerCase();
+    if (!q) return US_STATES;
+    return US_STATES.filter(
+      (s) => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q)
+    );
+  }, [stateSearchQuery]);
+
   const handleToggleState = (stateIdentifier: string) => {
     if (isQuotationLocked) {
       toast.error('Quotation is locked because payment has already been verified.');
       return;
     }
-    const targetState = AVAILABLE_STATES.find((s) => s.name === stateIdentifier || s.code === stateIdentifier);
-    const standardName = targetState ? targetState.name : stateIdentifier;
-    const isSelected = feeBreakdown.selectedStates.some((s) => 
-      s === standardName || 
-      s === targetState?.code ||
-      (targetState && (s.startsWith(targetState.code) || targetState.name.includes(s)))
+    const targetState = US_STATES.find(
+      (s) => s.name.toLowerCase() === stateIdentifier.toLowerCase() || 
+             s.code.toLowerCase() === stateIdentifier.toLowerCase() ||
+             stateIdentifier.includes(s.code) ||
+             stateIdentifier.includes(s.name)
     );
+    const standardName = targetState ? `${targetState.name} (${targetState.code})` : stateIdentifier;
+
+    const isSelected = feeBreakdown.selectedStates.some((s) => {
+      if (s === standardName) return true;
+      if (targetState && (s === targetState.code || s === targetState.name || s.includes(targetState.code) || targetState.name.includes(s))) return true;
+      return false;
+    });
 
     const newStates = isSelected
-      ? feeBreakdown.selectedStates.filter((s) => !(
-          s === standardName || 
-          s === targetState?.code ||
-          (targetState && (s.startsWith(targetState.code) || targetState.name.includes(s)))
-        ))
+      ? feeBreakdown.selectedStates.filter((s) => {
+          if (s === standardName) return false;
+          if (targetState && (s === targetState.code || s === targetState.name || s.includes(targetState.code) || targetState.name.includes(s))) return false;
+          return true;
+        })
       : [...feeBreakdown.selectedStates, standardName];
 
     const stateFeeTotal = newStates.length * 49;
@@ -111,6 +135,28 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
       statePrepFee: stateFeeTotal,
       totalServiceFee: Math.max(0, total),
     });
+  };
+
+  const handleClearAllStates = () => {
+    if (isQuotationLocked) {
+      toast.error('Quotation is locked because payment has already been verified.');
+      return;
+    }
+    const total = 
+      feeBreakdown.fed1040PrepFee + 
+      0 + 
+      currentAuditDefenseFee + 
+      currentFbarFee + 
+      currentFatcaFee - 
+      feeBreakdown.discountAmount;
+
+    onUpdateFeeBreakdown({
+      ...feeBreakdown,
+      selectedStates: [],
+      statePrepFee: 0,
+      totalServiceFee: Math.max(0, total),
+    });
+    toast.success('Removed all state returns');
   };
 
   const handleToggleAuditDefense = () => {
@@ -299,48 +345,164 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
           </div>
         </div>
 
-        {/* Item 2: State Tax Return Filing (Selectable checkboxes) */}
+        {/* Item 2: State Tax Return Filing (Sleek Searchable Multi-Select) */}
         <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <div className="text-xs font-bold text-slate-900">State Tax Return Preparation ($49 / State)</div>
-              <div className="text-[11px] text-slate-500 font-medium">
-                Select states where the client lived or worked during tax year 2025.
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                <span>State Tax Return Preparation ($49 / State)</span>
+                {feeBreakdown.selectedStates.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                    {feeBreakdown.selectedStates.length} {feeBreakdown.selectedStates.length === 1 ? 'State' : 'States'} Selected
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                Select states where the client lived, worked, or earned income during tax year 2025.
               </div>
             </div>
-            <div className="text-sm font-black text-slate-900">
+            <div className="text-sm font-black text-slate-900 shrink-0">
               ${feeBreakdown.statePrepFee}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-            {AVAILABLE_STATES.map((state) => {
-              const isChecked = feeBreakdown.selectedStates.some((s) => 
-                s === state.name || 
-                s === state.code || 
-                s.startsWith(state.code) || 
-                state.name.includes(s)
-              );
-              return (
-                <label
-                  key={state.code}
-                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs cursor-pointer transition-all ${
-                    isChecked
-                      ? 'border-blue-500 bg-blue-50/60 font-bold text-blue-900'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => handleToggleState(state.name)}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                  />
-                  <span>{state.name}</span>
-                </label>
-              );
-            })}
+          {/* Selected States Chip Tags */}
+          <div className="flex flex-wrap items-center gap-1.5 min-h-[32px] pt-1">
+            {feeBreakdown.selectedStates.length === 0 ? (
+              <span className="text-[11px] text-slate-400 italic">No state returns added yet (Federal-only filing).</span>
+            ) : (
+              feeBreakdown.selectedStates.map((st) => {
+                const code = st.includes('(') ? st.match(/\(([^)]+)\)/)?.[1] || st : st;
+                const stateObj = US_STATES.find(
+                  (s) => s.code === code.toUpperCase() || s.name === st || st.startsWith(s.name)
+                );
+                const isNoTax = NO_INCOME_TAX_STATES.has(stateObj?.code || code.toUpperCase());
+                return (
+                  <span
+                    key={st}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-900 border border-blue-200 shadow-2xs group transition-all"
+                  >
+                    <span>{stateObj ? `${stateObj.name} (${stateObj.code})` : st}</span>
+                    {isNoTax && (
+                      <span className="text-[9px] font-semibold text-slate-500 bg-white/80 px-1 rounded">
+                        No Income Tax
+                      </span>
+                    )}
+                    {!isQuotationLocked && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleState(st)}
+                        className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-blue-200 text-blue-700 transition-colors cursor-pointer"
+                        title={`Remove ${st}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </span>
+                );
+              })
+            )}
           </div>
+
+          {/* Searchable State Dropdown Selector */}
+          {!isQuotationLocked && (
+            <div className="relative pt-2 border-t border-slate-100" ref={stateDropdownRef}>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={stateSearchQuery}
+                    onChange={(e) => {
+                      setStateSearchQuery(e.target.value);
+                      setIsStateDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsStateDropdownOpen(true)}
+                    placeholder="Search and add US states (e.g., California, NY, Texas)..."
+                    className="w-full text-xs pl-8 pr-8 py-2 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                  />
+                  {stateSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setStateSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsStateDropdownOpen(!isStateDropdownOpen)}
+                  className="px-3 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                >
+                  <span>{isStateDropdownOpen ? 'Close' : 'Browse All 50 States'}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isStateDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {feeBreakdown.selectedStates.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAllStates}
+                    className="px-2.5 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer shrink-0"
+                    title="Clear all selected states"
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              {/* Popover State Selection Grid */}
+              {isStateDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-white border border-slate-200 rounded-xl shadow-xl p-3 space-y-2 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 pb-1 border-b border-slate-100">
+                    <span>Click a state to add/remove ({filteredStates.length} states found)</span>
+                    <span className="font-semibold text-slate-500">$49/state</span>
+                  </div>
+
+                  {filteredStates.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-slate-400">
+                      No US states match &ldquo;{stateSearchQuery}&rdquo;
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                      {filteredStates.map((st) => {
+                        const isSelected = feeBreakdown.selectedStates.some(
+                          (s) => s === st.name || s === st.code || s.includes(st.code) || st.name.includes(s)
+                        );
+                        const isNoTax = NO_INCOME_TAX_STATES.has(st.code);
+                        return (
+                          <button
+                            key={st.code}
+                            type="button"
+                            onClick={() => handleToggleState(st.name)}
+                            className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-all cursor-pointer border ${
+                              isSelected
+                                ? 'bg-blue-600 text-white font-bold border-blue-600 shadow-2xs'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`w-5 text-[11px] font-black shrink-0 ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                                {st.code}
+                              </span>
+                              <span className="truncate">{st.name}</span>
+                            </div>
+                            {isSelected ? (
+                              <Check className="w-3.5 h-3.5 text-white shrink-0 ml-1" />
+                            ) : isNoTax ? (
+                              <span className="text-[9px] text-slate-400 shrink-0 ml-1">No Tax</span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Item 3: Audit Defense Shield (Toggle) */}

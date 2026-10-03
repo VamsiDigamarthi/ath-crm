@@ -327,32 +327,39 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
         </div>
 
         {/* Bottom: New Note Entry Box */}
-        <div className="space-y-2 pt-1 border-t border-slate-100">
-          <textarea
-            rows={2}
-            value={newNoteText}
-            onChange={(e) => {
-              setNewNoteText(e.target.value);
-              setIsNotesSaved(false);
-            }}
-            placeholder="Type a new closer note (e.g. client agreed on $227, callback scheduled for 5 PM)..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all shadow-2xs"
-          />
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-slate-400 font-medium">
-              💡 Notes are recorded in history &amp; audit timeline.
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSaveNotes}
-              disabled={isSavingNotes || !newNoteText.trim()}
-              className="h-7 px-3 text-[11px] font-bold border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer rounded-lg shadow-2xs flex items-center gap-1"
-            >
-              {isSavingNotes ? 'Saving...' : 'Save Note'}
-            </Button>
+        {paymentStatus === 'PAID' || lead.paymentStatus === 'PAID' || isAlreadyDispatched ? (
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-xs text-slate-500 font-medium flex items-center justify-center gap-2">
+            <Lock className="w-3.5 h-3.5 text-slate-400" />
+            <span>Closer notes and comments are locked following verified client payment.</span>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-2 pt-1 border-t border-slate-100">
+            <textarea
+              rows={2}
+              value={newNoteText}
+              onChange={(e) => {
+                setNewNoteText(e.target.value);
+                setIsNotesSaved(false);
+              }}
+              placeholder="Type a new closer note (e.g. client agreed on $227, callback scheduled for 5 PM)..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all shadow-2xs"
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-slate-400 font-medium">
+                💡 Notes are recorded in history &amp; audit timeline.
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSaveNotes}
+                disabled={isSavingNotes || !newNoteText.trim()}
+                className="h-7 px-3 text-[11px] font-bold border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer rounded-lg shadow-2xs flex items-center gap-1"
+              >
+                {isSavingNotes ? 'Saving...' : 'Save Note'}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 4. Final Handoff: Dispatch to IRS E-Filing Queue */}

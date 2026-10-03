@@ -59,8 +59,8 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
   const itemStyle = isActive ? activeStyleMap[activeStyle] : {}
 
   const itemClassName = cn(
-    'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs transition-all duration-150 cursor-pointer',
-    isActive ? 'font-bold' : 'font-semibold',
+    'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all duration-150 cursor-pointer',
+    isActive ? 'font-medium' : 'font-normal',
     activeStyle === 'bar' ? 'pl-3 border-l-[3px] border-transparent' : '',
     isActive ? activeClasses[activeStyle] : cn('border-transparent', theme.hover, theme.text),
     collapsed ? 'justify-center px-0' : '',
@@ -82,26 +82,26 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
   const itemInner = (
     <>
       <item.icon
-        size={18}
+        size={17}
         className={cn(
           'shrink-0 transition-colors',
           isActive
             ? 'text-white'
             : theme.bg === 'bg-white'
             ? 'text-slate-500'
-            : 'text-slate-300'
+            : 'text-slate-400'
         )}
         style={isActive ? { color: '#ffffff' } : undefined}
       />
       {!collapsed && (
         <span
           className={cn(
-            'flex-1 text-left truncate transition-colors text-xs font-semibold',
+            'flex-1 text-left truncate transition-colors text-xs',
             isActive
-              ? 'text-white font-bold'
+              ? 'text-white font-medium'
               : theme.bg === 'bg-white'
-              ? 'text-slate-700'
-              : 'text-slate-200'
+              ? 'text-slate-600 font-normal'
+              : 'text-slate-300 font-normal'
           )}
         >
           {item.label}
@@ -110,7 +110,7 @@ export function NavItem({ item, isActive, activeSubId, collapsed, theme, activeS
       {!collapsed && item.badge != null && (
         <span
           className={cn(
-            'text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none',
+            'text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none',
             isActive
               ? 'bg-white text-emerald-800'
               : 'bg-emerald-600 text-white'

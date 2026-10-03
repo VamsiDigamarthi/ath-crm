@@ -2,10 +2,12 @@ import React from 'react';
 import { Calendar, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppInput } from '@/shared/components/AppInput';
+import { AppSelect } from '@/shared/components/AppSelect';
 import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { parseUsDate, formatUsDate } from '../utils/organizer-date-helpers';
 import { type OrganizerData } from '../../../services/customer-api';
 import { isLeapYear, type ValidationErrorMap } from '../utils/organizer-validation';
+import { US_STATE_OPTIONS } from '@/shared/constants/us-states';
 
 interface Module3Props {
   data: OrganizerData['m3_presence'];
@@ -145,10 +147,10 @@ export const Module3Presence: React.FC<Module3Props> = ({
                 </tr>
                 <tr className="border-t border-slate-200 bg-slate-50/80 text-[11px] text-slate-600">
                   <th className="p-2 text-center">Year</th>
-                  <th className="p-2 border-l border-slate-200 w-24">State *</th>
+                  <th className="p-2 border-l border-slate-200 min-w-[140px]">State *</th>
                   <th className="p-2 min-w-[150px]">From (MM/DD/YYYY) *</th>
                   <th className="p-2 border-r border-slate-200 min-w-[150px]">To (MM/DD/YYYY) *</th>
-                  <th className="p-2 w-24">State</th>
+                  <th className="p-2 min-w-[140px]">State</th>
                   <th className="p-2 min-w-[150px]">From (MM/DD/YYYY)</th>
                   <th className="p-2 min-w-[150px]">To (MM/DD/YYYY)</th>
                   <th className="p-2 text-center"></th>
@@ -174,32 +176,21 @@ export const Module3Presence: React.FC<Module3Props> = ({
                     </td>
 
                     {/* Taxpayer State */}
-                    <td className="p-2 border-l border-slate-200">
-                      <div>
-                        <input
-                          type="text"
-                          placeholder="TX"
-                          maxLength={2}
-                          className={`w-16 px-2 py-1.5 border rounded-lg text-xs uppercase font-bold ${
-                            errors[`state_${idx}_state`]
-                              ? 'border-rose-400 bg-rose-50 text-rose-900'
-                              : 'border-slate-200 text-slate-800'
-                          }`}
-                          value={row.state || ''}
-                          onChange={(e) => {
-                            const list = historyList.map((item, i) =>
-                              i === idx ? { ...item, state: e.target.value.toUpperCase() } : item
-                            );
-                            updateField('statesResidedHistory', list);
-                            if (clearError) clearError(`state_${idx}_state`);
-                          }}
-                        />
-                        {errors[`state_${idx}_state`] && (
-                          <span className="text-[10px] text-rose-600 block mt-0.5 font-medium">
-                            {errors[`state_${idx}_state`]}
-                          </span>
-                        )}
-                      </div>
+                    <td className="p-2 border-l border-slate-200 min-w-[140px]">
+                      <AppSelect
+                        options={US_STATE_OPTIONS}
+                        searchable={true}
+                        placeholder="State"
+                        error={errors[`state_${idx}_state`]}
+                        value={row.state || ''}
+                        onChange={(val) => {
+                          const list = historyList.map((item, i) =>
+                            i === idx ? { ...item, state: val || '' } : item
+                          );
+                          updateField('statesResidedHistory', list);
+                          if (clearError) clearError(`state_${idx}_state`);
+                        }}
+                      />
                     </td>
 
                     {/* Taxpayer From Date */}
@@ -239,18 +230,19 @@ export const Module3Presence: React.FC<Module3Props> = ({
                     </td>
 
                     {/* Spouse State */}
-                    <td className="p-2">
-                      <input
-                        type="text"
-                        placeholder="TX"
-                        maxLength={2}
-                        className="w-16 px-2 py-1.5 border border-slate-200 rounded-lg text-xs uppercase font-bold text-slate-800"
+                    <td className="p-2 min-w-[140px]">
+                      <AppSelect
+                        options={[{ label: 'None / Same', value: '' }, ...US_STATE_OPTIONS]}
+                        searchable={true}
+                        placeholder="State"
+                        error={errors[`state_${idx}_spouseState`]}
                         value={row.spouseState || ''}
-                        onChange={(e) => {
+                        onChange={(val) => {
                           const list = historyList.map((item, i) =>
-                            i === idx ? { ...item, spouseState: e.target.value.toUpperCase() } : item
+                            i === idx ? { ...item, spouseState: val || '' } : item
                           );
                           updateField('statesResidedHistory', list);
+                          if (clearError) clearError(`state_${idx}_spouseState`);
                         }}
                       />
                     </td>

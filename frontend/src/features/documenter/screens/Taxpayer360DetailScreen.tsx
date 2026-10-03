@@ -53,7 +53,13 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     handleSaveCallDisposition,
   } = useDocumenterWorkspace();
 
-  const [activeTab, setActiveTab] = useState<'TIMELINE' | 'CALCULATOR' | 'ORGANIZER' | 'SALES_PITCH'>('TIMELINE');
+  const queryParams = new URLSearchParams(location.search);
+  const initialTabParam = queryParams.get('tab')?.toUpperCase();
+  const initialTab = (initialTabParam === 'ORGANIZER' || initialTabParam === 'SALES_PITCH' || initialTabParam === 'TIMELINE')
+    ? (initialTabParam as 'TIMELINE' | 'ORGANIZER' | 'SALES_PITCH')
+    : 'TIMELINE';
+
+  const [activeTab, setActiveTab] = useState<'TIMELINE' | 'CALCULATOR' | 'ORGANIZER' | 'SALES_PITCH'>(initialTab);
   const [lead, setLead] = useState<DocumenterLeadItem | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState<boolean>(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
@@ -136,6 +142,13 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       fetchLeadAuditLogs(id);
     }
   }, [id, fetchLeadAuditLogs]);
+
+  useEffect(() => {
+    const tabParam = new URLSearchParams(location.search).get('tab')?.toUpperCase();
+    if (tabParam === 'ORGANIZER' || tabParam === 'SALES_PITCH' || tabParam === 'TIMELINE') {
+      setActiveTab(tabParam as any);
+    }
+  }, [location.search]);
 
   // Fallback if not loaded
   const currentLead: DocumenterLeadItem = lead || {
@@ -243,7 +256,22 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              const fromQuery = new URLSearchParams(location.search).get('from') || (location.state as any)?.from;
+              if (fromQuery === 'documents' || fromQuery === 'agent_documents') {
+                navigate('/documenter/agent/documents');
+              } else if (fromQuery === 'queue' || fromQuery === 'agent_queue') {
+                navigate('/documenter/agent/queue');
+              } else if (fromQuery === 'callbacks' || fromQuery === 'agent_callbacks') {
+                navigate('/documenter/agent/callbacks');
+              } else if (fromQuery === 'fallback' || fromQuery === 'agent_fallback') {
+                navigate('/documenter/agent/fallback');
+              } else if (fromQuery === 'caseload') {
+                navigate('/documenter/manager/queue');
+              } else {
+                navigate(-1);
+              }
+            }}
             className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
             title="Go Back"
           >
@@ -253,7 +281,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <span>Tax Operations</span>
               <span>/</span>
-              <span>Calling Workspace</span>
+              <span>{new URLSearchParams(location.search).get('from') === 'documents' || (location.state as any)?.from === 'documents' ? 'Document Vault' : 'Calling Workspace'}</span>
               <span>/</span>
               <span className="text-slate-900 font-bold">Taxpayer Profile</span>
             </div>

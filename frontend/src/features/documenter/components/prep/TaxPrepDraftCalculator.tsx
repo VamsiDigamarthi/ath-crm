@@ -16,6 +16,7 @@ export interface TaxDraftComputation {
   fedTaxWithheld: number;
   stateTaxWithheld: number;
   interestIncome: number;
+  iraRetirementIncome?: number;
   stocksCapitalGains: number;
   standardDeduction: number;
   taxableIncome: number;
@@ -55,14 +56,39 @@ export const TaxPrepDraftCalculator: React.FC<TaxPrepDraftCalculatorProps> = ({
     (customerMaritalStatus?.toLowerCase() === 'married' ? 'MFJ' : 'SINGLE');
 
   const defaultWages = initialDraft?.w2GrossWages ?? organizer?.m4_wages?.estimatedWages ?? '';
-  const defaultInterest = initialDraft?.interestIncome ?? organizer?.m5_interest?.interestAmount ?? '';
+
+  const organizerPassiveIncome =
+    (Number(organizer?.m5_interest?.interestAmount) || 0) +
+    (Number(organizer?.m5_interest?.dividendAmount) || 0) +
+    (Number(organizer?.m5_interest?.form1099OidAmount) || 0);
+
+  const defaultInterest =
+    initialDraft?.interestIncome ??
+    (organizerPassiveIncome > 0 ? organizerPassiveIncome : organizer?.m5_interest?.interestAmount ?? '');
+
+  const defaultIra =
+    initialDraft?.iraRetirementIncome ??
+    (organizer?.m10_retirement?.grossDistribution ?? '');
+
   const defaultStocks = initialDraft?.stocksCapitalGains ?? organizer?.m6_stocks?.totalCapitalGain ?? '';
+
+  const organizerTotalFedWithheld =
+    (Number(organizer?.m4_wages?.federalTaxWithheld) || 0) +
+    (Number(organizer?.m5_interest?.interestFedTaxWithheld) || 0) +
+    (Number(organizer?.m5_interest?.dividendFedTaxWithheld) || 0) +
+    (Number(organizer?.m5_interest?.form1099OidFedTaxWithheld) || 0) +
+    (Number(organizer?.m10_retirement?.fedTaxWithheld) || 0);
+
+  const defaultFedWithheld =
+    initialDraft?.fedTaxWithheld ??
+    (organizerTotalFedWithheld > 0 ? organizerTotalFedWithheld : organizer?.m4_wages?.federalTaxWithheld ?? '');
 
   const [filingStatus, setFilingStatus] = useState<'SINGLE' | 'MFJ' | 'MFS' | 'HOH'>(defaultStatus);
   const [w2Wages, setW2Wages] = useState<number | string>(defaultWages);
-  const [fedWithheld, setFedWithheld] = useState<number | string>(initialDraft?.fedTaxWithheld ?? '');
+  const [fedWithheld, setFedWithheld] = useState<number | string>(defaultFedWithheld);
   const [stateWithheld, setStateWithheld] = useState<number | string>(initialDraft?.stateTaxWithheld ?? '');
   const [interestIncome, setInterestIncome] = useState<number | string>(defaultInterest);
+  const [iraIncome, setIraIncome] = useState<number | string>(defaultIra);
   const [stocksIncome, setStocksIncome] = useState<number | string>(defaultStocks);
 
   // 2025 IRS Standard Deductions
@@ -78,9 +104,10 @@ export const TaxPrepDraftCalculator: React.FC<TaxPrepDraftCalculatorProps> = ({
   const numFedWithheld = Number(fedWithheld) || 0;
   const numStateWithheld = Number(stateWithheld) || 0;
   const numInterest = Number(interestIncome) || 0;
+  const numIra = Number(iraIncome) || 0;
   const numStocks = Number(stocksIncome) || 0;
 
-  const grossTotal = numW2 + numInterest + numStocks;
+  const grossTotal = numW2 + numInterest + numIra + numStocks;
   const taxableIncome = grossTotal > 0 ? Math.max(0, grossTotal - currentStdDeduction) : 0;
 
   // Simplified IRS bracket estimate for quick intake preview
@@ -103,6 +130,7 @@ export const TaxPrepDraftCalculator: React.FC<TaxPrepDraftCalculatorProps> = ({
     fedTaxWithheld: numFedWithheld,
     stateTaxWithheld: numStateWithheld,
     interestIncome: numInterest,
+    iraRetirementIncome: numIra,
     stocksCapitalGains: numStocks,
     standardDeduction: currentStdDeduction,
     taxableIncome,
@@ -119,7 +147,7 @@ export const TaxPrepDraftCalculator: React.FC<TaxPrepDraftCalculatorProps> = ({
           <div className="flex items-center gap-2">
             <Calculator className="w-4 h-4 text-emerald-600" />
             <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-              1. Income & Tax Withholding Inputs
+              1. Income &amp; Tax Withholding Inputs
             </h4>
           </div>
           <span className="text-[10px] font-bold text-slate-400">
@@ -154,7 +182,7 @@ export const TaxPrepDraftCalculator: React.FC<TaxPrepDraftCalculatorProps> = ({
           {/* Federal & State Withheld */}
           <div className="grid grid-cols-2 gap-3">
             <AppInput
-              label="Fed Withheld (Box 2) ($) *"
+              label="Total Fed Withheld (W-2 & 1099) ($) *"
               type="number"
               placeholder="0.00"
               leftIcon={<DollarSign className="w-4 h-4" />}
@@ -172,15 +200,24 @@ export const TaxPrepDraftCalculator: React.FC<TaxPrepDraftCalculatorProps> = ({
             />
           </div>
 
-          {/* 1099 Interest & Stocks */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* 1099 Interest, 1099-R IRA & Stocks */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <AppInput
-              label="1099-INT/DIV Interest ($)"
+              label="1099-INT/DIV Passive ($)"
               type="number"
               placeholder="0.00"
               leftIcon={<DollarSign className="w-4 h-4" />}
               value={interestIncome.toString()}
               onChange={(e) => setInterestIncome(e.target.value)}
+            />
+
+            <AppInput
+              label="1099-R IRA Gross ($)"
+              type="number"
+              placeholder="0.00"
+              leftIcon={<DollarSign className="w-4 h-4" />}
+              value={iraIncome.toString()}
+              onChange={(e) => setIraIncome(e.target.value)}
             />
 
             <AppInput

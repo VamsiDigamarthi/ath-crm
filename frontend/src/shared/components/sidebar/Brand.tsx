@@ -53,12 +53,12 @@ export function Brand({ brand, collapsed, onToggle, theme, accentColor }: Props)
       {/* Title + subtitle */}
       <div className="flex flex-col min-w-0 flex-1">
         {brand?.title && (
-          <span className={cn('text-[14px] font-bold leading-tight truncate', theme.bg === 'bg-white' ? 'text-black font-extrabold' : 'text-white')}>
+          <span className={cn('text-[13px] font-medium leading-tight truncate', theme.bg === 'bg-white' ? 'text-slate-900' : 'text-white')}>
             {brand.title}
           </span>
         )}
         {brand?.subtitle && (
-          <span className={cn('text-[10px] leading-tight truncate font-semibold mt-0.5', theme.bg === 'bg-white' ? 'text-black/70' : 'text-gray-400')}>
+          <span className={cn('text-[10px] leading-tight truncate font-normal mt-0.5', theme.bg === 'bg-white' ? 'text-slate-500' : 'text-slate-400')}>
             {brand.subtitle}
           </span>
         )}

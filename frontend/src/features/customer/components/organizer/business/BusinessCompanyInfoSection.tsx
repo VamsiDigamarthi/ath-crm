@@ -5,6 +5,7 @@ import { AppSelect } from '@/shared/components/AppSelect';
 import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { parseUsDate, formatUsDate } from '../utils/organizer-date-helpers';
 import { type OrganizerData } from '../../../services/customer-api';
+import { US_STATE_OPTIONS } from '@/shared/constants/us-states';
 
 interface BusinessCompanyInfoSectionProps {
   data: Partial<OrganizerData['b1_companyInfo']>;
@@ -158,12 +159,14 @@ export const BusinessCompanyInfoSection: React.FC<BusinessCompanyInfoSectionProp
           onChange={(e) => onChange('city', e.target.value)}
         />
 
-        <AppInput
-          label="State (2-Letter) *"
-          placeholder="e.g. TX"
+        <AppSelect
+          label="State *"
+          options={US_STATE_OPTIONS}
+          searchable={true}
+          placeholder="Select State"
           error={errors.state}
           value={data.state || ''}
-          onChange={(e) => onChange('state', e.target.value.toUpperCase().slice(0, 2))}
+          onChange={(val) => onChange('state', val || '')}
         />
 
         <AppInput

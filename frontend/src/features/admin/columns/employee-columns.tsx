@@ -1,112 +1,143 @@
-import type { ColumnDef } from '@/shared/components/AppTable';
+import type { ColumnDef } from '@tanstack/react-table';
+import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { Button } from '@/shared/components/Button';
 import { Edit3, Power } from 'lucide-react';
 import type { EmployeeItem } from '../types/employee.types';
+import { SYSTEM_ROLES, SYSTEM_DEPARTMENTS, SYSTEM_STATUSES } from '@/shared/constants/system-enums';
 
 interface ColumnActionsProps {
   onEdit: (employee: EmployeeItem) => void;
   onToggleStatus: (employee: EmployeeItem) => void;
 }
 
-const DEPARTMENT_META: Record<EmployeeItem['department'], { label: string; dot: string }> = {
-  DOC: { label: 'Documenter', dot: 'bg-blue-500' },
-  PREP_REVIEW: { label: 'Tax Prep & Review', dot: 'bg-indigo-500' },
-  SALES: { label: 'Sales', dot: 'bg-purple-500' },
-  FILE_OP: { label: 'Filing', dot: 'bg-[#16A34A]' },
-  ADMIN: { label: 'Administration', dot: 'bg-slate-500' },
-};
-
-/**
- * Returns column definitions for the Staff directory table
- */
-export const getEmployeeColumns = (actions: ColumnActionsProps): ColumnDef<EmployeeItem>[] => [
+export const getEmployeeColumns = ({
+  onEdit,
+  onToggleStatus,
+}: ColumnActionsProps): ColumnDef<EmployeeItem, any>[] => [
   {
-    header: 'Member',
-    accessorKey: 'fullName',
-    sortable: true,
-    render: (row) => (
-      <div className="min-w-0">
-        <div className="font-semibold text-slate-900 text-sm truncate">{row.fullName}</div>
-        <div className="text-xs text-slate-500 truncate" title={row.email}>
-          {row.email}
-        </div>
-      </div>
+    id: 'employee',
+    header: 'EMPLOYEE',
+    accessorFn: (row) => `${row.fullName} ${row.email}`,
+    cell: ({ row }) => (
+      <TaxpayerCell
+        name={row.original.fullName}
+        email={row.original.email}
+      />
     ),
   },
   {
-    header: 'Role',
-    accessorKey: 'department',
-    render: (row) => {
-      const meta = DEPARTMENT_META[row.department] ?? DEPARTMENT_META.ADMIN;
-      return (
-        <div>
-          <div className="text-sm font-medium text-slate-800">{row.roleLabel}</div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-            {meta.label}
-          </div>
-        </div>
-      );
-    },
-  },
-  {
-    header: 'Phone',
-    accessorKey: 'mobile',
-    render: (row) => <span className="text-sm text-slate-600">{row.mobile || '—'}</span>,
-  },
-  {
-    header: 'Cases',
-    accessorKey: 'assignedCasesCount',
-    render: (row) => (
-      <div className="text-sm text-slate-700">
-        <span className="font-semibold text-slate-900">{row.assignedCasesCount}</span> active
-        <span className="text-slate-400"> · {row.completedCasesCount} done</span>
-      </div>
-    ),
-  },
-  {
-    header: 'Status',
-    accessorKey: 'isActive',
-    render: (row) => (
-      <span
-        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
-          row.isActive ? 'bg-emerald-50 text-[#15803D]' : 'bg-slate-100 text-slate-500'
-        }`}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full ${row.isActive ? 'bg-[#16A34A]' : 'bg-slate-400'}`} />
-        {row.isActive ? 'Active' : 'Inactive'}
+    id: 'empId',
+    header: 'EMP ID',
+    accessorFn: (row) => row.id.split('-')[0].toUpperCase(),
+    cell: ({ row }) => (
+      <span className="font-mono text-xs text-zinc-600">
+        {row.original.id.split('-')[0].toUpperCase()}
       </span>
     ),
   },
   {
-    header: '',
-    width: '90px',
-    render: (row) => (
-      <div className="flex items-center justify-end gap-1">
-        <button
-          type="button"
-          disabled={!row.isActive}
-          onClick={() => row.isActive && actions.onEdit(row)}
-          className={`p-2 rounded-lg transition-colors ${
-            row.isActive
-              ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer'
-              : 'text-slate-300 cursor-not-allowed'
+    id: 'role',
+    header: 'DESIGNATION',
+    accessorFn: (row) => `${row.roleLabel || ''} ${row.role || ''}`.trim(),
+    meta: {
+      filterType: 'enum',
+      filterOptions: SYSTEM_ROLES,
+    },
+    cell: ({ row }) => (
+      <span className="text-xs font-normal text-zinc-800">
+        {row.original.roleLabel || row.original.role}
+      </span>
+    ),
+  },
+  {
+    id: 'department',
+    header: 'DEPARTMENT',
+    accessorFn: (row) => `${row.department || ''} ${row.departmentLabel || ''}`.trim(),
+    meta: {
+      filterType: 'enum',
+      filterOptions: SYSTEM_DEPARTMENTS,
+    },
+    cell: ({ row }) => {
+      const deptMap: Record<string, string> = {
+        DOC: 'Documenter',
+        PREP_REVIEW: 'Prep & Review',
+        SALES: 'Sales',
+        FILE_OP: 'Filing Ops',
+        ADMIN: 'Admin',
+      };
+      return (
+        <span className="text-xs font-normal text-zinc-700">
+          {deptMap[row.original.department] || row.original.department}
+        </span>
+      );
+    },
+  },
+  {
+    id: 'mobile',
+    header: 'CONTACT',
+    accessorKey: 'mobile',
+    cell: ({ row }) => (
+      <span className="text-xs font-normal text-zinc-600">
+        {row.original.mobile || '—'}
+      </span>
+    ),
+  },
+  {
+    id: 'status',
+    header: 'STATUS',
+    accessorKey: 'isActive',
+    meta: {
+      filterType: 'enum',
+      filterOptions: SYSTEM_STATUSES,
+    },
+    cell: ({ row }) => {
+      const isActive = row.original.isActive;
+      return (
+        <span
+          className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded ${
+            isActive
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : 'bg-zinc-100 text-zinc-500 border border-zinc-200'
           }`}
-          title={row.isActive ? 'Edit' : 'Activate to edit'}
         >
-          <Edit3 className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => actions.onToggleStatus(row)}
-          className={`p-2 rounded-lg transition-colors cursor-pointer ${
-            row.isActive
-              ? 'text-slate-500 hover:text-rose-600 hover:bg-rose-50'
-              : 'text-[#16A34A] hover:bg-emerald-50'
+          {isActive ? 'Active' : 'Inactive'}
+        </span>
+      );
+    },
+  },
+  {
+    id: 'actions',
+    header: 'ACTION',
+    enableSorting: false,
+    enableHiding: false,
+    meta: {
+      disableMenu: true,
+      disableFilter: true,
+    },
+    cell: ({ row }) => (
+      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onEdit(row.original)}
+          className="h-7 px-2 text-[11px] font-normal border-zinc-200 text-zinc-700 hover:bg-zinc-50 cursor-pointer"
+        >
+          <Edit3 className="w-3 h-3 text-zinc-500 mr-1" />
+          <span>Edit</span>
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onToggleStatus(row.original)}
+          className={`h-7 px-2 text-[11px] font-normal border-zinc-200 cursor-pointer ${
+            row.original.isActive
+              ? 'text-rose-600 hover:bg-rose-50'
+              : 'text-emerald-600 hover:bg-emerald-50'
           }`}
-          title={row.isActive ? 'Deactivate' : 'Activate'}
         >
-          <Power className="w-4 h-4" />
-        </button>
+          <Power className="w-3 h-3 mr-1" />
+          <span>{row.original.isActive ? 'Deactivate' : 'Activate'}</span>
+        </Button>
       </div>
     ),
   },

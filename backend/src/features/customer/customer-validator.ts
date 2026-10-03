@@ -230,18 +230,50 @@ export const m5InterestSchema = z.object({
   hasInterestDividends: z.boolean().optional().default(false),
   bankName: z.string().trim().max(150).optional().default(''),
   interestAmount: z.number().min(0, 'Interest amount cannot be negative').max(100000000).optional().default(0),
+  interestFedTaxWithheld: z.number().min(0, '1099-INT Federal Tax Withheld cannot be negative').max(100000000).optional().default(0),
   dividendAmount: z.number().min(0, 'Dividend amount cannot be negative').max(100000000).optional().default(0),
+  dividendFedTaxWithheld: z.number().min(0, '1099-DIV Federal Tax Withheld cannot be negative').max(100000000).optional().default(0),
   form1099OidAmount: z.number().min(0, '1099-OID amount cannot be negative').max(100000000).optional().default(0),
+  form1099OidFedTaxWithheld: z.number().min(0, '1099-OID Federal Tax Withheld cannot be negative').max(100000000).optional().default(0),
   interestAccounts: z
     .array(
       z.object({
         bankName: z.string().trim().max(150).optional().default(''),
         interestAmount: z.number().min(0).optional().default(0),
         dividendAmount: z.number().min(0).optional().default(0),
+        fedTaxWithheld: z.number().min(0).optional().default(0),
       })
     )
     .optional()
     .default([]),
+});
+
+/**
+ * Zod Schema for Module 10 1099-R IRA & Retirement Distributions
+ */
+export const m10RetirementSchema = z.object({
+  hasRetirementDistribution: z.boolean().optional().default(false),
+  payerName: z
+    .string()
+    .trim()
+    .max(150)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  distributionType: z.string().trim().max(100).optional().default('NORMAL'),
+  grossDistribution: z.number().min(0, 'Gross distribution cannot be negative').max(100000000).optional().default(0),
+  taxableAmount: z.number().min(0, 'Taxable distribution cannot be negative').max(100000000).optional().default(0),
+  fedTaxWithheld: z.number().min(0, 'IRA Federal Tax Withheld cannot be negative').max(100000000).optional().default(0),
+  stateTaxWithheld: z.number().min(0, 'IRA State Tax Withheld cannot be negative').max(100000000).optional().default(0),
+  earlyWithdrawalReason: z.string().trim().max(100).optional().default('NO_EXCEPTION'),
+  reasonExplanation: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => !/<[^>]+>|<\s*script\b|javascript\s*:/i.test(v), 'HTML tags and script injections are forbidden')
+    .optional()
+    .default(''),
+  isRothIra: z.boolean().optional().default(false),
 });
 
 /**
@@ -522,6 +554,7 @@ export const saveOrganizerSchema = z.object({
       m3_presence: m3PresenceSchema.optional(),
       m4_wages: m4WagesSchema.optional(),
       m5_interest: m5InterestSchema.optional(),
+      m10_retirement: m10RetirementSchema.optional(),
       m6_stocks: m6StocksSchema.optional(),
       m7_foreign: m7ForeignSchema.optional(),
       m8_deductions: m8DeductionsSchema.optional(),

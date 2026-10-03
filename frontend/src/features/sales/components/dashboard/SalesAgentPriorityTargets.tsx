@@ -37,7 +37,7 @@ export const SalesAgentPriorityTargets: React.FC<SalesAgentPriorityTargetsProps>
           onClick={onGoToQueue}
           className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer transition-colors"
         >
-          <span>View All in Pitch Queue</span>
+          <span>View All in Outreach Pending</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -47,7 +47,7 @@ export const SalesAgentPriorityTargets: React.FC<SalesAgentPriorityTargetsProps>
         {priorityTargets.length === 0 ? (
           <div className="p-8 text-center text-slate-400 font-medium text-xs">
             <AlertCircle className="w-6 h-6 mx-auto text-slate-300 mb-2" />
-            <span>No pending returns in pitch queue right now. Great job closing all deals!</span>
+            <span>No pending returns in outreach pending right now. Great job closing all deals!</span>
           </div>
         ) : (
           priorityTargets.map((lead) => (

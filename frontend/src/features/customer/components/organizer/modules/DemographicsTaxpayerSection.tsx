@@ -12,6 +12,7 @@ import { AppSelect } from '@/shared/components/AppSelect';
 import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { parseUsDate, formatUsDate } from '../utils/organizer-date-helpers';
 import { type OrganizerData } from '../../../services/customer-api';
+import { US_STATE_OPTIONS } from '@/shared/constants/us-states';
 
 interface DemographicsTaxpayerSectionProps {
   data: Partial<OrganizerData['m1_demographics']>;
@@ -63,6 +64,11 @@ export const DemographicsTaxpayerSection: React.FC<DemographicsTaxpayerSectionPr
         workPhone: m2.spouseWorkPhone || '',
         email: m2.spouseEmail || '',
         relationship: m2.spouseRelationship || 'Spouse',
+        sameAddressAsTaxpayer: m2.spouseSameAddressAsTaxpayer !== undefined ? m2.spouseSameAddressAsTaxpayer : true,
+        residentialAddress: m2.spouseResidentialAddress || '',
+        city: m2.spouseCity || '',
+        state: m2.spouseState || '',
+        zipCode: m2.spouseZipCode || '',
       };
 
   const handleSpouseChange = (field: string, value: any, errorKey?: string) => {
@@ -90,8 +96,20 @@ export const DemographicsTaxpayerSection: React.FC<DemographicsTaxpayerSectionPr
       updateM2Field('spouseVisaType', value);
     } else if (field === 'workPhone') {
       updateM2Field('spouseWorkPhone', value);
+    } else if (field === 'email') {
+      updateM2Field('spouseEmail', value);
     } else if (field === 'relationship') {
       updateM2Field('spouseRelationship', value);
+    } else if (field === 'sameAddressAsTaxpayer') {
+      updateM2Field('spouseSameAddressAsTaxpayer', value);
+    } else if (field === 'residentialAddress') {
+      updateM2Field('spouseResidentialAddress', value);
+    } else if (field === 'city') {
+      updateM2Field('spouseCity', value);
+    } else if (field === 'state') {
+      updateM2Field('spouseState', value);
+    } else if (field === 'zipCode') {
+      updateM2Field('spouseZipCode', value);
     }
 
     updateM2Field('spouseList', [updatedSpouse]);
@@ -499,8 +517,8 @@ export const DemographicsTaxpayerSection: React.FC<DemographicsTaxpayerSectionPr
                 />
               </div>
 
-              {/* Row 3: Spouse Occupation & Work / Mobile Phone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Row 3: Spouse Occupation, Work / Mobile Phone, Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <AppInput
                   label="Spouse Occupation *"
                   placeholder="e.g. Financial Analyst or Homemaker"
@@ -517,6 +535,77 @@ export const DemographicsTaxpayerSection: React.FC<DemographicsTaxpayerSectionPr
                   value={spouse.workPhone || ''}
                   onChange={(e) => handleSpouseChange('workPhone', e.target.value)}
                 />
+
+                <AppInput
+                  label="Spouse Email Address"
+                  placeholder="spouse@domain.com"
+                  leftIcon={<Mail className="w-4 h-4" />}
+                  value={spouse.email || ''}
+                  onChange={(e) => handleSpouseChange('email', e.target.value)}
+                />
+              </div>
+
+              {/* Row 4: Spouse Residential Address */}
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800 select-none">
+                    <input
+                      type="checkbox"
+                      checked={spouse.sameAddressAsTaxpayer !== false}
+                      onChange={(e) => handleSpouseChange('sameAddressAsTaxpayer', e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-[#16A34A] focus:ring-[#16A34A] cursor-pointer"
+                    />
+                    <span>Spouse residential address is same as taxpayer</span>
+                  </label>
+                  {spouse.sameAddressAsTaxpayer !== false && d.residentialAddress && (
+                    <span className="text-[11px] text-slate-500 italic truncate max-w-xs hidden sm:inline">
+                      {d.residentialAddress}, {d.city || ''}, {d.state || ''} {d.zipCode || ''}
+                    </span>
+                  )}
+                </div>
+
+                {spouse.sameAddressAsTaxpayer === false && (
+                  <div className="space-y-3 p-3.5 rounded-lg bg-slate-50/80 border border-slate-200 animate-in fade-in duration-150">
+                    <div className="text-[11px] font-semibold text-slate-700">
+                      Separate Spouse Residential Address
+                    </div>
+                    <div>
+                      <AppInput
+                        label="Spouse Current Residential Street Address *"
+                        placeholder="e.g. 200 Park Ave, Apt 14B"
+                        leftIcon={<Home className="w-4 h-4" />}
+                        error={errors['spouse_0_residentialAddress'] || errors.spouseResidentialAddress}
+                        value={spouse.residentialAddress || ''}
+                        onChange={(e) => handleSpouseChange('residentialAddress', e.target.value, 'spouse_0_residentialAddress')}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <AppInput
+                        label="Spouse City *"
+                        placeholder="e.g. New York"
+                        error={errors['spouse_0_city'] || errors.spouseCity}
+                        value={spouse.city || ''}
+                        onChange={(e) => handleSpouseChange('city', e.target.value, 'spouse_0_city')}
+                      />
+                      <AppSelect
+                        label="Spouse State *"
+                        options={US_STATE_OPTIONS}
+                        searchable={true}
+                        placeholder="Select State"
+                        error={errors['spouse_0_state'] || errors.spouseState}
+                        value={spouse.state || ''}
+                        onChange={(val) => handleSpouseChange('state', val || '', 'spouse_0_state')}
+                      />
+                      <AppInput
+                        label="Spouse ZIP Code *"
+                        placeholder="e.g. 10017"
+                        error={errors['spouse_0_zipCode'] || errors.spouseZipCode}
+                        value={spouse.zipCode || ''}
+                        onChange={(e) => handleSpouseChange('zipCode', e.target.value.slice(0, 10), 'spouse_0_zipCode')}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -542,12 +631,14 @@ export const DemographicsTaxpayerSection: React.FC<DemographicsTaxpayerSectionPr
             onChange={(e) => handleFieldChange('city', e.target.value)}
           />
 
-          <AppInput
-            label="State (2-Letter Code) *"
-            placeholder="e.g. TX"
+          <AppSelect
+            label="State *"
+            options={US_STATE_OPTIONS}
+            searchable={true}
+            placeholder="Select State"
             error={errors.state}
             value={d.state || ''}
-            onChange={(e) => handleFieldChange('state', e.target.value.toUpperCase().slice(0, 2))}
+            onChange={(val) => handleFieldChange('state', val || '')}
           />
 
           <AppInput
