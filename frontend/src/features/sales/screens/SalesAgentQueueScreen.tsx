@@ -21,7 +21,7 @@ export const SalesAgentQueueScreen: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            My Active Sales &amp; Fee Quotation Pitch Queue
+            My Active Sales &amp; Fee Quotation Outreach Pending
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
             Call QA-approved taxpayers, pitch certified Form 1040 deductions, quote custom filing fees, and collect payment checkouts.

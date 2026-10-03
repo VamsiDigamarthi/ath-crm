@@ -52,6 +52,11 @@ export const PitchNegotiationBar: React.FC<PitchNegotiationBarProps> = ({ lead, 
     247
   );
 
+  const isPaid =
+    lead.paymentStatus === 'PAID' ||
+    Number(lead.paidAmount || 0) >= Number(lead.feeBreakdown?.totalServiceFee || (lead.taxDraftSummary as any)?.totalQuotedFee || 1) ||
+    ['PAID_AND_AUTHORIZED', 'FILING_QUEUE', 'FILING_IN_PROGRESS', 'FILING_SUCCESS', 'COMPLETED'].includes(lead.currentStage as string);
+
   const initialStatus: PitchNegotiationStatus =
     (lead.pitchStatus as PitchNegotiationStatus) ||
     ((lead.taxDraftSummary as any)?.salesPitch?.pitchStatus as PitchNegotiationStatus) ||
@@ -85,6 +90,7 @@ export const PitchNegotiationBar: React.FC<PitchNegotiationBarProps> = ({ lead, 
   }, [lead.pitchStatus, lead.negotiatedAmount]);
 
   const handleSave = async () => {
+    if (isPaid) return;
     setIsSaving(true);
     setIsSaved(false);
 
@@ -134,19 +140,32 @@ export const PitchNegotiationBar: React.FC<PitchNegotiationBarProps> = ({ lead, 
             <Tag className="w-3.5 h-3.5" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight">
-              Closer Pitch Status &amp; Fee Negotiation
+            <h4 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Closer Pitch Status &amp; Fee Negotiation</span>
+              {isPaid && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-[#16A34A] border border-emerald-200 flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5 text-[#16A34A]" /> Locked (Paid)
+                </span>
+              )}
             </h4>
             <p className="text-[11px] text-slate-500 font-medium">
-              Record live call disposition, fee objections, and client-negotiated counter-offers.
+              {isPaid
+                ? 'Fee payment has been collected. Negotiation fields and closer disposition are read-only.'
+                : 'Record live call disposition, fee objections, and client-negotiated counter-offers.'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${currentOption.badgeColor}`}>
-            ● {currentOption.shortLabel}
-          </span>
+          {isPaid ? (
+            <span className="text-[10px] font-bold px-2.5 py-1 rounded-md border bg-emerald-50 text-emerald-800 border-emerald-200 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-[#16A34A]" /> Finalized (Paid)
+            </span>
+          ) : (
+            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${currentOption.badgeColor}`}>
+              ● {currentOption.shortLabel}
+            </span>
+          )}
           {isSaved && (
             <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 animate-in fade-in">
               <CheckCircle2 className="w-3 h-3" />
@@ -156,21 +175,39 @@ export const PitchNegotiationBar: React.FC<PitchNegotiationBarProps> = ({ lead, 
         </div>
       </div>
 
+      {/* Payment Locked Banner */}
+      {isPaid && (
+        <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between gap-2 text-xs text-emerald-950">
+          <div className="flex items-center gap-2 font-medium">
+            <Lock className="w-4 h-4 text-[#16A34A] shrink-0" />
+            <span>
+              Payment of <strong className="font-bold text-[#16A34A]">${Number(lead.paidAmount || lead.feeBreakdown?.totalServiceFee || originalFee).toLocaleString()}</strong> verified. Pitch disposition, negotiated fee, and comments are locked.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Horizontal Layout Options */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
         {/* 1. Status Dropdown (Col Span 5) */}
         <div className="md:col-span-5 space-y-1.5">
-          <label className="block text-xs font-bold text-slate-700">
-            1. Pitch Status / Disposition *
+          <label className="block text-xs font-bold text-slate-700 flex items-center justify-between">
+            <span>1. Pitch Status / Disposition *</span>
+            {isPaid && <span className="text-[10px] font-bold text-slate-400 flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> Locked</span>}
           </label>
           <div className="relative">
             <select
               value={pitchStatus}
+              disabled={isPaid}
               onChange={(e) => {
                 setPitchStatus(e.target.value as PitchNegotiationStatus);
                 setIsSaved(false);
               }}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all cursor-pointer shadow-2xs"
+              className={`w-full border rounded-xl px-3 py-2.5 text-xs font-semibold shadow-2xs transition-all ${
+                isPaid
+                  ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
+                  : 'bg-slate-50 border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white cursor-pointer'
+              }`}
             >
               {PITCH_STATUS_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -206,8 +243,9 @@ export const PitchNegotiationBar: React.FC<PitchNegotiationBarProps> = ({ lead, 
 
         {/* 3. Negotiated Amount by Client (Col Span 3) */}
         <div className="md:col-span-3 space-y-1.5">
-          <label className="block text-xs font-bold text-slate-700">
-            3. Negotiated Amount by Client
+          <label className="block text-xs font-bold text-slate-700 flex items-center justify-between">
+            <span>3. Negotiated Amount by Client</span>
+            {isPaid && <span className="text-[10px] font-bold text-slate-400 flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> Locked</span>}
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 font-bold text-xs">
@@ -217,13 +255,18 @@ export const PitchNegotiationBar: React.FC<PitchNegotiationBarProps> = ({ lead, 
               type="number"
               min="0"
               step="1"
+              disabled={isPaid}
               value={negotiatedAmount}
               onChange={(e) => {
                 setNegotiatedAmount(e.target.value);
                 setIsSaved(false);
               }}
-              placeholder="e.g. 200.00"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-7 pr-3 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all shadow-2xs"
+              placeholder={isPaid ? 'N/A' : 'e.g. 200.00'}
+              className={`w-full border rounded-xl pl-7 pr-3 py-2.5 text-xs font-bold shadow-2xs transition-all ${
+                isPaid
+                  ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
+                  : 'bg-slate-50 border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white'
+              }`}
             />
           </div>
         </div>
@@ -233,12 +276,22 @@ export const PitchNegotiationBar: React.FC<PitchNegotiationBarProps> = ({ lead, 
           <Button
             size="sm"
             onClick={handleSave}
-            disabled={isSaving}
-            className="w-full h-[38px] bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer rounded-xl shadow-xs transition-all"
-            title="Save status & negotiation to database"
+            disabled={isSaving || isPaid}
+            className={`w-full h-[38px] font-bold text-xs flex items-center justify-center gap-1.5 rounded-xl shadow-xs transition-all ${
+              isPaid
+                ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                : 'bg-slate-900 hover:bg-slate-800 text-white cursor-pointer'
+            }`}
+            title={isPaid ? 'Negotiation locked after payment' : 'Save status & negotiation to database'}
           >
             {isSaving ? (
               <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : isPaid ? (
+              <>
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden md:inline">Locked</span>
+                <span className="md:hidden">Locked</span>
+              </>
             ) : (
               <>
                 <Save className="w-3.5 h-3.5" />
@@ -253,30 +306,40 @@ export const PitchNegotiationBar: React.FC<PitchNegotiationBarProps> = ({ lead, 
       {/* 5. Custom Comment Input (Strictly visible ONLY when OTHER_COMMENT is selected) */}
       {pitchStatus === 'OTHER_COMMENT' && (
         <div className="pt-2 border-t border-slate-100 animate-in fade-in duration-150 space-y-1.5">
-          <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-            <span>Custom Negotiation Note / Closer Comment *</span>
+          <label className="block text-xs font-bold text-slate-700 flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+              <span>Custom Negotiation Note / Closer Comment *</span>
+            </span>
+            {isPaid && <span className="text-[10px] font-bold text-slate-400 flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /> Locked</span>}
           </label>
           <div className="flex gap-2">
             <input
               type="text"
+              disabled={isPaid}
               value={comment}
               onChange={(e) => {
                 setComment(e.target.value);
                 setIsSaved(false);
               }}
-              placeholder="Enter specific client remarks, reasons for discount request, or callback timing..."
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all shadow-2xs"
+              placeholder={isPaid ? 'Note locked' : 'Enter specific client remarks, reasons for discount request, or callback timing...'}
+              className={`flex-1 border rounded-xl px-3 py-2 text-xs font-medium shadow-2xs transition-all ${
+                isPaid
+                  ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
+                  : 'bg-slate-50 border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white'
+              }`}
             />
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="shrink-0 h-[34px] px-3 text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer rounded-xl"
-            >
-              Update Note
-            </Button>
+            {!isPaid && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="shrink-0 h-[34px] px-3 text-xs font-bold border-slate-300 text-slate-700 hover:bg-slate-100 cursor-pointer rounded-xl"
+              >
+                Update Note
+              </Button>
+            )}
           </div>
         </div>
       )}

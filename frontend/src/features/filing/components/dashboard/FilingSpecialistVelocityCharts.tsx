@@ -12,6 +12,7 @@ import {
   Tooltip 
 } from 'recharts';
 import { AreaChart as AreaIcon, PieChart as PieIcon, Clock, Calendar } from 'lucide-react';
+import { AppTabs } from '@/shared/components/AppTabs';
 
 export type FilingChartMode = 'HOURLY' | 'WEEKLY';
 
@@ -78,34 +79,24 @@ export const FilingSpecialistVelocityCharts: React.FC<FilingSpecialistVelocityCh
             </p>
           </div>
 
-          {/* Hourly vs Weekly Mode Toggles */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => onChartModeChange('HOURLY')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                chartMode === 'HOURLY'
-                  ? 'bg-white text-emerald-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Clock className="w-3 h-3" />
-              <span>Today Hourly</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onChartModeChange('WEEKLY')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                chartMode === 'WEEKLY'
-                  ? 'bg-white text-emerald-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Calendar className="w-3 h-3" />
-              <span>This Week</span>
-            </button>
-          </div>
+          {/* Hourly vs Weekly Mode Tabs */}
+          <AppTabs
+            tabs={[
+              {
+                id: 'HOURLY',
+                label: 'Today Hourly',
+                icon: Clock,
+              },
+              {
+                id: 'WEEKLY',
+                label: 'This Week',
+                icon: Calendar,
+              },
+            ]}
+            activeTab={chartMode}
+            onChange={(mode) => onChartModeChange(mode as FilingChartMode)}
+            className="border-b-0 shrink-0 self-start sm:self-auto"
+          />
         </div>
 
         {/* Recharts Area Chart */}

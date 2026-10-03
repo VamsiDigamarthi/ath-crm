@@ -4,6 +4,7 @@ export interface TabItem {
   id: string;
   label: string;
   count?: number | string;
+  icon?: React.ComponentType<{ className?: string }>;
   badge?: React.ReactNode;
   disabled?: boolean;
 }
@@ -43,6 +44,7 @@ export const AppTabs: React.FC<AppTabsProps> = ({
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab;
         const isDisabled = tab.disabled;
+        const TabIcon = tab.icon;
 
         return (
           <button
@@ -53,25 +55,28 @@ export const AppTabs: React.FC<AppTabsProps> = ({
             disabled={isDisabled}
             onClick={() => !isDisabled && onChange(tab.id)}
             className={`
-              relative flex items-center justify-center gap-2 border-b-2 font-semibold whitespace-nowrap transition-colors duration-150 shrink-0
+              relative flex items-center justify-center gap-2 border-b-2 font-semibold whitespace-nowrap transition-all duration-150 shrink-0 -mb-[1px]
               ${sizeClasses[size]}
               ${
                 isActive
                   ? 'border-[#16A34A] text-[#16A34A] font-bold'
-                  : 'border-transparent text-black hover:text-[#16A34A] hover:border-slate-300 font-semibold'
+                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300 font-semibold'
               }
               ${isDisabled ? 'opacity-40 cursor-not-allowed hover:border-transparent hover:text-slate-400' : 'cursor-pointer'}
               ${fullWidth ? 'flex-1 text-center' : ''}
               ${tabClassName}
             `}
           >
+            {TabIcon && (
+              <TabIcon className={`w-3.5 h-3.5 ${isActive ? 'text-[#16A34A]' : 'text-slate-400'}`} />
+            )}
             <span>{tab.label}</span>
             {tab.count !== undefined && tab.count !== null && (
               <span
-                className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
                   isActive
                     ? 'bg-emerald-100 text-[#16A34A]'
-                    : 'bg-slate-200 text-black'
+                    : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
                 }`}
               >
                 {tab.count}

@@ -3,41 +3,26 @@ import {
   FileText, 
   ShieldCheck, 
   UserCheck, 
-  Calendar,
-  Layers,
-  Clock,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
+import { Button } from '@/shared/components/Button';
 import type { SalesLeadItem } from '../../types/sales.types';
 
 interface PitchTaxDraftSummaryCardProps {
   lead: SalesLeadItem;
+  onViewOrganizer?: () => void;
 }
 
-export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> = ({ lead }) => {
+export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> = ({ lead, onViewOrganizer }) => {
   const draft = lead.taxDraftSummary || {};
-
-  /*
-  const grossIncome = Number(draft.grossIncome || lead.grossIncome) || 0;
-  const w2Wages = Number(draft.w2Wages) || grossIncome;
-  const isMarriedJoint = lead.maritalStatus?.includes('Joint') || lead.maritalStatus === 'Married' || (lead.maritalStatus?.includes('Married') && !lead.maritalStatus?.includes('Separately'));
-  const stdDeduction = Number(draft.standardDeduction || draft.effectiveDeduction) || (isMarriedJoint ? 29200 : 14600);
-  const taxableIncome = Number(draft.taxableIncome) || Math.max(0, grossIncome - stdDeduction);
-  const taxLiability = Number(draft.taxLiability) || 0;
-  const fedRefund = Number(draft.federalRefund ?? lead.federalRefund) || 0;
-  const balanceDue = Number((draft as any).balanceDue ?? draft.federalBalanceDue ?? lead.balanceDue) || 0;
-  const fedWithheld = Number(draft.fedWithheld) || (fedRefund > 0 ? (taxLiability + fedRefund) : Math.max(0, taxLiability - balanceDue));
-  const stateRefund = Number(draft.stateRefund ?? lead.stateRefund) || 0;
-  const stateWithheld = Number(draft.stateWithheld) || 0;
-  const stateTax = Number(draft.stateTaxLiability) || 0;
-  */
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
       {/* Header with Explainer Banner */}
-      <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100 shrink-0">
@@ -53,21 +38,18 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
           </p>
         </div>
 
-        {/* Tab Switcher - Federal and State tabs commented out as requested */}
-        {/*
-        <div className="shrink-0 overflow-x-auto">
-          <AppTabs
-            tabs={[
-              { id: 'SCHEDULES', label: 'Federal 1040' },
-              { id: 'STATE', label: `State (${lead.stateOfResidence?.split(',')[1]?.trim() || lead.stateOfResidence || 'Return'})` },
-              { id: 'QA_AUDIT', label: 'QA Sign-Off' },
-            ]}
-            activeTab={activeTab}
-            onChange={(tab) => setActiveTab(tab as any)}
+        {onViewOrganizer && (
+          <Button
             size="sm"
-          />
-        </div>
-        */}
+            variant="outline"
+            onClick={onViewOrganizer}
+            className="h-8 px-3 text-xs font-bold border-slate-300 bg-white hover:bg-emerald-50 hover:text-[#16A34A] hover:border-emerald-300 text-slate-700 rounded-xl shadow-2xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-all"
+            title="Inspect Taxpayer Info & Files"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-[#16A34A]" />
+            <span>Tax info and Files</span>
+          </Button>
+        )}
       </div>
 
       {/* Tab 1: Form 1040 Federal Schedule Breakdown - Commented out as requested */}
@@ -257,7 +239,7 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
       )}
       */}
 
-      {/* Preparer & QA Sign-Off Audit Stepper */}
+      {/* Preparer & QA Sign-Off Compact Metadata & Audit Status */}
       {(() => {
         const rawStage = String(lead.currentStage || draft.status || '');
         let qaStatus: 'Approved' | 'Changes Required' | 'Pending Review' = 'Approved';
@@ -269,18 +251,6 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
           qaStatus = 'Approved';
         }
 
-        interface StepperItem {
-          id: number;
-          label: string;
-          value: string;
-          subtext: string;
-          icon: React.ComponentType<{ className?: string }>;
-          iconColor: string;
-          bg: string;
-          border: string;
-          isBadge?: boolean;
-        }
-
         const preparerName = String(lead.assignedPrepAgent?.name || (draft as any).preparerName || 'Ananya Iyer');
         const preparerEmail = String(lead.assignedPrepAgent?.email || 'ananya@taxcrm.com');
         const reviewerName = String(lead.qaAuditorName || (draft as any).reviewerName || 'Vikram Malhotra');
@@ -289,157 +259,92 @@ export const PitchTaxDraftSummaryCard: React.FC<PitchTaxDraftSummaryCardProps> =
           : 'Sep 23, 2026';
         const taxYearDisplay = `TY ${lead.taxYear || (draft as any).taxYear || 2025}`;
         const calcVersion = String((draft as any).calculationVersion || (draft as any).version || 'v2.1 (Certified)');
-        const lastUpdatedDisplay = typeof lead.updatedAt === 'string' && lead.updatedAt
-          ? new Date(lead.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-          : 'Sep 23, 08:45 PM';
         const filingTypeStr = typeof lead.filingType === 'string' && lead.filingType ? lead.filingType : 'Form 1040';
 
-        const steps: StepperItem[] = [
-          {
-            id: 1,
-            label: 'Prepared By',
-            value: preparerName,
-            subtext: preparerEmail,
-            icon: UserCheck,
-            iconColor: 'text-blue-600',
-            bg: 'bg-blue-50',
-            border: 'border-blue-200',
-          },
-          {
-            id: 2,
-            label: 'Reviewed By',
-            value: reviewerName,
-            subtext: 'Senior CPA Auditor',
-            icon: ShieldCheck,
-            iconColor: 'text-purple-600',
-            bg: 'bg-purple-50',
-            border: 'border-purple-200',
-          },
-          {
-            id: 3,
-            label: 'Review Date',
-            value: reviewDate,
-            subtext: 'Audit Sign-Off',
-            icon: Calendar,
-            iconColor: 'text-amber-600',
-            bg: 'bg-amber-50',
-            border: 'border-amber-200',
-          },
-          {
-            id: 4,
-            label: 'Tax Year',
-            value: taxYearDisplay,
-            subtext: filingTypeStr,
-            icon: FileText,
-            iconColor: 'text-emerald-600',
-            bg: 'bg-emerald-50',
-            border: 'border-emerald-200',
-          },
-          {
-            id: 5,
-            label: 'Calculation Version',
-            value: calcVersion,
-            subtext: 'Line-by-Line Draft',
-            icon: Layers,
-            iconColor: 'text-indigo-600',
-            bg: 'bg-indigo-50',
-            border: 'border-indigo-200',
-          },
-          {
-            id: 6,
-            label: 'Last Updated',
-            value: lastUpdatedDisplay,
-            subtext: 'System Sync',
-            icon: Clock,
-            iconColor: 'text-slate-600',
-            bg: 'bg-slate-100',
-            border: 'border-slate-200',
-          },
-          {
-            id: 7,
-            label: 'QA Status',
-            value: qaStatus,
-            subtext: qaStatus === 'Approved' ? 'Ready for Pitch' : qaStatus === 'Changes Required' ? 'Reverted' : 'In Review',
-            icon: qaStatus === 'Approved' ? CheckCircle2 : AlertCircle,
-            iconColor: qaStatus === 'Approved' ? 'text-[#16A34A]' : qaStatus === 'Changes Required' ? 'text-amber-600' : 'text-blue-600',
-            bg: qaStatus === 'Approved' ? 'bg-emerald-50' : qaStatus === 'Changes Required' ? 'bg-amber-50' : 'bg-blue-50',
-            border: qaStatus === 'Approved' ? 'border-emerald-200' : qaStatus === 'Changes Required' ? 'border-amber-200' : 'border-blue-200',
-            isBadge: true,
-          },
-        ];
-
         return (
-          <div className="p-5 space-y-4">
-            {/* Horizontal Stepper Timeline */}
-            <div className="relative">
-              {/* Connecting line */}
-              <div className="hidden xl:block absolute top-6 left-8 right-8 h-0.5 bg-slate-200 -z-0" />
+          <div className="p-4 space-y-3.5">
+            {/* Compact Top Metadata Strip */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200 text-xs">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Preparer */}
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-[10px] flex items-center justify-center border border-blue-200">
+                    {preparerName[0]}
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block -mb-0.5">Preparer</span>
+                    <span className="font-bold text-slate-800" title={preparerEmail}>{preparerName}</span>
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3 relative z-10">
-                {steps.map((step) => {
-                  const StepIcon = step.icon;
-                  return (
-                    <div
-                      key={step.id}
-                      className="bg-white rounded-xl border border-slate-200 p-3 shadow-2xs hover:shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between"
-                    >
-                      {/* Top Bar: Icon + Step Number */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${step.bg} ${step.border} border`}>
-                          <StepIcon className={`w-4 h-4 ${step.iconColor}`} />
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
-                          Step {step.id}
-                        </span>
-                      </div>
+                <div className="h-6 w-[1px] bg-slate-200 hidden sm:block" />
 
-                      {/* Step Label */}
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        {step.label}
-                      </div>
+                {/* Auditor */}
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 font-bold text-[10px] flex items-center justify-center border border-purple-200">
+                    {reviewerName[0]}
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 block -mb-0.5">Senior QA Auditor</span>
+                    <span className="font-bold text-slate-800">{reviewerName}</span>
+                  </div>
+                </div>
 
-                      {/* Main Value */}
-                      <div className="text-xs font-bold text-slate-900 truncate" title={step.value}>
-                        {step.isBadge ? (
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${step.bg} ${step.iconColor} ${step.border}`}
-                          >
-                            <StepIcon className="w-3 h-3" />
-                            <span>{step.value}</span>
-                          </span>
-                        ) : (
-                          step.value
-                        )}
-                      </div>
+                <div className="h-6 w-[1px] bg-slate-200 hidden sm:block" />
 
-                      {/* Subtext */}
-                      <div className="text-[10px] text-slate-500 font-medium truncate mt-0.5" title={step.subtext}>
-                        {step.subtext}
-                      </div>
-                    </div>
-                  );
-                })}
+                {/* Tax Year & Version */}
+                <div className="flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="font-bold text-slate-700">{taxYearDisplay}</span>
+                  <span className="text-slate-400">({filingTypeStr})</span>
+                  <span className="px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-600 text-[10px] font-bold ml-1">
+                    {calcVersion}
+                  </span>
+                </div>
+              </div>
+
+              {/* QA Status Badge & Date */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-500 font-medium hidden md:inline">
+                  Reviewed: <strong>{reviewDate}</strong>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                    qaStatus === 'Approved'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : qaStatus === 'Changes Required'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : 'bg-blue-50 text-blue-800 border-blue-200'
+                  }`}
+                >
+                  {qaStatus === 'Approved' ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A]" />
+                  ) : (
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                  )}
+                  <span>{qaStatus === 'Approved' ? 'QA Certified' : qaStatus}</span>
+                </span>
               </div>
             </div>
 
-            {/* Bottom Combined Audit Notes Strip */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-              <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-200 text-xs">
-                <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px] mb-1">
-                  <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+            {/* Side-by-Side Audit Notes Strip */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div className="p-3 rounded-xl bg-blue-50/40 border border-blue-100 text-xs">
+                <div className="flex items-center gap-1.5 font-bold text-blue-900 text-[11px] mb-1">
+                  <UserCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                   <span>Preparer Note ({preparerName}):</span>
                 </div>
-                <p className="text-slate-600 italic text-[11px] line-clamp-2">
+                <p className="text-slate-700 italic text-[11px] line-clamp-2 leading-relaxed">
                   {draft.preparerNotes ? `"${draft.preparerNotes}"` : '"Form 1040 draft prepared and submitted for compliance review."'}
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-purple-50/40 border border-purple-200/80 text-xs">
+              <div className="p-3 rounded-xl bg-purple-50/40 border border-purple-100 text-xs">
                 <div className="flex items-center gap-1.5 font-bold text-purple-900 text-[11px] mb-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                  <span>QA Auditor Remarks ({reviewerName}):</span>
+                  <ShieldCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                  <span>Senior QA Auditor Remarks ({reviewerName}):</span>
                 </div>
-                <p className="text-purple-800 italic text-[11px] line-clamp-2">
+                <p className="text-purple-900 italic text-[11px] line-clamp-2 leading-relaxed">
                   {lead.qaAuditorRemarks ? `"${lead.qaAuditorRemarks}"` : '"All Form 1040 calculations 100% verified against source documents. Approved for fee pitch."'}
                 </p>
               </div>

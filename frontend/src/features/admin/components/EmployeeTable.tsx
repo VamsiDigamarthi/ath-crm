@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { UserPlus, Users, DollarSign, FileCheck, ShieldCheck, Calculator } from 'lucide-react';
 import type { EmployeeItem, DepartmentType } from '../types/employee.types';
@@ -69,85 +70,20 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             />
           </div>
 
-          {/* Department Filter Pills */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeDepartment === 'ALL'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All Staff ({totalEmployeesCount})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('DOC')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'DOC'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              Documenters
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('PREP_REVIEW')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'PREP_REVIEW'
-                  ? 'bg-white text-indigo-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Calculator className="w-3.5 h-3.5" />
-              Tax Prep &amp; Review
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('SALES')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'SALES'
-                  ? 'bg-white text-purple-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <DollarSign className="w-3.5 h-3.5" />
-              Sales Team
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('FILE_OP')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'FILE_OP'
-                  ? 'bg-white text-[#16A34A] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <FileCheck className="w-3.5 h-3.5" />
-              File Operators
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onDepartmentChange('ADMIN')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeDepartment === 'ADMIN'
-                  ? 'bg-white text-slate-800 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Admins
-            </button>
-          </div>
+          {/* Department Filter AppTabs */}
+          <AppTabs
+            tabs={[
+              { id: 'ALL', label: 'All Staff', count: totalEmployeesCount },
+              { id: 'DOC', label: 'Documenters', icon: Users },
+              { id: 'PREP_REVIEW', label: 'Tax Prep & Review', icon: Calculator },
+              { id: 'SALES', label: 'Sales Team', icon: DollarSign },
+              { id: 'FILE_OP', label: 'File Operators', icon: FileCheck },
+              { id: 'ADMIN', label: 'Admins', icon: ShieldCheck },
+            ]}
+            activeTab={activeDepartment}
+            onChange={(dept) => onDepartmentChange(dept as DepartmentType)}
+            size="sm"
+          />
         </div>
 
         {/* Right: Add Staff Action Button */}

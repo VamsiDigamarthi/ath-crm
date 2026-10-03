@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
 import { FilingFloatingActionBar } from '../components/manager/FilingFloatingActionBar';
@@ -169,38 +170,12 @@ export const FilingManagerQueueScreen: React.FC = () => {
       {/* 3. Dedicated Tabs & Multi-Filter Card */}
       <div className="rounded-xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
         {/* Navigation Tabs Header */}
-        <div className="border-b border-slate-200 px-6 pt-3 flex items-center justify-between overflow-x-auto">
-          <div className="flex items-center gap-1 sm:gap-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = stageFilter === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setStageFilter(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap cursor-pointer ${
-                    isActive
-                      ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/40 rounded-t-lg'
-                      : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-[#16A34A]' : 'text-slate-400'}`} />
-                  <span>{tab.label}</span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      isActive
-                        ? 'bg-[#16A34A] text-white'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <AppTabs
+          tabs={tabs}
+          activeTab={stageFilter}
+          onChange={(id) => setStageFilter(id as any)}
+          className="px-6 pt-3"
+        />
 
         {/* Multi-Filter & Search Bar */}
         <div className="p-4 sm:p-5 bg-slate-50/50 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">

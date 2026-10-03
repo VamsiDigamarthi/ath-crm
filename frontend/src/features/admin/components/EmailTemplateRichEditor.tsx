@@ -23,6 +23,7 @@ import {
   RemoveFormatting,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AppTabs } from '@/shared/components/AppTabs';
 
 export interface EmailTemplateRichEditorProps {
   value: string;
@@ -209,34 +210,23 @@ export const EmailTemplateRichEditor: React.FC<EmailTemplateRichEditorProps> = (
         </label>
 
         {/* Edit Mode vs Live Preview Mode Switcher */}
-        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-[11px]">
-          <button
-            type="button"
-            onClick={() => setViewMode('EDIT')}
-            className={cn(
-              'px-2.5 py-1 rounded font-bold flex items-center gap-1.5 transition-all cursor-pointer',
-              viewMode === 'EDIT'
-                ? 'bg-white text-[#16A34A] shadow-2xs'
-                : 'text-slate-500 hover:text-slate-800'
-            )}
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            Editor
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('PREVIEW')}
-            className={cn(
-              'px-2.5 py-1 rounded font-bold flex items-center gap-1.5 transition-all cursor-pointer',
-              viewMode === 'PREVIEW'
-                ? 'bg-white text-[#16A34A] shadow-2xs'
-                : 'text-slate-500 hover:text-slate-800'
-            )}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Live Preview
-          </button>
-        </div>
+        <AppTabs
+          tabs={[
+            {
+              id: 'EDIT',
+              label: 'Editor',
+              icon: Edit3,
+            },
+            {
+              id: 'PREVIEW',
+              label: 'Live Preview',
+              icon: Eye,
+            },
+          ]}
+          activeTab={viewMode}
+          onChange={(mode) => setViewMode(mode as any)}
+          className="border-b-0"
+        />
       </div>
 
       {/* Editor Container */}

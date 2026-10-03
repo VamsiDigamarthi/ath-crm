@@ -4,6 +4,7 @@ import { PrepStageBadge } from '../common/PrepStageBadge';
 import { PrepComplexityBadge } from '../common/PrepComplexityBadge';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { AppEmptyState } from '@/shared/components/AppEmptyState';
 import { Button } from '@/shared/components/Button';
 import { 
@@ -163,108 +164,21 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
       </div>
 
       {/* Filter Tabs Ribbon */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-100 bg-white overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setTab('ALL')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'ALL'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'text-slate-500 hover:text-slate-900 bg-slate-50'
-          }`}
-        >
-          All Pipeline ({counts.all})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTab('UNASSIGNED')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'UNASSIGNED'
-              ? 'bg-amber-500 text-white shadow-xs'
-              : 'text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/60'
-          }`}
-        >
-          <span>Unassigned</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
-            {counts.unassigned}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTab('UNDER_PREP')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'UNDER_PREP'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/60'
-          }`}
-        >
-          <span>Under Prep (1040)</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
-            {counts.underPrep}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTab('QA_REVIEW')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'QA_REVIEW'
-              ? 'bg-purple-600 text-white shadow-xs'
-              : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/60'
-          }`}
-        >
-          <span>In QA Review</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
-            {counts.qaReview}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTab('REVISIONS')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'REVISIONS'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/60'
-          }`}
-        >
-          <span>Revisions</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
-            {counts.revisions}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTab('QA_APPROVED')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'QA_APPROVED'
-              ? 'bg-[#16A34A] text-white shadow-xs'
-              : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60'
-          }`}
-        >
-          <span>Ready for Sales</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
-            {counts.qaApproved}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTab('REVERTED')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'REVERTED' || activeTab === 'REVERTED_TO_DOC'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200/60'
-          }`}
-        >
-          <span>Reverted to Docs</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">
-            {counts.reverted || 0}
-          </span>
-        </button>
+      <div className="px-4 pt-1 bg-white">
+        <AppTabs
+          tabs={[
+            { id: 'ALL', label: 'All Pipeline', count: counts.all },
+            { id: 'UNASSIGNED', label: 'Unassigned', count: counts.unassigned },
+            { id: 'UNDER_PREP', label: 'Under Prep (1040)', count: counts.underPrep },
+            { id: 'QA_REVIEW', label: 'In QA Review', count: counts.qaReview },
+            { id: 'REVISIONS', label: 'Revisions', count: counts.revisions },
+            { id: 'QA_APPROVED', label: 'Ready for Sales', count: counts.qaApproved },
+            { id: 'REVERTED', label: 'Reverted to Docs', count: counts.reverted || 0 },
+          ]}
+          activeTab={activeTab === 'REVERTED_TO_DOC' ? 'REVERTED' : activeTab}
+          onChange={(tab) => setTab(tab)}
+          size="sm"
+        />
       </div>
 
       {/* Leads Table or AppEmptyState */}

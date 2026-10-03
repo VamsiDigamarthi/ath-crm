@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, CalendarRange, X } from 'lucide-react';
+import { AppTabs } from '@/shared/components/AppTabs';
 import type { DateFilterPreset } from '../utils/date-filters';
 
 export interface DashboardDateFilterProps {
@@ -48,56 +49,18 @@ export const DashboardDateFilter: React.FC<DashboardDateFilterProps> = ({
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      {/* 1. Main Presets Segmented Control */}
-      <div className="flex items-center bg-slate-100 p-1 rounded-md border border-slate-300 shadow-2xs">
-        <button
-          type="button"
-          onClick={() => handlePresetClick('TODAY')}
-          className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-            preset === 'TODAY'
-              ? 'bg-[#16A34A] text-white shadow-xs'
-              : 'text-black hover:text-[#16A34A]'
-          }`}
-        >
-          Today
-        </button>
-        <button
-          type="button"
-          onClick={() => handlePresetClick('WEEK')}
-          className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-            preset === 'WEEK'
-              ? 'bg-[#16A34A] text-white shadow-xs'
-              : 'text-black hover:text-[#16A34A]'
-          }`}
-          title="Actual calendar week (Monday - Sunday)"
-        >
-          This Week
-        </button>
-        <button
-          type="button"
-          onClick={() => handlePresetClick('MONTH')}
-          className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-            preset === 'MONTH'
-              ? 'bg-[#16A34A] text-white shadow-xs'
-              : 'text-black hover:text-[#16A34A]'
-          }`}
-          title="Actual calendar month (1st - End of Month)"
-        >
-          This Month
-        </button>
-        <button
-          type="button"
-          onClick={() => handlePresetClick('CUSTOM')}
-          className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            preset === 'CUSTOM'
-              ? 'bg-[#16A34A] text-white shadow-xs'
-              : 'text-black hover:text-[#16A34A]'
-          }`}
-        >
-          <CalendarRange className="w-3.5 h-3.5" />
-          <span>Custom</span>
-        </button>
-      </div>
+      {/* 1. Main Presets AppTabs */}
+      <AppTabs
+        tabs={[
+          { id: 'TODAY', label: 'Today' },
+          { id: 'WEEK', label: 'This Week' },
+          { id: 'MONTH', label: 'This Month' },
+          { id: 'CUSTOM', label: 'Custom', icon: CalendarRange },
+        ]}
+        activeTab={preset}
+        onChange={(id) => handlePresetClick(id as DateFilterPreset)}
+        size="sm"
+      />
 
       {/* 2. Custom From/To Date Pickers (Shown when Custom is selected or active) */}
       {showCustomInputs && (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import type { MasterTaxpayerRecord } from '../types/master-taxpayers.types';
 import type { TaxpayerYearDetailsResponse } from '../services/master-taxpayers-service';
@@ -17,6 +18,7 @@ import {
   FileCheck,
   PhoneCall,
   UserCheck,
+  Calculator,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -271,66 +273,18 @@ State Refund: $${activeYearDetails?.taxDraftSummary?.stateRefund || 0}`;
         </div>
 
         {/* 2. Sub-Tab Navigation for the Selected Tax Year */}
-        <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 overflow-x-auto">
-          <button
-            onClick={() => setActiveSubTab('OVERVIEW')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              activeSubTab === 'OVERVIEW'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            1. Form 1040 Specs & Financials
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('DOCUMENTS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-              activeSubTab === 'DOCUMENTS'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>2. Uploaded Documents ({activeYearDetails?.documents?.length || 0})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('TEAM')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-              activeSubTab === 'TEAM'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>3. Assigned Operations Team</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('TIMELINE')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-              activeSubTab === 'TIMELINE'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
-            <span>4. Stage Transition Audit</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('CALL_LOGS')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-              activeSubTab === 'CALL_LOGS'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-          >
-            <PhoneCall className="w-3.5 h-3.5" />
-            <span>5. Call Logs & Notes ({activeYearDetails?.callLogs?.length || 0})</span>
-          </button>
-        </div>
+        <AppTabs
+          tabs={[
+            { id: 'OVERVIEW', label: '1. Form 1040 Specs & Financials', icon: Calculator },
+            { id: 'DOCUMENTS', label: '2. Uploaded Documents', count: activeYearDetails?.documents?.length || 0, icon: FileText },
+            { id: 'TEAM', label: '3. Assigned Operations Team', icon: UserCheck },
+            { id: 'TIMELINE', label: '4. Stage Transition Audit', count: activeYearDetails?.stageHistories?.length || 0, icon: Clock },
+            { id: 'CALL_LOGS', label: '5. Call Logs & Notes', count: activeYearDetails?.callLogs?.length || 0, icon: PhoneCall },
+          ]}
+          activeTab={activeSubTab}
+          onChange={(tab) => setActiveSubTab(tab as any)}
+          size="sm"
+        />
 
         {/* 3. Sub-Tab Content */}
         {isLoadingYear ? (

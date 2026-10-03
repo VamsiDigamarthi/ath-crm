@@ -47,6 +47,7 @@ interface TaxPrepOrganizerReviewProps {
   allowEdit?: boolean;
   readOnly?: boolean;
   filingType?: string;
+  hideHeader?: boolean;
 }
 
 export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
@@ -57,6 +58,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   allowEdit = true,
   readOnly = false,
   filingType,
+  hideHeader = false,
 }) => {
   const canEdit = allowEdit && !readOnly;
   const organizer = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
@@ -251,79 +253,65 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   return (
     <div className="space-y-6 font-sans animate-in fade-in duration-150">
       {/* 1. Header Bar matching Client Side Tax Organizer */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
-              Tax Info and Files {viewMode === 'AGENT_EDIT' ? '' : '— Audit'}
-            </h2>
-            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
-              {progressPercent}% Complete
-            </span>
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
+                Tax Info and Files {viewMode === 'AGENT_EDIT' ? '' : '— Audit'}
+              </h2>
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
+                {progressPercent}% Complete
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
+              ATH Tax Services IRS-compliant intake wizard. Entering responses for {customerName}.
+            </p>
           </div>
-          <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
-            ATH Tax Services IRS-compliant intake wizard. Entering responses for {customerName}.
-          </p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          {/* Mode Toggles */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-md border border-slate-200">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {/* Mode Tabs */}
+            <AppTabs
+              tabs={[
+                ...(canEdit
+                  ? [
+                      {
+                        id: 'AGENT_EDIT',
+                        label: 'Live Entry',
+                        icon: Edit3,
+                      },
+                    ]
+                  : []),
+                {
+                  id: 'INSPECTOR',
+                  label: 'Review',
+                  icon: Eye,
+                },
+                {
+                  id: 'GRID',
+                  label: 'Grid',
+                  icon: LayoutGrid,
+                },
+              ]}
+              activeTab={viewMode}
+              onChange={(mode) => setViewMode(mode as any)}
+              className="border-b-0"
+            />
+
             {canEdit && (
-              <button
-                type="button"
-                onClick={() => setViewMode('AGENT_EDIT')}
-                className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'AGENT_EDIT'
-                    ? 'bg-[#16A34A] text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-black'
-                  }`}
-                title="Fill / edit fields on call"
+              <Button
+                size="sm"
+                onClick={handleSaveOrganizerOnCall}
+                disabled={isSaving}
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
               >
-                <Edit3 className="w-3 h-3" />
-                <span>Live Entry</span>
-              </button>
+                <Save className="w-3.5 h-3.5" />
+                <span>{isSaving ? 'Saving to DB...' : 'Save All Drafts'}</span>
+              </Button>
             )}
-
-            <button
-              type="button"
-              onClick={() => setViewMode('INSPECTOR')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'INSPECTOR'
-                  ? 'bg-[#16A34A] text-white shadow-2xs'
-                  : 'text-slate-600 hover:text-black'
-                }`}
-              title="Review & Audit responses"
-            >
-              <Eye className="w-3 h-3" />
-              <span>Review</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setViewMode('GRID')}
-              className={`px-2.5 py-1 rounded text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${viewMode === 'GRID'
-                  ? 'bg-[#16A34A] text-white shadow-2xs'
-                  : 'text-slate-600 hover:text-black'
-                }`}
-              title="Grid overview"
-            >
-              <LayoutGrid className="w-3 h-3" />
-              <span>Grid</span>
-            </button>
           </div>
-
-          {canEdit && (
-            <Button
-              size="sm"
-              onClick={handleSaveOrganizerOnCall}
-              disabled={isSaving}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>{isSaving ? 'Saving to DB...' : 'Save All Drafts'}</span>
-            </Button>
-          )}
         </div>
-      </div>
+      )}
 
       {/* 2. Top Horizontal 5-Module Navigator Bar */}
       <AppTabs

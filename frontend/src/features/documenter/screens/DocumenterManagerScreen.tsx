@@ -11,6 +11,7 @@ import { getDocumenterColumns } from '../columns/documenter-columns';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { 
   Users, 
@@ -237,33 +238,18 @@ export const DocumenterManagerScreen: React.FC = () => {
         isActionLoading={isActionLoading}
       />
 
-      {/* 3. Modern Workspace View Selector (Segmented Tabs) */}
-      <div className="flex items-center justify-between gap-4 p-1.5 bg-slate-100/90 rounded-xl border border-slate-200/80">
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full sm:w-auto">
-          {[
+      {/* 3. Modern Workspace View Selector */}
+      <div className="flex items-center justify-between gap-4 px-2 py-1 bg-white rounded-xl border border-slate-200">
+        <AppTabs
+          tabs={[
             { id: 'TEAM_PERFORMANCE', label: 'Team Performance & Scorecards', icon: Users },
             { id: 'CASELOAD_QUEUE', label: 'Department Lead Queue & Workloads', icon: LayoutGrid },
             { id: 'ANALYTICS', label: 'Conversion Funnel & Visa Insights', icon: TrendingUp },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = managerView === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setManagerView(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
-                    ? 'bg-white text-[#16A34A] shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-[#16A34A]' : 'text-slate-400'}`} />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+          ]}
+          activeTab={managerView}
+          onChange={(id) => setManagerView(id as any)}
+          size="sm"
+        />
 
         {selectedAgentFilter && (
           <div className="hidden sm:flex items-center gap-2 text-xs bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg text-emerald-900 font-bold">
@@ -295,37 +281,12 @@ export const DocumenterManagerScreen: React.FC = () => {
           {/* Tabs & Search Bar Card */}
           <div className="rounded-xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
             {/* Navigation Tabs Header */}
-            <div className="border-b border-slate-200 px-6 pt-3 flex items-center justify-between overflow-x-auto">
-              <div className="flex items-center gap-1 sm:gap-2">
-                {departmentTabs.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => handleTabChange(tab.id)}
-                      className={`flex items-center gap-2 px-3.5 py-3 border-b-2 font-bold text-xs transition-all whitespace-nowrap cursor-pointer ${
-                        isActive
-                          ? 'border-[#16A34A] text-[#16A34A] bg-emerald-50/40 rounded-t-lg'
-                          : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-[#16A34A]' : 'text-slate-400'}`} />
-                      <span>{tab.label}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          isActive
-                            ? 'bg-[#16A34A] text-white'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {tab.count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <AppTabs
+              tabs={departmentTabs}
+              activeTab={activeTab}
+              onChange={(id) => handleTabChange(id as any)}
+              className="px-6 pt-3"
+            />
 
             {/* Filter & Search Bar */}
             <div className="p-4 sm:p-5 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">

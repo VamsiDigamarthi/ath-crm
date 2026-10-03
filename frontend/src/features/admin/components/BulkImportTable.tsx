@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { Button } from '@/shared/components/Button';
 import { Send, Trash2 } from 'lucide-react';
@@ -71,46 +72,17 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
             onChange={onPriorityFilterChange}
           />
 
-          {/* Status Filter Pills */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => onStatusFilterChange('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                statusFilter === 'ALL'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All Records ({totalRawRows})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onStatusFilterChange('VALID')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                statusFilter === 'VALID'
-                  ? 'bg-white text-[#16A34A] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Ready ({stats.valid})
-            </button>
-
-            {stats.invalid > 0 && (
-              <button
-                type="button"
-                onClick={() => onStatusFilterChange('INVALID')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  statusFilter === 'INVALID'
-                    ? 'bg-white text-rose-600 shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Needs Review ({stats.invalid})
-              </button>
-            )}
-          </div>
+          {/* Status Filter AppTabs */}
+          <AppTabs
+            tabs={[
+              { id: 'ALL', label: 'All Records', count: totalRawRows },
+              { id: 'VALID', label: 'Ready', count: stats.valid },
+              ...(stats.invalid > 0 ? [{ id: 'INVALID', label: 'Needs Review', count: stats.invalid }] : []),
+            ]}
+            activeTab={statusFilter}
+            onChange={(status) => onStatusFilterChange(status as StatusFilterType)}
+            size="sm"
+          />
         </div>
 
         {/* Right Side: Primary Import Button & Batch Operations */}

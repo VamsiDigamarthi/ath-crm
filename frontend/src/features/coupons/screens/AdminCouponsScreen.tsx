@@ -14,6 +14,7 @@ import type {
   CouponJustificationCategory,
   CouponStatus,
 } from '../types/coupon.types';
+import { AppTabs } from '@/shared/components/AppTabs';
 import {
   Tag,
   Plus,
@@ -252,35 +253,24 @@ export const AdminCouponsScreen: React.FC = () => {
       </div>
 
       {/* 3. Tab Switcher Navigation */}
-      <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('DIRECTORY')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'DIRECTORY'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <Tag className="w-4 h-4" />
-            <span>1. Authorized Coupons ({totalCount})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('AUDIT_TRAIL')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'AUDIT_TRAIL'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>2. Fee Concession &amp; Justification Audit Trail ({auditTotalCount})</span>
-          </button>
-        </div>
-      </div>
+      <AppTabs
+        tabs={[
+          {
+            id: 'DIRECTORY',
+            label: 'Authorized Coupons',
+            icon: Tag,
+            count: totalCount,
+          },
+          {
+            id: 'AUDIT_TRAIL',
+            label: 'Fee Concession & Justification Audit Trail',
+            icon: ShieldCheck,
+            count: auditTotalCount,
+          },
+        ]}
+        activeTab={activeTab}
+        onChange={(tab) => setActiveTab(tab as any)}
+      />
 
       {/* 4. TAB 1: COUPONS DIRECTORY & RULES */}
       {activeTab === 'DIRECTORY' && (

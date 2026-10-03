@@ -18,6 +18,7 @@ import {
 import { useNotificationStore } from '../store/notification-store';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { AppPagination } from '@/shared/components/AppPagination';
+import { AppTabs } from '@/shared/components/AppTabs';
 import type { NotificationCategory, NotificationPriority } from '../types/notification.types';
 import { resolveNotificationClickUrl } from '../utils/notification-router';
 import toast from 'react-hot-toast';
@@ -144,13 +145,13 @@ export const NotificationCenterScreen: React.FC = () => {
     }
   };
 
-  const categoryTabs: { label: string; value: NotificationCategory | 'ALL' }[] = [
-    { label: 'All Activity', value: 'ALL' },
-    { label: 'Filing & IRS MeF', value: 'FILING' },
-    { label: 'Sales & Closer', value: 'SALES' },
-    { label: 'Prep & CPA Review', value: 'PREP_REVIEW' },
-    { label: 'Document Vault', value: 'DOCUMENTER' },
-    { label: 'Rejection Alerts', value: 'REJECTION_ALERT' },
+  const categoryTabs = [
+    { id: 'ALL', label: 'All Activity', count: totalCount },
+    { id: 'FILING', label: 'Filing & IRS MeF', count: filingCount, icon: Send },
+    { id: 'SALES', label: 'Sales & Closer', count: notifications.filter((n) => n.category === 'SALES').length, icon: DollarSign },
+    { id: 'PREP_REVIEW', label: 'Prep & CPA Review', count: notifications.filter((n) => n.category === 'PREP_REVIEW').length, icon: FileCheck2 },
+    { id: 'DOCUMENTER', label: 'Document Vault', count: notifications.filter((n) => n.category === 'DOCUMENTER').length, icon: FolderArchive },
+    { id: 'REJECTION_ALERT', label: 'Rejection Alerts', count: notifications.filter((n) => n.category === 'REJECTION_ALERT').length, icon: AlertTriangle },
   ];
 
   return (
@@ -201,22 +202,12 @@ export const NotificationCenterScreen: React.FC = () => {
       {/* Filter Tabs & Search Controls */}
       <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs space-y-3.5">
         {/* Category Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-          {categoryTabs.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => setCategoryFilter(tab.value)}
-              className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                filterCategory === tab.value
-                  ? 'bg-[#16A34A] text-white shadow-2xs border border-emerald-700'
-                  : 'bg-slate-50 hover:bg-slate-100 text-black border border-slate-300'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <AppTabs
+          tabs={categoryTabs}
+          activeTab={filterCategory}
+          onChange={(val) => setCategoryFilter(val as any)}
+          size="sm"
+        />
 
         {/* Search Bar & Toggles */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-200">

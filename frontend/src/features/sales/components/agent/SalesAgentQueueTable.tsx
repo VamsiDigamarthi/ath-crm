@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
@@ -172,82 +173,20 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({ lead
         </div>
       </div>
 
-      {/* 2. Filter Tabs Ribbon (Below Header) */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-100 bg-white overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveTab('ALL')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            activeTab === 'ALL'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 bg-slate-50'
-          }`}
-        >
-          All Assigned ({counts.all})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('AWAITING')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'AWAITING'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200/60'
-          }`}
-        >
-          <span>Awaiting Pitch</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-bold">
-            {counts.awaiting}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('QUOTED')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'QUOTED'
-              ? 'bg-purple-600 text-white shadow-xs'
-              : 'text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200/60'
-          }`}
-        >
-          <span>Quoted</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-bold">
-            {counts.quoted}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('PAID')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'PAID'
-              ? 'bg-[#16A34A] text-white shadow-xs'
-              : 'text-[#16A34A] bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60'
-          }`}
-        >
-          <span>Paid &amp; E-Signed</span>
-          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 font-bold">
-            {counts.paid}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('REVERTED')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'REVERTED'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300'
-          }`}
-        >
-          <RotateCcw className="w-3 h-3 text-amber-600" />
-          <span>Sent Back for Revision</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-            activeTab === 'REVERTED' ? 'bg-white/20 text-white' : 'bg-amber-200 text-amber-900'
-          }`}>
-            {counts.reverted}
-          </span>
-        </button>
+      {/* 2. Filter Tabs Ribbon (Underlined Clean Tab Bar) */}
+      <div className="px-4 sm:px-5 bg-white border-b border-slate-200">
+        <AppTabs
+          tabs={[
+            { id: 'ALL', label: 'All Assigned', count: counts.all },
+            { id: 'AWAITING', label: 'Awaiting Pitch', count: counts.awaiting },
+            { id: 'QUOTED', label: 'Quoted', count: counts.quoted },
+            { id: 'PAID', label: 'Paid & E-Signed', count: counts.paid },
+            { id: 'REVERTED', label: 'Sent Back for Revision', count: counts.reverted },
+          ]}
+          activeTab={activeTab}
+          onChange={(tabId: string) => setActiveTab(tabId as any)}
+          size="sm"
+        />
       </div>
 
       {/* 3. Table: Full Width Edge-to-Edge Flush with Outer Card */}

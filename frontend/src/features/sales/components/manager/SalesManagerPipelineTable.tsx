@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
 import { SalesLeadAssignmentModal } from './SalesLeadAssignmentModal';
@@ -124,7 +125,7 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
       </div>
 
       {/* 2. Filter Bar & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-200 pb-2">
         <div className="w-full sm:w-72">
           <AppSearchInput
             value={searchQuery}
@@ -135,58 +136,18 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
         </div>
 
         {/* Dynamic Status Tabs */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'ALL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            All Leads ({counts.all})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('PITCHING')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'PITCHING' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            In Pitch ({counts.pitching})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('QUOTED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'QUOTED' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Quoted ({counts.quoted})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('PAID')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'PAID' ? 'bg-white text-[#16A34A] shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Paid &amp; E-Signed ({counts.paid})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('REVERTED')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-              activeTab === 'REVERTED' ? 'bg-white text-amber-800 shadow-xs' : 'text-amber-800 hover:text-amber-900'
-            }`}
-          >
-            <RotateCcw className="w-3 h-3 text-amber-600" />
-            <span>Reverted ({counts.reverted})</span>
-          </button>
-        </div>
+        <AppTabs
+          tabs={[
+            { id: 'ALL', label: 'All Leads', count: counts.all },
+            { id: 'PITCHING', label: 'In Pitch', count: counts.pitching },
+            { id: 'QUOTED', label: 'Quoted', count: counts.quoted },
+            { id: 'PAID', label: 'Paid & E-Signed', count: counts.paid },
+            { id: 'REVERTED', label: 'Reverted', count: counts.reverted, icon: RotateCcw },
+          ]}
+          activeTab={activeTab}
+          onChange={(id) => setActiveTab(id as any)}
+          size="sm"
+        />
       </div>
 
       {/* 3. Pipeline Table */}

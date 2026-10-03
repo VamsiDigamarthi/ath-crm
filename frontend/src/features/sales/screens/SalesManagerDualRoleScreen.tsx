@@ -18,6 +18,7 @@ import { salesService } from '../services/sales-service';
 import type { SalesLeadItem } from '../types/sales.types';
 import { AppTable } from '@/shared/components/AppTable';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { Button } from '@/shared/components/Button';
@@ -436,102 +437,19 @@ export const SalesManagerDualRoleScreen: React.FC = () => {
       </div>
 
       {/* 3. Workflow Phase Tabs */}
-      <div className="bg-white rounded-xl border border-slate-200 p-1.5 shadow-xs flex items-center gap-1 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => setActiveTab('ALL')}
-          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-            activeTab === 'ALL'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>All Dual Leads</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'ALL' ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
-            {metrics.total}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('INTAKE')}
-          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-            activeTab === 'INTAKE'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Intake Active</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'INTAKE' ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
-            {metrics.intakeCount}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('TAX_PREP')}
-          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-            activeTab === 'TAX_PREP'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          <span>With CPA Preparer</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'TAX_PREP' ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
-            {metrics.prepCount}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('READY_PITCH')}
-          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-            activeTab === 'READY_PITCH'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <DollarSign className="w-3.5 h-3.5" />
-          <span>Ready for Pitch (QA Approved)</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'READY_PITCH' ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
-            {metrics.readyPitchCount}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('PAID_SIGNED')}
-          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-            activeTab === 'PAID_SIGNED'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>Paid &amp; E-Signed</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'PAID_SIGNED' ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
-            {metrics.paidSignedCount}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('FILING')}
-          className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-            activeTab === 'FILING'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <Rocket className="w-3.5 h-3.5" />
-          <span>IRS Filing Queue</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'FILING' ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'}`}>
-            {metrics.filingCount}
-          </span>
-        </button>
+      <div className="bg-white rounded-xl border border-slate-200 px-4 pt-1 shadow-xs">
+        <AppTabs
+          tabs={[
+            { id: 'ALL', label: 'All Dual Leads', count: metrics.total, icon: Layers },
+            { id: 'INTAKE', label: 'Intake Active', count: metrics.intakeCount, icon: FileText },
+            { id: 'TAX_PREP', label: 'With CPA Preparer', count: metrics.prepCount, icon: Clock },
+            { id: 'READY_PITCH', label: 'Ready for Pitch (QA Approved)', count: metrics.readyPitchCount, icon: DollarSign },
+            { id: 'PAID_SIGNED', label: 'Paid & E-Signed', count: metrics.paidSignedCount, icon: CheckCircle2 },
+            { id: 'FILING', label: 'IRS Filing Queue', count: metrics.filingCount, icon: Rocket },
+          ]}
+          activeTab={activeTab}
+          onChange={(id) => setActiveTab(id as any)}
+        />
       </div>
 
       {/* 4. Search & Multi-Dimensional Filters Bar */}

@@ -11,6 +11,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
+import { AppTabs } from '@/shared/components/AppTabs';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { FilingComplianceGate } from '../components/workspace/FilingComplianceGate';
@@ -127,41 +128,28 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
 
         <div className="flex items-center gap-2.5">
           {/* Inspection View Mode Selector */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0">
-            <button
-              type="button"
-              onClick={() => setViewMode('FULL_INSPECTION')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'FULL_INSPECTION'
-                  ? 'bg-white text-[#16A34A] shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900'
-                }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Full Inspection</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('AUDIT_FILE')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'AUDIT_FILE'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900'
-                }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              <span>Taxpayer 1040 File</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('XML_SCHEMA')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'XML_SCHEMA'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900'
-                }`}
-            >
-              <Code2 className="w-3.5 h-3.5" />
-              <span>IRS XML Schema</span>
-            </button>
-          </div>
+          <AppTabs
+            tabs={[
+              {
+                id: 'FULL_INSPECTION',
+                label: 'Full Inspection',
+                icon: Layers,
+              },
+              {
+                id: 'AUDIT_FILE',
+                label: 'Taxpayer 1040 File',
+                icon: FileText,
+              },
+              {
+                id: 'XML_SCHEMA',
+                label: 'IRS XML Schema',
+                icon: Code2,
+              },
+            ]}
+            activeTab={viewMode}
+            onChange={(mode) => setViewMode(mode as WorkspaceViewMode)}
+            className="border-b-0"
+          />
 
           {/* Email Client Button */}
           <Button
