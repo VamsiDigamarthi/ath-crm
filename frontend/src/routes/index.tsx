@@ -202,6 +202,10 @@ export const router = createBrowserRouter([
             element: <AdminTaxpayerDetailScreen />,
           },
           {
+            path: 'customers/:id',
+            element: <AdminTaxpayerDetailScreen />,
+          },
+          {
             path: 'coupons',
             element: <AdminCouponsScreen />,
           },
@@ -339,6 +343,14 @@ export const router = createBrowserRouter([
             path: 'lead/:id',
             element: <Taxpayer360DetailScreen />,
           },
+          {
+            path: 'agent/taxpayer-360/:id',
+            element: <Taxpayer360DetailScreen />,
+          },
+          {
+            path: 'taxpayer-360/:id',
+            element: <Taxpayer360DetailScreen />,
+          },
         ],
       },
     ],
@@ -389,12 +401,20 @@ export const router = createBrowserRouter([
             element: <TaxPreparerQueueScreen />,
           },
           {
+            path: 'preparer/queue',
+            element: <TaxPreparerQueueScreen />,
+          },
+          {
             path: 'preparer/workspace/:id',
             element: <TaxPreparerWorkspaceScreen />,
           },
           // QA Compliance Reviewer Routes
           {
             path: 'reviewer',
+            element: <TaxReviewerQueueScreen />,
+          },
+          {
+            path: 'reviewer/queue',
             element: <TaxReviewerQueueScreen />,
           },
           {
