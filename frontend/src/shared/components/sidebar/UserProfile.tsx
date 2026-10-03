@@ -63,9 +63,9 @@ export function UserProfile({ user, collapsed, theme, accentColor, onUserClick, 
         {/* Name + email */}
         {!collapsed && (
           <div className="flex-1 min-w-0 text-left">
-            <div className={cn('text-sm font-semibold truncate', theme.text)}>{user.name}</div>
+            <div className={cn('text-xs font-medium truncate', theme.text)}>{user.name}</div>
             {user.email && (
-              <div className={cn('text-[11px] truncate', theme.textMuted)}>{user.email}</div>
+              <div className={cn('text-[11px] font-normal truncate', theme.textMuted)}>{user.email}</div>
             )}
           </div>
         )}

@@ -20,4 +20,5 @@ export * from './AppTabs'
 export * from './SendEmailModal'
 export * from './HeaderUserProfile'
 export * from './AppAccordion'
+export * from './table'
 

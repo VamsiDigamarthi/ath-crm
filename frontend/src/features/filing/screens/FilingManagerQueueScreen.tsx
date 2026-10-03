@@ -1,42 +1,30 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { 
   Send, 
   RefreshCw, 
   CheckCircle2, 
   Clock, 
-  FileCheck2,
-  Users,
-  Zap,
-  ListFilter,
-  CreditCard,
-  Scale,
-  Globe,
-  RotateCcw
+  Zap, 
+  ListFilter, 
+  ShieldCheck 
 } from 'lucide-react';
-import { AppTable } from '@/shared/components/AppTable';
-import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
 import { FilingFloatingActionBar } from '../components/manager/FilingFloatingActionBar';
 import { FilingLeadAssignmentModal } from '../components/manager/FilingLeadAssignmentModal';
 import { getFilingColumns } from '../columns/filing-columns';
-import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { useFilingQueue } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
-
-export type FilingTabType = 'ALL' | 'FILING_QUEUE' | 'FILING_IN_PROGRESS' | 'FILING_SUCCESS' | 'REVERTED';
 
 export const FilingManagerQueueScreen: React.FC = () => {
   const {
     isLoading,
     leads,
-    searchQuery,
-    setSearchQuery,
     stageFilter,
     setStageFilter,
-    priorityFilter,
-    setPriorityFilter,
     selectedRows,
     setSelectedRows,
     isAssignModalOpen,
@@ -50,28 +38,20 @@ export const FilingManagerQueueScreen: React.FC = () => {
     handleRoundRobinAssign,
   } = useFilingQueue(false);
 
-  const [paymentFilter, setPaymentFilter] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
-  const [liabilityFilter, setLiabilityFilter] = useState<'ALL' | 'REFUND' | 'TAX_DUE'>('ALL');
-  const [visaFilter, setVisaFilter] = useState<string>('ALL');
-
-  const counts = useMemo(() => {
-    const ready = leads.filter((l) => l.currentStage === 'FILING_QUEUE').length;
-    const inProg = leads.filter((l) => l.currentStage === 'FILING_IN_PROGRESS').length;
-    const accepted = leads.filter((l) => l.currentStage === 'FILING_SUCCESS').length;
-    const failed = leads.filter((l) => l.currentStage === 'FILING_FAILED').length;
-    const unassigned = leads.filter((l) => !l.assignedFilingAgent).length;
-    const reverted = leads.filter((l) =>
-      ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'SALES_PITCH_QUEUE', 'SALES_PITCHING'].includes(l.currentStage)
-    ).length;
+  const stats = useMemo(() => {
+    const readyForTransmission = leads.filter((l) => l.currentStage === 'FILING_QUEUE').length;
+    const transmittingMeF = leads.filter((l) => l.currentStage === 'FILING_IN_PROGRESS').length;
+    const acceptedToday = leads.filter((l) => l.currentStage === 'FILING_SUCCESS').length;
+    const totalDepartmentLeads = leads.length;
+    const acceptanceRatePct = totalDepartmentLeads > 0 ? Math.round((acceptedToday / totalDepartmentLeads) * 100) : 0;
 
     return {
-      ready,
-      inProg,
-      accepted,
-      failed,
-      reverted,
-      all: leads.length,
-      unassigned,
+      readyForTransmission,
+      transmittingMeF,
+      acceptedToday,
+      rejectedToday: 0,
+      totalDepartmentLeads,
+      acceptanceRatePct,
     };
   }, [leads]);
 
@@ -79,57 +59,51 @@ export const FilingManagerQueueScreen: React.FC = () => {
     () =>
       getFilingColumns({
         onOpenWorkspace: (lead) => handleOpenWorkspace(lead.id),
-        onOpenAssignModal: (lead) => handleOpenAssignModal(lead),
+        onOpenAssignModal: handleOpenAssignModal,
+        isSpecialist: false,
+        isAdmin: true,
       }),
     [handleOpenWorkspace, handleOpenAssignModal]
   );
 
   const tabs = [
-    { id: 'FILING_QUEUE' as FilingTabType, label: 'Ready for Transmission', count: counts.ready, icon: Send },
-    { id: 'FILING_IN_PROGRESS' as FilingTabType, label: 'In Transmission', count: counts.inProg, icon: Clock },
-    { id: 'FILING_SUCCESS' as FilingTabType, label: 'Accepted by IRS', count: counts.accepted, icon: CheckCircle2 },
-    { id: 'REVERTED' as FilingTabType, label: 'Reverted / In Revision', count: counts.reverted, icon: RotateCcw },
-    { id: 'ALL' as FilingTabType, label: 'All Filing Returns', count: counts.all, icon: ListFilter },
+    { id: 'FILING_QUEUE', label: '1. Awaiting Assignment / E-File', count: stats.readyForTransmission, icon: Send },
+    { id: 'FILING_IN_PROGRESS', label: '2. Transmitting to IRS MeF', count: stats.transmittingMeF, icon: Clock },
+    { id: 'FILING_SUCCESS', label: '3. IRS Accepted Filings', count: stats.acceptedToday, icon: CheckCircle2 },
+    { id: 'ALL', label: 'All Department Returns', count: stats.totalDepartmentLeads, icon: ListFilter },
   ];
 
-  // Filtered dataset based on extra dropdowns
-  const filteredLeads = useMemo(() => {
-    return leads.filter((item) => {
-      if (stageFilter === 'FILING_QUEUE' && item.currentStage !== 'FILING_QUEUE') return false;
-      if (stageFilter === 'FILING_IN_PROGRESS' && item.currentStage !== 'FILING_IN_PROGRESS') return false;
-      if (stageFilter === 'FILING_SUCCESS' && item.currentStage !== 'FILING_SUCCESS') return false;
-      if (
-        stageFilter === 'REVERTED' &&
-        !['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'SALES_PITCH_QUEUE', 'SALES_PITCHING'].includes(item.currentStage)
-      )
-        return false;
-
-      if (paymentFilter === 'PAID' && item.paymentStatus !== 'PAID') return false;
-      if (paymentFilter === 'UNPAID' && item.paymentStatus === 'PAID') return false;
-      const balVal = item.balanceDue || item.federalBalanceDue || 0;
-      if (liabilityFilter === 'REFUND' && item.federalRefund <= 0) return false;
-      if (liabilityFilter === 'TAX_DUE' && balVal <= 0) return false;
-      if (visaFilter !== 'ALL' && item.visaType !== visaFilter) return false;
-      return true;
-    });
-  }, [leads, stageFilter, paymentFilter, liabilityFilter, visaFilter]);
+  const handleExport = () => {
+    exportTableToExcel(
+      leads,
+      [
+        { header: 'Taxpayer Name', key: 'name', format: (l) => l.taxpayerName },
+        { header: 'Email', key: 'email', format: (l) => l.taxpayerEmail },
+        { header: 'Tax Year', key: 'taxYear', format: (l) => `TY${l.taxYear}` },
+        { header: 'Stage', key: 'stage', format: (l) => l.currentStage },
+        { header: 'Payment Status', key: 'payment', format: (l) => l.clientPaymentStatus || l.paymentStatus },
+        { header: 'Assigned Specialist', key: 'specialist', format: (l) => l.assignedFilingAgent?.name || 'Unassigned' },
+      ],
+      'filing_manager_queue'
+    );
+  };
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
-      {/* 1. Header & Quick Round-Robin */}
+      {/* 1. Header & Live MeF Status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              IRS Modernized e-File (MeF) Department Caseload
+            <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+              IRS Modernized e-File (MeF) Transmission Supervision
             </h2>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              <FileCheck2 className="w-3.5 h-3.5" />
-              Manager Transmission Desk
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Manager Queue & Supervision
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Supervise paid tax returns, assign filing specialists (CPAs), monitor XML schemas, and dispatch to the IRS Gateway.
+          <p className="text-xs sm:text-sm text-zinc-500 font-normal">
+            Supervise QA-approved and fee-paid tax returns, CPA specialist assignments, and IRS MeF acknowledgments.
           </p>
         </div>
 
@@ -139,136 +113,53 @@ export const FilingManagerQueueScreen: React.FC = () => {
             size="sm"
             onClick={fetchQueue}
             disabled={isLoading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            className="border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-normal flex items-center gap-1.5 cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-600' : ''}`} />
+            Refresh
           </Button>
 
-          {counts.unassigned > 0 && (
+          {stats.readyForTransmission > 0 && (
             <Button
               size="sm"
               onClick={handleRoundRobinAssign}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
               <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-              <span>1-Click Auto Round-Robin ({counts.unassigned})</span>
+              1-Click Auto Distribute ({stats.readyForTransmission})
             </Button>
           )}
         </div>
       </div>
 
-      {/* 2. Top Metric Cards (5 Filing KPI Cards) */}
+      {/* 2. Metrics Cards */}
       <FilingManagerMetrics
-        readyCount={counts.ready}
-        inProgressCount={counts.inProg}
-        acceptedCount={counts.accepted}
-        failedCount={counts.failed}
-        totalCount={counts.all}
+        readyCount={stats.readyForTransmission}
+        inProgressCount={stats.transmittingMeF}
+        acceptedCount={stats.acceptedToday}
+        failedCount={stats.rejectedToday}
+        totalCount={stats.totalDepartmentLeads}
       />
 
-      {/* 3. Dedicated Tabs & Multi-Filter Card */}
-      <div className="rounded-xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
-        {/* Navigation Tabs Header */}
-        <AppTabs
-          tabs={tabs}
-          activeTab={stageFilter}
-          onChange={(id) => setStageFilter(id as any)}
-          className="px-6 pt-3"
-        />
+      {/* 3. Navigation Tabs */}
+      <AppTabs
+        tabs={tabs}
+        activeTab={stageFilter}
+        onChange={(id) => setStageFilter(id as any)}
+      />
 
-        {/* Multi-Filter & Search Bar */}
-        <div className="p-4 sm:p-5 bg-slate-50/50 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          <div className="w-full lg:w-72">
-            <AppSearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search taxpayer, phone, email, specialist..."
-              debounceMs={300}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Payment Status Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <CreditCard className="w-3.5 h-3.5 text-purple-500" />
-              <span>Payment:</span>
-              <select
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Payments</option>
-                <option value="PAID">Paid ($227)</option>
-                <option value="UNPAID">Pending Payment</option>
-              </select>
-            </div>
-
-            {/* Refund / Due Liability Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Scale className="w-3.5 h-3.5 text-emerald-500" />
-              <span>1040 Balance:</span>
-              <select
-                value={liabilityFilter}
-                onChange={(e) => setLiabilityFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Balances</option>
-                <option value="REFUND">Refund (+$)</option>
-                <option value="TAX_DUE">Tax Due (-$)</option>
-              </select>
-            </div>
-
-            {/* Visa Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Globe className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Visa:</span>
-              <select
-                value={visaFilter}
-                onChange={(e) => setVisaFilter(e.target.value)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Visas</option>
-                <option value="H-1B">H-1B</option>
-                <option value="L-1">L-1</option>
-                <option value="F-1 OPT">F-1 OPT</option>
-                <option value="H-4">H-4</option>
-                <option value="GREEN_CARD">Green Card</option>
-                <option value="US_CITIZEN">US Citizen</option>
-              </select>
-            </div>
-
-            <PriorityFilterSelect
-              value={priorityFilter}
-              onChange={setPriorityFilter}
-            />
-
-            {selectedRows.length > 0 && (
-              <Button
-                size="sm"
-                onClick={() => handleOpenAssignModal()}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>Assign Selected ({selectedRows.length})</span>
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Dedicated AppTable Section with Checkboxes & Green Selection Indicator */}
-      <AppTable<FilingLeadItem>
-        title="IRS Modernized e-File Caseload Pipeline"
-        description="Oversee QA-approved and fee-paid tax returns, assign filing specialists, and transmit Form 1040 XML packages to the IRS Gateway."
-        data={filteredLeads}
+      {/* 4. Unified Table */}
+      <UnifiedTable<FilingLeadItem>
+        title="FILING MANAGER TRANSMISSION PIPELINE"
+        subtitle="Manage returns awaiting transmission, transmitting batches, and accepted returns."
+        data={leads}
         columns={columns}
-        selectable
-        isRowSelectable={(item) => !item.assignedFilingAgent}
+        enableSelection={true}
         selectedRows={selectedRows}
-        rowKey="id"
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}
+        searchPlaceholder="Search taxpayer, phone, stage, specialist..."
+        onExportExcel={handleExport}
         emptyText={
           stageFilter === 'FILING_QUEUE'
             ? 'All returns have been transmitted, or no returns are awaiting transmission.'
@@ -276,17 +167,15 @@ export const FilingManagerQueueScreen: React.FC = () => {
         }
       />
 
-
-      {/* 5. Floating Bottom Action Bar when rows are checked */}
+      {/* 5. Floating Bottom Action Bar */}
       <FilingFloatingActionBar
         selectedCount={selectedRows.length}
         onAutoRoundRobin={handleRoundRobinAssign}
         onOpenAssignModal={() => handleOpenAssignModal()}
         onClearSelection={() => setSelectedRows([])}
-        isLoading={isLoading}
       />
 
-      {/* 6. Lead Assignment Modal (Bulk or Single) */}
+      {/* 6. Filing Lead Assignment Modal */}
       <FilingLeadAssignmentModal
         isOpen={isAssignModalOpen}
         onClose={handleCloseAssignModal}
@@ -294,7 +183,6 @@ export const FilingManagerQueueScreen: React.FC = () => {
         staffList={staffList}
         onConfirmDirectAssign={handleDirectAssign}
         onConfirmRoundRobin={handleRoundRobinAssign}
-        isLoading={isLoading}
       />
     </div>
   );

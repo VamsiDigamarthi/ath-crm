@@ -1,469 +1,253 @@
 import React, { useState, useMemo } from 'react';
-import type { PrepReviewLead } from '../../types/prep-review.types';
-import { PrepStageBadge } from '../common/PrepStageBadge';
-import { PrepComplexityBadge } from '../common/PrepComplexityBadge';
-import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
-import { AppSearchInput } from '@/shared/components/AppSearchInput';
-import { AppTabs } from '@/shared/components/AppTabs';
-import { AppEmptyState } from '@/shared/components/AppEmptyState';
+import type { ColumnDef } from '@tanstack/react-table';
+import { UserCheck, Eye, Sparkles } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { 
-  UserCheck, 
-  FileText, 
-  CheckSquare, 
-  Square, 
-  ShieldCheck, 
-  Calculator, 
-  UserPlus,
-  CheckCircle2,
-  X 
-} from 'lucide-react';
-import { useAuthStore } from '@/features/auth/store/auth-store';
+import { AppTabs } from '@/shared/components/AppTabs';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { PrepStageBadge } from '../common/PrepStageBadge';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
+import type { PrepReviewLead } from '../../types/prep-review.types';
 
-interface PrepManagerQueueTableProps {
+export interface PrepManagerQueueTableProps {
   leads: PrepReviewLead[];
-  tabStats?: {
-    all: number;
-    unassigned: number;
-    underPrep: number;
-    qaReview: number;
-    revisions: number;
-    qaApproved: number;
-    reverted?: number;
-  };
-  isLoading?: boolean;
-  onOpenAssignModal: (leadsToAssign: PrepReviewLead[]) => void;
-  onOpenAutoDistribute?: () => void;
-  onViewLeadDetail: (lead: PrepReviewLead) => void;
+  tabStats?: any;
   selectedStageFilter?: string;
   onStageFilterChange?: (stage: string) => void;
+  onOpenAutoDistribute?: () => void;
   isAdmin?: boolean;
+  isLoading?: boolean;
+  onOpenAssignModal: (leadsToAssign: PrepReviewLead[]) => void;
+  onViewLeadDetail: (lead: PrepReviewLead) => void;
 }
 
 export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
   leads,
   tabStats,
+  selectedStageFilter,
+  onStageFilterChange,
+  onOpenAutoDistribute,
   isLoading = false,
   onOpenAssignModal,
-  onOpenAutoDistribute: _onOpenAutoDistribute,
   onViewLeadDetail,
-  selectedStageFilter = 'ALL',
-  onStageFilterChange,
-  isAdmin = false,
 }) => {
-  const { user } = useAuthStore();
-  const isEffectiveAdmin = isAdmin || user?.role === 'ADMIN';
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
-  const [internalTab, setInternalTab] = useState<string>(selectedStageFilter);
+  const [selectedRows, setSelectedRows] = useState<PrepReviewLead[]>([]);
+  const columns = useMemo<ColumnDef<PrepReviewLead, any>[]>(
+    () => [
+      {
+        id: 'taxpayer',
+        header: 'TAXPAYER',
+        accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
+        cell: ({ row }) => (
+          <TaxpayerCell
+            name={row.original.taxpayerName}
+            email={row.original.taxpayerEmail}
+          />
+        ),
+      },
+      {
+        id: 'taxYear',
+        header: 'TY',
+        accessorFn: (row) => `TY ${row.taxYear || 2025}`,
+        cell: ({ row }) => (
+          <span className="text-xs font-medium text-slate-700">
+            {row.original.taxYear || 2025}
+          </span>
+        ),
+      },
+      {
+        id: 'state',
+        header: 'STATE',
+        accessorKey: 'stateOfResidence',
+        cell: ({ row }) => (
+          <span className="text-xs font-normal text-slate-700">
+            {row.original.stateOfResidence || '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'preparer',
+        header: 'PREPARER',
+        accessorFn: (row) => row.assignedPreparer?.name || 'Unassigned',
+        cell: ({ row }) => {
+          const prep = row.original.assignedPreparer;
+          if (!prep) {
+            return (
+              <span className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                Unassigned
+              </span>
+            );
+          }
+          return (
+            <span className="text-xs font-normal text-slate-800">
+              {prep.name}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'reviewer',
+        header: 'QA REVIEWER',
+        accessorFn: (row) => row.assignedReviewer?.name || 'Unassigned',
+        cell: ({ row }) => {
+          const rev = row.original.assignedReviewer;
+          if (!rev) {
+            return (
+              <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                Unassigned
+              </span>
+            );
+          }
+          return (
+            <span className="text-xs font-normal text-slate-800">
+              {rev.name}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'docs',
+        header: 'DOCS',
+        accessorFn: (row) => `${row.verifiedDocumentsCount || 0}/${row.documentsCount || 0}`,
+        cell: ({ row }) => (
+          <span className="text-xs font-normal text-slate-700">
+            {row.original.verifiedDocumentsCount || 0}/{row.original.documentsCount || 0}
+          </span>
+        ),
+      },
+      {
+        id: 'stage',
+        header: 'STAGE',
+        accessorKey: 'currentStage',
+        meta: {
+          filterType: 'enum',
+          filterOptions: [
+            { label: 'In Tax Prep', value: 'DOC_PREP' },
+            { label: 'QA Review', value: 'QA_REVIEW' },
+            { label: 'Correction Needed', value: 'CORRECTION_NEEDED' },
+            { label: 'Sales Pitching', value: 'SALES_PITCHING' },
+          ],
+        },
+        cell: ({ row }) => <PrepStageBadge stage={row.original.currentStage} />,
+      },
+      {
+        id: 'actions',
+        header: 'ACTION',
+        enableSorting: false,
+        enableHiding: false,
+        meta: {
+          disableMenu: true,
+          disableFilter: true,
+        },
+        cell: ({ row }) => {
+          const lead = row.original;
+          return (
+            <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenAssignModal([lead])}
+                className="h-7 px-2 text-[11px] font-normal border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                title="Assign / Reassign Staff"
+              >
+                <UserCheck className="w-3 h-3 text-slate-500" />
+                <span>{lead.assignedPreparer ? 'Reassign' : 'Assign'}</span>
+              </Button>
 
-  const activeTab = onStageFilterChange ? selectedStageFilter : internalTab;
-  const setTab = (tab: string) => {
-    if (onStageFilterChange) onStageFilterChange(tab);
-    else setInternalTab(tab);
-  };
+              <Button
+                size="sm"
+                onClick={() => onViewLeadDetail(lead)}
+                className="h-7 px-2 text-[11px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
+              >
+                <Eye className="w-3 h-3" />
+                <span>Inspect</span>
+              </Button>
+            </div>
+          );
+        },
+      },
+    ],
+    [onOpenAssignModal, onViewLeadDetail]
+  );
 
-  // Filtered Leads
-  const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
-      // Tab Filter
-      if (activeTab === 'UNASSIGNED') {
-        if (lead.prepStage !== 'DOC_PREP_COMPLETE' && (lead.currentStage !== 'DOC_PREP_COMPLETE' || lead.assignedPreparer !== null)) return false;
-      } else if (activeTab === 'UNDER_PREP') {
-        if (lead.prepStage !== 'PREP_IN_PROGRESS' && lead.currentStage !== 'PREP_ASSIGNED' && lead.currentStage !== 'PREP_IN_PROGRESS') return false;
-      } else if (activeTab === 'QA_REVIEW') {
-        if (lead.prepStage !== 'QA_IN_REVIEW' && lead.currentStage !== 'QA_REVIEW_QUEUE' && lead.currentStage !== 'QA_IN_REVIEW') return false;
-      } else if (activeTab === 'REVISIONS') {
-        if (lead.prepStage !== 'QA_REVISION_REQUESTED' && lead.currentStage !== 'QA_REVISION_REQUESTED' && lead.currentStage !== 'CORRECTION_NEEDED') return false;
-      } else if (activeTab === 'QA_APPROVED') {
-        if (lead.prepStage !== 'QA_APPROVED' && lead.currentStage !== 'QA_APPROVED' && lead.currentStage !== 'SALES_PITCH_QUEUE') return false;
-      } else if (activeTab === 'REVERTED' || activeTab === 'REVERTED_TO_DOC') {
-        if ((lead.prepStage as any) !== 'REVERTED_TO_DOC' && lead.currentStage !== 'DOC_OUTREACH' && lead.taxDraftSummary?.status !== 'REVERTED_TO_DOCUMENTER') return false;
-      }
-
-      // Search Query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesName = lead.taxpayerName.toLowerCase().includes(q);
-        const matchesEmail = lead.taxpayerEmail.toLowerCase().includes(q);
-        const matchesPhone = lead.taxpayerPhone.includes(q);
-        const matchesVisa = lead.visaType.toLowerCase().includes(q);
-        const matchesState = lead.stateOfResidence.toLowerCase().includes(q);
-        if (!matchesName && !matchesEmail && !matchesPhone && !matchesVisa && !matchesState) return false;
-      }
-
-      return true;
-    });
-  }, [leads, activeTab, searchQuery]);
-
-  const isLeadSelectable = (lead: PrepReviewLead) => !lead.assignedPreparer;
-
-  const selectableLeads = useMemo(() => {
-    return filteredLeads.filter(isLeadSelectable);
-  }, [filteredLeads]);
-
-  const allSelectableSelected =
-    selectableLeads.length > 0 && selectableLeads.every((l) => selectedLeadIds.includes(l.id));
-
-  const toggleSelectAll = () => {
-    if (allSelectableSelected) {
-      setSelectedLeadIds([]);
-    } else {
-      setSelectedLeadIds(selectableLeads.map((l) => l.id));
-    }
-  };
-
-  const toggleSelectOne = (id: string, lead: PrepReviewLead) => {
-    if (!isLeadSelectable(lead)) return;
-    setSelectedLeadIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+  const handleExportExcel = () => {
+    exportTableToExcel(
+      leads,
+      [
+        { header: 'Taxpayer Name', key: 'taxpayerName' },
+        { header: 'Email', key: 'taxpayerEmail' },
+        { header: 'Tax Year', key: 'taxYear' },
+        { header: 'State', key: 'stateOfResidence' },
+        { header: 'Preparer', key: 'prep', format: (r) => r.assignedPreparer?.name || 'Unassigned' },
+        { header: 'Reviewer', key: 'rev', format: (r) => r.assignedReviewer?.name || 'Unassigned' },
+        { header: 'Stage', key: 'currentStage' },
+      ],
+      'prep_manager_queue'
     );
   };
 
-  const handleBulkAssignClick = () => {
-    const selectedLeads = leads.filter((l) => selectedLeadIds.includes(l.id));
-    onOpenAssignModal(selectedLeads);
-  };
-
-  const counts = tabStats || {
-    all: leads.length,
-    unassigned: leads.filter((l) => l.prepStage === 'DOC_PREP_COMPLETE' || (l.currentStage === 'DOC_PREP_COMPLETE' && l.assignedPreparer === null)).length,
-    underPrep: leads.filter((l) => l.prepStage === 'PREP_IN_PROGRESS' || l.currentStage === 'PREP_ASSIGNED' || l.currentStage === 'PREP_IN_PROGRESS').length,
-    qaReview: leads.filter((l) => l.prepStage === 'QA_IN_REVIEW' || l.currentStage === 'QA_REVIEW_QUEUE' || l.currentStage === 'QA_IN_REVIEW').length,
-    revisions: leads.filter((l) => l.prepStage === 'QA_REVISION_REQUESTED' || l.currentStage === 'QA_REVISION_REQUESTED' || l.currentStage === 'CORRECTION_NEEDED').length,
-    qaApproved: leads.filter((l) => l.prepStage === 'QA_APPROVED' || l.currentStage === 'QA_APPROVED' || l.currentStage === 'SALES_PITCH_QUEUE').length,
-    reverted: leads.filter((l) => (l.prepStage as any) === 'REVERTED_TO_DOC' || l.currentStage === 'DOC_OUTREACH' || l.taxDraftSummary?.status === 'REVERTED_TO_DOCUMENTER').length,
-  };
+  const tabs = useMemo(() => {
+    if (!tabStats) return [];
+    return [
+      { id: 'ALL', label: 'All Pipeline', count: tabStats.all || leads.length },
+      { id: 'UNASSIGNED', label: 'Unassigned', count: tabStats.unassigned || 0 },
+      { id: 'UNDER_PREP', label: 'Under Prep', count: tabStats.underPrep || 0 },
+      { id: 'QA_REVIEW', label: 'QA Review', count: tabStats.qaReview || 0 },
+      { id: 'REVISIONS', label: 'Revisions', count: tabStats.revisions || 0 },
+      { id: 'QA_APPROVED', label: 'Ready for Sales', count: tabStats.qaApproved || 0 },
+    ];
+  }, [tabStats, leads.length]);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden font-sans space-y-0">
-      {/* Top Header & Search Bar */}
-      <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50/50">
-        <div>
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-            <Calculator className="w-4 h-4 text-[#16A34A]" />
-            <span>Tax Preparation &amp; Quality Review Pipeline</span>
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            {isEffectiveAdmin 
-              ? 'Real-time monitoring of taxpayer files moving through 1040 computation and QA compliance sign-off.'
-              : 'Assign intake-ready taxpayer files to Preparers and designate Compliance Reviewers.'}
-          </p>
-        </div>
-
-        {/* Search Input */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="w-64 sm:w-80">
-            <AppSearchInput
-              value={searchQuery}
-              onChange={(val) => setSearchQuery(val)}
-              placeholder="Search taxpayer, visa, state..."
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Tabs Ribbon */}
-      <div className="px-4 pt-1 bg-white">
+    <div className="space-y-3">
+      {onStageFilterChange && tabs.length > 0 && (
         <AppTabs
-          tabs={[
-            { id: 'ALL', label: 'All Pipeline', count: counts.all },
-            { id: 'UNASSIGNED', label: 'Unassigned', count: counts.unassigned },
-            { id: 'UNDER_PREP', label: 'Under Prep (1040)', count: counts.underPrep },
-            { id: 'QA_REVIEW', label: 'In QA Review', count: counts.qaReview },
-            { id: 'REVISIONS', label: 'Revisions', count: counts.revisions },
-            { id: 'QA_APPROVED', label: 'Ready for Sales', count: counts.qaApproved },
-            { id: 'REVERTED', label: 'Reverted to Docs', count: counts.reverted || 0 },
-          ]}
-          activeTab={activeTab === 'REVERTED_TO_DOC' ? 'REVERTED' : activeTab}
-          onChange={(tab) => setTab(tab)}
+          tabs={tabs}
+          activeTab={selectedStageFilter || 'ALL'}
+          onChange={(tab) => onStageFilterChange(tab)}
           size="sm"
         />
-      </div>
-
-      {/* Leads Table or AppEmptyState */}
-      {isLoading ? (
-        <div className="py-20 text-center text-slate-400 text-xs">
-          <div className="w-6 h-6 border-2 border-[#16A34A] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <span>Loading dynamic pipeline queue from database...</span>
-        </div>
-      ) : filteredLeads.length === 0 ? (
-        <div className="p-8">
-          <AppEmptyState
-            icon={FileText}
-            title="No Tax Returns in this Queue"
-            description={
-              searchQuery.trim()
-                ? `No returns matched your search query "${searchQuery}".`
-                : activeTab !== 'ALL'
-                ? `There are currently 0 tax returns under the "${activeTab}" stage.`
-                : 'There are currently no taxpayer files in the preparation pipeline.'
-            }
-            secondaryAction={
-              searchQuery.trim() || activeTab !== 'ALL'
-                ? {
-                    label: 'Reset Filters',
-                    onClick: () => {
-                      setSearchQuery('');
-                      setTab('ALL');
-                    },
-                  }
-                : undefined
-            }
-          />
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase tracking-wider text-[10px]">
-              <tr>
-                {!isEffectiveAdmin && (
-                  <th className="py-3 px-4 w-10 text-center">
-                    <button
-                      type="button"
-                      disabled={selectableLeads.length === 0}
-                      onClick={toggleSelectAll}
-                      title={selectableLeads.length === 0 ? "No unassigned returns available to select" : "Select all unassigned returns"}
-                      className={`cursor-pointer ${
-                        selectableLeads.length === 0
-                          ? "opacity-30 cursor-not-allowed text-slate-300"
-                          : "text-slate-400 hover:text-slate-700"
-                      }`}
-                    >
-                      {allSelectableSelected ? (
-                        <CheckSquare className="w-4 h-4 text-[#16A34A]" />
-                      ) : (
-                        <Square className="w-4 h-4" />
-                      )}
-                    </button>
-                  </th>
-                )}
-                <th className="py-3 px-4">Taxpayer Client</th>
-                <th className="py-3 px-4">Complexity &amp; Location</th>
-                <th className="py-3 px-4 text-center">Intake &amp; Vault</th>
-                <th className="py-3 px-4">Assigned Preparer</th>
-                <th className="py-3 px-4">QA Reviewer</th>
-                <th className="py-3 px-4">Filing Lifecycle Stage</th>
-                {!isEffectiveAdmin && <th className="py-3 px-4 text-right">Assign Action</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredLeads.map((lead) => {
-                const isSelected = selectedLeadIds.includes(lead.id);
-                const isSelectable = isLeadSelectable(lead);
-
-                return (
-                  <tr
-                    key={lead.id}
-                    className={`hover:bg-slate-50/70 transition-colors ${
-                      isSelected ? 'bg-emerald-50/40' : ''
-                    }`}
-                  >
-                    {/* Checkbox */}
-                    {!isEffectiveAdmin && (
-                      <td className="py-3.5 px-4 text-center">
-                        {isSelectable ? (
-                          <button
-                            type="button"
-                            onClick={() => toggleSelectOne(lead.id, lead)}
-                            className="text-slate-400 hover:text-slate-700 cursor-pointer"
-                            title={`Select ${lead.taxpayerName}`}
-                          >
-                            {isSelected ? (
-                              <CheckSquare className="w-4 h-4 text-[#16A34A]" />
-                            ) : (
-                              <Square className="w-4 h-4" />
-                            )}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled
-                            className="opacity-30 cursor-not-allowed text-slate-300"
-                            title={`Already assigned to ${lead.assignedPreparer?.name || 'preparer'}`}
-                          >
-                            <Square className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    )}
-
-                    {/* Taxpayer Client Info */}
-                    <td className="py-3.5 px-4">
-                      <div>
-                        <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5 flex-wrap">
-                          <span
-                            onClick={() => onViewLeadDetail(lead)}
-                            className="hover:text-[#16A34A] cursor-pointer"
-                          >
-                            {lead.taxpayerName}
-                          </span>
-                          <ClientPaymentStatusChip lead={lead} size="xs" />
-                          {lead.allApplications && lead.allApplications.length > 1 ? (
-                            <div className="inline-flex items-center gap-1">
-                              {lead.allApplications.map((app) => (
-                                <span
-                                  key={app.id}
-                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                                    app.id === (lead.id || lead.applicationId)
-                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 ring-1 ring-emerald-500/20'
-                                      : 'bg-slate-100 text-slate-600 border-slate-200'
-                                  }`}
-                                  title={`TY ${app.taxYear} (${app.filingType || 'INDIVIDUAL'})`}
-                                >
-                                  TY {app.taxYear}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                              TY {lead.taxYear}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-medium">{lead.taxpayerEmail}</div>
-                        <div className="text-[10px] text-slate-400">
-                          {lead.visaType} • {lead.maritalStatus}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Complexity & Location */}
-                    <td className="py-3.5 px-4">
-                      <div className="space-y-1">
-                        <PrepComplexityBadge complexity={lead.complexity || 'STANDARD'} />
-                        <div className="text-[11px] text-slate-500 font-medium">
-                          {lead.stateOfResidence}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Intake Docs & Vault */}
-                    <td className="py-3.5 px-4 text-center">
-                      <div className="inline-flex flex-col items-center">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          <FileText className="w-3 h-3 text-[#16A34A]" />
-                          <span>{lead.verifiedDocumentsCount} Docs Verified</span>
-                        </span>
-                        <span className="text-[10px] text-slate-400 mt-0.5">
-                          Organizer: {lead.organizerPercent}%
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Assigned Preparer */}
-                    <td className="py-3.5 px-4">
-                      {lead.assignedPreparer ? (
-                        <div className="flex items-center gap-1.5">
-                          <Calculator className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
-                          <div>
-                            <div className="font-bold text-slate-800 text-xs">{lead.assignedPreparer.name}</div>
-                            <div className="text-[10px] text-slate-400">{lead.assignedPreparer.email.split('@')[0]}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                          Unassigned
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Assigned Reviewer */}
-                    <td className="py-3.5 px-4">
-                      {lead.assignedReviewer ? (
-                        <div className="flex items-center gap-1.5">
-                          <ShieldCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                          <div>
-                            <div className="font-bold text-slate-800 text-xs">{lead.assignedReviewer.name}</div>
-                            <div className="text-[10px] text-slate-400">{lead.assignedReviewer.email.split('@')[0]}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic">Not Designated</span>
-                      )}
-                    </td>
-
-                    {/* Lifecycle Stage */}
-                    <td className="py-3.5 px-4">
-                      <PrepStageBadge 
-                        stage={lead.prepStage || lead.currentStage} 
-                        assignedPreparerName={lead.assignedPreparer?.name}
-                        assignedCloserName={lead.assignedSalesAgent?.name}
-                        assignedFileOpName={lead.assignedFileOp?.name}
-                      />
-                    </td>
-
-                    {/* Assign Action */}
-                    {!isEffectiveAdmin && (
-                      <td className="py-3.5 px-4 text-right">
-                        {lead.assignedPreparer ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={true}
-                            className="border-slate-200 bg-slate-50 text-slate-400 text-xs font-semibold h-7.5 px-2.5 cursor-not-allowed opacity-60 shadow-none inline-flex items-center gap-1.5"
-                            title={`Already assigned to ${lead.assignedPreparer.name}`}
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Assigned</span>
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onOpenAssignModal([lead])}
-                            className="border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-[#16A34A] text-xs font-bold h-7.5 px-2.5 cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
-                            title="Assign Tax Preparer and QA Reviewer"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                            <span>Assign</span>
-                          </Button>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       )}
 
-      {/* Floating Action Bar at Bottom (Hidden for Admin) */}
-      {!isEffectiveAdmin && selectedLeadIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in fade-in slide-in-from-bottom-5 duration-200 font-sans">
-          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-slate-900/95 backdrop-blur-md text-white border border-slate-700 shadow-2xl shadow-slate-950/40">
-            <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-[#16A34A] border border-emerald-500/30 flex items-center justify-center font-bold text-xs">
-                <CheckSquare className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-white tracking-wide">
-                  {selectedLeadIds.length} {selectedLeadIds.length === 1 ? 'Lead' : 'Leads'}
-                </span>
-                <span className="text-[10px] text-slate-400 block -mt-0.5">Selected</span>
-              </div>
-            </div>
-
-            <Button
-              size="sm"
-              onClick={handleBulkAssignClick}
-              className="h-9 px-4 rounded-xl font-bold text-xs bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            >
-              <UserPlus className="w-3.5 h-3.5 text-white" />
-              <span>Assign Preparer &amp; QA Reviewer</span>
-            </Button>
-
-            <button
-              onClick={() => setSelectedLeadIds([])}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-1 cursor-pointer"
-              title="Clear Selection"
-            >
-              <X className="w-4 h-4" />
-            </button>
+      <UnifiedTable<PrepReviewLead>
+        columns={columns}
+        data={leads}
+        title="TAX PREPARATION & QA SUPERVISION"
+        subtitle="Oversee preparer caseload allocations, audit deck throughput, and 4-Eyes sign-off pipeline."
+        isLoading={isLoading}
+        enableSelection={true}
+        selectedRows={selectedRows}
+        onSelectionChange={setSelectedRows}
+        searchPlaceholder="Search taxpayer, preparer, reviewer, stage..."
+        onExportExcel={handleExportExcel}
+        onRowClick={(item) => onViewLeadDetail(item)}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            {selectedRows.length > 0 && (
+              <Button
+                size="sm"
+                onClick={() => onOpenAssignModal(selectedRows)}
+                className="h-8 px-3 text-xs font-semibold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Assign Selected ({selectedRows.length})</span>
+              </Button>
+            )}
+            {onOpenAutoDistribute && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onOpenAutoDistribute}
+                className="h-8 px-3 text-xs font-medium border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>Auto Distribute</span>
+              </Button>
+            )}
           </div>
-        </div>
-      )}
+        }
+        emptyText="No returns in this supervisor queue."
+      />
     </div>
   );
 };

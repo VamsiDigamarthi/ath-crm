@@ -9,7 +9,8 @@ import { CallOutreachModal } from '../components/CallOutreachModal';
 import { StartFilingModal } from '../components/StartFilingModal';
 import { getDocumenterColumns } from '../columns/documenter-columns';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
-import { AppTable } from '@/shared/components/AppTable';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
@@ -44,12 +45,7 @@ export const DocumenterManagerScreen: React.FC = () => {
     stats,
     isLoading,
     isActionLoading,
-    page,
-    limit,
-    totalPages,
     totalItems,
-    handlePageChange,
-    handleLimitChange,
     selectedRows,
     setSelectedRows,
     handleAutoRoundRobin,
@@ -339,15 +335,30 @@ export const DocumenterManagerScreen: React.FC = () => {
           </div>
 
           {/* Department Lead Table */}
-          <AppTable<DocumenterLeadItem>
+          <UnifiedTable<DocumenterLeadItem>
+            title="DEPARTMENT LEAD DIRECTORY"
+            subtitle="Full department assignments, outreach statuses, and client tax intake pipeline."
             data={displayedLeads}
             columns={leadColumns}
-            selectable
-            isRowSelectable={(item) => !item.assignedDocAgent}
+            enableSelection={true}
             selectedRows={selectedRows}
-            rowKey="id"
             onSelectionChange={(selected) => setSelectedRows(selected)}
             isLoading={isLoading}
+            searchPlaceholder="Search taxpayer, phone, stage, staff..."
+            onExportExcel={() => {
+              exportTableToExcel(
+                displayedLeads,
+                [
+                  { header: 'Taxpayer Name', key: 'name', format: (l) => l.customer?.fullName || `${l.customer?.firstName} ${l.customer?.lastName}` },
+                  { header: 'Email', key: 'email', format: (l) => l.customer?.email || '' },
+                  { header: 'Phone', key: 'phone', format: (l) => l.customer?.phone || '' },
+                  { header: 'Priority', key: 'priority' },
+                  { header: 'Stage', key: 'currentStage' },
+                  { header: 'Assigned Staff', key: 'staff', format: (l) => l.assignedDocAgent?.email || 'Unassigned' },
+                ],
+                'documenter_leads_export'
+              );
+            }}
             emptyText={
               selectedAgentFilter
                 ? 'No leads currently assigned to this staff member.'
@@ -355,15 +366,6 @@ export const DocumenterManagerScreen: React.FC = () => {
                 ? 'All leads have been distributed to staff, or no new bulk leads are unassigned.'
                 : 'No leads match the selected filter criteria.'
             }
-            pagination={{
-              currentPage: page,
-              totalPages,
-              totalItems,
-              itemsPerPage: limit,
-              perPageOptions: [5, 10, 20, 50],
-              onPageChange: handlePageChange,
-              onPerPageChange: handleLimitChange,
-            }}
           />
         </div>
       )}

@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { getRoleDefaultRoute } from '@/features/auth/utils/auth-redirect';
 import { Button } from '@/shared/components/Button';
-import { AppTable } from '@/shared/components/AppTable';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { useNavigate } from 'react-router-dom';
+import type { ColumnDef } from '@tanstack/react-table';
 import {
   FileSpreadsheet,
   LogOut,
@@ -13,10 +16,9 @@ import {
   TrendingUp,
   Clock,
   CheckCircle2,
-  Plus,
 } from 'lucide-react';
 
-interface MockLead extends Record<string, unknown> {
+interface MockLead {
   id: string;
   name: string;
   email: string;
@@ -33,7 +35,7 @@ const MOCK_LEADS: MockLead[] = [
   { id: 'TAX-1004', name: 'Emily Davis', email: 'emily.d@outlook.com', phone: '+1 415-555-0123', taxYear: 2024, stage: 'Completed', status: 'Filed Successfully' },
 ];
 
-export const DashboardScreen = () => {
+export const DashboardScreen: React.FC = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -52,57 +54,91 @@ export const DashboardScreen = () => {
     navigate('/login');
   };
 
-  const columns = [
-    { header: 'Case ID', accessorKey: 'id' as keyof MockLead, sortable: true, cellClassName: 'font-mono text-xs font-bold text-indigo-600' },
-    { header: 'Taxpayer Client', accessorKey: 'name' as keyof MockLead, sortable: true, cellClassName: 'font-semibold text-gray-900' },
-    { header: 'Contact Email', accessorKey: 'email' as keyof MockLead },
-    { header: 'Tax Year', accessorKey: 'taxYear' as keyof MockLead, cellClassName: 'font-bold text-gray-700' },
-    {
-      header: 'Workflow Stage',
-      accessorKey: 'stage' as keyof MockLead,
-      render: (item: MockLead) => (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-          <Clock className="w-3 h-3" />
-          {item.stage}
-        </span>
-      ),
-    },
-    {
-      header: 'Status',
-      accessorKey: 'status' as keyof MockLead,
-      render: (item: MockLead) => (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
-          <CheckCircle2 className="w-3 h-3" />
-          {item.status}
-        </span>
-      ),
-    },
-  ];
+  const columns = useMemo<ColumnDef<MockLead, any>[]>(
+    () => [
+      {
+        id: 'taxpayer',
+        header: 'TAXPAYER',
+        accessorFn: (row) => `${row.name} ${row.email}`,
+        cell: ({ row }) => (
+          <TaxpayerCell
+            name={row.original.name}
+            email={row.original.email}
+          />
+        ),
+      },
+      {
+        id: 'taxYear',
+        header: 'TAX YEAR',
+        accessorKey: 'taxYear',
+        cell: ({ row }) => (
+          <span className="text-xs font-medium text-zinc-900">
+            TY{row.original.taxYear}
+          </span>
+        ),
+      },
+      {
+        id: 'stage',
+        header: 'STAGE',
+        accessorKey: 'stage',
+        cell: ({ row }) => (
+          <span className="text-xs text-zinc-700">
+            {row.original.stage}
+          </span>
+        ),
+      },
+      {
+        id: 'status',
+        header: 'STATUS',
+        accessorKey: 'status',
+        cell: ({ row }) => (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+            {row.original.status}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  const handleExport = () => {
+    exportTableToExcel(
+      MOCK_LEADS,
+      [
+        { header: 'Taxpayer', key: 'name' },
+        { header: 'Email', key: 'email' },
+        { header: 'Tax Year', key: 'taxYear' },
+        { header: 'Stage', key: 'stage' },
+        { header: 'Status', key: 'status' },
+      ],
+      'tax_filing_pipeline'
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-zinc-50 flex flex-col font-sans">
       {/* Top Navbar */}
-      <header className="bg-slate-900 border-b border-slate-800 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-20 shadow-md">
+      <header className="bg-zinc-900 border-b border-zinc-800 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-20 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md">
             <FileSpreadsheet className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-lg font-extrabold tracking-tight font-mono">TaxCRM Engine</h1>
-            <p className="text-[11px] text-slate-400">Operations & Workflow Dashboard</p>
+            <h1 className="text-lg font-bold tracking-tight">TaxCRM Engine</h1>
+            <p className="text-[11px] text-zinc-400 font-normal">Operations & Workflow Dashboard</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex flex-col text-right">
-            <span className="text-sm font-semibold text-slate-200">{user?.email || user?.phone || 'Operator'}</span>
-            <span className="text-[10px] font-bold text-indigo-400 tracking-widest">
+            <span className="text-sm font-medium text-zinc-200">{user?.email || user?.phone || 'Operator'}</span>
+            <span className="text-[10px] font-medium text-zinc-400">
               Role: {user?.role || 'SUPER_ADMIN'}
             </span>
           </div>
 
           {user?.role === 'ADMIN' && (
-            <Button size="sm" variant="outline" onClick={() => navigate('/admin')} className="text-white border-slate-700 hover:bg-slate-800">
+            <Button size="sm" variant="outline" onClick={() => navigate('/admin')} className="text-white border-zinc-700 hover:bg-zinc-800">
               <ShieldCheck className="w-4 h-4 mr-1.5" />
               Admin Panel
             </Button>
@@ -117,74 +153,59 @@ export const DashboardScreen = () => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 sm:p-8 space-y-8">
-        
         {/* Welcome & Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <TrendingUp className="w-6 h-6" />
+          <div className="p-5 rounded-xl bg-white border border-zinc-200 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-2xl font-black text-gray-900">128</div>
-              <div className="text-xs text-gray-500 font-medium">Active Tax Applications</div>
+              <div className="text-xl font-bold text-zinc-900">128</div>
+              <div className="text-xs text-zinc-500 font-normal">Active Tax Applications</div>
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-6 h-6" />
+          <div className="p-5 rounded-xl bg-white border border-zinc-200 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-2xl font-black text-gray-900">94</div>
-              <div className="text-xs text-gray-500 font-medium">Completed Filings</div>
+              <div className="text-xl font-bold text-zinc-900">94</div>
+              <div className="text-xs text-zinc-500 font-normal">Completed Filings</div>
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-              <Clock className="w-6 h-6" />
+          <div className="p-5 rounded-xl bg-white border border-zinc-200 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Clock className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-2xl font-black text-gray-900">22</div>
-              <div className="text-xs text-gray-500 font-medium">In Sales Pitch</div>
+              <div className="text-xl font-bold text-zinc-900">22</div>
+              <div className="text-xs text-zinc-500 font-normal">In Sales Pitch</div>
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-gray-200/80 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-              <UserCheck className="w-6 h-6" />
+          <div className="p-5 rounded-xl bg-white border border-zinc-200 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <UserCheck className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-2xl font-black text-gray-900">12</div>
-              <div className="text-xs text-gray-500 font-medium">Pending E-File CPA</div>
+              <div className="text-xl font-bold text-zinc-900">12</div>
+              <div className="text-xs text-zinc-500 font-normal">Pending E-File CPA</div>
             </div>
           </div>
         </div>
 
-        {/* Action Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Active Tax Filing Pipeline</h2>
-            <p className="text-sm text-gray-500">Real-time status across Documenter, Sales, and CPA File Operator segments.</p>
-          </div>
-
-          <Button size="md" variant="primary">
-            <Plus className="w-4 h-4 mr-1.5" />
-            Create New Filing Case
-          </Button>
-        </div>
-
-        {/* Reusable AppTable Display */}
-        <AppTable<MockLead>
-          title="Tax Applications Registry"
-          description="Click any row to open customer tax vault and stage notes."
-          columns={columns}
+        {/* Unified Table Display */}
+        <UnifiedTable<MockLead>
+          title="TAX APPLICATIONS REGISTRY"
+          subtitle="Real-time status across Documenter, Sales, and CPA File Operator segments."
           data={MOCK_LEADS}
-          searchable
-          exportable
-          exportFilename="tax_applications_export"
-          density="comfortable"
-          striped
+          columns={columns}
+          isLoading={false}
+          searchPlaceholder="Search leads..."
+          onExportExcel={handleExport}
+          emptyText="No records found."
         />
       </main>
 

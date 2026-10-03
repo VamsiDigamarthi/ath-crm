@@ -35,10 +35,10 @@ export const HeaderUserProfile: React.FC<HeaderUserProfileProps> = ({
         />
       </div>
       <div className="hidden sm:flex flex-col min-w-0 text-left">
-        <span className="text-xs font-bold text-black leading-tight truncate">
+        <span className="text-xs font-medium text-slate-900 leading-tight truncate">
           {displayName}
         </span>
-        <span className="text-[10px] text-black/70 leading-tight truncate max-w-[160px] font-semibold">
+        <span className="text-[10px] text-slate-500 leading-tight truncate max-w-[160px] font-normal mt-0.5">
           {displayEmail}
         </span>
       </div>

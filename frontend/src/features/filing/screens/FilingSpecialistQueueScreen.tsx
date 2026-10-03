@@ -1,48 +1,36 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   Send, 
   RefreshCw, 
   CheckCircle2, 
   Clock, 
-  FileCheck2,
-  ListFilter,
-  CreditCard,
-  Scale,
-  Globe,
-  RotateCcw
+  ListFilter, 
+  RotateCcw 
 } from 'lucide-react';
-import { AppTable } from '@/shared/components/AppTable';
-import { AppSearchInput } from '@/shared/components/AppSearchInput';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
 import { getFilingColumns } from '../columns/filing-columns';
-import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { useFilingQueue } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
 
 export type FilingTabType = 'ALL' | 'FILING_QUEUE' | 'FILING_IN_PROGRESS' | 'FILING_SUCCESS' | 'REVERTED';
 
 export const FilingSpecialistQueueScreen: React.FC = () => {
-  const navigate = useNavigate();
-
   const {
     isLoading,
     leads,
-    searchQuery,
-    setSearchQuery,
     stageFilter,
     setStageFilter,
-    priorityFilter,
-    setPriorityFilter,
     fetchQueue,
     handleOpenWorkspace,
   } = useFilingQueue(true);
 
-  const [paymentFilter, setPaymentFilter] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
-  const [liabilityFilter, setLiabilityFilter] = useState<'ALL' | 'REFUND' | 'TAX_DUE'>('ALL');
-  const [visaFilter, setVisaFilter] = useState<string>('ALL');
+  const [paymentFilter] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
+  const [liabilityFilter] = useState<'ALL' | 'REFUND' | 'TAX_DUE'>('ALL');
+  const [visaFilter] = useState<string>('ALL');
 
   const counts = useMemo(() => {
     const ready = leads.filter((l) => l.currentStage === 'FILING_QUEUE').length;
@@ -80,7 +68,6 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
     { id: 'ALL' as FilingTabType, label: 'All My Returns', count: counts.all, icon: ListFilter },
   ];
 
-  // Filtered dataset based on extra dropdowns
   const filteredLeads = useMemo(() => {
     return leads.filter((item) => {
       if (stageFilter === 'FILING_QUEUE' && item.currentStage !== 'FILING_QUEUE') return false;
@@ -98,53 +85,39 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
       if (liabilityFilter === 'REFUND' && item.federalRefund <= 0) return false;
       if (liabilityFilter === 'TAX_DUE' && balVal <= 0) return false;
       if (visaFilter !== 'ALL' && item.visaType !== visaFilter) return false;
+
       return true;
     });
   }, [leads, stageFilter, paymentFilter, liabilityFilter, visaFilter]);
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
-      {/* 1. Header & Actions */}
+      {/* 1. Header & Live Queue Statistics */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              My IRS Transmission Queue
-            </h2>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              <FileCheck2 className="w-3.5 h-3.5" />
-              Specialist Transmission Desk
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Returns assigned to you ready for MeF XML schema inspection, EFIN validation, and direct IRS Gateway dispatch.
+          <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+            My CPA Filing Queue & Transmissions
+          </h2>
+          <p className="text-xs sm:text-sm text-zinc-500 mt-1 font-normal">
+            Transmit Form 1040 XML packages to IRS Modernized e-File (MeF), monitor acknowledgments, and handle CPA audit reviews.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={fetchQueue}
             disabled={isLoading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            className="border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-normal flex items-center gap-1.5 cursor-pointer shadow-2xs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => navigate('/filing/agent')}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Filing Hub</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-600' : ''}`} />
+            Refresh Queue
           </Button>
         </div>
       </div>
 
-      {/* 2. Top Metric Cards (5 Specialist KPI Cards) */}
+      {/* 2. Live Transmission KPI Cards */}
       <FilingManagerMetrics
         readyCount={counts.ready}
         inProgressCount={counts.inProg}
@@ -153,93 +126,38 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
         totalCount={counts.all}
       />
 
-      {/* 3. Dedicated Tabs & Multi-Filter Card */}
-      <div className="rounded-xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
-        {/* Navigation Tabs Header */}
-        <AppTabs
-          tabs={tabs}
-          activeTab={stageFilter}
-          onChange={(id) => setStageFilter(id as any)}
-          className="px-6 pt-3"
-        />
+      {/* 3. Navigation Tabs */}
+      <AppTabs
+        tabs={tabs}
+        activeTab={stageFilter}
+        onChange={(id) => setStageFilter(id as any)}
+      />
 
-        {/* Multi-Filter & Search Bar */}
-        <div className="p-4 sm:p-5 bg-slate-50/50 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          <div className="w-full lg:w-72">
-            <AppSearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search taxpayer, phone, email..."
-              debounceMs={300}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Payment Status Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <CreditCard className="w-3.5 h-3.5 text-purple-500" />
-              <span>Payment:</span>
-              <select
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Payments</option>
-                <option value="PAID">Paid ($227)</option>
-                <option value="UNPAID">Pending Payment</option>
-              </select>
-            </div>
-
-            {/* Refund / Due Liability Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Scale className="w-3.5 h-3.5 text-emerald-500" />
-              <span>1040 Balance:</span>
-              <select
-                value={liabilityFilter}
-                onChange={(e) => setLiabilityFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Balances</option>
-                <option value="REFUND">Refund (+$)</option>
-                <option value="TAX_DUE">Tax Due (-$)</option>
-              </select>
-            </div>
-
-            {/* Visa Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Globe className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Visa:</span>
-              <select
-                value={visaFilter}
-                onChange={(e) => setVisaFilter(e.target.value)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Visas</option>
-                <option value="H-1B">H-1B</option>
-                <option value="L-1">L-1</option>
-                <option value="F-1 OPT">F-1 OPT</option>
-                <option value="H-4">H-4</option>
-                <option value="GREEN_CARD">Green Card</option>
-                <option value="US_CITIZEN">US Citizen</option>
-              </select>
-            </div>
-
-            <PriorityFilterSelect
-              value={priorityFilter}
-              onChange={setPriorityFilter}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Dedicated AppTable Section */}
-      <AppTable<FilingLeadItem>
-        title="My Assigned Modernized e-File Pipeline"
-        description="Review compliance status, inspect IRS XML schema packages, and transmit Form 1040 returns to the IRS MeF Gateway."
+      {/* 4. Unified Table */}
+      <UnifiedTable<FilingLeadItem>
+        title="IRS MODERNIZED E-FILE PIPELINE"
+        subtitle="Review compliance status, inspect IRS XML schema packages, and transmit Form 1040 returns to the IRS MeF Gateway."
         data={filteredLeads}
         columns={columns}
-        rowKey="id"
         isLoading={isLoading}
+        searchPlaceholder="Search taxpayer, state, stage, payment..."
+        onExportExcel={() => {
+          exportTableToExcel(
+            filteredLeads,
+            [
+              { header: 'Taxpayer Name', key: 'taxpayerName' },
+              { header: 'Email', key: 'taxpayerEmail' },
+              { header: 'Tax Year', key: 'taxYear' },
+              { header: 'State', key: 'stateOfResidence' },
+              { header: 'Refund', key: 'federalRefund' },
+              { header: 'Payment', key: 'paymentStatus' },
+              { header: 'E-Sign', key: 'esignStatus' },
+              { header: 'Stage', key: 'currentStage' },
+            ],
+            'filing_specialist_queue'
+          );
+        }}
+        onRowClick={(item) => handleOpenWorkspace(item.id)}
         emptyText={
           stageFilter === 'FILING_QUEUE'
             ? 'All your assigned returns have been transmitted, or no returns are awaiting transmission.'
