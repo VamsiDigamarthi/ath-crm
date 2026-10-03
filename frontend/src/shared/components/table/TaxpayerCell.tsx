@@ -17,7 +17,7 @@ export const TaxpayerCell: React.FC<TaxpayerCellProps> = ({
 
   return (
     <div className={`flex flex-col min-w-0 text-left py-0.5 ${className}`}>
-      <span className="text-xs font-semibold text-slate-900 uppercase tracking-tight truncate leading-snug">
+      <span className="text-xs font-semibold text-slate-900 truncate leading-snug">
         {name || 'Unknown'}
       </span>
       {secondaryText && (

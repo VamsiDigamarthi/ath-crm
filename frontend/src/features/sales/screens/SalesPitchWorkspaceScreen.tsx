@@ -494,6 +494,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
             leadId={appId}
             customerName={lead.taxpayerName}
             taxDraftSummary={lead.taxDraftSummary}
+            taxYear={lead.taxYear}
             allowEdit={false}
             readOnly={true}
             filingType={(lead as any).filingType as string | undefined}

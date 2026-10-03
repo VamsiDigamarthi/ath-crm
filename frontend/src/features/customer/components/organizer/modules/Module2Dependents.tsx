@@ -16,6 +16,7 @@ import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { parseUsDate, formatUsDate } from '../utils/organizer-date-helpers';
 import { type OrganizerData } from '../../../services/customer-api';
 import { type ValidationErrorMap } from '../utils/organizer-validation';
+import { formatSsn } from '../utils/ssn-format';
 
 interface Module2Props {
   data: OrganizerData['m2_dependents'];
@@ -249,16 +250,18 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                 placeholder="982-14-9812"
                 leftIcon={<CreditCard className="w-4 h-4" />}
                 error={errors['spouse_0_ssn'] || errors.spouseSsn}
-                value={spouse.ssn || ''}
-                onChange={(e) => handleSpouseChange('ssn', e.target.value, 'spouse_0_ssn')}
+                value={formatSsn(spouse.ssn)}
+                onChange={(e) => handleSpouseChange('ssn', formatSsn(e.target.value), 'spouse_0_ssn')}
               />
 
               <AppSelect
                 label={`Spouse VISA Type as of 12/31/${selectedTaxYear}`}
                 options={[
+                  { label: 'H-4 (Dependent)', value: 'H-4' },
                   { label: 'H-4 EAD (Work Authorized)', value: 'H-4 EAD' },
                   { label: 'H-1B (Specialty Worker)', value: 'H-1B' },
-                  { label: 'L-2 / L-2 EAD (Dependent)', value: 'L-2' },
+                  { label: 'L-2 (Dependent)', value: 'L-2' },
+                  { label: 'L-2 EAD (Work Authorized)', value: 'L-2 EAD' },
                   { label: 'F-1 OPT (Student)', value: 'F-1 OPT' },
                   { label: 'Green Card / Citizen', value: 'GREEN_CARD' },
                   { label: 'B-2 / Other Visa', value: 'OTHER' },
@@ -489,10 +492,10 @@ export const Module2Dependents: React.FC<Module2Props> = ({
                     placeholder="982-14-1234"
                     leftIcon={<CreditCard className="w-4 h-4" />}
                     error={errors[`dep_${idx}_ssn`]}
-                    value={dep.ssn || ''}
+                    value={formatSsn(dep.ssn)}
                     onChange={(e) => {
                       const list = [...(d.dependentsList || [])];
-                      list[idx].ssn = e.target.value;
+                      list[idx].ssn = formatSsn(e.target.value);
                       handleFieldChange('dependentsList', list, `dep_${idx}_ssn`);
                     }}
                   />

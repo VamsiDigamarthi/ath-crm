@@ -41,7 +41,7 @@ export const DemographicsBankSection: React.FC<DemographicsBankSectionProps> = (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <AppInput
-          label="Bank Name *"
+          label="Bank Name"
           placeholder="e.g. JPMorgan Chase / Bank of America / Wells Fargo"
           leftIcon={<Building2 className="w-4 h-4" />}
           error={errors.bankName}
@@ -50,7 +50,7 @@ export const DemographicsBankSection: React.FC<DemographicsBankSectionProps> = (
         />
 
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-gray-700 tracking-tight">Account Type *</label>
+          <label className="text-xs font-semibold text-gray-700 tracking-tight">Account Type</label>
           <AppSelect
             options={[
               { label: 'Checking Account', value: 'CHECKING' },
@@ -62,7 +62,7 @@ export const DemographicsBankSection: React.FC<DemographicsBankSectionProps> = (
         </div>
 
         <AppInput
-          label="9-Digit Routing Number *"
+          label="9-Digit Routing Number"
           placeholder="e.g. 111000614"
           leftIcon={<CreditCard className="w-4 h-4" />}
           error={errors.routingNumber}
@@ -74,7 +74,7 @@ export const DemographicsBankSection: React.FC<DemographicsBankSectionProps> = (
         />
 
         <AppInput
-          label="Account Number *"
+          label="Account Number"
           placeholder="e.g. 849204819"
           leftIcon={<CreditCard className="w-4 h-4" />}
           error={errors.accountNumber}
@@ -84,7 +84,7 @@ export const DemographicsBankSection: React.FC<DemographicsBankSectionProps> = (
 
         <div className="sm:col-span-2">
           <AppInput
-            label="Account Owner Name (as appears on bank statement) *"
+            label="Account Owner Name (as appears on bank statement)"
             placeholder="e.g. Taxpayer Full Name"
             error={errors.accountOwnerName}
             value={m9.accountOwnerName || defaultAccountOwner}

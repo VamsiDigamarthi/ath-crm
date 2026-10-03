@@ -1,0 +1,6 @@
+export const formatSsn = (value?: string | null): string => {
+  const digits = (value || '').replace(/\D/g, '').slice(0, 9);
+  if (digits.length > 5) return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+  if (digits.length > 3) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return digits;
+};

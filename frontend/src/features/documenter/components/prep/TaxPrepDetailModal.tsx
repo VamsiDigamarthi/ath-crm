@@ -168,6 +168,7 @@ export const TaxPrepDetailModal: React.FC<TaxPrepDetailModalProps> = ({
             leadId={lead.id}
             customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
             taxDraftSummary={lead.taxDraftSummary}
+            taxYear={lead.taxYear}
             filingType={lead.filingType || (lead.taxDraftSummary as any)?.filingType}
           />
         )}

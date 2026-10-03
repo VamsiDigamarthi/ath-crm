@@ -48,22 +48,21 @@ export const m1DemographicsSchema = z.object({
   phone: z.string().trim().max(30).optional().default(''),
   workPhone: z.string().trim().max(30).optional().default(''),
   email: z.string().trim().email('Please provide a valid email address').optional().or(z.literal('')).default(''),
-  visaType: z.string().max(50).optional().default('H-1B'),
+  visaType: z.string().max(50).optional().default(''),
   visaStatusChanged2025: z.enum(['YES', 'NO']).optional().default('NO'),
   previousVisaType: z.string().max(50).optional().default(''),
   newVisaType: z.string().max(50).optional().default(''),
   visaChangeDate: z.string().max(30).optional().default(''),
   visaStatusChangeReason: z.string().max(255).optional().default(''),
   firstPortOfEntryDate: z.string().max(30).optional().default(''),
-  stayMoreThan6Months2026: z.enum(['YES', 'NO']).optional().default('YES'),
+  stayMoreThan6Months2026: z.enum(['YES', 'NO']).or(z.literal('')).optional().default(''),
   monthsStayedInUs2025: z
     .number()
     .int('Months stayed must be an integer')
     .min(0, 'Months stayed cannot be negative (min: 0)')
     .max(12, 'Months stayed in a year cannot exceed 12 months (max: 12)')
-    .optional()
-    .default(12),
-  maritalStatus: z.string().max(50).optional().default('Single'),
+    .optional(),
+  maritalStatus: z.string().max(50).optional().default(''),
   dateOfMarriage: z.string().max(30).optional().default(''),
   residentialAddress: z.string().trim().max(255).optional().default(''),
   city: z.string().trim().max(100).optional().default(''),
@@ -117,6 +116,7 @@ export const m2DependentsSchema = z.object({
         ssn: z.string().trim().max(30).optional().default(''),
         relationship: z.string().trim().max(50).optional().default('Son'),
         monthsInHome: z.number().int().min(0).max(12).optional().default(12),
+        visaType: z.string().trim().max(50).optional().default(''),
       })
     )
     .optional()

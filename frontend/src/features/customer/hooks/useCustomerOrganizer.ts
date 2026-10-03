@@ -30,7 +30,7 @@ export const useCustomerOrganizer = (
   const defaultModId = isBusiness ? 'b1_companyInfo' : 'm1';
 
   const [selectedTaxYear, setSelectedTaxYear] = useState<number>(
-    taxYearParam ? parseInt(taxYearParam, 10) : 2025
+    taxYearParam ? parseInt(taxYearParam, 10) : new Date().getFullYear()
   );
   const [organizerData, setOrganizerData] = useState<OrganizerData | null>(null);
   const [selectedModId, setSelectedModId] = useState<string>(defaultModId);
@@ -64,7 +64,7 @@ export const useCustomerOrganizer = (
       if (res.data) {
         const org = res.data.organizer;
         if (org && org.m3_presence) {
-          const userState = org.m1_demographics?.state || 'TX';
+          const userState = org.m1_demographics?.state || '';
           if (!org.m3_presence.statesResidedHistory || org.m3_presence.statesResidedHistory.length === 0) {
             org.m3_presence.statesResidedHistory = [
               {
@@ -332,8 +332,17 @@ export const useCustomerOrganizer = (
       const updatedSubmitted = Array.from(
         new Set([...(organizerData.submittedModules || []), ...extraKeys])
       );
+      // Prior-year presence days left blank are recorded as 0
+      const m3 = organizerData.m3_presence;
       const dataToSave: OrganizerData = {
         ...organizerData,
+        ...(m3 && {
+          m3_presence: {
+            ...m3,
+            days2024: m3.days2024 ?? 0,
+            days2023: m3.days2023 ?? 0,
+          },
+        }),
         submittedModules: updatedSubmitted,
       };
       setOrganizerData(dataToSave);
@@ -351,6 +360,29 @@ export const useCustomerOrganizer = (
       return false;
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to save organizer';
+      toast.error(msg);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Save work-in-progress without validation (does not mark the section as completed)
+  const saveDraft = async (): Promise<boolean> => {
+    if (!organizerData) return false;
+    try {
+      setSaving(true);
+      const res = await customerApi.saveOrganizer(selectedTaxYear, organizerData, leadIdParam);
+      if (res.data) {
+        setProgressPercent(res.data.progressPercent);
+        setCompletedCount(res.data.completedCount);
+        setValidationErrors({});
+        toast.success('Draft saved');
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to save draft';
       toast.error(msg);
       return false;
     } finally {
@@ -395,6 +427,7 @@ export const useCustomerOrganizer = (
     clearError,
     updateModuleField,
     saveOrganizer,
+    saveDraft,
     handleNext,
     handlePrev,
     refetch: fetchOrganizer,

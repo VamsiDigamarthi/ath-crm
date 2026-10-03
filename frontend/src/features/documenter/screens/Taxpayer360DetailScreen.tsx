@@ -2,20 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
-  User, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Briefcase, 
   ShieldCheck, 
   FileCheck2,
   CheckCircle2,
   RotateCcw,
-  Sparkles,
   Paperclip,
   Download,
   FileText,
-  Calendar,
   History,
   ChevronDown,
   ChevronUp,
@@ -27,8 +20,7 @@ import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatus
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
-import { AppTabs } from '@/shared/components/AppTabs';
-import { renderVisaBadge, renderStageBadge } from '../columns/documenter-columns';
+import { renderStageBadge } from '../columns/documenter-columns';
 import { TaxpayerCallHistoryTimeline } from '../components/TaxpayerCallHistoryTimeline';
 import { TaxPrepOrganizerReview } from '../components/prep/TaxPrepOrganizerReview';
 import { DualRoleSalesPitchTab } from '../components/prep/DualRoleSalesPitchTab';
@@ -57,7 +49,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const initialTabParam = queryParams.get('tab')?.toUpperCase();
   const initialTab = (initialTabParam === 'ORGANIZER' || initialTabParam === 'SALES_PITCH' || initialTabParam === 'TIMELINE')
     ? (initialTabParam as 'TIMELINE' | 'ORGANIZER' | 'SALES_PITCH')
-    : 'TIMELINE';
+    : 'ORGANIZER';
 
   const [activeTab, setActiveTab] = useState<'TIMELINE' | 'CALCULATOR' | 'ORGANIZER' | 'SALES_PITCH'>(initialTab);
   const [lead, setLead] = useState<DocumenterLeadItem | null>(null);
@@ -272,32 +264,15 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                 navigate(-1);
               }
             }}
-            className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-all shadow-2xs cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
             title="Go Back"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-              <span>Tax Operations</span>
-              <span>/</span>
-              <span>{new URLSearchParams(location.search).get('from') === 'documents' || (location.state as any)?.from === 'documents' ? 'Document Vault' : 'Calling Workspace'}</span>
-              <span>/</span>
-              <span className="text-slate-900 font-bold">Taxpayer Profile</span>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-0.5">
-                {customer.fullName || `${customer.firstName} ${customer.lastName}`}
-              </h2>
-              <ClientPaymentStatusChip lead={lead || currentLead} scope="return" size="sm" />
-              <PriorityBadge priority={lead?.priority || currentLead.priority || 'NO_PRIORITY'} size="sm" />
-              {isDualRole && (
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1 shadow-2xs">
-                  <Sparkles className="w-3 h-3 text-indigo-600" />
-                  Dual-Role (Doc + Sales)
-                </span>
-              )}
-            </div>
+          <div className="flex items-center gap-1.5 text-sm text-slate-500">
+            <span>{new URLSearchParams(location.search).get('from') === 'documents' || (location.state as any)?.from === 'documents' ? 'Document Vault' : 'Calling Workspace'}</span>
+            <span className="text-slate-300">/</span>
+            <span className="text-slate-900 font-medium">Taxpayer Profile</span>
           </div>
         </div>
 
@@ -313,8 +288,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               }}
               className={
                 canMoveToPrep
-                  ? "bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                  : "bg-slate-100 text-slate-400 border border-slate-200 text-xs font-semibold flex items-center gap-1.5 cursor-not-allowed opacity-75 shadow-none"
+                  ? "bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                  : "bg-slate-100 text-slate-500 border border-slate-200 text-xs font-medium flex items-center gap-1.5 cursor-not-allowed shadow-none"
               }
               title={
                 !canMoveToPrep
@@ -333,7 +308,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               {canMoveToPrep ? (
                 <FileCheck2 className="w-3.5 h-3.5 text-white" />
               ) : (
-                <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
               )}
               <span>
                 {canMoveToPrep
@@ -353,61 +328,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
         </div>
       </div>
-
-      {/* 1.2 Multi-Year Return Switcher Tabs */}
-      {availableApplications && availableApplications.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
-              <Calendar className="w-4 h-4 text-emerald-600" />
-              <span>Tax Year Filings:</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {availableApplications.map((appItem: any) => {
-                const isSelected = appItem.id === (lead?.id || id);
-                return (
-                  <button
-                    key={appItem.id}
-                    type="button"
-                    onClick={() => handleSwitchTaxYear(appItem.id)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
-                      isSelected
-                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
-                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <span>TY {appItem.taxYear}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
-                      isSelected ? 'bg-slate-800 text-emerald-400' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {appItem.filingType || 'INDIVIDUAL'}
-                    </span>
-                    <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${
-                      isSelected
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : appItem.currentStage === 'DOC_OUTREACH'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : appItem.currentStage === 'DOC_PREP'
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : appItem.currentStage?.startsWith('SALES')
-                        ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                        : appItem.currentStage?.startsWith('FILING')
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {appItem.currentStage?.replace(/_/g, ' ') || 'Outreach'}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="text-[11px] text-slate-500 font-medium px-2">
-            Viewing: <strong className="text-slate-800 font-bold">TY {currentLead.taxYear} ({currentLead.filingType})</strong>
-          </div>
-        </div>
-      )}
 
       {/* 1.5 Revert from Preparation / Sales Alert Banner */}
       {isRevertedToDocumenter && Boolean(lastRevert) && (
@@ -503,174 +423,140 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Top Hero Profile Summary Card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          {/* Left: Avatar & Primary Details */}
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold text-xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/10">
-              {customer.firstName?.[0] || 'T'}
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-                  {customer.fullName || `${customer.firstName} ${customer.lastName}`}
-                </h3>
-                {renderVisaBadge(customer.visaType)}
-                <ClientPaymentStatusChip lead={lead || currentLead} scope="return" size="sm" />
-                <PriorityBadge priority={lead?.priority || currentLead.priority || 'NO_PRIORITY'} size="sm" />
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                  TY {currentLead.taxYear}
+      {/* 2. Profile Card */}
+      <div className="bg-white rounded-xl border border-slate-200">
+        <div className="p-5 flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                {customer.fullName || `${customer.firstName} ${customer.lastName}`}
+              </h2>
+              <ClientPaymentStatusChip lead={lead || currentLead} scope="return" size="sm" />
+              <PriorityBadge priority={lead?.priority || currentLead.priority || 'NO_PRIORITY'} size="sm" />
+              {renderStageBadge(currentLead.currentStage)}
+              {isDualRole && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                  Doc + Sales
                 </span>
-                {renderStageBadge(currentLead.currentStage)}
-                {isDualRole && (
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200 flex items-center gap-1">
-                    <Sparkles className="w-2.5 h-2.5 text-indigo-600" />
-                    Dual Doc + Sales
+              )}
+            </div>
+            <p className="text-sm text-slate-500 mt-1.5">
+              {[customer.occupation, customer.dob ? `DOB ${customer.dob}` : null, customer.visaType]
+                .filter(Boolean)
+                .join(' · ') || 'Taxpayer Client'}
+            </p>
+          </div>
+
+          <div className="text-sm lg:text-right shrink-0">
+            <div className="text-xs text-slate-500">{isDualRole ? 'Intake & sales agent' : 'Calling agent'}</div>
+            <div className="font-medium text-slate-900 mt-0.5">
+              {currentLead.assignedDocAgent?.email?.split('@')[0] || 'Unassigned'}
+            </div>
+          </div>
+        </div>
+
+        {availableApplications && availableApplications.length > 0 && (
+          <div className="px-5 pb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-500 mr-1">Tax year</span>
+            {availableApplications.map((appItem: any) => {
+              const isSelected = appItem.id === (lead?.id || id);
+              return (
+                <button
+                  key={appItem.id}
+                  type="button"
+                  onClick={() => handleSwitchTaxYear(appItem.id)}
+                  className={`px-3 py-1 rounded-full text-xs border transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'border-[#16A34A] bg-emerald-50 text-[#15803D] font-semibold'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                  title={appItem.currentStage?.replace(/_/g, ' ')}
+                >
+                  TY {appItem.taxYear}
+                  <span className="text-slate-400 font-normal">
+                    {' · '}
+                    {(appItem.filingType || 'INDIVIDUAL').toLowerCase()}
                   </span>
-                )}
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium flex items-center gap-2">
-                <Briefcase className="w-3.5 h-3.5 text-slate-400" />
-                <span>{customer.occupation || 'Taxpayer Client'}</span>
-                {customer.dob && (
-                  <>
-                    <span className="text-slate-300">•</span>
-                    <span>DOB: {customer.dob}</span>
-                  </>
-                )}
-              </p>
-            </div>
+                </button>
+              );
+            })}
           </div>
+        )}
 
-          {/* Right: Quick Action Pill */}
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-right">
-              <span className="text-[11px] font-semibold text-slate-400 block">
-                {isDualRole ? 'Assigned Intake & Sales Agent' : 'Assigned Calling Agent'}
-              </span>
-              <span className="text-xs font-bold text-slate-800 flex items-center justify-end gap-1.5 mt-0.5">
-                <User className="w-3.5 h-3.5 text-emerald-600" />
-                {currentLead.assignedDocAgent?.email?.split('@')[0] || 'Kavya Reddy'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Contact Info Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-5 border-t border-slate-100 text-xs">
-          {/* Phone */}
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-md bg-emerald-50 text-[#16A34A] flex items-center justify-center shrink-0">
-                <Phone className="w-3.5 h-3.5" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-slate-100 divide-y sm:divide-y-0 lg:divide-x divide-slate-100">
+          {[
+            { label: 'Phone', value: customer.phone, copy: customer.phone },
+            { label: 'Email', value: customer.email || '—', copy: customer.email },
+            {
+              label: 'Location',
+              value: [customer.city, customer.state, customer.zipCode].filter(Boolean).join(', ') || '—',
+              copy: null,
+            },
+            { label: 'SSN / ITIN', value: customer.ssnTin || '—', copy: customer.ssnTin },
+          ].map((item) => (
+            <div key={item.label} className="px-5 py-3 flex items-center justify-between gap-2 min-w-0">
+              <div className="min-w-0">
+                <div className="text-xs text-slate-500">{item.label}</div>
+                <div className="text-sm font-medium text-slate-900 truncate" title={item.value || undefined}>
+                  {item.value}
+                </div>
               </div>
-              <div className="truncate">
-                <span className="text-[10px] text-slate-400 font-medium block">Phone Number</span>
-                <span className="font-bold text-slate-800">{customer.phone}</span>
-              </div>
+              {item.copy && <AppCopyButton text={item.copy} size="sm" />}
             </div>
-            <AppCopyButton text={customer.phone} size="sm" />
-          </div>
-
-          {/* Email */}
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <Mail className="w-3.5 h-3.5" />
-              </div>
-              <div className="truncate">
-                <span className="text-[10px] text-slate-400 font-medium block">Email Address</span>
-                <span className="font-bold text-slate-800 truncate block max-w-[130px]">{customer.email || 'N/A'}</span>
-              </div>
-            </div>
-            {customer.email && <AppCopyButton text={customer.email} size="sm" />}
-          </div>
-
-          {/* Location */}
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-              <MapPin className="w-3.5 h-3.5" />
-            </div>
-            <div className="truncate">
-              <span className="text-[10px] text-slate-400 font-medium block">Tax Location</span>
-              <span className="font-bold text-slate-800 truncate block">
-                {customer.city ? `${customer.city}, ${customer.state} ${customer.zipCode || ''}` : 'United States'}
-              </span>
-            </div>
-          </div>
-
-          {/* SSN / TIN */}
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-3.5 h-3.5" />
-              </div>
-              <div className="truncate">
-                <span className="text-[10px] text-slate-400 font-medium block">SSN / ITIN Status</span>
-                <span className="font-bold text-slate-800">{customer.ssnTin || 'Verified on file'}</span>
-              </div>
-            </div>
-            {customer.ssnTin && <AppCopyButton text={customer.ssnTin} size="sm" />}
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* 3. Main Workspace Tab Navigation */}
-      <AppTabs
-        tabs={[
-          { id: 'TIMELINE', label: 'Call History & Outreach Timeline', count: callLogs.length },
-          // { id: 'CALCULATOR', label: 'Tax Draft Worksheet' },
-          { id: 'ORGANIZER', label: 'Tax Info and Files' },
-          ...(isDualRole ? [{ id: 'SALES_PITCH', label: 'Sales Pitch & Pricing' }] : []),
+      {/* 3. Tax Info, Call History & Sales Pitch */}
+      <TaxPrepOrganizerReview
+        leadId={currentLead.id}
+        customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+        taxDraftSummary={currentLead.taxDraftSummary}
+        taxYear={currentLead.taxYear}
+        filingType={currentLead.filingType || (currentLead.taxDraftSummary as any)?.filingType}
+        onOrganizerSaved={fetchLeadDetails}
+        allowEdit={!isReadOnly}
+        readOnly={isReadOnly}
+        requestedTabId={activeTab === 'TIMELINE' ? 'CALL_HISTORY' : activeTab === 'SALES_PITCH' ? 'SALES_PITCH' : 'MODULES'}
+        onTabChange={(tabId) =>
+          setActiveTab(tabId === 'CALL_HISTORY' ? 'TIMELINE' : tabId === 'SALES_PITCH' ? 'SALES_PITCH' : 'ORGANIZER')
+        }
+        extraTabs={[
+          {
+            id: 'CALL_HISTORY',
+            label: 'Call History',
+            count: callLogs.length,
+            content: (
+              <TaxpayerCallHistoryTimeline
+                callLogs={callLogs}
+                taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+                onOpenCallModal={() => setIsCallModalOpen(true)}
+                onOpenEmailModal={() => setIsEmailModalOpen(true)}
+                readOnly={isReadOnly}
+              />
+            ),
+          },
+          ...(isDualRole
+            ? [
+                {
+                  id: 'SALES_PITCH',
+                  label: 'Sales Pitch & Pricing',
+                  content: (
+                    <DualRoleSalesPitchTab
+                      lead={lead || currentLead}
+                      customer={customer}
+                      onRefresh={() => {
+                        refreshData();
+                        fetchLeadDetails();
+                      }}
+                      onSwitchToWorksheet={() => setActiveTab('ORGANIZER')}
+                    />
+                  ),
+                },
+              ]
+            : []),
         ]}
-        activeTab={activeTab === 'CALCULATOR' ? 'TIMELINE' : activeTab}
-        onChange={(tabId) => setActiveTab(tabId as any)}
       />
-
-      {/* 4. Tab Content Panels */}
-      <div>
-        {activeTab === 'TIMELINE' && (
-          <TaxpayerCallHistoryTimeline
-            callLogs={callLogs}
-            taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
-            onOpenCallModal={() => setIsCallModalOpen(true)}
-            onOpenEmailModal={() => setIsEmailModalOpen(true)}
-            readOnly={isReadOnly}
-          />
-        )}
-
-        {/* Tax Draft Worksheet Commented Out */}
-        {/* {activeTab === 'CALCULATOR' && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6">
-            ...
-          </div>
-        )} */}
-
-        {activeTab === 'ORGANIZER' && (
-          <TaxPrepOrganizerReview
-            leadId={currentLead.id}
-            customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
-            taxDraftSummary={currentLead.taxDraftSummary}
-            filingType={currentLead.filingType || (currentLead.taxDraftSummary as any)?.filingType}
-            onOrganizerSaved={fetchLeadDetails}
-            allowEdit={!isReadOnly}
-            readOnly={isReadOnly}
-          />
-        )}
-
-        {activeTab === 'SALES_PITCH' && isDualRole && (
-          <DualRoleSalesPitchTab
-            lead={lead || currentLead}
-            customer={customer}
-            onRefresh={() => {
-              refreshData();
-              fetchLeadDetails();
-            }}
-            onSwitchToWorksheet={() => setActiveTab('ORGANIZER')}
-          />
-        )}
-      </div>
 
       {/* 5. Collapsible Tax Year Audit Trail & Lifecycle Activity Section */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all font-sans">

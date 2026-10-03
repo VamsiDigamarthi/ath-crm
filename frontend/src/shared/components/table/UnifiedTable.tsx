@@ -392,7 +392,7 @@ export function UnifiedTable<TData extends Record<string, any>>({
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr
                   key={headerGroup.id}
-                  className="border-b border-zinc-200 bg-zinc-50 text-[11px] font-semibold text-zinc-900 uppercase tracking-wider"
+                  className="border-b border-zinc-200 bg-zinc-50 text-[11px] font-semibold text-zinc-900"
                 >
                   {headerGroup.headers.map((header) => {
                     const isSelect = header.id === 'select';

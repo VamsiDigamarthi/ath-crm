@@ -318,6 +318,11 @@ export const ReviewModule2Dependents: React.FC<ReviewModule2DependentsProps> = (
                         {dep.monthsInHome !== undefined ? `${dep.monthsInHome} Months` : '12 Months'}
                       </span>
                     </div>
+
+                    <div className="flex justify-between items-center pt-1">
+                      <span className="text-slate-400 text-[10px]">Visa Type:</span>
+                      <span className="font-semibold text-slate-900">{dep.visaType || 'Not Provided'}</span>
+                    </div>
                   </div>
                 </div>
               );

@@ -5,6 +5,19 @@ import { AppSelect } from '@/shared/components/AppSelect';
 import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { parseUsDate, formatUsDate } from '../utils/organizer-date-helpers';
 import { type OrganizerData } from '../../../services/customer-api';
+import { formatSsn } from '../utils/ssn-format';
+
+const DEPENDENT_VISA_OPTIONS = [
+  { label: 'H-4 (Dependent)', value: 'H-4' },
+  { label: 'H-4 EAD', value: 'H-4 EAD' },
+  { label: 'L-2 (Dependent)', value: 'L-2' },
+  { label: 'F-2 (Dependent)', value: 'F-2' },
+  { label: 'H-1B (Specialty Worker)', value: 'H-1B' },
+  { label: 'F-1 OPT / CPT (Student)', value: 'F-1 OPT' },
+  { label: 'Green Card (Permanent Resident)', value: 'GREEN_CARD' },
+  { label: 'U.S. Citizen', value: 'US_CITIZEN' },
+  { label: 'Other Visa', value: 'OTHER' },
+];
 
 interface DemographicsDependentsSectionProps {
   m2Data?: Partial<OrganizerData['m2_dependents']>;
@@ -55,6 +68,7 @@ export const DemographicsDependentsSection: React.FC<DemographicsDependentsSecti
                 ssn: '',
                 relationship: 'Son',
                 monthsInHome: 12,
+                visaType: '',
               },
             ];
             handleM2FieldChange('dependentsList', updated);
@@ -176,10 +190,10 @@ export const DemographicsDependentsSection: React.FC<DemographicsDependentsSecti
                   placeholder="982-14-1234"
                   leftIcon={<CreditCard className="w-4 h-4" />}
                   error={errors[`dep_${idx}_ssn`]}
-                  value={dep.ssn || ''}
+                  value={formatSsn(dep.ssn)}
                   onChange={(e) => {
                     const list = [...dependentsList];
-                    list[idx].ssn = e.target.value;
+                    list[idx].ssn = formatSsn(e.target.value);
                     handleM2FieldChange('dependentsList', list, `dep_${idx}_ssn`);
                   }}
                 />
@@ -200,6 +214,18 @@ export const DemographicsDependentsSection: React.FC<DemographicsDependentsSecti
                     list[idx].monthsInHome = clamped;
                     handleM2FieldChange('dependentsList', list, `dep_${idx}_monthsInHome`);
                   }}
+                />
+
+                <AppSelect
+                  label={`VISA Type as of 12/31/${new Date().getFullYear()}`}
+                  options={DEPENDENT_VISA_OPTIONS}
+                  value={dep.visaType || ''}
+                  onChange={(val) => {
+                    const list = [...dependentsList];
+                    list[idx].visaType = val || '';
+                    handleM2FieldChange('dependentsList', list);
+                  }}
+                  placeholder="Select Visa Type"
                 />
               </div>
             </div>

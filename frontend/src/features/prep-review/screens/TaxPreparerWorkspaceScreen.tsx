@@ -807,6 +807,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             leadId={applicationId}
             customerName={taxpayerName}
             taxDraftSummary={taxDraftSummary}
+            taxYear={taxYear}
             allowEdit={false}
             readOnly={true}
           />

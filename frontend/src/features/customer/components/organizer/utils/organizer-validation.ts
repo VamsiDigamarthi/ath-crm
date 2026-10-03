@@ -415,8 +415,9 @@ export const validateModule3 = (
 
   // 2. Prior Year 1 Days (e.g. 2024)
   const maxPrior1Days = isLeapYear(selectedTaxYear - 1) ? 366 : 365;
+  // Optional: left blank means 0 days
   if (data.days2024 === undefined || data.days2024 === null) {
-    errors.days2024 = `TY ${selectedTaxYear - 1} days in U.S. is required (0 to ${maxPrior1Days})`;
+    // no error
   } else if (isNaN(data.days2024) || data.days2024 < 0) {
     errors.days2024 = `Days cannot be negative (min: 0)`;
   } else if (data.days2024 > maxPrior1Days) {
@@ -425,8 +426,9 @@ export const validateModule3 = (
 
   // 3. Prior Year 2 Days (e.g. 2023)
   const maxPrior2Days = isLeapYear(selectedTaxYear - 2) ? 366 : 365;
+  // Optional: left blank means 0 days
   if (data.days2023 === undefined || data.days2023 === null) {
-    errors.days2023 = `TY ${selectedTaxYear - 2} days in U.S. is required (0 to ${maxPrior2Days})`;
+    // no error
   } else if (isNaN(data.days2023) || data.days2023 < 0) {
     errors.days2023 = `Days cannot be negative (min: 0)`;
   } else if (data.days2023 > maxPrior2Days) {
@@ -846,53 +848,16 @@ export const validateModule9 = (
   _selectedTaxYear: number = 2025
 ): ValidationErrorMap => {
   const errors: ValidationErrorMap = {};
-  if (!data) {
-    return { bankName: 'Direct deposit information is required' };
-  }
+  if (!data) return errors;
 
-  // 1. Bank Name
-  const bName = (data.bankName || '').trim();
-  if (!bName) {
-    errors.bankName = 'Bank Name is required for refund direct deposit';
-  } else if (containsXssOrHtml(bName)) {
-    errors.bankName = 'HTML tags or script injections are strictly forbidden!';
-  } else if (bName.length < 2) {
-    errors.bankName = 'Bank Name must be at least 2 characters';
-  }
-
-  // 2. 9-Digit Routing Number
-  const routing = (data.routingNumber || '').trim();
-  if (!routing) {
-    errors.routingNumber = '9-Digit Routing Number is required';
-  } else {
-    const rawRouting = routing.replace(/\D/g, '');
-    if (rawRouting.length !== 9) {
-      errors.routingNumber = 'Routing Number must be exactly 9 digits (e.g. 111000614)';
+  // Bank details are optional: only guard against script/HTML injection
+  const bankFields = ['bankName', 'routingNumber', 'accountNumber', 'accountOwnerName'] as const;
+  bankFields.forEach((field) => {
+    const value = (data[field] || '').trim();
+    if (value && containsXssOrHtml(value)) {
+      errors[field] = 'HTML tags or script injections are strictly forbidden!';
     }
-  }
-
-  // 3. Account Number
-  const acct = (data.accountNumber || '').trim();
-  if (!acct) {
-    errors.accountNumber = 'Account Number is required';
-  } else if (containsXssOrHtml(acct)) {
-    errors.accountNumber = 'HTML tags or script injections are strictly forbidden!';
-  } else {
-    const rawAcct = acct.replace(/\D/g, '');
-    if (rawAcct.length < 4 || rawAcct.length > 17) {
-      errors.accountNumber = 'Account number must be between 4 and 17 digits';
-    }
-  }
-
-  // 4. Account Owner Name
-  const owner = (data.accountOwnerName || '').trim();
-  if (!owner) {
-    errors.accountOwnerName = 'Account Owner Name as appears on bank statement is required';
-  } else if (containsXssOrHtml(owner)) {
-    errors.accountOwnerName = 'HTML tags or script injections are strictly forbidden!';
-  } else if (owner.length < 2) {
-    errors.accountOwnerName = 'Account Owner Name must be at least 2 characters';
-  }
+  });
 
   // 5. Notes & Contact Preference Length & XSS Checks
   const notes = data.notesToPreparer || '';

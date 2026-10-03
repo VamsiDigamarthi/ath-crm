@@ -13,6 +13,7 @@ import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { parseUsDate, formatUsDate } from '../utils/organizer-date-helpers';
 import { type OrganizerData } from '../../../services/customer-api';
 import { US_STATE_OPTIONS } from '@/shared/constants/us-states';
+import { formatSsn } from '../utils/ssn-format';
 
 interface DemographicsTaxpayerSectionProps {
   data: Partial<OrganizerData['m1_demographics']>;
@@ -191,8 +192,8 @@ export const DemographicsTaxpayerSection: React.FC<DemographicsTaxpayerSectionPr
           placeholder="982-14-6789"
           leftIcon={<CreditCard className="w-4 h-4" />}
           error={errors.ssnMasked}
-          value={d.ssnMasked || ''}
-          onChange={(e) => handleFieldChange('ssnMasked', e.target.value)}
+          value={formatSsn(d.ssnMasked)}
+          onChange={(e) => handleFieldChange('ssnMasked', formatSsn(e.target.value))}
         />
       </div>
 
@@ -498,16 +499,18 @@ export const DemographicsTaxpayerSection: React.FC<DemographicsTaxpayerSectionPr
                   placeholder="982-14-9812"
                   leftIcon={<CreditCard className="w-4 h-4" />}
                   error={errors['spouse_0_ssn'] || errors.spouseSsn}
-                  value={spouse.ssn || ''}
-                  onChange={(e) => handleSpouseChange('ssn', e.target.value, 'spouse_0_ssn')}
+                  value={formatSsn(spouse.ssn)}
+                  onChange={(e) => handleSpouseChange('ssn', formatSsn(e.target.value), 'spouse_0_ssn')}
                 />
 
                 <AppSelect
                   label={`Spouse VISA Type as of 12/31/${selectedTaxYear}`}
                   options={[
+                    { label: 'H-4 (Dependent)', value: 'H-4' },
                     { label: 'H-4 EAD (Work Authorized)', value: 'H-4 EAD' },
                     { label: 'H-1B (Specialty Worker)', value: 'H-1B' },
-                    { label: 'L-2 / L-2 EAD (Dependent)', value: 'L-2' },
+                    { label: 'L-2 (Dependent)', value: 'L-2' },
+                    { label: 'L-2 EAD (Work Authorized)', value: 'L-2 EAD' },
                     { label: 'F-1 OPT (Student)', value: 'F-1 OPT' },
                     { label: 'Green Card / Citizen', value: 'GREEN_CARD' },
                     { label: 'B-2 / Other Visa', value: 'OTHER' },

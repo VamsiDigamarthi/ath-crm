@@ -103,7 +103,7 @@ export const getDocumenterColumns = ({
   const cols: ColumnDef<DocumenterLeadItem, any>[] = [
     {
       id: 'taxpayer',
-      header: 'TAXPAYER',
+      header: 'Taxpayer',
       accessorFn: (row) => `${row.customer.fullName || `${row.customer.firstName} ${row.customer.lastName}`} ${row.customer.email}`,
       cell: ({ row }) => {
         const c = row.original.customer;
@@ -113,7 +113,7 @@ export const getDocumenterColumns = ({
     },
     {
       id: 'phone',
-      header: 'PHONE',
+      header: 'Phone',
       accessorKey: 'customer.phone',
       cell: ({ row }) => (
         <span className="text-xs font-normal text-slate-700">
@@ -123,7 +123,7 @@ export const getDocumenterColumns = ({
     },
     {
       id: 'priority',
-      header: 'PRIORITY',
+      header: 'Priority',
       accessorKey: 'priority',
       meta: {
         filterType: 'enum',
@@ -135,7 +135,7 @@ export const getDocumenterColumns = ({
     },
     {
       id: 'stage',
-      header: 'OUTREACH STAGE',
+      header: 'Stage',
       accessorKey: 'currentStage',
       meta: {
         filterType: 'enum',
@@ -145,7 +145,7 @@ export const getDocumenterColumns = ({
     },
     {
       id: 'lastCall',
-      header: 'LAST CALL',
+      header: 'Last call',
       accessorFn: (row) => row.lastCallLog?.disposition || 'NO_CALLS',
       cell: ({ row }) => {
         const log = row.original.lastCallLog || (row.original as any).callLogs?.[0];
@@ -154,7 +154,7 @@ export const getDocumenterColumns = ({
         }
         return (
           <span className="text-xs font-normal text-slate-700">
-            {log.disposition.replace(/_/g, ' ')}
+            {log.disposition.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (ch: string) => ch.toUpperCase())}
           </span>
         );
       },
@@ -164,15 +164,13 @@ export const getDocumenterColumns = ({
   if (!hideAssignedStaff) {
     cols.push({
       id: 'assignedAgent',
-      header: 'ASSIGNED STAFF',
+      header: 'Assigned to',
       accessorFn: (row) => row.assignedDocAgent?.email || 'Unassigned',
       cell: ({ row }) => {
         const agent = row.original.assignedDocAgent;
         if (!agent) {
           return (
-            <span className="text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-              Unassigned
-            </span>
+            <span className="text-xs text-slate-400">Unassigned</span>
           );
         }
         return (
@@ -186,7 +184,7 @@ export const getDocumenterColumns = ({
 
   cols.push({
     id: 'actions',
-    header: 'ACTION',
+    header: '',
     enableSorting: false,
     enableHiding: false,
     meta: {
@@ -204,10 +202,10 @@ export const getDocumenterColumns = ({
             <Button
               size="sm"
               onClick={() => onOpenStartFilingModal(item)}
-              className="h-7 px-2 text-[11px] font-normal border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 flex items-center gap-1 shadow-2xs cursor-pointer"
+              className="h-7 px-2 text-[11px] font-medium border border-emerald-200 bg-white text-[#15803D] hover:bg-emerald-50 flex items-center gap-1 cursor-pointer"
               title="Configure Tax Year & Filing Type"
             >
-              <FilePlus2 className="w-3 h-3 text-emerald-700" />
+              <FilePlus2 className="w-3 h-3" />
               <span>Configure</span>
             </Button>
           )}

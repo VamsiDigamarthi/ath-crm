@@ -350,9 +350,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
           />
 
           <AppInput
-            label={`TY ${selectedTaxYear - 1} Days in U.S. (Max: ${maxPrior1Days}) *`}
+            label={`TY ${selectedTaxYear - 1} Days in U.S. (Max: ${maxPrior1Days})`}
             type="number"
-            placeholder={isLeapYear(selectedTaxYear - 1) ? 'e.g. 366 (Leap)' : 'e.g. 365'}
+            placeholder="Leave blank for 0"
             leftIcon={<Calendar className="w-4 h-4" />}
             error={errors.days2024}
             value={d.days2024 !== undefined && d.days2024 !== null ? d.days2024.toString() : ''}
@@ -360,9 +360,9 @@ export const Module3Presence: React.FC<Module3Props> = ({
           />
 
           <AppInput
-            label={`TY ${selectedTaxYear - 2} Days in U.S. (Max: ${maxPrior2Days}) *`}
+            label={`TY ${selectedTaxYear - 2} Days in U.S. (Max: ${maxPrior2Days})`}
             type="number"
-            placeholder="e.g. 365"
+            placeholder="Leave blank for 0"
             leftIcon={<Calendar className="w-4 h-4" />}
             error={errors.days2023}
             value={d.days2023 !== undefined && d.days2023 !== null ? d.days2023.toString() : ''}

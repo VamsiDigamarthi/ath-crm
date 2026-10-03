@@ -305,6 +305,7 @@ export interface OrganizerData {
       ssn: string;
       relationship: string;
       monthsInHome: number;
+      visaType?: string;
     }>;
     daycareExpensesClaimed: boolean;
     daycareProviderName?: string;

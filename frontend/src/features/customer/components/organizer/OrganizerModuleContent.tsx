@@ -26,6 +26,7 @@ interface OrganizerModuleContentProps {
   clearError?: (field: string) => void;
   className?: string;
   readOnly?: boolean;
+  hideFooter?: boolean;
   filingType?: string;
   leadId?: string;
 }
@@ -44,6 +45,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
   clearError,
   className,
   readOnly = false,
+  hideFooter = false,
   filingType,
   leadId,
 }) => {
@@ -115,7 +117,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
         )}
 
         {/* Navigation & Action Footer Card */}
-        <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs flex items-center justify-between gap-3">
+        {!hideFooter && <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs flex items-center justify-between gap-3">
           <Button
             variant="outline"
             size="sm"
@@ -149,7 +151,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
               <ArrowRight className="w-3.5 h-3.5" />
             </Button>
           </div>
-        </div>
+        </div>}
       </div>
     );
   }
@@ -214,7 +216,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
       </div>
 
       {/* Navigation & Action Footer */}
-      <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
+      {!hideFooter && <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
         <Button
           variant="outline"
           size="sm"
@@ -261,7 +263,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             </Button>
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 };

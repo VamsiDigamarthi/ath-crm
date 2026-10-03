@@ -249,6 +249,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
             leadId={applicationId}
             customerName={taxpayerName}
             taxDraftSummary={taxDraftSummary}
+            taxYear={availableApplications?.find((a: { id: string }) => a.id === applicationId)?.taxYear}
             allowEdit={false}
             readOnly={true}
           />

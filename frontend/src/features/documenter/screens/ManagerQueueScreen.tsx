@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
-import { DocumenterMetrics } from '../components/DocumenterMetrics';
 import { FloatingActionBar } from '../components/FloatingActionBar';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { CallOutreachModal } from '../components/CallOutreachModal';
@@ -10,19 +9,7 @@ import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
-import { 
-  Users, 
-  PhoneCall, 
-  FileCheck2, 
-  Clock, 
-  ListFilter, 
-  Zap, 
-  RefreshCw, 
-  UserCheck, 
-  ShieldCheck, 
-  UserX, 
-  UserPlus 
-} from 'lucide-react';
+import { RefreshCw, Zap } from 'lucide-react';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
 
 export const ManagerQueueScreen: React.FC = () => {
@@ -67,80 +54,53 @@ export const ManagerQueueScreen: React.FC = () => {
   );
 
   const tabs = [
-    { id: 'MY_LEADS' as DocumenterTab, label: 'My Assigned Leads', count: stats.myLeads || 0, icon: UserCheck },
-    { id: 'RAW_PROSPECTS' as DocumenterTab, label: 'New Leads', count: stats.rawProspects || 0, icon: UserPlus },
-    { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
-    { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
-    { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
-    { id: 'CALLBACKS' as DocumenterTab, label: 'Scheduled Callbacks', count: stats.callbacks, icon: Clock },
-    { id: 'NOT_INTERESTED' as DocumenterTab, label: 'Not Interested', count: stats.notInterested ?? stats.dropped ?? 0, icon: UserX },
-    { id: 'ALL' as DocumenterTab, label: 'All Department Leads', count: stats.totalDepartment, icon: ListFilter },
+    { id: 'MY_LEADS', label: 'My leads', count: stats.myLeads || 0 },
+    { id: 'RAW_PROSPECTS', label: 'New leads', count: stats.rawProspects || 0 },
+    { id: 'UNASSIGNED', label: 'Unassigned', count: stats.unassigned },
+    { id: 'OUTREACH', label: 'In outreach', count: stats.activeOutreach },
+    { id: 'PREP', label: 'In tax prep', count: stats.inPrep },
+    { id: 'CALLBACKS', label: 'Callbacks', count: stats.callbacks },
+    { id: 'NOT_INTERESTED', label: 'Not interested', count: stats.notInterested ?? stats.dropped ?? 0 },
+    { id: 'ALL', label: 'All', count: stats.totalDepartment },
   ];
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
-      {/* 1. Header & Live Team Capacity Action */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
-              Department Caseload Queue & Pipeline Supervision
-            </h2>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Manager Full Queue
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-zinc-500 font-normal">
-            Distribute bulk lead pools, monitor cross-agent calling pipelines, and rebalance departmental caseloads.
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Department Queue</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            {stats.totalDepartment || leads.length} leads · {stats.unassigned} unassigned · {stats.callbacks} callbacks due
           </p>
         </div>
-
         <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refreshData}
-            disabled={isLoading}
-            className="border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-normal flex items-center gap-1.5 cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+          <Button variant="outline" size="md" onClick={refreshData} disabled={isLoading} title="Refresh" className="px-3 cursor-pointer">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
-
           {stats.unassigned > 0 && (
             <Button
-              size="sm"
+              size="md"
               onClick={() => handleAutoRoundRobin()}
               disabled={isActionLoading}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold flex items-center gap-2 cursor-pointer"
             >
-              <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-              1-Click Auto Round-Robin ({stats.unassigned})
+              <Zap className="w-4 h-4" />
+              Auto-assign ({stats.unassigned})
             </Button>
           )}
         </div>
       </div>
 
-      {/* 2. Top Metric Cards */}
-      <DocumenterMetrics
-        stats={stats}
-        onQuickAutoDistribute={handleAutoRoundRobin}
-        isDistributing={isActionLoading}
-        showMyLeads={true}
-      />
-
       {/* 3. Navigation Tabs */}
       <AppTabs
         tabs={tabs}
         activeTab={activeTab}
-        onChange={(id) => handleTabChange(id as any)}
+        onChange={(id) => handleTabChange(id as DocumenterTab)}
       />
 
       {/* 4. Unified Table */}
       <UnifiedTable<DocumenterLeadItem>
-        title="DOCUMENTER DEPARTMENT QUEUE"
-        subtitle="Oversee full department assignments, outreach statuses, and client tax intake pipeline."
         data={leads}
         columns={columns}
         enableSelection={true}

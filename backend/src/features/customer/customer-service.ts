@@ -869,12 +869,12 @@ export class CustomerService {
     const organizer = draft.organizer || {};
     const m1Saved = organizer.m1_demographics || {};
 
-    const firstName = m1Saved.firstName || profile.firstName || user?.firstName || 'Arjun';
+    const firstName = m1Saved.firstName || profile.firstName || user?.firstName || '';
     const middleName = m1Saved.middleName !== undefined ? m1Saved.middleName : (profile.middleName || '');
-    const lastName = m1Saved.lastName || profile.lastName || user?.lastName || 'Varma';
+    const lastName = m1Saved.lastName || profile.lastName || user?.lastName || '';
     const fullName = m1Saved.fullName || [firstName, middleName, lastName].filter(Boolean).join(' ');
-    const email = m1Saved.email || profile.email || user?.email || 'arjun.varma@gmail.com';
-    const phone = m1Saved.phone || profile.phone || user?.mobile || '+1 (713) 555-0138';
+    const email = m1Saved.email || profile.email || user?.email || '';
+    const phone = m1Saved.phone || profile.phone || user?.mobile || '';
 
     // Strictly load submittedModules from saved draft. Default only to ['m1'] if user has filled demographics
     const submittedModules: string[] = Array.isArray(organizer.submittedModules)
@@ -890,27 +890,27 @@ export class CustomerService {
         lastName,
         fullName,
         ssnMasked: m1Saved.ssnMasked || profile.ssnTin || '',
-        dob: m1Saved.dob || profile.dob || '05/14/1988',
-        occupation: m1Saved.occupation || profile.occupation || 'Principal Cloud Architect',
+        dob: m1Saved.dob || profile.dob || '',
+        occupation: m1Saved.occupation || profile.occupation || '',
         phone,
         workPhone: m1Saved.workPhone || '',
         email,
         relationshipToPrimary: m1Saved.relationshipToPrimary || 'SELF',
-        visaType: m1Saved.visaType || profile.visaType || 'H-1B',
+        visaType: m1Saved.visaType || profile.visaType || '',
         visaStatusChanged2025: m1Saved.visaStatusChanged2025 || 'NO',
         previousVisaType: m1Saved.previousVisaType || '',
         newVisaType: m1Saved.newVisaType || '',
         visaChangeDate: m1Saved.visaChangeDate || '',
         visaStatusChangeReason: m1Saved.visaStatusChangeReason || '',
-        firstPortOfEntryDate: m1Saved.firstPortOfEntryDate || '08/15/2018',
-        stayMoreThan6Months2026: m1Saved.stayMoreThan6Months2026 || 'YES',
-        monthsStayedInUs2025: m1Saved.monthsStayedInUs2025 !== undefined ? m1Saved.monthsStayedInUs2025 : 12,
-        maritalStatus: m1Saved.maritalStatus || (profile.maritalStatus === 'Married' ? 'Married Filing Jointly' : (profile.maritalStatus || 'Single')),
+        firstPortOfEntryDate: m1Saved.firstPortOfEntryDate || '',
+        stayMoreThan6Months2026: m1Saved.stayMoreThan6Months2026 || '',
+        monthsStayedInUs2025: m1Saved.monthsStayedInUs2025 !== undefined ? m1Saved.monthsStayedInUs2025 : undefined,
+        maritalStatus: m1Saved.maritalStatus || (profile.maritalStatus === 'Married' ? 'Married Filing Jointly' : (profile.maritalStatus || '')),
         dateOfMarriage: m1Saved.dateOfMarriage || '',
-        residentialAddress: m1Saved.residentialAddress || profile.addressLine1 || '1000 Louisiana St, Suite 4200',
-        city: m1Saved.city || profile.city || 'Houston',
-        state: m1Saved.state || profile.state || 'TX',
-        zipCode: m1Saved.zipCode || profile.zipCode || '77002',
+        residentialAddress: m1Saved.residentialAddress || profile.addressLine1 || '',
+        city: m1Saved.city || profile.city || '',
+        state: m1Saved.state || profile.state || '',
+        zipCode: m1Saved.zipCode || profile.zipCode || '',
       },
       m2_dependents: organizer.m2_dependents || {
         hasDependents: false,
@@ -927,7 +927,7 @@ export class CustomerService {
         days2025: undefined,
         days2024: undefined,
         days2023: undefined,
-        visaType: profile.visaType || 'H-1B',
+        visaType: profile.visaType || '',
         cityCountyTaxesRequired: false,
         ...(organizer.m3_presence || {}),
         statesResidedHistory: (organizer.m3_presence?.statesResidedHistory && organizer.m3_presence.statesResidedHistory.length > 0)
@@ -935,10 +935,10 @@ export class CustomerService {
           : [
               {
                 taxYear: activeApp.taxYear ? parseInt(String(activeApp.taxYear), 10) : 2026,
-                state: m1Saved.state || profile.state || 'TX',
+                state: m1Saved.state || profile.state || '',
                 fromDate: '',
                 toDate: '',
-                spouseState: m1Saved.state || profile.state || 'TX',
+                spouseState: m1Saved.state || profile.state || '',
                 spouseFromDate: '',
                 spouseToDate: '',
               },

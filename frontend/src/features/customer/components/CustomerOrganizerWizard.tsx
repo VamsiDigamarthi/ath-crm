@@ -1,5 +1,5 @@
 import React from 'react';
-import { Save } from 'lucide-react';
+import { Save, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useCustomerOrganizer } from '../hooks/useCustomerOrganizer';
@@ -36,7 +36,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
     validationErrors,
     clearError,
     updateModuleField,
-    saveOrganizer,
+    saveDraft,
     handleNext,
     handlePrev,
     moduleIds,
@@ -87,15 +87,35 @@ export const CustomerOrganizerWizard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
+            variant="outline"
             size="sm"
-            onClick={() => saveOrganizer(false)}
+            onClick={handlePrev}
+            disabled={currentModIndex === 0 || saving}
+            className="text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Previous</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={saveDraft}
             disabled={saving || loading}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
+            className="text-xs flex items-center gap-1.5 cursor-pointer"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{saving ? 'Saving to DB...' : 'Save All Drafts'}</span>
+            <span>{saving ? 'Saving...' : 'Save Draft'}</span>
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleNext}
+            disabled={saving || loading}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 cursor-pointer px-4"
+          >
+            <span>Save &amp; Next</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>
@@ -118,7 +138,8 @@ export const CustomerOrganizerWizard: React.FC = () => {
           updateModuleField={updateModuleField}
           onNext={handleNext}
           onPrev={handlePrev}
-          onSave={() => saveOrganizer(false)}
+          onSave={saveDraft}
+          hideFooter
           currentModIndex={currentModIndex}
           saving={saving}
           errors={validationErrors}

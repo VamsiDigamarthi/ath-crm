@@ -48,6 +48,10 @@ interface TaxPrepOrganizerReviewProps {
   readOnly?: boolean;
   filingType?: string;
   hideHeader?: boolean;
+  taxYear?: number;
+  extraTabs?: { id: string; label: string; count?: number; content: React.ReactNode }[];
+  requestedTabId?: string;
+  onTabChange?: (tabId: string) => void;
 }
 
 export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
@@ -59,10 +63,14 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   readOnly = false,
   filingType,
   hideHeader = false,
+  taxYear,
+  extraTabs = [],
+  requestedTabId,
+  onTabChange,
 }) => {
   const canEdit = allowEdit && !readOnly;
   const organizer = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
-  const activeTaxYear = taxDraftSummary?.taxYear || organizer.taxYear || 2025;
+  const activeTaxYear = taxYear || taxDraftSummary?.taxYear || organizer.taxYear || new Date().getFullYear();
   const effectiveFilingType =
     filingType ||
     taxDraftSummary?.filingType ||
@@ -71,7 +79,17 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   const initialModId = effectiveFilingType === 'BUSINESS' ? 'b1_companyInfo' : 'm1';
 
   const [viewMode, setViewMode] = useState<'INSPECTOR' | 'GRID' | 'AGENT_EDIT'>(canEdit ? 'AGENT_EDIT' : 'INSPECTOR');
-  const [selectedModId, setSelectedModId] = useState<string>(initialModId);
+  const [selectedModId, setSelectedModId] = useState<string>(
+    requestedTabId && extraTabs.some((t) => t.id === requestedTabId) ? requestedTabId : initialModId
+  );
+
+  useEffect(() => {
+    if (!requestedTabId) return;
+    if (extraTabs.some((t) => t.id === requestedTabId)) setSelectedModId(requestedTabId);
+    else if (requestedTabId === 'MODULES' && extraTabs.some((t) => t.id === selectedModId)) setSelectedModId(initialModId);
+  }, [requestedTabId]);
+
+  const activeExtraTab = extraTabs.find((t) => t.id === selectedModId);
   const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});
 
   // Local state for Agent Editing on Call
@@ -252,8 +270,24 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
 
   return (
     <div className="space-y-6 font-sans animate-in fade-in duration-150">
+      {/* 2. Top Horizontal 5-Module Navigator Bar */}
+      <AppTabs
+        tabs={[
+          ...modulesList.map((m) => ({ id: m.id, label: m.label })),
+          ...extraTabs.map((t) => ({ id: t.id, label: t.label, count: t.count })),
+        ]}
+        activeTab={selectedModId}
+        onChange={(tabId) => {
+          setSelectedModId(tabId);
+          onTabChange?.(tabId);
+          if (viewMode === 'GRID' && !extraTabs.some((t) => t.id === tabId)) setViewMode(canEdit ? 'AGENT_EDIT' : 'INSPECTOR');
+        }}
+        size="sm"
+      />
+
+      {/* 3A. AGENT EDIT MODE: Full-Width Client-Styled Organizer Workspace */}
       {/* 1. Header Bar matching Client Side Tax Organizer */}
-      {!hideHeader && (
+      {!hideHeader && !activeExtraTab && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -313,22 +347,9 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
         </div>
       )}
 
-      {/* 2. Top Horizontal 5-Module Navigator Bar */}
-      <AppTabs
-        tabs={modulesList.map((m) => ({
-          id: m.id,
-          label: m.label,
-        }))}
-        activeTab={selectedModId}
-        onChange={(tabId) => {
-          setSelectedModId(tabId);
-          if (viewMode === 'GRID') setViewMode(canEdit ? 'AGENT_EDIT' : 'INSPECTOR');
-        }}
-        size="sm"
-      />
+      {activeExtraTab && <div>{activeExtraTab.content}</div>}
 
-      {/* 3A. AGENT EDIT MODE: Full-Width Client-Styled Organizer Workspace */}
-      {viewMode === 'AGENT_EDIT' && (
+      {!activeExtraTab && viewMode === 'AGENT_EDIT' && (
         <div className="w-full">
           <OrganizerModuleContent
             selectedModId={selectedModId}
@@ -358,7 +379,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
       )}
 
       {/* 3B. INSPECTOR VIEW (Audit Review with Edit CTA - Full Width) */}
-      {viewMode === 'INSPECTOR' && (
+      {!activeExtraTab && viewMode === 'INSPECTOR' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
             <div className="flex items-center gap-2">
@@ -574,7 +595,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
       )}
 
       {/* 3C. 9-GRID OVERVIEW */}
-      {viewMode === 'GRID' && (
+      {!activeExtraTab && viewMode === 'GRID' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {modulesList.map((mod) => {
             const Icon = mod.icon;

@@ -43,7 +43,7 @@ export function ColumnHeaderMenu<TData, TValue>({
   // If menu is disabled (e.g. Action column), render clean title without 3-dots
   if (disableMenu) {
     return (
-      <div className={`flex items-center text-[11px] font-semibold text-zinc-900 uppercase tracking-wider ${className}`}>
+      <div className={`flex items-center text-[11px] font-semibold text-zinc-900 ${className}`}>
         <span>{title}</span>
       </div>
     );
@@ -136,7 +136,7 @@ export function ColumnHeaderMenu<TData, TValue>({
 
   return (
     <div className={`flex items-center justify-between gap-1 group/header ${className}`}>
-      <span className="text-[11px] font-semibold text-zinc-900 uppercase tracking-wider truncate">
+      <span className="text-[11px] font-semibold text-zinc-900 truncate">
         {title}
       </span>
 
@@ -230,7 +230,7 @@ export function ColumnHeaderMenu<TData, TValue>({
             {showFilterSection && hasEnumFilter && (
               <div className="pt-2 border-t border-zinc-100 space-y-2 mb-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                  <span className="text-[10px] font-bold text-zinc-500">
                     Filter by {title}
                   </span>
                   {isFiltered && (
@@ -305,7 +305,7 @@ export function ColumnHeaderMenu<TData, TValue>({
             {/* Text Filter Section (If text filter explicitly specified) */}
             {showFilterSection && hasTextFilter && (
               <div className="pt-2 border-t border-zinc-100 space-y-1.5 mb-2">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
+                <span className="text-[10px] font-bold text-zinc-500 block">
                   Search {title}
                 </span>
                 <input

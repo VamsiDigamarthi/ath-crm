@@ -101,7 +101,7 @@ export function TableTopToolbar<TData>({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             {title && (
-              <h1 className="text-base sm:text-lg font-bold text-zinc-900 uppercase tracking-tight">
+              <h1 className="text-base sm:text-lg font-bold text-zinc-900">
                 {title}
               </h1>
             )}
@@ -189,7 +189,7 @@ export function TableTopToolbar<TData>({
           </span>
 
           <div className="flex items-center gap-1.5 pl-2 border-l border-zinc-200">
-            <span className="text-[11px] font-medium text-zinc-400 uppercase">Rows:</span>
+            <span className="text-[11px] font-medium text-zinc-400">Rows:</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}

@@ -56,11 +56,11 @@ export const ReviewModule1Demographics: React.FC<ReviewModule1DemographicsProps>
             </div>
             <div>
               <span className="text-slate-400 font-medium block text-[10px]">Date of Birth</span>
-              <span className="font-bold text-slate-900">{m1.dob || '05/14/1988'}</span>
+              <span className="font-bold text-slate-900">{m1.dob || 'Not Provided'}</span>
             </div>
             <div>
               <span className="text-slate-400 font-medium block text-[10px]">Occupation</span>
-              <span className="font-bold text-slate-900">{m1.occupation || 'Principal Cloud Architect'}</span>
+              <span className="font-bold text-slate-900">{m1.occupation || 'Not Provided'}</span>
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@ export const ReviewModule1Demographics: React.FC<ReviewModule1DemographicsProps>
             <div>
               <span className="text-slate-400 font-medium block text-[10px]">VISA Status (as of 12/31/2025)</span>
               <span className="font-bold text-slate-900 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 inline-block">
-                {m1.visaType || 'H-1B'}
+                {m1.visaType || 'Not Provided'}
               </span>
             </div>
             <div>
@@ -110,7 +110,7 @@ export const ReviewModule1Demographics: React.FC<ReviewModule1DemographicsProps>
             )}
             <div>
               <span className="text-slate-400 font-medium block text-[10px]">First Port of Entry in U.S.</span>
-              <span className="font-bold text-slate-900">{m1.firstPortOfEntryDate || '08/15/2018'}</span>
+              <span className="font-bold text-slate-900">{m1.firstPortOfEntryDate || 'Not Provided'}</span>
             </div>
             <div>
               <span className="text-slate-400 font-medium block text-[10px]">Months Stayed in U.S. during 2025</span>
@@ -129,7 +129,7 @@ export const ReviewModule1Demographics: React.FC<ReviewModule1DemographicsProps>
             <div>
               <span className="text-slate-400 font-medium block text-[10px]">Filing / Marital Status</span>
               <span className="font-bold text-slate-900 px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200 inline-block">
-                {m1.maritalStatus || 'Single'}
+                {m1.maritalStatus || 'Not Provided'}
               </span>
             </div>
             {m1.maritalStatus?.includes('Married') && (
@@ -140,8 +140,8 @@ export const ReviewModule1Demographics: React.FC<ReviewModule1DemographicsProps>
             )}
             <div>
               <span className="text-slate-400 font-medium block text-[10px]">Residential Street Address</span>
-              <span className="font-bold text-slate-900 block">{m1.residentialAddress || '1000 Louisiana St, Suite 4200'}</span>
-              <span className="text-slate-600">{m1.city || 'Houston'}, {m1.state || 'TX'} {m1.zipCode || '77002'}</span>
+              <span className="font-bold text-slate-900 block">{m1.residentialAddress || 'Not Provided'}</span>
+              <span className="text-slate-600">{[m1.city, m1.state, m1.zipCode].filter(Boolean).join(', ') || 'Not Provided'}</span>
             </div>
           </div>
         </div>
