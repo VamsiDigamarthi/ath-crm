@@ -9,6 +9,7 @@ import {
 } from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { BadRequestError } from '../../errors/bad-request-error.js';
+import { ApplicationNoteService } from '../application-notes/application-note-service.js';
 import { StorageService } from '../../utils/storage-service.js';
 import { EmailService } from '../../utils/email-service.js';
 import { sanitizeObject } from '../customer/customer-validator.js';
@@ -1787,8 +1788,8 @@ export class DocumenterService {
         } else if (disposition === 'FALLBACK') {
           targetStage = ApplicationStage.DOC_OUTREACH;
           auditRemark = subDisposition
-            ? `Lead marked as Fall Back (${subDisposition}). Retained in outreach pipeline.`
-            : `Lead marked as Fall Back. Retained in outreach pipeline.`;
+            ? `Lead marked for Follow-up (${subDisposition}). Retained in outreach pipeline.`
+            : `Lead marked for Follow-up. Retained in outreach pipeline.`;
         }
 
         // 2. Create CallLog entry
@@ -1887,6 +1888,17 @@ export class DocumenterService {
     agentUserId: string;
   }) {
     const { applicationId, remarks, agentUserId } = options;
+    if (!remarks || !remarks.trim()) {
+      throw new BadRequestError('A hand-off note for the preparer is required');
+    }
+
+    await ApplicationNoteService.recordHandoff({
+      applicationId,
+      authorId: agentUserId,
+      targetTeam: 'PREPARER',
+      message: remarks,
+      context: 'MOVED_TO_PREP',
+    });
 
     return await prisma.$transaction(async (tx) => {
       const app = await tx.taxApplication.findUnique({

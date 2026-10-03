@@ -4,6 +4,7 @@ import { StorageService } from '../../utils/storage-service.js';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { BadRequestError } from '../../errors/bad-request-error.js';
 import { PermissionService } from '../permissions/permission-service.js';
+import { ApplicationNoteService } from '../application-notes/application-note-service.js';
 
 export class PrepReviewService {
   /**
@@ -1321,6 +1322,9 @@ export class PrepReviewService {
         assignedReviewAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
       },
     });
+    if (!payload?.preparerNotes || !String(payload.preparerNotes).trim()) {
+      throw new BadRequestError('A hand-off note for the QA reviewer is required');
+    }
 
     if (!app) {
       throw new Error('Tax application not found');
@@ -1439,6 +1443,14 @@ export class PrepReviewService {
         console.error('QA Notification dispatch failed:', notifErr);
       }
     }
+
+    await ApplicationNoteService.recordHandoff({
+      applicationId,
+      authorId: userId,
+      targetTeam: 'QA_REVIEWER',
+      message: payload?.preparerNotes,
+      context: 'SUBMITTED_TO_QA',
+    });
 
     return {
       applicationId: updated.id,
@@ -1674,6 +1686,14 @@ export class PrepReviewService {
       }
     }
 
+    await ApplicationNoteService.recordHandoff({
+      applicationId,
+      authorId: userId,
+      targetTeam: 'ALL',
+      message: remarks,
+      context: 'QA_SIGN_OFF',
+    });
+
     return {
       applicationId: updated.id,
       status: 'QA_APPROVED',
@@ -1758,6 +1778,14 @@ export class PrepReviewService {
         console.error('Revision notification error:', e);
       }
     }
+
+    await ApplicationNoteService.recordHandoff({
+      applicationId,
+      authorId: userId,
+      targetTeam: 'PREPARER',
+      message: payload.revisionNotes,
+      context: 'QA_REVISION',
+    });
 
     return {
       applicationId: updated.id,

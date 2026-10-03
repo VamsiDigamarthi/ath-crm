@@ -107,7 +107,7 @@ export const TaxpayerCallHistoryTimeline: React.FC<TaxpayerCallHistoryTimelinePr
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-300">
             <RotateCcw className="w-3.5 h-3.5 text-slate-600" />
-            Fall Back
+            Follow-up
           </span>
         );
       default:

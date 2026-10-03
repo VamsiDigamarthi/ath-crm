@@ -159,7 +159,7 @@ const dispositions: DispositionConfig[] = [
   },
   {
     id: 'FALLBACK',
-    title: 'Fall Back',
+    title: 'Follow-up',
     subtitle: 'Retain lead in outreach pipeline for subsequent cycle / follow-up',
     icon: RotateCcw,
     subOptions: [

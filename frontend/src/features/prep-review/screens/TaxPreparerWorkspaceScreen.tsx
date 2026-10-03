@@ -21,6 +21,7 @@ import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
 import { ReturnItemsSummary } from '../components/workspace/ReturnItemsSummary';
 import { DrakeTaxUploadCard } from '../components/workspace/DrakeTaxUploadCard';
 import { useAuthStore } from '@/features/auth/store/auth-store';
+import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
 
 export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -647,6 +648,11 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
               </div>
             ),
           },
+          {
+            id: 'NOTES',
+            label: 'Notes',
+            content: <ApplicationNotesPanel applicationId={applicationId} />,
+          },
         ]}
       />
 
@@ -819,7 +825,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
           {/* Preparer Handover Notes */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              Preparer Handover Comments for Senior QA Auditor (Optional)
+              Hand-off note for the QA reviewer *
             </label>
             <textarea
               value={preparerNotes}
@@ -852,7 +858,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             <Button
               size="sm"
               onClick={handleSubmitForQA}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !preparerNotes.trim()}
               className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold px-4 cursor-pointer flex items-center gap-1.5 shadow-2xs"
             >
               <Send className="w-3.5 h-3.5" />

@@ -13,6 +13,7 @@ import { couponRouter } from "../features/coupons/coupon-routes.js";
 import { productRouter } from "../features/products/product-routes.js";
 import { permissionRouter } from "../features/permissions/permission-routes.js";
 import { returnItemRouter } from "../features/return-items/return-item-routes.js";
+import { applicationNoteRouter } from "../features/application-notes/application-note-routes.js";
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use("/admin/coupons", couponRouter);
 router.use("/products", productRouter);
 router.use("/permissions", permissionRouter);
 router.use("/applications", returnItemRouter);
+router.use("/applications", applicationNoteRouter);
 router.use("/email-templates", emailTemplateRouter);
 router.use("/documenter", documenterRouter);
 router.use("/prep-review", prepReviewRouter);

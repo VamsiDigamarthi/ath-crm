@@ -52,7 +52,7 @@ export const DocumenterLayout: React.FC = () => {
       { id: 'agent_dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
       { id: 'agent_queue', label: 'My Calling', icon: PhoneCall, section: 'Calling Workspace', path: '/documenter/agent/queue' },
       { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', path: '/documenter/agent/callbacks' },
-      { id: 'agent_fallback', label: 'Fallback Leads', icon: RotateCcw, section: 'Calling Workspace', path: '/documenter/agent/fallback' },
+      { id: 'agent_fallback', label: 'Follow-up Leads', icon: RotateCcw, section: 'Calling Workspace', path: '/documenter/agent/fallback' },
       { id: 'agent_documents', label: 'My Documents', icon: FileCheck2, section: 'Intake Pipeline', path: '/documenter/agent/documents' },
       // { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Intake Pipeline', path: '/documenter/agent/audit-logs' },
       { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Calling Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },

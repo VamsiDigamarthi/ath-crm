@@ -1,0 +1,14 @@
+model ApplicationNote {
+  id            String         @id @default(uuid())
+  applicationId String
+  application   TaxApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  authorId      String?
+  author        User?          @relation("AuthoredApplicationNotes", fields: [authorId], references: [id], onDelete: SetNull)
+  authorRole    String
+  targetTeam    String
+  context       String         @default("GENERAL")
+  message       String
+  createdAt     DateTime       @default(now())
+
+  @@index([applicationId, createdAt])
+}

@@ -154,7 +154,7 @@ export const getDocumenterColumns = ({
         }
         return (
           <span className="text-xs font-normal text-slate-700">
-            {log.disposition.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (ch: string) => ch.toUpperCase())}
+            {log.disposition === 'FALLBACK' ? 'Follow-up' : log.disposition.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (ch: string) => ch.toUpperCase())}
           </span>
         );
       },

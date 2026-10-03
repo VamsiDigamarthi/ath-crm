@@ -19,6 +19,7 @@ import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatus
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
 import { useAuthStore } from '@/features/auth/store/auth-store';
+import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
 
 export const TaxReviewerAuditScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -262,6 +263,11 @@ export const TaxReviewerAuditScreen: React.FC = () => {
                 </div>
               </div>
             ),
+          },
+          {
+            id: 'NOTES',
+            label: 'Notes',
+            content: <ApplicationNotesPanel applicationId={applicationId} />,
           },
         ]}
       />

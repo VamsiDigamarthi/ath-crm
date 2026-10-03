@@ -34,6 +34,7 @@ import { documenterService } from '../services/documenter-service';
 import type { DocumenterLeadItem, CallLogItem } from '../types/documenter.types';
 import toast from 'react-hot-toast';
 import { useChangeTaxYear } from '../hooks/useChangeTaxYear';
+import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
 
 export const Taxpayer360DetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -539,10 +540,16 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         allowEdit={!isReadOnly}
         readOnly={isReadOnly}
         requestedTabId={activeTab === 'TIMELINE' ? 'CALL_HISTORY' : activeTab === 'SALES_PITCH' ? 'SALES_PITCH' : 'MODULES'}
-        onTabChange={(tabId) =>
-          setActiveTab(tabId === 'CALL_HISTORY' ? 'TIMELINE' : tabId === 'SALES_PITCH' ? 'SALES_PITCH' : 'ORGANIZER')
-        }
+        onTabChange={(tabId) => {
+          if (tabId === 'NOTES') return;
+          setActiveTab(tabId === 'CALL_HISTORY' ? 'TIMELINE' : tabId === 'SALES_PITCH' ? 'SALES_PITCH' : 'ORGANIZER');
+        }}
         extraTabs={[
+          {
+            id: 'NOTES',
+            label: 'Notes',
+            content: <ApplicationNotesPanel applicationId={currentLead.id} />,
+          },
           {
             id: 'CALL_HISTORY',
             label: 'Call History',
@@ -752,8 +759,8 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 {hasAssignedPreparer || isRevertedFromPrep
-                  ? `Handover / Verification Notes for ${preparerDisplayName} (Optional)`
-                  : `Handover Notes for Preparation Manager (Optional)`}
+                  ? `Hand-off note for ${preparerDisplayName} *`
+                  : `Hand-off note for the preparer *`}
               </label>
               <textarea
                 rows={2}
@@ -794,7 +801,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
               <Button
                 type="button"
                 size="sm"
-                disabled={isMovingToPrep}
+                disabled={isMovingToPrep || !prepTransferNotes.trim()}
                 onClick={handleConfirmMoveToPrep}
                 className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold px-4 cursor-pointer shadow-2xs flex items-center gap-1.5"
               >

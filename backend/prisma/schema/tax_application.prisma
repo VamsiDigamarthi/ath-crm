@@ -60,6 +60,7 @@ model TaxApplication {
   sentEmails     SentEmail[]
   couponUsages   CouponUsage[]
   items          TaxApplicationItem[]
+  notes          ApplicationNote[]
 
   @@unique([customerId, taxYear])
   @@index([currentStage])

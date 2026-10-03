@@ -56,14 +56,14 @@ export const DocumenterAgentFallbackScreen: React.FC = () => {
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
       <UnifiedTable<DocumenterLeadItem>
-        title="FALLBACK / NO ANSWER RECOVERY POOL"
-        subtitle="Recover leads where previous call attempts went unanswered or hit voicemail."
+        title="Follow-up Leads"
+        subtitle="Leads marked for follow-up after earlier call attempts."
         data={leads}
         columns={columns}
         isLoading={isLoading}
-        searchPlaceholder="Search fallback leads by name, email, phone..."
+        searchPlaceholder="Search follow-up leads by name, email, phone..."
         onExportExcel={handleExport}
-        emptyText="No unanswered leads in your fallback pool. Great job!"
+        emptyText="No leads waiting for follow-up. Great job!"
       />
 
       {/* Call Outreach & Disposition Modal */}
