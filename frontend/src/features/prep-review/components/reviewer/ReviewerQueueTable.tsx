@@ -9,12 +9,16 @@ import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { PrepReviewLead } from '../../types/prep-review.types';
 
 interface ReviewerQueueTableProps {
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
   returns: PrepReviewLead[];
   isLoading: boolean;
-  onOpenAudit: (id: string) => void;
+  onOpenAudit: (lead: PrepReviewLead) => void;
 }
 
 export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
+  searchQuery,
+  onSearchChange,
   returns,
   isLoading,
   onOpenAudit,
@@ -23,7 +27,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
     () => [
       {
         id: 'taxpayer',
-        header: 'TAXPAYER',
+        header: 'Taxpayer',
         accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
         cell: ({ row }) => (
           <TaxpayerCell
@@ -34,7 +38,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
       },
       {
         id: 'taxYear',
-        header: 'TY',
+        header: 'Tax year',
         accessorFn: (row) => `TY ${row.taxYear || 2025}`,
         cell: ({ row }) => (
           <span className="text-xs font-medium text-slate-700">
@@ -44,7 +48,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
       },
       {
         id: 'preparer',
-        header: 'PREPARER',
+        header: 'Preparer',
         accessorFn: (row) => row.assignedPreparer?.name || 'Unassigned',
         cell: ({ row }) => {
           const prep = row.original.assignedPreparer;
@@ -57,7 +61,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
       },
       {
         id: 'refund',
-        header: '1040 REFUND',
+        header: '1040 refund',
         accessorFn: (row) => {
           const draft: any = (row as any).taxDraftSummary || {};
           return draft.federalRefund !== undefined ? Number(draft.federalRefund) : row.estimatedRefund || 0;
@@ -86,7 +90,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
       },
       {
         id: 'state',
-        header: 'STATE',
+        header: 'State',
         accessorKey: 'stateOfResidence',
         cell: ({ row }) => (
           <span className="text-xs font-normal text-slate-700">
@@ -96,7 +100,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
       },
       {
         id: 'docs',
-        header: 'DOCS',
+        header: 'Docs',
         accessorFn: (row) => `${row.verifiedDocumentsCount || 0}/${row.documentsCount || 0}`,
         cell: ({ row }) => {
           const verified = row.original.verifiedDocumentsCount || 0;
@@ -110,7 +114,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
       },
       {
         id: 'stage',
-        header: 'AUDIT STAGE',
+        header: 'Audit stage',
         accessorKey: 'currentStage',
         meta: {
           filterType: 'enum',
@@ -124,7 +128,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
       },
       {
         id: 'actions',
-        header: 'ACTION',
+        header: '',
         enableSorting: false,
         enableHiding: false,
         meta: {
@@ -135,8 +139,8 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
           <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
-              onClick={() => onOpenAudit(row.original.id || row.original.applicationId)}
-              className="h-7 px-2.5 text-[11px] font-medium bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
+              onClick={() => onOpenAudit(row.original)}
+              className="h-7 px-2.5 text-[11px] font-medium bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1 shadow-2xs cursor-pointer"
             >
               <ShieldCheck className="w-3 h-3" />
               <span>QA Review</span>
@@ -168,12 +172,12 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
     <UnifiedTable<PrepReviewLead>
       columns={columns}
       data={returns}
-      title="QA COMPLIANCE AUDIT QUEUE"
-      subtitle="4-Eyes verification of Form 1040 calculations, W-2/1099 statements, and IRS compliance sign-off."
       isLoading={isLoading}
-      searchPlaceholder="Search taxpayer, email, preparer, status..."
+      searchPlaceholder="Search taxpayer, email, preparer..."
+      searchValue={searchQuery}
+      onSearchChange={onSearchChange}
       onExportExcel={handleExportExcel}
-      onRowClick={(item) => onOpenAudit(item.id || item.applicationId)}
+      onRowClick={(item) => onOpenAudit(item)}
       emptyText="No returns awaiting Senior QA compliance review. Great job!"
     />
   );

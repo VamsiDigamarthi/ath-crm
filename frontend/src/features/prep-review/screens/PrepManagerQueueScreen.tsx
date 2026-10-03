@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePrepManagerQueue } from '../hooks/usePrepManagerQueue';
 import { PrepManagerQueueTable } from '../components/manager/PrepManagerQueueTable';
 import { PrepAssignLeadDrawer } from '../components/manager/PrepAssignLeadDrawer';
@@ -6,7 +7,7 @@ import { PrepAutoDistributeModal } from '../components/manager/PrepAutoDistribut
 import { PrepLeadDetailModal } from '../components/manager/PrepLeadDetailModal';
 import type { PrepReviewLead } from '../types/prep-review.types';
 import { Button } from '@/shared/components/Button';
-import { RefreshCw, Calculator, X } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 
 export const PrepManagerQueueScreen: React.FC = () => {
   const {
@@ -25,19 +26,27 @@ export const PrepManagerQueueScreen: React.FC = () => {
     clearStaffFilter,
   } = usePrepManagerQueue();
 
+  const navigate = useNavigate();
   const [selectedLeadForDetail, setSelectedLeadForDetail] = useState<PrepReviewLead | null>(null);
 
   const selectedStaffMember = staff.find((s) => s.id === staffIdFromUrl);
+
+  const clientRows = useMemo(() => {
+    const seen = new Set<string>();
+    return leads.filter((l) => {
+      const key = l.taxpayerId || l.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [leads]);
 
   return (
     <div className="w-full space-y-6 pb-12 font-sans animate-in fade-in duration-200">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Calculator className="w-6 h-6 text-[#16A34A]" />
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Preparation &amp; QA Caseload Pipeline
-            </h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Department Queue</h2>
             {selectedStaffMember && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 ml-2">
                 <span>Filtered: {selectedStaffMember.name}</span>
@@ -51,9 +60,7 @@ export const PrepManagerQueueScreen: React.FC = () => {
               </span>
             )}
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Full live queue view of all tax filings across intake readiness, computation, and QA review.
-          </p>
+          <p className="text-sm text-slate-500 mt-1">Returns in preparation and QA review. Open a client to assign or inspect a tax year.</p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -62,23 +69,23 @@ export const PrepManagerQueueScreen: React.FC = () => {
             size="sm"
             onClick={fetchQueueData}
             disabled={isLoading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            className="px-3 cursor-pointer"
+            title="Refresh"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Sync Live Queue</span>
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
 
       <PrepManagerQueueTable
-        leads={leads}
+        leads={clientRows}
         tabStats={tabStats}
         isLoading={isLoading}
         selectedStageFilter={activeTab}
         onStageFilterChange={setActiveTab}
         onOpenAssignModal={(selectedLeads) => setAssignModalLeads(selectedLeads)}
         onOpenAutoDistribute={() => setIsAutoDistributeOpen(true)}
-        onViewLeadDetail={(lead) => setSelectedLeadForDetail(lead)}
+        onViewLeadDetail={(lead) => navigate(`/prep-review/manager/queue/client/${lead.taxpayerId}`)}
       />
 
       {assignModalLeads && (

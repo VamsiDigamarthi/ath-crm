@@ -30,17 +30,9 @@ export const ReviewModule3Presence: React.FC<ReviewModule3PresenceProps> = ({
     return `$${Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const currentYearDays = m3[`days${selectedTaxYear}`] !== undefined 
-    ? m3[`days${selectedTaxYear}`] 
-    : m3.days2025;
-
-  const priorYear1Days = m3[`days${selectedTaxYear - 1}`] !== undefined 
-    ? m3[`days${selectedTaxYear - 1}`] 
-    : m3.days2024;
-
-  const priorYear2Days = m3[`days${selectedTaxYear - 2}`] !== undefined 
-    ? m3[`days${selectedTaxYear - 2}`] 
-    : m3.days2023;
+  const currentYearDays = m3.days2025;
+  const priorYear1Days = m3.days2024;
+  const priorYear2Days = m3.days2023;
 
   return (
     <div className="space-y-4 font-sans">

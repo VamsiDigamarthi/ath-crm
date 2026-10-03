@@ -169,6 +169,25 @@ export function useTaxPreparerQueue() {
     });
   }, [allLeads, activeTab, complexityFilter, priorityFilter, searchQuery]);
 
+  const clientRows = useMemo(() => {
+    const seen = new Set<string>();
+    return filteredReturns.filter((l) => {
+      const key = l.taxpayerId || l.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [filteredReturns]);
+
+  const handleOpenClient = (lead: PrepReviewLead) => {
+    const myYears = allLeads.filter((l) => l.taxpayerId && l.taxpayerId === lead.taxpayerId);
+    if (myYears.length > 1) {
+      navigate(`/prep-review/preparer/client/${lead.taxpayerId}`);
+    } else {
+      navigate(`/prep-review/preparer/workspace/${lead.id || lead.applicationId}`);
+    }
+  };
+
   const handleOpenNextReturn = () => {
     if (filteredReturns.length > 0) {
       navigate(`/prep-review/preparer/workspace/${filteredReturns[0].id || filteredReturns[0].applicationId}`);
@@ -183,6 +202,8 @@ export function useTaxPreparerQueue() {
     counts,
     stats,
     filteredReturns,
+    clientRows,
+    handleOpenClient,
     activeTab,
     setActiveTab,
     searchQuery,

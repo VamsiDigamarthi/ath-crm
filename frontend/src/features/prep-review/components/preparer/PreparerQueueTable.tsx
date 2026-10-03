@@ -13,7 +13,7 @@ interface PreparerQueueTableProps {
   onSearchChange?: (q: string) => void;
   returns: PrepReviewLead[];
   isLoading: boolean;
-  onOpenWorkspace: (id: string) => void;
+  onOpenWorkspace: (lead: PrepReviewLead) => void;
 }
 
 export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
@@ -120,7 +120,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
           <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
             <Button
               size="sm"
-              onClick={() => onOpenWorkspace(row.original.id || row.original.applicationId)}
+              onClick={() => onOpenWorkspace(row.original)}
               className="h-7 px-2.5 text-[11px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
             >
               <Calculator className="w-3 h-3" />
@@ -159,7 +159,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       searchValue={searchQuery}
       onSearchChange={onSearchChange}
       onExportExcel={handleExportExcel}
-      onRowClick={(item) => onOpenWorkspace(item.id || item.applicationId)}
+      onRowClick={(item) => onOpenWorkspace(item)}
       emptyText="No assigned returns in this queue. Great job!"
     />
   );

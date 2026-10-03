@@ -26,12 +26,16 @@ import { DocumenterAgentQueueScreen } from '@/features/documenter/screens/Docume
 import { DocumenterAgentCallbacksScreen } from '@/features/documenter/screens/DocumenterAgentCallbacksScreen';
 import { DocumenterAgentFallbackScreen } from '@/features/documenter/screens/DocumenterAgentFallbackScreen';
 import { DocumenterAgentPrepScreen } from '@/features/documenter/screens/DocumenterAgentPrepScreen';
+import { DocumenterTaxpayerYearsScreen } from '@/features/documenter/screens/DocumenterTaxpayerYearsScreen';
 import { Taxpayer360DetailScreen } from '@/features/documenter/screens/Taxpayer360DetailScreen';
 // import { AuditLogsScreen } from '@/features/documenter/screens/AuditLogsScreen';
 import { DocumenterLayout } from '@/features/documenter/layouts/DocumenterLayout';
 import { PrepReviewLayout } from '@/features/prep-review/layouts/PrepReviewLayout';
 import { PrepManagerDashboardScreen } from '@/features/prep-review/screens/PrepManagerDashboardScreen';
 import { PrepManagerQueueScreen } from '@/features/prep-review/screens/PrepManagerQueueScreen';
+import { PrepManagerClientYearsScreen } from '@/features/prep-review/screens/PrepManagerClientYearsScreen';
+import { PreparerClientYearsScreen } from '@/features/prep-review/screens/PreparerClientYearsScreen';
+import { ReviewerClientYearsScreen } from '@/features/prep-review/screens/ReviewerClientYearsScreen';
 import { PrepStaffScorecardsScreen } from '@/features/prep-review/screens/PrepStaffScorecardsScreen';
 import { TaxSpecialistDashboardScreen } from '@/features/prep-review/screens/TaxSpecialistDashboardScreen';
 import { TaxPreparerQueueScreen } from '@/features/prep-review/screens/TaxPreparerQueueScreen';
@@ -328,6 +332,10 @@ export const router = createBrowserRouter([
             element: <DocumenterAgentPrepScreen />,
           },
           {
+            path: 'agent/documents/:id',
+            element: <DocumenterTaxpayerYearsScreen />,
+          },
+          {
             path: 'agent/prep',
             element: <Navigate to="/documenter/agent/documents" replace />,
           },
@@ -397,6 +405,10 @@ export const router = createBrowserRouter([
             element: <PrepManagerQueueScreen />,
           },
           {
+            path: 'manager/queue/client/:taxpayerId',
+            element: <PrepManagerClientYearsScreen />,
+          },
+          {
             path: 'manager/staff',
             element: <PrepStaffScorecardsScreen />,
           },
@@ -418,6 +430,10 @@ export const router = createBrowserRouter([
             path: 'preparer/workspace/:id',
             element: <TaxPreparerWorkspaceScreen />,
           },
+          {
+            path: 'preparer/client/:taxpayerId',
+            element: <PreparerClientYearsScreen />,
+          },
           // QA Compliance Reviewer Routes
           {
             path: 'reviewer',
@@ -430,6 +446,10 @@ export const router = createBrowserRouter([
           {
             path: 'reviewer/audit/:id',
             element: <TaxReviewerAuditScreen />,
+          },
+          {
+            path: 'reviewer/client/:taxpayerId',
+            element: <ReviewerClientYearsScreen />,
           },
           {
             path: 'reviewer/workspace/:id',

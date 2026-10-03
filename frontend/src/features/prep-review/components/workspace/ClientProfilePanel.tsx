@@ -157,9 +157,9 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
   const isM2Provided = Boolean(m2.spouseFirstName || m2.spouseName || dependentsList.length > 0 || submittedModules.includes('m2'));
 
   // Real Data Extraction - Module 3
-  const days2025 = parseNum(m3.daysInUs2025);
-  const days2024 = parseNum(m3.daysInUs2024);
-  const days2023 = parseNum(m3.daysInUs2023);
+  const days2025 = parseNum(m3.days2025 ?? m3.daysInUs2025);
+  const days2024 = parseNum(m3.days2024 ?? m3.daysInUs2024);
+  const days2023 = parseNum(m3.days2023 ?? m3.daysInUs2023);
   const hasSptDays = days2025 !== null;
   const weightedDays = hasSptDays ? ((days2025 || 0) + ((days2024 || 0) / 3) + ((days2023 || 0) / 6)).toFixed(2) : null;
   const sptStatus = m3.residencyStatus || (weightedDays && Number(weightedDays) >= 183 ? 'Form 1040 Resident Alien' : (hasSptDays ? 'Form 1040-NR Non-Resident Alien' : 'Not Calculated / Pending Intake'));
@@ -222,50 +222,36 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
 
   return (
     <div className="space-y-4 font-sans">
-      {/* 1. Designated 4-Eyes Compliance Auditor */}
-      <div className="bg-gradient-to-br from-purple-50 via-white to-slate-50 p-4 sm:p-5 rounded-xl border border-purple-200 shadow-xs">
-        <div className="flex items-center gap-2 mb-3">
-          <ShieldCheck className="w-4 h-4 text-purple-600" />
-          <span className="text-xs font-bold text-purple-900 uppercase tracking-wider">
-            Designated 4-Eyes QA Auditor
-          </span>
+      {/* 1. QA Reviewer */}
+      <div className="bg-white px-4 py-3 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-xs text-slate-500">QA reviewer</div>
+          <div className="text-sm font-semibold text-slate-900 truncate">{reviewerName}</div>
+          <div className="text-xs text-slate-500 truncate">{reviewerEmail}</div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-sm shadow-xs">
-            {reviewerName !== '-' ? reviewerName.charAt(0).toUpperCase() : 'Q'}
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-bold text-slate-900 truncate">{reviewerName}</div>
-            <div className="text-xs text-slate-500 font-medium truncate">{reviewerEmail}</div>
-          </div>
-        </div>
-        <div className="mt-3 pt-3 border-t border-purple-100 flex items-center justify-between text-[11px] text-purple-700 font-medium">
-          <span>Compliance Reviewer</span>
-          <span className="font-bold">4-Eyes Sign-Off Authority</span>
-        </div>
+        <ShieldCheck className="w-4 h-4 text-slate-400 shrink-0" />
       </div>
 
       {/* 2. Source Documents Vault */}
-      <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs space-y-3">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
-            <FileText className="w-3.5 h-3.5 text-[#16A34A]" />
-            <span>Verified Source Documents</span>
+      <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-slate-900">Source documents</div>
+            <div className="text-xs text-slate-500">
+              {documents.filter((d) => d.verificationStatus === 'VERIFIED').length} of {documents.length} verified
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#16A34A] border border-emerald-200">
-              {documents.filter((d) => d.verificationStatus === 'VERIFIED').length}/{documents.length} Verified
-            </span>
             {onOpenRequestDocsModal && (
               <Button
                 size="sm"
                 variant="outline"
                 type="button"
                 onClick={onOpenRequestDocsModal}
-                className="h-6 px-2 text-[10px] font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-200 flex items-center gap-1 shadow-2xs cursor-pointer rounded-md"
+                className="h-7 px-2.5 text-xs font-medium flex items-center gap-1 cursor-pointer"
                 title="Send notification & email to client and document agent requesting missing documents"
               >
-                <Bell className="w-3 h-3 text-purple-600" />
+                <Bell className="w-3 h-3" />
                 <span>Request Docs</span>
               </Button>
             )}
@@ -282,19 +268,13 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
               <div
                 key={doc.id}
                 onClick={() => onPreviewDoc(doc)}
-                className="group p-2.5 rounded-lg border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-blue-300 hover:shadow-2xs transition-all cursor-pointer flex items-center justify-between gap-3"
+                className="group px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100 group-hover:scale-105 transition-transform">
-                    <FileText className="w-3.5 h-3.5" />
-                  </div>
+                  <FileText className="w-4 h-4 text-slate-400 shrink-0" />
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
-                      {doc.fileName || doc.category || '-'}
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-medium">
-                      Category: <strong className="text-slate-600">{doc.category || '-'}</strong>
-                    </div>
+                    <div className="text-sm font-medium text-slate-900 truncate">{doc.fileName || doc.category || '-'}</div>
+                    <div className="text-xs text-slate-500">{(doc.category || '-').replace(/_/g, ' ')}</div>
                   </div>
                 </div>
 
@@ -303,19 +283,17 @@ export const ClientProfilePanel: React.FC<ClientProfilePanelProps> = ({
                     type="button"
                     title="Open document in new browser tab"
                     onClick={(e) => handleDirectOpenNewTab(e, doc)}
-                    className="p-1 rounded-md hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+                    className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
 
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                      doc.verificationStatus === 'VERIFIED'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-800'
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      doc.verificationStatus === 'VERIFIED' ? 'bg-emerald-50 text-[#15803D]' : 'bg-slate-100 text-slate-600'
                     }`}
                   >
-                    {doc.verificationStatus || 'PENDING'}
+                    {doc.verificationStatus === 'VERIFIED' ? 'Verified' : 'Pending'}
                   </span>
                 </div>
               </div>

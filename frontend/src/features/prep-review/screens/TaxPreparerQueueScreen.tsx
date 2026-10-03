@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Calculator, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { useTaxPreparerQueue } from '../hooks/useTaxPreparerQueue';
@@ -7,9 +6,10 @@ import { PreparerFilterBar } from '../components/preparer/PreparerFilterBar';
 import { PreparerQueueTable } from '../components/preparer/PreparerQueueTable';
 
 export const TaxPreparerQueueScreen: React.FC = () => {
-  const navigate = useNavigate();
   const {
     filteredReturns,
+    clientRows,
+    handleOpenClient,
     counts,
     isLoading,
     activeTab,
@@ -24,9 +24,6 @@ export const TaxPreparerQueueScreen: React.FC = () => {
     handleOpenNextReturn,
   } = useTaxPreparerQueue();
 
-  const handleOpenWorkspace = (applicationId: string) => {
-    navigate(`/prep-review/preparer/workspace/${applicationId}`);
-  };
 
   return (
     <div className="space-y-6 pb-12 font-sans">
@@ -67,9 +64,9 @@ export const TaxPreparerQueueScreen: React.FC = () => {
 
       {/* 4. Queue Table Card (100% Real API Data) */}
       <PreparerQueueTable
-        returns={filteredReturns}
+        returns={clientRows}
         isLoading={isLoading}
-        onOpenWorkspace={handleOpenWorkspace}
+        onOpenWorkspace={handleOpenClient}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />

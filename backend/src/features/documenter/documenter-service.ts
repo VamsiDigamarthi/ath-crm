@@ -189,6 +189,7 @@ export class DocumenterService {
             role: true,
           },
         },
+        _count: { select: { documents: true } },
         createdAt: true,
         updatedAt: true,
       },
@@ -214,6 +215,7 @@ export class DocumenterService {
             assignedDocAgent: app.assignedDocAgent,
             taxDraftSummary: (app as any).taxDraftSummary || null,
             quotes: (app as any).quotes || [],
+            _count: { documents: (app as any).documents?.length ?? 0 },
             createdAt: app.createdAt,
             updatedAt: app.updatedAt,
           });
@@ -321,6 +323,15 @@ export class DocumenterService {
         currentStage: a.currentStage,
         assignedDocAgentId: a.assignedDocAgentId,
         assignedDocAgent: a.assignedDocAgent,
+        documentsCount: (a as any)._count?.documents ?? 0,
+        estimatedRefund: (() => {
+          const d = (a.taxDraftSummary as any) || {};
+          return Number(d.fedRefund ?? d.federalRefund ?? d.federalTaxRefund ?? 0) + Number(d.stateRefund ?? d.stateTaxRefund ?? 0);
+        })(),
+        dueAmount: (() => {
+          const d = (a.taxDraftSummary as any) || {};
+          return Number(d.balanceDue ?? d.federalBalanceDue ?? 0) + Number(d.stateBalanceDue ?? 0);
+        })(),
         createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
         updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : a.updatedAt,
       })),
@@ -3260,4 +3271,44 @@ export class DocumenterService {
       },
     };
   }
+
+  /**
+   * Change the tax year of an application that is still in documenter calling.
+   * Blocked when the customer already has an application for the target year.
+   */
+  public static async changeTaxYear(applicationId: string, taxYear: number, userId: string) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      select: { id: true, customerId: true, taxYear: true, currentStage: true },
+    });
+    if (!app) throw new NotFoundError('Tax application not found');
+    if (app.taxYear === taxYear) return { id: app.id, taxYear };
+
+    const editableStages: ApplicationStage[] = [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH];
+    if (!editableStages.includes(app.currentStage)) {
+      throw new BadRequestError('Tax year can only be changed before the return moves to tax preparation');
+    }
+
+    const clash = await prisma.taxApplication.findFirst({
+      where: { customerId: app.customerId, taxYear, id: { not: app.id } },
+      select: { id: true },
+    });
+    if (clash) throw new BadRequestError(`This taxpayer already has a TY ${taxYear} tax application`);
+
+    await prisma.$transaction([
+      prisma.taxApplication.update({ where: { id: app.id }, data: { taxYear } }),
+      prisma.stageHistory.create({
+        data: {
+          applicationId: app.id,
+          fromStage: app.currentStage,
+          toStage: app.currentStage,
+          movedByUserId: userId,
+          remarks: `Tax year changed from TY ${app.taxYear} to TY ${taxYear}`,
+        },
+      }),
+    ]);
+
+    return { id: app.id, taxYear };
+  }
+
 }

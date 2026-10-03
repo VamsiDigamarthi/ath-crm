@@ -19,7 +19,10 @@ import {
   requestMissingDocuments,
   startFiling,
   getAuditLogsFeed,
+  changeTaxYear,
 } from './documenter-controller.js';
+import { changeTaxYearSchema } from './documenter-validator.js';
+import { validateRequest } from '../../middlewares/validate-request.js';
 import {
   getSelfSignups,
   assignSelfSignupsBulk,
@@ -96,6 +99,14 @@ router.post(
   requireAuth,
   authorize(...MANAGER_ASSIGN_ROLES),
   assignLeadsBulk
+);
+
+router.patch(
+  '/leads/:id/tax-year',
+  requireAuth,
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.DOC_AGENT),
+  validateRequest(changeTaxYearSchema),
+  changeTaxYear
 );
 
 // 4. 1-Click Auto Round-Robin (Admin, Manager, Team Lead)

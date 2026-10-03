@@ -1,0 +1,21 @@
+model TaxApplicationItem {
+  id            String         @id @default(uuid())
+  applicationId String
+  application   TaxApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name          String
+  description   String?
+  unit          String
+  taxType       ProductTaxType
+  catalogPrice  Decimal        @db.Decimal(10, 2)
+  unitPrice     Decimal        @db.Decimal(10, 2)
+  quantity      Int            @default(1)
+  addedById     String?
+  addedBy       User?          @relation("AddedReturnItems", fields: [addedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([applicationId])
+  @@index([productId])
+}

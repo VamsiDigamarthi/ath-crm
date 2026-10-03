@@ -416,6 +416,10 @@ export const DemographicsTaxpayerSection: React.FC<DemographicsTaxpayerSectionPr
                 handleFieldChange('dateOfMarriage', '');
                 if (clearError) clearError('dateOfMarriage');
               }
+              if (selectedMarital !== 'Widowed') {
+                handleFieldChange('spouseDateOfDeath', '');
+                if (clearError) clearError('spouseDateOfDeath');
+              }
             }}
             placeholder="Select Marital Status"
           />
@@ -432,6 +436,44 @@ export const DemographicsTaxpayerSection: React.FC<DemographicsTaxpayerSectionPr
             onChange={(dateVal) => handleFieldChange('dateOfMarriage', formatUsDate(dateVal))}
           />
         </div>
+
+        {d.maritalStatus === 'Widowed' && (() => {
+          const deathDate = parseUsDate(d.spouseDateOfDeath);
+          const deathYear = deathDate && !isNaN(deathDate.getTime()) ? deathDate.getFullYear() : null;
+          const isQssEligible = deathYear !== null && (deathYear === selectedTaxYear - 1 || deathYear === selectedTaxYear - 2);
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <AppDatePicker
+                label="Spouse's Date of Death (MM/DD/YYYY) *"
+                placeholder="MM/DD/YYYY"
+                format="MM/dd/yyyy"
+                accentColor="#16A34A"
+                maxDate={new Date()}
+                error={errors.spouseDateOfDeath}
+                value={deathDate}
+                onChange={(dateVal) => {
+                  handleFieldChange('spouseDateOfDeath', formatUsDate(dateVal));
+                  if (clearError) clearError('spouseDateOfDeath');
+                }}
+              />
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-xs text-slate-600 self-end">
+                <div className="font-semibold text-slate-800 mb-0.5">QSS eligibility</div>
+                {deathYear === null ? (
+                  <span>
+                    Qualifying Surviving Spouse applies for TY {selectedTaxYear} if your spouse died in {selectedTaxYear - 2} or{' '}
+                    {selectedTaxYear - 1} and you have a dependent child.
+                  </span>
+                ) : isQssEligible ? (
+                  <span className="text-[#15803D]">Spouse died in {deathYear}: eligible to file as QSS for TY {selectedTaxYear} (with a dependent child).</span>
+                ) : (
+                  <span className="text-amber-700">
+                    Spouse died in {deathYear}: QSS is not available for TY {selectedTaxYear}. Your preparer will confirm the right filing status.
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Spouse Error Alert if Married and missing fields */}
         {errors.spouse_general && isMarried && (

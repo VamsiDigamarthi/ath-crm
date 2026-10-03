@@ -92,7 +92,7 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden font-sans">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden font-sans">
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
@@ -107,37 +107,21 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
       />
 
       {/* Card Header */}
-      <div className="p-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
-            <FileSpreadsheet className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h4 className="font-bold text-xs sm:text-sm text-white tracking-tight">
-                Drake Tax Software Return File
-              </h4>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                Drake Engine
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300 mt-0.5">
-              Official Form 1040 computation &amp; return export generated from Drake Tax.
-            </p>
-          </div>
+      <div className="px-4 py-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold text-slate-900">Drake return file</h4>
+          <p className="text-xs text-slate-500 mt-0.5">Form 1040 computation exported from Drake Tax.</p>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-          <span className="text-[10px] font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
-            .PDF • .D25 • .XML • .ZIP
-          </span>
+          <span className="text-xs text-slate-400">PDF · D25 · XML · ZIP</span>
           {!isReadOnly && drakeTaxFile && (
             <Button
               size="sm"
               variant="outline"
               disabled={isUploading}
               onClick={() => fileInputRef.current?.click()}
-              className="bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200 text-[11px] font-bold h-7 px-2.5 flex items-center gap-1 cursor-pointer"
+              className="text-xs font-medium h-7 px-2.5 flex items-center gap-1 cursor-pointer"
               title="Replace current Drake Tax calculation file"
             >
               <RefreshCw className={`w-3 h-3 ${isUploading ? 'animate-spin' : ''}`} />

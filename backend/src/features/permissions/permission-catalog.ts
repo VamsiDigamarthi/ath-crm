@@ -14,7 +14,7 @@ export const PERMISSION_CATALOG: PermissionDefinition[] = [
     label: "Edit item prices on returns",
     description: "Allows changing the price of a product or service on a tax return. The admin catalog price is never changed.",
     module: "Tax Preparation",
-    roles: [Role.TAX_PREPARER],
+    roles: [Role.TAX_PREPARER, Role.TAX_REVIEWER],
   },
 ];
 

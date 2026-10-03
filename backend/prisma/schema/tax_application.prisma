@@ -59,6 +59,7 @@ model TaxApplication {
   notifications  Notification[]
   sentEmails     SentEmail[]
   couponUsages   CouponUsage[]
+  items          TaxApplicationItem[]
 
   @@unique([customerId, taxYear])
   @@index([currentStage])

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Mail, Sparkles, Bell, Paperclip, Download, FileText, Calendar } from 'lucide-react';
+import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Sparkles, Bell, Paperclip, Download, FileText } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
@@ -8,15 +8,18 @@ import { AppModal } from '@/shared/components/AppModal';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { useTaxPreparerWorkspace } from '../hooks/useTaxPreparerWorkspace';
-import { ClientProfilePanel } from '../components/workspace/ClientProfilePanel';
-import { Tax1040FormEngine } from '../components/workspace/Tax1040FormEngine';
-import { DrakeTaxUploadCard } from '../components/workspace/DrakeTaxUploadCard';
 import { DocumentPreviewModal } from '../components/workspace/DocumentPreviewModal';
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
 import { RequestMissingDocumentsModal } from '@/features/documenter/components/prep/RequestMissingDocumentsModal';
 import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
+import { AppTextarea } from '@/shared/components/AppTextarea';
+import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
+import { ReturnItemsSummary } from '../components/workspace/ReturnItemsSummary';
+import { DrakeTaxUploadCard } from '../components/workspace/DrakeTaxUploadCard';
 
 export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -24,6 +27,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
   const [isRequestDocsModalOpen, setIsRequestDocsModalOpen] = useState(false);
+  const [isAuditCollapsed, setIsAuditCollapsed] = useState(true);
   const {
     isLoading,
     isSaving,
@@ -36,36 +40,16 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     priority,
     taxpayer,
     assignedReviewer,
-    documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
-    availableApplications,
     drakeTaxFile,
     isUploadingDrakeFile,
     handleUploadDrakeFile,
     handleDeleteDrakeFile,
+    availableApplications,
     taxDraftSummary,
-    w2Wages,
-    setW2Wages,
-    taxableInterest,
-    setTaxableInterest,
-    capitalGains,
-    setCapitalGains,
-    otherIncome,
-    setOtherIncome,
-    deductionType,
-    setDeductionType,
-    itemizedDeduction,
-    setItemizedDeduction,
-    taxCredits,
-    setTaxCredits,
-    fedWithheld,
-    setFedWithheld,
-    stateWithheld,
-    setStateWithheld,
     preparerNotes,
     setPreparerNotes,
-    standardDeductionAmount,
     calculations,
     isSubmittedToQA,
     isRevisionRequested,
@@ -84,6 +68,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     handleSubmitForQA,
   } = useTaxPreparerWorkspace();
 
+  /* Used by the previous split workspace layout
   const handleApplyFieldValue = (field: string, value: number) => {
     if (field === 'w2Wages') setW2Wages(value);
     else if (field === 'taxableInterest') setTaxableInterest(value);
@@ -97,6 +82,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     }
     toast.success(`Applied $${value.toLocaleString()} directly to Form 1040! 📝✓`);
   };
+  */
 
   const handleOpenRevertDoc = async (doc: { id?: string; fileName: string; filePath?: string; fileUrl?: string }) => {
     if (doc.fileUrl && (doc.fileUrl.startsWith('http://') || doc.fileUrl.startsWith('https://'))) {
@@ -144,76 +130,45 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* 1. Header Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/prep-review/preparer')}
-            className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1 mb-1.5 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
+            title="Back to queue"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Queue</span>
+            <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900">
-              {taxpayerName}
-            </h1>
-            <ClientPaymentStatusChip lead={{ ...taxDraftSummary, currentStage, taxDraftSummary, taxYear }} scope="return" size="sm" />
-            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700">
-              TY {taxYear} Form 1040
-            </span>
-            <PriorityBadge priority={priority || 'NO_PRIORITY'} size="sm" />
-            {isSubmittedToQA ? (
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-purple-600" />
-                <span>In QA Review</span>
-              </span>
-            ) : isRevertedToSales ? (
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1">
-                <RotateCcw className="w-3 h-3 text-blue-600" />
-                <span>With Sales Closer</span>
-              </span>
-            ) : isRevertedToDocs ? (
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                <RotateCcw className="w-3 h-3 text-amber-600" />
-                <span>Reverted to Documenter</span>
-              </span>
-            ) : isRevisionRequested ? (
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
-                <RotateCcw className="w-3 h-3 text-rose-600" />
-                <span>Revision Requested</span>
-              </span>
-            ) : (
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                Drafting 1040
-              </span>
-            )}
+          <div className="flex items-center gap-1.5 text-sm text-slate-500">
+            <span>Preparer Queue</span>
+            <span className="text-slate-300">/</span>
+            <span className="text-slate-900 font-medium">Taxpayer Profile</span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            SSN: {taxpayerSSN} • {taxpayerFilingStatus} • {taxpayerLocation}
-          </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          {/* Email client button (hidden)
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsEmailModalOpen(true)}
-            className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            className="text-xs font-medium flex items-center gap-1.5 cursor-pointer"
             title="Compose and send official email to client"
           >
-            <Mail className="w-3.5 h-3.5 text-blue-600" />
-            <span>Email Client</span>
+            <Mail className="w-3.5 h-3.5" />
+            <span>Email client</span>
           </Button>
+          */}
 
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsRequestDocsModalOpen(true)}
-            className="border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            className="text-xs font-medium flex items-center gap-1.5 cursor-pointer"
             title="Request missing documents from client & notify assigned document agent"
           >
-            <Bell className="w-3.5 h-3.5 text-purple-600" />
-            <span>Request Missing Docs</span>
+            <Bell className="w-3.5 h-3.5" />
+            <span>Request docs</span>
           </Button>
 
           {(() => {
@@ -229,7 +184,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
               ? 'In IRS Filing'
               : isSubmittedToQA
               ? 'In QA Review'
-              : 'Send Back to Documenter';
+              : 'Send back';
 
             const sendBackTitle = isRevertedToDocs
               ? 'Return is currently with Documenter department awaiting intake documents'
@@ -247,14 +202,12 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
                 size="sm"
                 onClick={() => setIsSendBackOpen(true)}
                 disabled={isSendBackDisabled}
-                className={`text-xs font-bold flex items-center gap-1.5 shadow-2xs ${
-                  isSendBackDisabled
-                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-75 shadow-none'
-                    : 'border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 cursor-pointer'
+                className={`text-xs font-medium flex items-center gap-1.5 ${
+                  isSendBackDisabled ? 'text-slate-400 cursor-not-allowed' : 'cursor-pointer'
                 }`}
                 title={sendBackTitle}
               >
-                <RotateCcw className={`w-3.5 h-3.5 ${isSendBackDisabled ? 'text-slate-400' : 'text-amber-600'}`} />
+                <RotateCcw className="w-3.5 h-3.5" />
                 <span>{sendBackLabel}</span>
               </Button>
             );
@@ -285,7 +238,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
           </Button>
 
           {isSubmittedToQA ? (
-            <Button size="sm" disabled className="bg-purple-50 text-purple-700 border-purple-200 text-xs font-semibold cursor-not-allowed">
+            <Button size="sm" disabled className="bg-slate-100 text-slate-500 border border-slate-200 text-xs font-semibold cursor-not-allowed">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Submitted for QA</span>
             </Button>
@@ -324,7 +277,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
               size="sm"
               onClick={() => setIsConfirmOpen(true)}
               disabled={isSubmitting}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold cursor-pointer shadow-2xs"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold cursor-pointer"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Submit for QA</span>
@@ -333,75 +286,117 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 1.2 Multi-Year Return Switcher Tabs */}
-      {availableApplications && availableApplications.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
-              <Calendar className="w-4 h-4 text-emerald-600" />
-              <span>Tax Year Filings:</span>
+      {/* 1.2 Profile Card */}
+      <div className="bg-white rounded-xl border border-slate-200">
+        <div className="p-5 flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">{taxpayerName}</h2>
+              <ClientPaymentStatusChip lead={{ ...taxDraftSummary, currentStage, taxDraftSummary, taxYear }} scope="return" size="sm" />
+              <PriorityBadge priority={priority || 'NO_PRIORITY'} size="sm" />
+              <span
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                  isSubmittedToQA || isRevertedToSales || isRevertedToDocs
+                    ? 'bg-slate-100 text-slate-700'
+                    : isRevisionRequested
+                    ? 'bg-rose-50 text-rose-700'
+                    : 'bg-emerald-50 text-[#15803D]'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    isSubmittedToQA || isRevertedToSales || isRevertedToDocs
+                      ? 'bg-slate-400'
+                      : isRevisionRequested
+                      ? 'bg-rose-500'
+                      : 'bg-[#16A34A]'
+                  }`}
+                />
+                {isSubmittedToQA
+                  ? 'In QA review'
+                  : isRevertedToSales
+                  ? 'With sales closer'
+                  : isRevertedToDocs
+                  ? 'Reverted to documenter'
+                  : isRevisionRequested
+                  ? 'Revision requested'
+                  : 'Drafting'}
+              </span>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {availableApplications.map((appItem: any) => {
-                const isSelected = appItem.id === applicationId;
-                return (
-                  <button
-                    key={appItem.id}
-                    type="button"
-                    onClick={() => {
-                      if (appItem.id !== applicationId) {
-                        navigate(`/prep-review/preparer/workspace/${appItem.id}`);
-                      }
-                    }}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
-                      isSelected
-                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
-                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <span>TY {appItem.taxYear}</span>
-                    <span className="text-[10px] font-medium opacity-80">
-                      ({appItem.filingType || 'INDIVIDUAL'})
-                    </span>
-                    <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-slate-300'}`} />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 1.3 Documenter Intake Handover Notes Banner */}
-      {documenterNotes && !isRevertedToDocs && (
-        <div className="bg-emerald-50/90 border border-emerald-200 rounded-xl p-4 flex items-start gap-3.5 text-emerald-950 shadow-2xs animate-in fade-in duration-200">
-          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-[#16A34A] flex items-center justify-center shrink-0 border border-emerald-200 mt-0.5">
-            <FileSpreadsheet className="w-4 h-4 text-[#16A34A]" />
-          </div>
-          <div className="space-y-1.5 flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-emerald-950">
-                <span>Documenter Intake Handover Notes</span>
-                {documenterNotesBy && (
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-200/70 text-emerald-900 text-[10px] font-bold">
-                    from {documenterNotesBy}
-                  </span>
-                )}
-              </div>
-              {documenterNotesAt && (
-                <span className="text-[11px] text-emerald-700 font-medium">
-                  {new Date(documenterNotesAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                </span>
-              )}
-            </div>
-            <p className="text-xs font-medium text-slate-800 leading-relaxed bg-white/95 p-3 rounded-lg border border-emerald-200/80 shadow-2xs">
-              "{documenterNotes}"
+            <p className="text-sm text-slate-500 mt-1.5">
+              {[`Form 1040`, taxpayerFilingStatus, taxpayer?.visaType].filter(Boolean).join(' · ')}
             </p>
           </div>
+
+          <div className="text-sm lg:text-right shrink-0">
+            <div className="text-xs text-slate-500">QA reviewer</div>
+            <div className="font-medium text-slate-900 mt-0.5">{assignedReviewer?.name || 'Unassigned'}</div>
+          </div>
+        </div>
+
+        {availableApplications && availableApplications.length > 0 && (
+          <div className="px-5 pb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-500 mr-1">Tax year</span>
+            {availableApplications.map((appItem: any) => {
+              const isSelected = appItem.id === applicationId;
+              return (
+                <button
+                  key={appItem.id}
+                  type="button"
+                  onClick={() => {
+                    if (appItem.id !== applicationId) navigate(`/prep-review/preparer/workspace/${appItem.id}`);
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs border transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'border-[#16A34A] bg-emerald-50 text-[#15803D] font-semibold'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  TY {appItem.taxYear}
+                  <span className="text-slate-400 font-normal"> · {(appItem.filingType || 'INDIVIDUAL').toLowerCase()}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-slate-100 divide-y sm:divide-y-0 lg:divide-x divide-slate-100">
+          {[
+            { label: 'Phone', value: taxpayer?.phone || '—', copy: taxpayer?.phone },
+            { label: 'Email', value: taxpayer?.email || '—', copy: taxpayer?.email },
+            { label: 'Location', value: taxpayerLocation, copy: null },
+            { label: 'SSN / ITIN', value: taxpayerSSN, copy: null },
+          ].map((item) => (
+            <div key={item.label} className="px-5 py-3 flex items-center justify-between gap-2 min-w-0">
+              <div className="min-w-0">
+                <div className="text-xs text-slate-500">{item.label}</div>
+                <div className="text-sm font-medium text-slate-900 truncate" title={item.value}>
+                  {item.value}
+                </div>
+              </div>
+              {item.copy && <AppCopyButton text={item.copy} size="sm" />}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 1.3 Documenter Intake Handover Notes */}
+      {documenterNotes && !isRevertedToDocs && (
+        <div className="bg-white border border-slate-200 rounded-xl px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm font-semibold text-slate-900">
+              Handover notes from documenter
+              {documenterNotesBy && <span className="font-normal text-slate-500"> · {documenterNotesBy}</span>}
+            </div>
+            {documenterNotesAt && (
+              <span className="text-xs text-slate-400">
+                {new Date(documenterNotesAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-slate-700 mt-1.5 leading-relaxed">{documenterNotes}</p>
         </div>
       )}
-
-
 
       {/* 1.5 Revision Request Alert Banner (from Sales, Filing, or Senior QA - strictly for PREPARATION target) */}
       {isRevisionRequested && (!lastRevertInfo || lastRevertInfo?.targetDepartment === 'PREPARATION') && (
@@ -564,7 +559,83 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
         )
       )}
 
-      {/* 2. Split Workspace Layout */}
+      {/* 2. Tax Info (view only) + Review & Notes */}
+      <TaxPrepOrganizerReview
+        leadId={applicationId}
+        customerName={taxpayerName}
+        taxDraftSummary={taxDraftSummary}
+        taxYear={taxYear}
+        filingType={(taxDraftSummary as any)?.filingType}
+        allowEdit={false}
+        readOnly
+        hideHeader
+        extraTabs={[
+          {
+            id: 'SERVICES',
+            label: 'Services & Pricing',
+            content: (
+              <div className="space-y-4">
+                <ReturnItemsPanel
+                  applicationId={applicationId}
+                  readOnly={
+                    isSubmittedToQA ||
+                    isRevertedToDocs ||
+                    isRevertedToSales ||
+                    currentStage.startsWith('FILING') ||
+                    currentStage === 'QA_APPROVED'
+                  }
+                />
+                <DrakeTaxUploadCard
+                  drakeTaxFile={drakeTaxFile}
+                  isUploading={isUploadingDrakeFile}
+                  isReadOnly={
+                    isSubmittedToQA ||
+                    isRevertedToDocs ||
+                    isRevertedToSales ||
+                    currentStage === 'QA_APPROVED' ||
+                    currentStage.startsWith('FILING') ||
+                    currentStage === 'PAID_AND_AUTHORIZED'
+                  }
+                  onUpload={handleUploadDrakeFile}
+                  onDelete={handleDeleteDrakeFile}
+                  onPreview={setSelectedDocForPreview}
+                />
+              </div>
+            ),
+          },
+          {
+            id: 'REVIEW_NOTES',
+            label: 'Review & Notes',
+            content: (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                <div className="bg-white px-4 py-3 rounded-xl border border-slate-200">
+                  <div className="text-xs text-slate-500">QA reviewer</div>
+                  <div className="text-sm font-semibold text-slate-900 mt-0.5">{assignedReviewer?.name || 'Unassigned'}</div>
+                  <div className="text-xs text-slate-500">{assignedReviewer?.email || '—'}</div>
+                </div>
+                <div className="lg:col-span-2 bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">Preparer notes for QA</div>
+                    <div className="text-xs text-slate-500">Saved with Save Draft and shared with the QA reviewer.</div>
+                  </div>
+                  <AppTextarea
+                    value={preparerNotes}
+                    onChange={setPreparerNotes}
+                    rows={6}
+                    maxLength={5000}
+                    showCount
+                    disabled={isSubmittedToQA || isRevertedToDocs}
+                    placeholder="e.g. Verified W-2 box 1 vs box 16, checked dual-state apportionment..."
+                  />
+                </div>
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      {/* Previous split workspace layout (kept for reference)
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           <ClientProfilePanel
@@ -619,8 +690,25 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
           />
         </div>
       </div>
+      */}
 
-      {/* 2.5 Complete Lead Audit Trail & Lifecycle Activity Stream */}
+      {/* 2.5 Collapsible Audit Trail */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setIsAuditCollapsed((prev) => !prev)}
+          className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left hover:bg-slate-50 transition-colors cursor-pointer"
+        >
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-slate-900">Audit trail</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Stage handoffs, calls and updates for TY {taxYear} · {(stageHistories?.length || 0) + (callLogs?.length || 0) + (auditLogs?.length || 0)} events
+            </p>
+          </div>
+          {isAuditCollapsed ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronUp className="w-4 h-4 text-slate-500" />}
+        </button>
+        {!isAuditCollapsed && (
+          <div className="p-4 sm:p-5 border-t border-slate-100">
       <LeadAuditTrailSection
         leadId={applicationId}
         taxpayerName={taxpayerName}
@@ -630,6 +718,9 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
         callLogs={callLogs}
         auditLogs={auditLogs}
       />
+          </div>
+        )}
+      </div>
 
       <DocumentPreviewModal
         document={selectedDocForPreview}
@@ -662,7 +753,10 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* Key Numbers Grid */}
+          {/* Services & pricing summary */}
+          <ReturnItemsSummary applicationId={applicationId} />
+
+          {/* Auto-calculated key numbers (kept for reference)
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-center">
               <div className="text-[10px] font-medium text-slate-500">Gross Income</div>
@@ -704,6 +798,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
               </div>
             </div>
           </div>
+          */}
 
           {/* Preparer Handover Notes */}
           <div>

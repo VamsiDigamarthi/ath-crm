@@ -52,6 +52,10 @@ export const documenterService = {
     return apiClient.get(`/documenter/leads/${id}`);
   },
 
+  async changeTaxYear(id: string, taxYear: number): Promise<{ success: boolean; data: { id: string; taxYear: number } }> {
+    return apiClient.patch(`/documenter/leads/${id}/tax-year`, { taxYear });
+  },
+
   /**
    * Fetch active documenter agents with live workload stats
    */

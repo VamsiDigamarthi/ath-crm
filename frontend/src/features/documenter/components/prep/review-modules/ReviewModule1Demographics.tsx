@@ -62,6 +62,14 @@ export const ReviewModule1Demographics: React.FC<ReviewModule1DemographicsProps>
               <span className="text-slate-400 font-medium block text-[10px]">Occupation</span>
               <span className="font-bold text-slate-900">{m1.occupation || 'Not Provided'}</span>
             </div>
+            <div>
+              <span className="text-slate-400 font-medium block text-[10px]">Mobile Phone</span>
+              <span className="font-bold text-slate-900">{m1.phone || 'Not Provided'}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 font-medium block text-[10px]">Email Address</span>
+              <span className="font-bold text-slate-900 break-all">{m1.email || 'Not Provided'}</span>
+            </div>
           </div>
         </div>
 
@@ -136,6 +144,12 @@ export const ReviewModule1Demographics: React.FC<ReviewModule1DemographicsProps>
               <div>
                 <span className="text-slate-400 font-medium block text-[10px]">Date of Marriage</span>
                 <span className="font-bold text-slate-900">{m1.dateOfMarriage || 'Not Provided'}</span>
+              </div>
+            )}
+            {m1.maritalStatus === 'Widowed' && (
+              <div>
+                <span className="text-slate-400 font-medium block text-[10px]">Spouse's Date of Death</span>
+                <span className="font-bold text-slate-900">{m1.spouseDateOfDeath || 'Not Provided'}</span>
               </div>
             )}
             <div>

@@ -55,7 +55,7 @@ export function useTaxReviewerAudit() {
     });
   };
 
-  const allChecksPassed = Object.values(checks).every(Boolean);
+  const allChecksPassed = Object.entries(checks).every(([key, value]) => key === 'checkFBAR' || value);
 
   // QA Auditor Remarks (Empty by default)
   const [auditorRemarks, setAuditorRemarks] = useState<string>('');

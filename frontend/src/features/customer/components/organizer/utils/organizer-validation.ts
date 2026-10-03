@@ -174,6 +174,25 @@ export const validateModule1 = (data?: OrganizerData['m1_demographics']): Valida
     }
   }
 
+  // 15b. Spouse Date of Death (required for Widowed / Qualifying Surviving Spouse)
+  if (marital === 'Widowed') {
+    if (!data.spouseDateOfDeath || !data.spouseDateOfDeath.trim()) {
+      errors.spouseDateOfDeath = "Spouse's date of death is required for Qualifying Surviving Spouse";
+    } else {
+      const deathDate = parseUsDate(data.spouseDateOfDeath);
+      if (!deathDate || isNaN(deathDate.getTime())) {
+        errors.spouseDateOfDeath = 'Please enter a valid date (MM/DD/YYYY)';
+      } else if (deathDate > today) {
+        errors.spouseDateOfDeath = 'Date of death cannot be a future date';
+      } else if (data.dateOfMarriage) {
+        const marriageDate = parseUsDate(data.dateOfMarriage);
+        if (marriageDate && deathDate < marriageDate) {
+          errors.spouseDateOfDeath = 'Date of death must be after the date of marriage';
+        }
+      }
+    }
+  }
+
   // 15. Visa Status Change Details (if changed)
   if (data.visaStatusChanged2025 === 'YES') {
     if (!data.previousVisaType || !data.previousVisaType.trim()) {

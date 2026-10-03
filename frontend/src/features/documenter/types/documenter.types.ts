@@ -99,6 +99,9 @@ export interface DocumenterLeadCustomer {
 export interface DocumenterTaxYearSummary {
   id: string;
   taxYear: number;
+  documentsCount?: number;
+  estimatedRefund?: number;
+  dueAmount?: number;
   filingType?: string;
   currentStage: string;
   irsStatus?: string;

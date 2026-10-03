@@ -64,6 +64,7 @@ export const m1DemographicsSchema = z.object({
     .optional(),
   maritalStatus: z.string().max(50).optional().default(''),
   dateOfMarriage: z.string().max(30).optional().default(''),
+  spouseDateOfDeath: z.string().trim().max(30).optional().default(''),
   residentialAddress: z.string().trim().max(255).optional().default(''),
   city: z.string().trim().max(100).optional().default(''),
   state: z.string().trim().max(10).optional().default(''),

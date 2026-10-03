@@ -36,7 +36,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
     () => [
       {
         id: 'taxpayer',
-        header: 'TAXPAYER',
+        header: 'Taxpayer',
         accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
         cell: ({ row }) => (
           <TaxpayerCell
@@ -47,7 +47,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
       },
       {
         id: 'taxYear',
-        header: 'TY',
+        header: 'Tax year',
         accessorFn: (row) => `TY ${row.taxYear || 2025}`,
         cell: ({ row }) => (
           <span className="text-xs font-medium text-slate-700">
@@ -57,7 +57,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
       },
       {
         id: 'state',
-        header: 'STATE',
+        header: 'State',
         accessorKey: 'stateOfResidence',
         cell: ({ row }) => (
           <span className="text-xs font-normal text-slate-700">
@@ -67,7 +67,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
       },
       {
         id: 'preparer',
-        header: 'PREPARER',
+        header: 'Preparer',
         accessorFn: (row) => row.assignedPreparer?.name || 'Unassigned',
         cell: ({ row }) => {
           const prep = row.original.assignedPreparer;
@@ -87,7 +87,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
       },
       {
         id: 'reviewer',
-        header: 'QA REVIEWER',
+        header: 'QA reviewer',
         accessorFn: (row) => row.assignedReviewer?.name || 'Unassigned',
         cell: ({ row }) => {
           const rev = row.original.assignedReviewer;
@@ -107,7 +107,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
       },
       {
         id: 'docs',
-        header: 'DOCS',
+        header: 'Docs',
         accessorFn: (row) => `${row.verifiedDocumentsCount || 0}/${row.documentsCount || 0}`,
         cell: ({ row }) => (
           <span className="text-xs font-normal text-slate-700">
@@ -117,7 +117,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
       },
       {
         id: 'stage',
-        header: 'STAGE',
+        header: 'Stage',
         accessorKey: 'currentStage',
         meta: {
           filterType: 'enum',
@@ -132,7 +132,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
       },
       {
         id: 'actions',
-        header: 'ACTION',
+        header: '',
         enableSorting: false,
         enableHiding: false,
         meta: {
@@ -144,23 +144,12 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
           return (
             <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onOpenAssignModal([lead])}
-                className="h-7 px-2 text-[11px] font-normal border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
-                title="Assign / Reassign Staff"
-              >
-                <UserCheck className="w-3 h-3 text-slate-500" />
-                <span>{lead.assignedPreparer ? 'Reassign' : 'Assign'}</span>
-              </Button>
-
-              <Button
                 size="sm"
                 onClick={() => onViewLeadDetail(lead)}
-                className="h-7 px-2 text-[11px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
+                className="h-7 px-2.5 text-[11px] font-semibold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1 cursor-pointer"
               >
                 <Eye className="w-3 h-3" />
-                <span>Inspect</span>
+                <span>View</span>
               </Button>
             </div>
           );
@@ -212,8 +201,6 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
       <UnifiedTable<PrepReviewLead>
         columns={columns}
         data={leads}
-        title="TAX PREPARATION & QA SUPERVISION"
-        subtitle="Oversee preparer caseload allocations, audit deck throughput, and 4-Eyes sign-off pipeline."
         isLoading={isLoading}
         enableSelection={true}
         selectedRows={selectedRows}

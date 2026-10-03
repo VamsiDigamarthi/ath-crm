@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { DocumenterService, DocumenterLeadQuery } from './documenter-service.js';
+import { SuccessHandler } from '../../utils/success-handler.js';
 
 export const getDocumenterLeads = async (
   req: Request,
@@ -552,4 +553,10 @@ export const getAuditLogsFeed = async (
   } catch (error) {
     next(error);
   }
+};
+
+export const changeTaxYear = async (req: Request, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+  const data = await DocumenterService.changeTaxYear(id, Number(req.body.taxYear), req.currentUser!.id);
+  SuccessHandler.handle(res, `Tax year updated to TY ${data.taxYear}`, data);
 };

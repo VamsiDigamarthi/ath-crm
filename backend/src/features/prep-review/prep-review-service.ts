@@ -2,6 +2,7 @@ import { prisma } from '../../config/db.js';
 import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType } from '@prisma/client';
 import { StorageService } from '../../utils/storage-service.js';
 import { NotFoundError } from '../../errors/not-found-error.js';
+import { BadRequestError } from '../../errors/bad-request-error.js';
 
 export class PrepReviewService {
   /**
@@ -294,10 +295,10 @@ export class PrepReviewService {
       return true;
     });
 
-    // Group filtered applications by customerId so each customer appears as 1 unique row
+    // One row per tax return so each year keeps its own preparer, reviewer and stage
     const customerGroupsMap = new Map<string, typeof filteredApps[0][]>();
     for (const app of filteredApps) {
-      const cId = app.customerId;
+      const cId = app.id;
       if (!customerGroupsMap.has(cId)) {
         customerGroupsMap.set(cId, []);
       }
@@ -1104,6 +1105,11 @@ export class PrepReviewService {
       throw new NotFoundError('Tax application not found');
     }
 
+    const lockedDraftStatus = (app.taxDraftSummary as any)?.status;
+    if (lockedDraftStatus === 'SUBMITTED_FOR_QA' || lockedDraftStatus === 'QA_APPROVED') {
+      throw new BadRequestError('The Drake file is locked while the return is with QA');
+    }
+
     const user = await prisma.user.findUnique({ where: { id: userId } });
     const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Tax Preparer';
 
@@ -1200,6 +1206,11 @@ export class PrepReviewService {
 
     if (!app) {
       throw new NotFoundError('Tax application not found');
+    }
+
+    const lockedDraftStatus = (app.taxDraftSummary as any)?.status;
+    if (lockedDraftStatus === 'SUBMITTED_FOR_QA' || lockedDraftStatus === 'QA_APPROVED') {
+      throw new BadRequestError('The Drake file is locked while the return is with QA');
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId } });

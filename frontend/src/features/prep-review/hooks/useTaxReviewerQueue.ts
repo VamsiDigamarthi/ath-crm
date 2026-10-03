@@ -137,8 +137,23 @@ export function useTaxReviewerQueue() {
     });
   }, [allLeads, activeTab, searchQuery]);
 
-  const handleOpenAudit = (leadId: string) => {
-    navigate(`/prep-review/reviewer/audit/${leadId}`);
+  const clientRows = useMemo(() => {
+    const seen = new Set<string>();
+    return filteredReturns.filter((l) => {
+      const key = l.taxpayerId || l.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [filteredReturns]);
+
+  const handleOpenAudit = (lead: PrepReviewLead) => {
+    const myYears = allLeads.filter((l) => l.taxpayerId && l.taxpayerId === lead.taxpayerId);
+    if (myYears.length > 1) {
+      navigate(`/prep-review/reviewer/client/${lead.taxpayerId}`);
+    } else {
+      navigate(`/prep-review/reviewer/audit/${lead.id || lead.applicationId}`);
+    }
   };
 
   const handleStartPriorityAudit = () => {
@@ -155,6 +170,7 @@ export function useTaxReviewerQueue() {
     counts,
     stats,
     filteredReturns,
+    clientRows,
     activeTab,
     setActiveTab,
     searchQuery,

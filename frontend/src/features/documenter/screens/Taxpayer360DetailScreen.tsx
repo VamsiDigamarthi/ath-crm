@@ -18,6 +18,8 @@ import apiClient from '@/lib/api-client';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { AppModal } from '@/shared/components/AppModal';
+import { AppSelect } from '@/shared/components/AppSelect';
+import { Pencil } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { renderStageBadge } from '../columns/documenter-columns';
@@ -31,6 +33,7 @@ import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { documenterService } from '../services/documenter-service';
 import type { DocumenterLeadItem, CallLogItem } from '../types/documenter.types';
 import toast from 'react-hot-toast';
+import { useChangeTaxYear } from '../hooks/useChangeTaxYear';
 
 export const Taxpayer360DetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -235,11 +238,22 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   );
 
   const availableApplications = (lead as any)?.availableApplications || (currentLead as any)?.availableApplications || [];
+  const openedFrom = new URLSearchParams(location.search).get('from') || (location.state as any)?.from;
+  const showYearSwitcher = openedFrom === 'queue' || openedFrom === 'agent_queue';
+  const callingYears = availableApplications.filter(
+    (a: any) => ['RAW_PROSPECT', 'DOC_OUTREACH'].includes(a.currentStage) || a.id === (lead?.id || id)
+  );
+
+  const canEditTaxYear =
+    !isReadOnly && ['RAW_PROSPECT', 'DOC_OUTREACH'].includes(currentLead.currentStage) && Boolean(lead?.id);
+  const taxYearEditor = useChangeTaxYear(lead?.id, currentLead.taxYear, availableApplications, async () => {
+    await fetchLeadDetails();
+    refreshData();
+  });
 
   const handleSwitchTaxYear = (targetAppId: string) => {
     if (targetAppId === (lead?.id || id)) return;
-    const searchStr = location.search || '';
-    navigate(`/documenter/agent/lead/${targetAppId}${searchStr}`, { state: location.state });
+    navigate(`/documenter/agent/lead/${targetAppId}${location.search || ''}`, { state: location.state });
   };
 
   return (
@@ -251,7 +265,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             onClick={() => {
               const fromQuery = new URLSearchParams(location.search).get('from') || (location.state as any)?.from;
               if (fromQuery === 'documents' || fromQuery === 'agent_documents') {
-                navigate('/documenter/agent/documents');
+                navigate(`/documenter/agent/documents/${currentLead.id}`);
               } else if (fromQuery === 'queue' || fromQuery === 'agent_queue') {
                 navigate('/documenter/agent/queue');
               } else if (fromQuery === 'callbacks' || fromQuery === 'agent_callbacks') {
@@ -270,7 +284,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-1.5 text-sm text-slate-500">
-            <span>{new URLSearchParams(location.search).get('from') === 'documents' || (location.state as any)?.from === 'documents' ? 'Document Vault' : 'Calling Workspace'}</span>
+            <span>{new URLSearchParams(location.search).get('from') === 'documents' || (location.state as any)?.from === 'documents' ? 'My Documents' : 'Calling Workspace'}</span>
             <span className="text-slate-300">/</span>
             <span className="text-slate-900 font-medium">Taxpayer Profile</span>
           </div>
@@ -455,10 +469,10 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           </div>
         </div>
 
-        {availableApplications && availableApplications.length > 0 && (
+        {showYearSwitcher && callingYears.length > 0 && (
           <div className="px-5 pb-4 flex flex-wrap items-center gap-2">
             <span className="text-xs text-slate-500 mr-1">Tax year</span>
-            {availableApplications.map((appItem: any) => {
+            {callingYears.map((appItem: any) => {
               const isSelected = appItem.id === (lead?.id || id);
               return (
                 <button
@@ -473,13 +487,20 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                   title={appItem.currentStage?.replace(/_/g, ' ')}
                 >
                   TY {appItem.taxYear}
-                  <span className="text-slate-400 font-normal">
-                    {' · '}
-                    {(appItem.filingType || 'INDIVIDUAL').toLowerCase()}
-                  </span>
+                  <span className="text-slate-400 font-normal"> · {(appItem.filingType || 'INDIVIDUAL').toLowerCase()}</span>
                 </button>
               );
             })}
+            {canEditTaxYear && (
+              <button
+                type="button"
+                onClick={taxYearEditor.open}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+                title="Change tax year"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         )}
 
@@ -626,6 +647,37 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Change Tax Year */}
+      <AppModal
+        isOpen={taxYearEditor.isOpen}
+        onClose={taxYearEditor.close}
+        title="Change tax year"
+        description={`Currently TY ${currentLead.taxYear}. Years that already have a return can't be selected.`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={taxYearEditor.close} disabled={taxYearEditor.isSaving}>
+              Cancel
+            </Button>
+            <Button
+              onClick={taxYearEditor.save}
+              disabled={taxYearEditor.isSaving || !taxYearEditor.selectedYear}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold"
+            >
+              {taxYearEditor.isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </>
+        }
+      >
+        <AppSelect
+          label="Tax year"
+          options={taxYearEditor.yearOptions}
+          value={taxYearEditor.selectedYear}
+          onChange={taxYearEditor.setSelectedYear}
+          placeholder="Select tax year"
+        />
+      </AppModal>
 
       {/* 6. Call Outreach Modal for Logging Conversations */}
       <CallOutreachModal

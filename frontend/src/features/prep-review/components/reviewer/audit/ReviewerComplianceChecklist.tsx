@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShieldCheck, CheckSquare, Square, FileText, CheckCircle2, Eye, ExternalLink } from 'lucide-react';
-import apiClient from '@/lib/api-client';
+import { ShieldCheck, CheckSquare, Square } from 'lucide-react';
+// import apiClient from '@/lib/api-client';
 import type { WorkspaceDocument } from '../../../hooks/useTaxPreparerWorkspace';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 
 interface ReviewerComplianceChecklistProps {
   documents: WorkspaceDocument[];
@@ -14,13 +14,12 @@ interface ReviewerComplianceChecklistProps {
 }
 
 export const ReviewerComplianceChecklist: React.FC<ReviewerComplianceChecklistProps> = ({
-  documents,
   checks,
   toggleCheck,
   onSelectAllChecks,
   allChecksPassed,
-  onPreviewDoc,
 }) => {
+  /* Used by the hidden source documents vault
   const handleDirectOpenNewTab = async (e: React.MouseEvent, doc: WorkspaceDocument) => {
     e.stopPropagation();
     const url = doc.fileUrl || (doc as any).filePath;
@@ -44,6 +43,7 @@ export const ReviewerComplianceChecklist: React.FC<ReviewerComplianceChecklistPr
       toast.error('Failed to open document in new tab', { id: 'audit-open' });
     }
   };
+  */
 
   const checklistItems = [
     { key: 'checkW2', title: 'W-2 Wages & Box 1 Match', desc: 'Verified W-2 box 1 against 1040 Line 1a total' },
@@ -76,7 +76,7 @@ export const ReviewerComplianceChecklist: React.FC<ReviewerComplianceChecklistPr
               </button>
             )}
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${allChecksPassed ? 'bg-emerald-50 text-[#16A34A] border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-              {allChecksPassed ? '6 of 6 Verified' : `${Object.values(checks).filter(Boolean).length} of 6 Checked`}
+              {allChecksPassed ? 'Required checks done' : `${Object.entries(checks).filter(([k, v]) => k !== 'checkFBAR' && v).length} of ${Object.keys(checks).filter((k) => k !== 'checkFBAR').length} required checked`}
             </span>
           </div>
         </div>
@@ -104,6 +104,7 @@ export const ReviewerComplianceChecklist: React.FC<ReviewerComplianceChecklistPr
                 <div>
                   <div className={`font-bold text-xs ${isChecked ? 'text-slate-900' : 'text-slate-700'}`}>
                     {item.title}
+                    {item.key === 'checkFBAR' && <span className="ml-1.5 font-normal text-slate-400">(Optional)</span>}
                   </div>
                   <div className="text-[11px] text-slate-400 font-medium">{item.desc}</div>
                 </div>
@@ -113,7 +114,8 @@ export const ReviewerComplianceChecklist: React.FC<ReviewerComplianceChecklistPr
         </div>
       </div>
 
-      {/* 2. Authenticated Source Documents Vault */}
+      {/* Source documents vault (hidden)
+      
       <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
@@ -180,6 +182,7 @@ export const ReviewerComplianceChecklist: React.FC<ReviewerComplianceChecklistPr
           </div>
         )}
       </div>
+      */}
     </div>
   );
 };

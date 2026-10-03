@@ -907,6 +907,7 @@ export class CustomerService {
         monthsStayedInUs2025: m1Saved.monthsStayedInUs2025 !== undefined ? m1Saved.monthsStayedInUs2025 : undefined,
         maritalStatus: m1Saved.maritalStatus || (profile.maritalStatus === 'Married' ? 'Married Filing Jointly' : (profile.maritalStatus || '')),
         dateOfMarriage: m1Saved.dateOfMarriage || '',
+        spouseDateOfDeath: m1Saved.spouseDateOfDeath || '',
         residentialAddress: m1Saved.residentialAddress || profile.addressLine1 || '',
         city: m1Saved.city || profile.city || '',
         state: m1Saved.state || profile.state || '',

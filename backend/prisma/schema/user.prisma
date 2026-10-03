@@ -52,6 +52,7 @@ model User {
   createdProducts Product[] @relation("CreatedProducts")
   permissions       UserPermission[] @relation("UserPermissions")
   grantedPermissions UserPermission[] @relation("GrantedPermissions")
+  addedReturnItems  TaxApplicationItem[] @relation("AddedReturnItems")
 
   @@index([email])
   @@index([mobile])

@@ -246,6 +246,7 @@ export interface OrganizerData {
     visaStatusChangeReason?: string;
     maritalStatus: string;
     dateOfMarriage?: string;
+    spouseDateOfDeath?: string;
     residentialAddress: string;
     city: string;
     state: string;
