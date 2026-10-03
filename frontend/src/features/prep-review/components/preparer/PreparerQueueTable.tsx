@@ -9,12 +9,16 @@ import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { PrepReviewLead } from '../../types/prep-review.types';
 
 interface PreparerQueueTableProps {
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
   returns: PrepReviewLead[];
   isLoading: boolean;
   onOpenWorkspace: (id: string) => void;
 }
 
 export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
+  searchQuery,
+  onSearchChange,
   returns,
   isLoading,
   onOpenWorkspace,
@@ -23,7 +27,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
     () => [
       {
         id: 'taxpayer',
-        header: 'TAXPAYER',
+        header: 'Taxpayer',
         accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
         cell: ({ row }) => (
           <TaxpayerCell
@@ -34,7 +38,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       },
       {
         id: 'taxYear',
-        header: 'TY',
+        header: 'Tax year',
         accessorFn: (row) => `TY ${row.taxYear || 2025}`,
         cell: ({ row }) => (
           <span className="text-xs font-medium text-slate-700">
@@ -44,7 +48,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       },
       {
         id: 'filingStatus',
-        header: 'FILING STATUS',
+        header: 'Filing status',
         accessorKey: 'maritalStatus',
         cell: ({ row }) => (
           <span className="text-xs font-normal text-slate-700">
@@ -54,7 +58,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       },
       {
         id: 'state',
-        header: 'STATE',
+        header: 'State',
         accessorKey: 'stateOfResidence',
         cell: ({ row }) => (
           <span className="text-xs font-normal text-slate-700">
@@ -64,7 +68,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       },
       {
         id: 'docs',
-        header: 'DOCS',
+        header: 'Docs',
         accessorFn: (row) => `${row.verifiedDocumentsCount || 0}/${row.documentsCount || 0}`,
         cell: ({ row }) => {
           const verified = row.original.verifiedDocumentsCount || 0;
@@ -78,7 +82,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       },
       {
         id: 'reviewer',
-        header: 'QA REVIEWER',
+        header: 'QA reviewer',
         accessorFn: (row) => row.assignedReviewer?.name || 'Unassigned',
         cell: ({ row }) => {
           const rev = row.original.assignedReviewer;
@@ -91,7 +95,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       },
       {
         id: 'stage',
-        header: 'STAGE',
+        header: 'Stage',
         accessorKey: 'currentStage',
         meta: {
           filterType: 'enum',
@@ -105,7 +109,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       },
       {
         id: 'actions',
-        header: 'ACTION',
+        header: '',
         enableSorting: false,
         enableHiding: false,
         meta: {
@@ -150,10 +154,10 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
     <UnifiedTable<PrepReviewLead>
       columns={columns}
       data={returns}
-      title="TAX PREPARATION WORKBENCH"
-      subtitle="Draft IRS Form 1040, state returns, itemized deductions, and submit for 4-Eyes QA certification."
       isLoading={isLoading}
-      searchPlaceholder="Search taxpayer, email, state, status..."
+      searchPlaceholder="Search name, phone, email..."
+      searchValue={searchQuery}
+      onSearchChange={onSearchChange}
       onExportExcel={handleExportExcel}
       onRowClick={(item) => onOpenWorkspace(item.id || item.applicationId)}
       emptyText="No assigned returns in this queue. Great job!"

@@ -12,6 +12,8 @@ import { AdminCustomerDirectoryScreen } from '@/features/admin/screens/AdminCust
 import { AdminMasterTaxpayerDirectoryScreen } from '@/features/admin/screens/AdminMasterTaxpayerDirectoryScreen';
 import { AdminTaxpayerDetailScreen } from '@/features/admin/screens/AdminTaxpayerDetailScreen';
 import { AdminCouponsScreen } from '@/features/coupons/screens/AdminCouponsScreen';
+import { AdminProductsScreen } from '@/features/products/screens/AdminProductsScreen';
+import { AdminPermissionsScreen } from '@/features/permissions/screens/AdminPermissionsScreen';
 import { AdminEmailTemplatesScreen } from '@/features/admin/screens/AdminEmailTemplatesScreen';
 import { AdminReturnedLeadsScreen } from '@/features/admin/screens/AdminReturnedLeadsScreen';
 import { AdminSelfSignupsScreen } from '@/features/admin/screens/AdminSelfSignupsScreen';
@@ -208,6 +210,14 @@ export const router = createBrowserRouter([
           {
             path: 'coupons',
             element: <AdminCouponsScreen />,
+          },
+          {
+            path: 'products',
+            element: <AdminProductsScreen />,
+          },
+          {
+            path: 'permissions',
+            element: <AdminPermissionsScreen />,
           },
           {
             path: 'coupon',

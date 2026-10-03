@@ -1,0 +1,12 @@
+model UserPermission {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation("UserPermissions", fields: [userId], references: [id], onDelete: Cascade)
+  permission  String
+  grantedById String?
+  grantedBy   User?    @relation("GrantedPermissions", fields: [grantedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, permission])
+  @@index([permission])
+}

@@ -10,6 +10,8 @@ import { notificationRouter } from "../features/notifications/notification-route
 import { workflowRouter } from "../features/workflow/workflow-routes.js";
 import { emailTemplateRouter } from "../features/email-templates/email-template-routes.js";
 import { couponRouter } from "../features/coupons/coupon-routes.js";
+import { productRouter } from "../features/products/product-routes.js";
+import { permissionRouter } from "../features/permissions/permission-routes.js";
 
 const router = Router();
 
@@ -18,6 +20,8 @@ router.use("/auth", authRouter);
 router.use("/admin", adminRouter);
 router.use("/coupons", couponRouter);
 router.use("/admin/coupons", couponRouter);
+router.use("/products", productRouter);
+router.use("/permissions", permissionRouter);
 router.use("/email-templates", emailTemplateRouter);
 router.use("/documenter", documenterRouter);
 router.use("/prep-review", prepReviewRouter);

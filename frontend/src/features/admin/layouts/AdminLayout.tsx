@@ -19,6 +19,8 @@ import {
   Tag,
   FolderKanban,
   Database,
+  Package,
+  ShieldCheck,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -49,6 +51,7 @@ export const AdminLayout: React.FC = () => {
     { id: 'returned-leads', label: 'Returned Leads', icon: RotateCcw, section: 'Operations', path: '/admin/returned-leads' },
     { id: 'all-taxpayers', label: 'Data', icon: Database, section: 'Management', path: '/admin/all-taxpayers' },
     { id: 'coupons', label: 'Discount Coupons', icon: Tag, section: 'Management', path: '/admin/coupons' },
+    { id: 'products', label: 'Products & Services', icon: Package, section: 'Management', path: '/admin/products' },
     { id: 'customers', label: 'Files', icon: FolderKanban, section: 'Management', path: '/admin/customers' },
     { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', path: '/admin/employees' },
     { id: 'email-templates', label: 'Email Templates', icon: Mail, section: 'Management', path: '/admin/email-templates' },
@@ -57,6 +60,7 @@ export const AdminLayout: React.FC = () => {
     { id: 'sales', label: 'Sales Dept', icon: DollarSign, section: 'Operations', path: '/admin/sales' },
     { id: 'filing', label: 'File Operator Hub', icon: FileCheck2, section: 'Operations', path: '/admin/filing' },
     { id: 'notifications', label: 'Notifications', icon: Bell, section: 'System', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/admin/notifications' },
+    { id: 'permissions', label: 'Permissions', icon: ShieldCheck, section: 'Admin', path: '/admin/permissions' },
     { id: 'settings', label: 'System Settings', icon: Settings, section: 'Admin', path: '/admin/settings' },
   ];
 
@@ -65,6 +69,8 @@ export const AdminLayout: React.FC = () => {
   const getActiveId = () => {
     if (currentPath.includes('/admin/notifications')) return 'notifications';
     if (currentPath.includes('/admin/coupons') || currentPath.includes('/admin/coupon') || currentPath.includes('/admin/discount-coupons')) return 'coupons';
+    if (currentPath.includes('/admin/products')) return 'products';
+    if (currentPath.includes('/admin/permissions')) return 'permissions';
     if (currentPath.includes('/admin/all-taxpayers')) return 'all-taxpayers';
     if (currentPath.includes('/admin/self-signups')) return 'self-signups';
     if (currentPath.includes('/admin/returned-leads')) return 'returned-leads';

@@ -49,6 +49,9 @@ model User {
   createdCoupons DiscountCoupon[] @relation("CreatedCoupons")
   approvedCoupons DiscountCoupon[] @relation("ApprovedCoupons")
   appliedCouponUsages CouponUsage[] @relation("AppliedCouponUsages")
+  createdProducts Product[] @relation("CreatedProducts")
+  permissions       UserPermission[] @relation("UserPermissions")
+  grantedPermissions UserPermission[] @relation("GrantedPermissions")
 
   @@index([email])
   @@index([mobile])
