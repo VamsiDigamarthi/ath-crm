@@ -190,11 +190,11 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
 
               <Button
                 size="sm"
-                onClick={() => navigate(`/sales/manager/pitch/${lead.id || lead.applicationId}`)}
+                onClick={() => navigate(`/sales/manager/client/${lead.taxpayerId || lead.id || lead.applicationId}`)}
                 className="h-7 px-2.5 text-[11px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
               >
                 <PhoneCall className="w-3 h-3" />
-                <span>Pitch</span>
+                <span>Pitch Filings</span>
               </Button>
             </div>
           );
@@ -234,7 +234,7 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
         onSelectionChange={setSelectedRows}
         searchPlaceholder="Search taxpayer, email, state, closer..."
         onExportExcel={handleExportExcel}
-        onRowClick={(item) => navigate(`/sales/manager/pitch/${item.id || item.applicationId}`)}
+        onRowClick={(item) => navigate(`/sales/manager/client/${item.taxpayerId || item.id || item.applicationId}`)}
         extraHeaderActions={
           <div className="flex items-center gap-2">
             {selectedRows.length > 0 && (

@@ -253,4 +253,60 @@ export const salesService = {
     const res: any = await apiClient.post('/sales/return-to-admin', { applicationIds, reason });
     return res?.data || res;
   },
+
+  /**
+   * Sales Closer modifies Form 1040/1120 draft calculation values
+   */
+  async updateDraftValues(id: string, payload: any): Promise<any> {
+    const res: any = await apiClient.post(`/sales/leads/${id}/update-draft-values`, payload);
+    return res?.data || res;
+  },
+
+  /**
+   * Sales Closer uploads scalable client deliverable document
+   */
+  async uploadDeliverableDocument(id: string, file: File, requiresEsign: boolean = false): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('requiresEsign', String(requiresEsign));
+    const res: any = await apiClient.post(`/sales/leads/${id}/deliverable-document`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res?.data || res;
+  },
+
+  /**
+   * Sales Closer deletes deliverable document
+   */
+  async deleteDeliverableDocument(id: string, docId: string): Promise<any> {
+    const res: any = await apiClient.delete(`/sales/leads/${id}/deliverable-document/${docId}`);
+    return res?.data || res;
+  },
+
+  /**
+   * Sales Closer toggles requiresEsign flag on deliverable document
+   */
+  async toggleDeliverableEsign(id: string, docId: string, requiresEsign: boolean): Promise<any> {
+    const res: any = await apiClient.patch(`/sales/leads/${id}/deliverable-document/${docId}`, { requiresEsign });
+    return res?.data || res;
+  },
+
+  /**
+   * Sales Closer dispatches draft return package & deliverables to client for review & e-sign
+   */
+  async sendDraftToClient(id: string, payload?: { message?: string }): Promise<any> {
+    const res: any = await apiClient.post(`/sales/leads/${id}/send-draft-to-client`, payload || {});
+    return res?.data || res;
+  },
+
+  /**
+   * Sales Closer reopens a new draft version (e.g. v2, v3) on demand
+   */
+  async reopenDraftVersion(id: string, payload?: { reason?: string }): Promise<any> {
+    const res: any = await apiClient.post(`/sales/leads/${id}/reopen-draft-version`, payload || {});
+    return res?.data || res;
+  },
 };
+

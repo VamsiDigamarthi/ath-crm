@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePrepReviewManager } from '../hooks/usePrepReviewManager';
 import { PrepManagerQueueTable } from '../components/manager/PrepManagerQueueTable';
 import { PrepAssignLeadDrawer } from '../components/manager/PrepAssignLeadDrawer';
@@ -32,9 +33,9 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import toast from 'react-hot-toast';
 
 export const PrepDepartmentScreen: React.FC = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'QUEUE' | 'ANALYTICS'>('QUEUE');
 
   const {
@@ -263,7 +264,7 @@ export const PrepDepartmentScreen: React.FC = () => {
           onOpenAssignModal={(selected) => setAssignModalLeads(selected)}
           onOpenAutoDistribute={() => setIsAutoDistributeOpen(true)}
           onViewLeadDetail={(lead) => {
-            toast.success(`Tax return for ${lead.taxpayerName} (TY ${lead.taxYear})`);
+            navigate(`/prep-review/preparer/workspace/${lead.id || lead.applicationId}`);
           }}
           isAdmin={true}
         />

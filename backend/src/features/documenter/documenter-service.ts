@@ -68,6 +68,26 @@ export class DocumenterService {
             role: true,
           },
         },
+        assignedReviewAgent: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobile: true,
+            role: true,
+          },
+        },
+        assignedFileOp: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobile: true,
+            role: true,
+          },
+        },
         callLogs: {
           orderBy: { createdAt: 'desc' },
           include: {
@@ -1666,12 +1686,11 @@ export class DocumenterService {
             initialStage = ApplicationStage.DOC_OUTREACH;
           }
 
-          let yearApp = await tx.taxApplication.findUnique({
+          let yearApp = await tx.taxApplication.findFirst({
             where: {
-              customerId_taxYear: {
-                customerId: customer.id,
-                taxYear: targetTaxYear,
-              },
+              customerId: customer.id,
+              taxYear: targetTaxYear,
+              filingType: targetFilingType,
             },
             include: { customer: true },
           });
@@ -2994,12 +3013,11 @@ export class DocumenterService {
         },
       });
     } else {
-      const existingApp = await prisma.taxApplication.findUnique({
+      const existingApp = await prisma.taxApplication.findFirst({
         where: {
-          customerId_taxYear: {
-            customerId,
-            taxYear: Number(taxYear),
-          },
+          customerId,
+          taxYear: Number(taxYear),
+          filingType,
         },
       });
 

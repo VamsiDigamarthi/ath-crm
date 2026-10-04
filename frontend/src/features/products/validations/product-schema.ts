@@ -20,8 +20,9 @@ export const productSchema = z.object({
     .min(0, 'Price cannot be negative')
     .max(1000000, 'Price cannot exceed 1,000,000')
     .refine((v) => /^\d+(\.\d{1,2})?$/.test(String(v)), 'Price can have at most 2 decimals'),
-  unit: z.enum(['PER_RETURN', 'PER_FORM', 'PER_STATE', 'PER_HOUR', 'PER_ITEM', 'FIXED'], { message: 'Select a unit' }),
-  taxType: z.enum(['NO_TAX', 'VAT_10'], { message: 'Select a tax option' }),
+  unit: z.string().trim().min(1, 'Select or enter a unit').max(50, 'Unit cannot exceed 50 characters'),
+  taxType: z.string().optional().default('NO_TAX'),
+  taxRate: z.coerce.number().min(0, 'Tax rate cannot be negative').max(100, 'Tax rate cannot exceed 100%').default(0),
   status: z.enum(['ACTIVE', 'INACTIVE'], { message: 'Select a status' }),
 });
 

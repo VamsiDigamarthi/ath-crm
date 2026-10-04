@@ -1,7 +1,14 @@
 import { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { documenterService } from '../services/documenter-service';
-import { generateTaxYears } from '@/features/auth/components/TaxpayerSignupForm';
+export const generateTaxYears = (futureYears = 2, pastYears = 6): number[] => {
+  const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let y = currentYear + futureYears; y >= currentYear - pastYears; y--) {
+    years.push(y);
+  }
+  return years;
+};
 
 interface YearLike {
   id: string;

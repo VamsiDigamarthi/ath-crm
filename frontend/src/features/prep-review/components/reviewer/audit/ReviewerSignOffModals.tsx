@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
+import { AppTextarea } from '@/shared/components/AppTextarea';
 import { CheckCircle2, RotateCcw, ShieldCheck } from 'lucide-react';
 import type { WorkspaceTaxpayer } from '../../../hooks/useTaxPreparerWorkspace';
 
@@ -9,6 +10,7 @@ interface ReviewerSignOffModalsProps {
   taxDraftSummary: any;
   assignedPreparer: { name: string; email: string } | null;
   auditorRemarks: string;
+  setAuditorRemarks: (v: string) => void;
   isApproveModalOpen: boolean;
   onCloseApproveModal: () => void;
   onConfirmApprove: () => void;
@@ -27,6 +29,7 @@ export const ReviewerSignOffModals: React.FC<ReviewerSignOffModalsProps> = ({
   taxDraftSummary,
   assignedPreparer,
   auditorRemarks,
+  setAuditorRemarks,
   isApproveModalOpen,
   onCloseApproveModal,
   onConfirmApprove,
@@ -65,11 +68,18 @@ export const ReviewerSignOffModals: React.FC<ReviewerSignOffModalsProps> = ({
               </p>
             </div>
 
-            <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="font-bold text-slate-700">Auditor Compliance Sign-Off Statement:</div>
-              <div className="text-[11px] text-slate-600 font-medium italic">
-                "{auditorRemarks}"
-              </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                Auditor Compliance Sign-Off Statement:
+              </label>
+              <AppTextarea
+                value={auditorRemarks}
+                onChange={setAuditorRemarks}
+                rows={4}
+                maxLength={5000}
+                showCount
+                placeholder="Enter compliance sign-off remarks, verified schedules, or Drake cross-checks (e.g. Verified W-2, 1040 Schedule 1-3, all Drake calculation checks passed with zero discrepancies)..."
+              />
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

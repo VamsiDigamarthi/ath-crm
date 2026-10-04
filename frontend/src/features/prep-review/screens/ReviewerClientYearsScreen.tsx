@@ -6,7 +6,6 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { useAuthStore } from '@/features/auth/store/auth-store';
 import { prepReviewService } from '../services/prep-review-service';
 import type { PrepReviewLead } from '../types/prep-review.types';
 
@@ -23,7 +22,6 @@ const STATUS_META: Record<string, { label: string; dot: string }> = {
 };
 
 const useReviewerClientYears = (taxpayerId?: string) => {
-  const { user } = useAuthStore();
   const [years, setYears] = useState<PrepReviewLead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,23 +29,54 @@ const useReviewerClientYears = (taxpayerId?: string) => {
     if (!taxpayerId) return;
     try {
       const res = await prepReviewService.getPipelineLeads({ limit: 100 });
-      const me = user?.id;
-      const myEmail = user?.email?.toLowerCase().trim();
-      setYears(
-        (res.leads || [])
-          .filter(
-            (l: PrepReviewLead) =>
-              l.taxpayerId === taxpayerId &&
-              (l.assignedReviewer?.id === me || l.assignedReviewer?.email?.toLowerCase().trim() === myEmail)
-          )
-          .sort((a: PrepReviewLead, b: PrepReviewLead) => b.taxYear - a.taxYear)
+      const leads = res.leads || [];
+      const baseLead = leads.find(
+        (l: PrepReviewLead) =>
+          l.taxpayerId === taxpayerId || l.id === taxpayerId || l.applicationId === taxpayerId
       );
+
+      if (baseLead?.allApplications && baseLead.allApplications.length > 0) {
+        const fullList: PrepReviewLead[] = baseLead.allApplications.map((appItem: any) => {
+          const existing = leads.find((l: PrepReviewLead) => l.id === appItem.id);
+          return (
+            existing || {
+              ...baseLead,
+              id: appItem.id,
+              applicationId: appItem.id,
+              taxYear: appItem.taxYear,
+              filingType: appItem.filingType || 'INDIVIDUAL',
+              currentStage: appItem.currentStage,
+              assignedPreparer: appItem.assignedPrepAgent
+                ? {
+                    id: appItem.assignedPrepAgent.id,
+                    name: `${appItem.assignedPrepAgent.firstName || ''} ${appItem.assignedPrepAgent.lastName || ''}`.trim() || appItem.assignedPrepAgent.email,
+                    email: appItem.assignedPrepAgent.email,
+                  }
+                : baseLead.assignedPreparer,
+              assignedReviewer: appItem.assignedReviewAgent
+                ? {
+                    id: appItem.assignedReviewAgent.id,
+                    name: `${appItem.assignedReviewAgent.firstName || ''} ${appItem.assignedReviewAgent.lastName || ''}`.trim() || appItem.assignedReviewAgent.email,
+                    email: appItem.assignedReviewAgent.email,
+                  }
+                : baseLead.assignedReviewer,
+            }
+          );
+        });
+        setYears(fullList.sort((a, b) => b.taxYear - a.taxYear));
+      } else {
+        const matched = leads.filter(
+          (l: PrepReviewLead) =>
+            l.taxpayerId === taxpayerId || l.id === taxpayerId || l.applicationId === taxpayerId
+        );
+        setYears(matched.sort((a, b) => b.taxYear - a.taxYear));
+      }
     } catch (err) {
       toast.error((err as Error).message || 'Failed to load tax years');
     } finally {
       setIsLoading(false);
     }
-  }, [taxpayerId, user]);
+  }, [taxpayerId]);
 
   useEffect(() => {
     load();
@@ -73,6 +102,16 @@ export const ReviewerClientYearsScreen: React.FC = () => {
         header: 'Tax year',
         accessorKey: 'taxYear',
         cell: ({ row }) => <span className="text-sm font-semibold text-slate-900">TY {row.original.taxYear}</span>,
+      },
+      {
+        id: 'type',
+        header: 'Type',
+        accessorKey: 'filingType',
+        cell: ({ row }) => (
+          <span className="text-sm font-medium text-slate-700">
+            {row.original.filingType === 'BUSINESS' ? 'Business' : 'Individual'}
+          </span>
+        ),
       },
       {
         id: 'status',
@@ -144,7 +183,7 @@ export const ReviewerClientYearsScreen: React.FC = () => {
             {isLoading ? 'Loading…' : client?.taxpayerName || 'Taxpayer'}
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            {years.length} tax {years.length === 1 ? 'year' : 'years'} assigned to you for QA · choose a year to review
+            {years.length} tax {years.length === 1 ? 'filing' : 'filings'} available for QA · choose a return to review
           </p>
         </div>
         {client && (

@@ -20,7 +20,7 @@ export const CustomerLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [selectedTaxYear, setSelectedTaxYear] = useState<string>('2025');
+  const [selectedTaxYear, setSelectedTaxYear] = useState<string>('');
   const [isNewFilingModalOpen, setIsNewFilingModalOpen] = useState<boolean>(false);
   
   // Real DB value from backend/prisma/schema/customer.prisma: customerProfile.isConvertedCustomer
@@ -37,6 +37,8 @@ export const CustomerLayout: React.FC = () => {
       if (!hasCurrent) {
         setSelectedTaxYear(applications[0].taxYear.toString());
       }
+    } else {
+      setSelectedTaxYear('');
     }
   }, [applications]);
 

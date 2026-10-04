@@ -124,6 +124,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
             select: {
               id: true,
               taxYear: true,
+              filingType: true,
               currentStage: true,
             },
             orderBy: { taxYear: "desc" },
@@ -182,6 +183,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
             select: {
               id: true,
               taxYear: true,
+              filingType: true,
               currentStage: true,
             },
             orderBy: { taxYear: "desc" },
@@ -208,12 +210,10 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
     referralCode,
   } = req.body;
 
-  const currentYear = new Date().getFullYear();
   const cleanEmail = email.trim().toLowerCase();
   const cleanPhone = phone.trim();
   const cleanFirstName = firstName.trim();
   const cleanLastName = lastName.trim();
-  const targetTaxYear = Number(taxYear) || currentYear;
   const cleanSsn = ssnTin?.trim() || null;
 
   // 1. Strict Duplicate Check: If already in DB by email, phone, or SSN, directly reject with contact message
@@ -283,74 +283,7 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
     },
   });
 
-  // 4. Insert new TaxApplication with leadSource: "SELF_SIGNUP"
-  const initialDraftSummary = {
-    leadSource: 'SELF_SIGNUP',
-    source: 'SELF_SIGNUP',
-    signupMethod: 'ONLINE_PORTAL',
-    isSelfRegistered: true,
-    registrationChannel: 'SELF_SERVICE_WEB',
-    registeredAt: new Date().toISOString(),
-    grossIncome: 0,
-    w2Wages: 0,
-    deductionType: 'STANDARD (Single)',
-    status: null,
-    notes: 'Direct online self-registration via public sign-up form',
-  };
-
-  const application = await prisma.taxApplication.create({
-    data: {
-      customerId: customerProfile.id,
-      taxYear: targetTaxYear,
-      filingType: 'INDIVIDUAL',
-      currentStage: ApplicationStage.RAW_PROSPECT,
-      priority: ApplicationPriority.HIGH,
-      taxDraftSummary: initialDraftSummary,
-    },
-  });
-
-  // A. Stage History Audit Trail
-  try {
-    await prisma.stageHistory.create({
-      data: {
-        applicationId: application.id,
-        toStage: ApplicationStage.RAW_PROSPECT,
-        movedByUserId: user.id,
-        remarks: `Taxpayer self-registered online via Public Client Portal (Source: SELF_SIGNUP, Method: ONLINE_PORTAL, Tax Year: ${targetTaxYear})${referrer ? ` • Referred by ${referrer.firstName} ${referrer.lastName}` : ''}`,
-      },
-    });
-  } catch (err) {
-    console.error('Failed to create stage history on self-signup:', err);
-  }
-
-  // B. Audit Log
-  try {
-    await prisma.auditLog.create({
-      data: {
-        applicationId: application.id,
-        actorId: user.id,
-        actorType: AuditActorType.CLIENT,
-        actorName: `${cleanFirstName} ${cleanLastName}`,
-        actorRole: 'TAXPAYER_USER',
-        action: AuditActionType.ORGANIZER_UPDATE,
-        moduleKey: 'AUTH_SIGNUP',
-        details: {
-          leadSource: 'SELF_SIGNUP',
-          source: 'SELF_SIGNUP',
-          signupMethod: 'ONLINE_PORTAL',
-          isSelfRegistered: true,
-          registrationChannel: 'SELF_SERVICE_WEB',
-          taxYear: targetTaxYear,
-          visaType: visaType || 'Standard',
-          registeredAt: new Date().toISOString(),
-        },
-      },
-    });
-  } catch (err) {
-    console.error('Failed to create audit log on self-signup:', err);
-  }
-
-  // C. In-App Notification dispatched to Super Admins & Documenter Managers
+  // 4. In-App Notification dispatched to Super Admins & Documenter Managers
   try {
     const adminManagers = await prisma.user.findMany({
       where: {
@@ -366,13 +299,13 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
           data: {
             recipientUserId: recipient.id,
             targetRole: recipient.role,
-            applicationId: application.id,
+            applicationId: null,
             category: NotificationCategory.DOCUMENTER,
             priority: NotificationPriority.HIGH,
             title: `New Online Sign-Up: ${cleanFirstName} ${cleanLastName}`,
-            message: `${cleanFirstName} ${cleanLastName} (${cleanPhone} • ${visaType || 'Standard'}) registered online for Tax Year ${targetTaxYear}. Lead is in Raw Prospects queue for document intake.`,
-            actionUrl: `/documenter/manager/queue`,
-            actionLabel: 'View Ingested Lead',
+            message: `${cleanFirstName} ${cleanLastName} (${cleanPhone}) registered online as a new taxpayer client.${referrer ? ` Referred by ${referrer.firstName} ${referrer.lastName}.` : ''}`,
+            actionUrl: `/leads`,
+            actionLabel: 'View Clients',
             relatedLeadName: `${cleanFirstName} ${cleanLastName}`,
           },
         });
@@ -424,6 +357,7 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
             select: {
               id: true,
               taxYear: true,
+              filingType: true,
               currentStage: true,
             },
             orderBy: { taxYear: "desc" },
@@ -433,7 +367,7 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
     },
   });
 
-  return SuccessHandler.handle(res, "Taxpayer registered successfully! Your account and filing case have been created.", {
+  return SuccessHandler.handle(res, "Taxpayer registered successfully! Your account has been created.", {
     token,
     user: authUser || {
       id: user.id,
@@ -441,7 +375,7 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
       mobile: user.mobile,
       role: user.role,
     },
-    application,
+    application: null,
   });
 };
 

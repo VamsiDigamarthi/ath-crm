@@ -1200,3 +1200,164 @@ export const validateBusinessExpenses = (data?: OrganizerData['b3_businessExpens
 
   return errors;
 };
+
+export interface EntireOrganizerValidationResult {
+  isValid: boolean;
+  errors: ValidationErrorMap;
+  firstFailedModuleId?: string;
+  firstErrorMessage?: string;
+}
+
+/**
+ * Validates the ENTIRE tax organizer across all sections.
+ * Used on the final "Save & Next" / "Save & Finish" step to ensure
+ * zero incomplete required fields remain before return preparation.
+ */
+export const validateEntireOrganizer = (
+  organizerData: OrganizerData | null,
+  taxYear: number,
+  filingType: string = 'INDIVIDUAL'
+): EntireOrganizerValidationResult => {
+  if (!organizerData) {
+    return {
+      isValid: false,
+      errors: { general: 'No organizer data available' },
+      firstErrorMessage: 'No organizer data available',
+    };
+  }
+
+  const isBusiness = filingType.toUpperCase() === 'BUSINESS';
+
+  if (isBusiness) {
+    // 1. Company Info
+    const b1Errors = validateBusinessCompanyInfo(organizerData.b1_companyInfo);
+    if (Object.keys(b1Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: b1Errors,
+        firstFailedModuleId: 'b1_companyInfo',
+        firstErrorMessage: `Company Information: ${Object.values(b1Errors)[0]}`,
+      };
+    }
+
+    // 2. Business Income
+    const b2Errors = validateBusinessIncome(organizerData.b2_businessIncome);
+    if (Object.keys(b2Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: b2Errors,
+        firstFailedModuleId: 'b2_businessIncome',
+        firstErrorMessage: `Business Income: ${Object.values(b2Errors)[0]}`,
+      };
+    }
+
+    // 3. Business Expenses
+    const b3Errors = validateBusinessExpenses(organizerData.b3_businessExpenses);
+    if (Object.keys(b3Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: b3Errors,
+        firstFailedModuleId: 'b3_businessExpenses',
+        firstErrorMessage: `Business Expenses: ${Object.values(b3Errors)[0]}`,
+      };
+    }
+
+    // 4. Foreign & FBAR
+    const m7Errors = validateModule7(organizerData.m7_foreign, taxYear);
+    if (Object.keys(m7Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: m7Errors,
+        firstFailedModuleId: 'm7',
+        firstErrorMessage: `FBAR & FATCA: ${Object.values(m7Errors)[0]}`,
+      };
+    }
+
+    return { isValid: true, errors: {} };
+  } else {
+    // Individual
+    // 1. General Information (Demographics, Dependents, Residency, Direct Deposit)
+    const m1Errors = validateModule1(organizerData.m1_demographics);
+    if (Object.keys(m1Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: m1Errors,
+        firstFailedModuleId: 'm1',
+        firstErrorMessage: `Demographics: ${Object.values(m1Errors)[0]}`,
+      };
+    }
+
+    const m2Errors = validateModule2(
+      organizerData.m2_dependents,
+      organizerData.m1_demographics?.maritalStatus
+    );
+    if (Object.keys(m2Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: m2Errors,
+        firstFailedModuleId: 'm1',
+        firstErrorMessage: `Family & Dependents: ${Object.values(m2Errors)[0]}`,
+      };
+    }
+
+    const m3Errors = validateModule3(organizerData.m3_presence, taxYear);
+    if (Object.keys(m3Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: m3Errors,
+        firstFailedModuleId: 'm1',
+        firstErrorMessage: `State & Residency: ${Object.values(m3Errors)[0]}`,
+      };
+    }
+
+    const m9Errors = validateModule9(organizerData.m9_directDeposit, taxYear);
+    if (Object.keys(m9Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: m9Errors,
+        firstFailedModuleId: 'm1',
+        firstErrorMessage: `Direct Deposit: ${Object.values(m9Errors)[0]}`,
+      };
+    }
+
+    // 2. Income
+    const e4 = validateModule4(organizerData.m4_wages, taxYear);
+    const e5 = validateModule5(organizerData.m5_interest, taxYear);
+    const e10 = validateModule10Retirement(organizerData.m10_retirement, taxYear);
+    const e6 = validateModule6(organizerData.m6_stocks, taxYear);
+    const incomeErrors = { ...e4, ...e5, ...e10, ...e6 };
+    if (Object.keys(incomeErrors).length > 0) {
+      return {
+        isValid: false,
+        errors: incomeErrors,
+        firstFailedModuleId: 'm_income',
+        firstErrorMessage: `Income: ${Object.values(incomeErrors)[0]}`,
+      };
+    }
+
+    // 3. Expenses
+    const m8Errors = validateModule8(organizerData.m8_deductions, taxYear);
+    if (Object.keys(m8Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: m8Errors,
+        firstFailedModuleId: 'm_expenses',
+        firstErrorMessage: `Expenses: ${Object.values(m8Errors)[0]}`,
+      };
+    }
+
+    // 4. Foreign & FBAR
+    const m7Errors = validateModule7(organizerData.m7_foreign, taxYear);
+    if (Object.keys(m7Errors).length > 0) {
+      return {
+        isValid: false,
+        errors: m7Errors,
+        firstFailedModuleId: 'm7',
+        firstErrorMessage: `FBAR & FATCA: ${Object.values(m7Errors)[0]}`,
+      };
+    }
+
+    return { isValid: true, errors: {} };
+  }
+};
+

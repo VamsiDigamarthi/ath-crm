@@ -696,7 +696,7 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
       </div>
 
       {/* 3. Final Summary & 1-Click Action Buttons */}
-      <div className="pt-4 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-xl">
+      <div className="pt-4 border-t border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 text-white p-5 rounded-xl border border-slate-800 shadow-sm">
         <div className="space-y-1">
           <div className="text-xs text-slate-300 font-medium flex items-center gap-2">
             <span>Total Quoted Service Fee</span>

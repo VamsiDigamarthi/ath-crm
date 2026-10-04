@@ -25,8 +25,9 @@ const productBody = z.object({
     .min(0, "Price cannot be negative")
     .max(1000000, "Price cannot exceed 1,000,000")
     .refine((v) => Number.isInteger(Math.round(v * 100)) && Math.abs(v * 100 - Math.round(v * 100)) < 1e-6, "Price can have at most 2 decimals"),
-  unit: z.enum(PRODUCT_UNITS, { message: "Select a valid unit" }),
-  taxType: z.enum(PRODUCT_TAX_TYPES, { message: "Select a valid tax option" }),
+  unit: z.string({ message: "Unit is required" }).trim().min(1, "Unit is required").max(50, "Unit cannot exceed 50 characters"),
+  taxRate: z.coerce.number().min(0, "Tax rate cannot be negative").max(100, "Tax rate cannot exceed 100%").default(0),
+  taxType: z.enum(["NO_TAX", "VAT_10", "CUSTOM"]).optional(),
   status: z.enum(PRODUCT_STATUSES, { message: "Select a valid status" }),
 });
 

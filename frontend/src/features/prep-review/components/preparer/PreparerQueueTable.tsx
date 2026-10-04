@@ -126,7 +126,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
               className="h-7 px-2.5 text-[11px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 shadow-2xs cursor-pointer"
             >
               <Calculator className="w-3 h-3" />
-              <span>Draft 1040</span>
+              <span>{row.original.filingType === 'BUSINESS' ? 'Draft 1120' : 'Draft 1040'}</span>
               <ArrowRight className="w-3 h-3" />
             </Button>
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Users, Building2, LayoutGrid, Edit3, Eye, Save, ArrowLeft, ArrowRight, CheckCircle2, Clock, Globe } from 'lucide-react';
+import { Save, ArrowLeft, ArrowRight, FileText } from 'lucide-react';
 import {
   isModuleCompleted,
   validateModule1,
@@ -15,6 +15,7 @@ import {
   validateBusinessCompanyInfo,
   validateBusinessIncome,
   validateBusinessExpenses,
+  validateEntireOrganizer,
 } from '@/features/customer/components/organizer/utils/organizer-validation';
 import { OrganizerModuleContent } from '@/features/customer/components/organizer/OrganizerModuleContent';
 import {
@@ -24,20 +25,9 @@ import { Button } from '@/shared/components/Button';
 import toast from 'react-hot-toast';
 import apiClient from '@/lib/api-client';
 import { AppTabs } from '@/shared/components/AppTabs';
-import { AppAccordion, AppAccordionItem } from '@/shared/components/AppAccordion';
-import { CustomerDocumentVault } from '@/features/customer/components/CustomerDocumentVault';
+import { TaxOrganizerDocumentPreviewModal } from './TaxOrganizerDocumentPreviewModal';
 
-// Modular Review Sub-Components
-import { ReviewModule1Demographics } from './review-modules/ReviewModule1Demographics';
-import { ReviewModule2Dependents } from './review-modules/ReviewModule2Dependents';
-import { ReviewModule3Presence } from './review-modules/ReviewModule3Presence';
-import { ReviewModule4Wages } from './review-modules/ReviewModule4Wages';
-import { ReviewModule5Interest } from './review-modules/ReviewModule5Interest';
-import { ReviewModule10Retirement } from './review-modules/ReviewModule10Retirement';
-import { ReviewModule6Stocks } from './review-modules/ReviewModule6Stocks';
-import { ReviewModule7Foreign } from './review-modules/ReviewModule7Foreign';
-import { ReviewModule8Deductions } from './review-modules/ReviewModule8Deductions';
-import { ReviewModule9DirectDeposit } from './review-modules/ReviewModule9DirectDeposit';
+import { useAuthStore } from '@/features/auth/store/auth-store';
 
 interface TaxPrepOrganizerReviewProps {
   leadId?: string;
@@ -52,6 +42,7 @@ interface TaxPrepOrganizerReviewProps {
   extraTabs?: { id: string; label: string; count?: number; content: React.ReactNode }[];
   requestedTabId?: string;
   onTabChange?: (tabId: string) => void;
+  hideReviewDraftTab?: boolean;
 }
 
 export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
@@ -67,18 +58,33 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   extraTabs = [],
   requestedTabId,
   onTabChange,
+  hideReviewDraftTab,
 }) => {
+  const { user } = useAuthStore();
+  const isDocumenterRole = user?.role === 'DOC_AGENT' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'DOC_MANAGER';
+  const isDocumenterPath = typeof window !== 'undefined' && window.location.pathname.includes('/documenter/');
+  const isDocumenter = isDocumenterRole || isDocumenterPath;
+
   const canEdit = allowEdit && !readOnly;
   const organizer = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
   const activeTaxYear = taxYear || taxDraftSummary?.taxYear || organizer.taxYear || new Date().getFullYear();
-  const effectiveFilingType =
+  const rawFilingType =
     filingType ||
     taxDraftSummary?.filingType ||
-    (organizer?.b1_companyInfo ? 'BUSINESS' : 'INDIVIDUAL');
-  const modulesList = getModulesForFilingType(effectiveFilingType);
-  const initialModId = effectiveFilingType === 'BUSINESS' ? 'b1_companyInfo' : 'm1';
+    (organizer?.b1_companyInfo?.companyName || organizer?.b1_companyInfo?.ein ? 'BUSINESS' : undefined) ||
+    'INDIVIDUAL';
+  const effectiveFilingType = String(rawFilingType || 'INDIVIDUAL').toUpperCase();
+  const isBusiness = effectiveFilingType === 'BUSINESS';
+  
+  const shouldHideReviewDraft = hideReviewDraftTab ?? isDocumenter;
+  const rawModulesList = getModulesForFilingType(effectiveFilingType);
+  const modulesList = shouldHideReviewDraft
+    ? rawModulesList.filter((m) => m.id !== 'm_review_draft')
+    : rawModulesList;
 
-  const [viewMode, setViewMode] = useState<'INSPECTOR' | 'GRID' | 'AGENT_EDIT'>(canEdit ? 'AGENT_EDIT' : 'INSPECTOR');
+  const initialModId = isBusiness ? 'b1_companyInfo' : 'm1';
+
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
   const [selectedModId, setSelectedModId] = useState<string>(
     requestedTabId && extraTabs.some((t) => t.id === requestedTabId) ? requestedTabId : initialModId
   );
@@ -87,10 +93,47 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     if (!requestedTabId) return;
     if (extraTabs.some((t) => t.id === requestedTabId)) setSelectedModId(requestedTabId);
     else if (requestedTabId === 'MODULES' && extraTabs.some((t) => t.id === selectedModId)) setSelectedModId(initialModId);
-  }, [requestedTabId]);
+  }, [requestedTabId, initialModId]);
+
+  // Synchronize module selection when filing type (Business vs Individual) changes
+  useEffect(() => {
+    if (extraTabs.some((t) => t.id === selectedModId)) return;
+    const currentValidIds = modulesList.map((m) => m.id);
+    if (!currentValidIds.includes(selectedModId)) {
+      if (isBusiness) {
+        if (selectedModId === 'm1') setSelectedModId('b1_companyInfo');
+        else if (selectedModId === 'm_income') setSelectedModId('b2_businessIncome');
+        else if (selectedModId === 'm_expenses') setSelectedModId('b3_businessExpenses');
+        else setSelectedModId(initialModId);
+      } else {
+        if (selectedModId === 'b1_companyInfo') setSelectedModId('m1');
+        else if (selectedModId === 'b2_businessIncome') setSelectedModId('m_income');
+        else if (selectedModId === 'b3_businessExpenses') setSelectedModId('m_expenses');
+        else setSelectedModId(initialModId);
+      }
+    }
+  }, [isBusiness, modulesList, selectedModId, initialModId, extraTabs]);
+
+  // Reset to initial module when lead changes or filing type changes unless requestedTabId specifies otherwise
+  useEffect(() => {
+    if (requestedTabId && extraTabs.some((t) => t.id === requestedTabId)) {
+      setSelectedModId(requestedTabId);
+    } else {
+      setSelectedModId(initialModId);
+    }
+  }, [leadId, initialModId]);
+
+  // Synchronize tab immediately if filing type switches
+  useEffect(() => {
+    if (extraTabs.some((t) => t.id === selectedModId)) return;
+    if (isBusiness && selectedModId === 'm1') {
+      setSelectedModId('b1_companyInfo');
+    } else if (!isBusiness && selectedModId === 'b1_companyInfo') {
+      setSelectedModId('m1');
+    }
+  }, [isBusiness, selectedModId, extraTabs]);
 
   const activeExtraTab = extraTabs.find((t) => t.id === selectedModId);
-  const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});
 
   // Local state for Agent Editing on Call
   const [localOrganizer, setLocalOrganizer] = useState<any>(() => {
@@ -102,15 +145,19 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
         firstName: customerName ? customerName.split(' ')[0] : '',
         lastName: customerName ? customerName.split(' ').slice(1).join(' ') : '',
       },
+      ...(isBusiness ? {
+        b1_companyInfo: raw.b1_companyInfo || {
+          companyName: customerName ? `${customerName} LLC` : '',
+          formationState: 'IL',
+          structure: 'LLC',
+          partners: [],
+        },
+        b2_businessIncome: raw.b2_businessIncome || {},
+        b3_businessExpenses: raw.b3_businessExpenses || {},
+      } : {}),
     };
   });
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (!canEdit && viewMode === 'AGENT_EDIT') {
-      setViewMode('INSPECTOR');
-    }
-  }, [canEdit, viewMode]);
 
   useEffect(() => {
     const raw = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
@@ -121,12 +168,18 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
         firstName: customerName ? customerName.split(' ')[0] : '',
         lastName: customerName ? customerName.split(' ').slice(1).join(' ') : '',
       },
+      ...(isBusiness ? {
+        b1_companyInfo: raw.b1_companyInfo || {
+          companyName: customerName ? `${customerName} LLC` : '',
+          formationState: 'IL',
+          structure: 'LLC',
+          partners: [],
+        },
+        b2_businessIncome: raw.b2_businessIncome || {},
+        b3_businessExpenses: raw.b3_businessExpenses || {},
+      } : {}),
     });
-  }, [taxDraftSummary, customerName]);
-
-  const toggleShow = (key: string) => {
-    setShowSensitive((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  }, [taxDraftSummary, customerName, isBusiness]);
 
   const updateModuleField = (moduleKey: any, field: any, value: any) => {
     setLocalOrganizer((prev: any) => ({
@@ -169,27 +222,8 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
       errs = { ...e4, ...e5, ...e10, ...e6 };
     } else if (selectedModId === 'm_expenses') {
       errs = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
-    } else if (selectedModId === 'm_income_expenses') {
-      const e4 = validateModule4(localOrganizer.m4_wages, activeTaxYear);
-      const e5 = validateModule5(localOrganizer.m5_interest, activeTaxYear);
-      const e10 = validateModule10Retirement(localOrganizer.m10_retirement, activeTaxYear);
-      const e6 = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
-      const e8 = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
-      errs = { ...e4, ...e5, ...e10, ...e6, ...e8 };
-    } else if (selectedModId === 'm4') {
-      errs = validateModule4(localOrganizer.m4_wages, activeTaxYear);
-    } else if (selectedModId === 'm5') {
-      errs = validateModule5(localOrganizer.m5_interest, activeTaxYear);
-    } else if (selectedModId === 'm10') {
-      errs = validateModule10Retirement(localOrganizer.m10_retirement, activeTaxYear);
-    } else if (selectedModId === 'm6') {
-      errs = validateModule6(localOrganizer.m6_stocks, activeTaxYear);
     } else if (selectedModId === 'm7') {
       errs = validateModule7(localOrganizer.m7_foreign, activeTaxYear);
-    } else if (selectedModId === 'm8') {
-      errs = validateModule8(localOrganizer.m8_deductions, activeTaxYear);
-    } else if (selectedModId === 'm9') {
-      errs = validateModule9(localOrganizer.m9_directDeposit, activeTaxYear);
     } else if (selectedModId === 'b1_companyInfo') {
       errs = validateBusinessCompanyInfo(localOrganizer.b1_companyInfo);
     } else if (selectedModId === 'b2_businessIncome') {
@@ -198,24 +232,24 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
       errs = validateBusinessExpenses(localOrganizer.b3_businessExpenses);
     }
 
+    setValidationErrors(errs);
     if (Object.keys(errs).length > 0) {
-      setValidationErrors(errs);
-      const firstError = Object.values(errs)[0];
-      toast.error(`Please complete required field: ${firstError}`);
+      toast.error('Please fix errors in highlighted required fields');
       return false;
     }
-    setValidationErrors({});
     return true;
   };
 
-  const handleSaveOrganizerOnCall = async () => {
+  const currentModIndex = Math.max(0, modulesList.findIndex((m) => m.id === selectedModId));
+  const completedCount = modulesList.filter((m) => isModuleCompleted(m.id, localOrganizer)).length;
+  const progressPercent = Math.round((completedCount / modulesList.length) * 100);
+
+  const handleSaveDraft = async () => {
     if (!leadId) {
       toast.error('Application Lead ID is missing');
       return;
     }
-    if (!validateActiveModule()) {
-      return;
-    }
+    // Saving as draft must NOT enforce strict blocking validation
     try {
       setIsSaving(true);
       const existingSubmitted: string[] = localOrganizer.submittedModules || [initialModId];
@@ -241,8 +275,82 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
       });
 
       setLocalOrganizer(payload);
+      toast.success('Draft saved successfully!');
+      if (onOrganizerSaved) onOrganizerSaved();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to save draft');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentModIndex > 0) {
+      setSelectedModId(modulesList[currentModIndex - 1].id);
+    }
+  };
+
+  const handleSaveAndNext = async () => {
+    if (!leadId) {
+      toast.error('Application Lead ID is missing');
+      return;
+    }
+
+    const isLastModule = currentModIndex === modulesList.length - 1;
+
+    // Validate current module
+    if (!validateActiveModule()) {
+      return;
+    }
+
+    // In final Save & Next / Finish, validate the ENTIRE organizer so zero required fields are missed
+    if (isLastModule) {
+      const wholeCheck = validateEntireOrganizer(localOrganizer, activeTaxYear, effectiveFilingType);
+      if (!wholeCheck.isValid) {
+        setValidationErrors(wholeCheck.errors);
+        toast.error(`Cannot complete organizer: ${wholeCheck.firstErrorMessage}`);
+        if (wholeCheck.firstFailedModuleId && wholeCheck.firstFailedModuleId !== selectedModId) {
+          setSelectedModId(wholeCheck.firstFailedModuleId);
+        }
+        return;
+      }
+    }
+
+    try {
+      setIsSaving(true);
+      const existingSubmitted: string[] = localOrganizer.submittedModules || [initialModId];
+      const extraKeys = selectedModId === 'm1'
+        ? ['m1', 'm2', 'm3', 'm9']
+        : selectedModId === 'm_income'
+          ? ['m4', 'm5', 'm6', 'm_income']
+          : selectedModId === 'm_expenses'
+            ? ['m8', 'm_expenses']
+            : selectedModId === 'm_income_expenses'
+              ? ['m4', 'm5', 'm6', 'm8', 'm_income', 'm_expenses', 'm_income_expenses']
+              : [selectedModId];
+      const submittedModules = Array.from(new Set([...existingSubmitted, ...extraKeys]));
+
+      const payload = {
+        ...localOrganizer,
+        submittedModules,
+        ...(isLastModule ? { isFullyCompleted: true } : {}),
+      };
+
+      await apiClient.put(`/documenter/leads/${leadId}/organizer`, {
+        organizerData: payload,
+        taxYear: activeTaxYear,
+      });
+
+      setLocalOrganizer(payload);
       setValidationErrors({});
-      toast.success(`Intake module saved & synced to database on call for ${customerName}! ✨`);
+
+      if (isLastModule) {
+        toast.success(`All sections completed & verified for ${customerName}! ✨`);
+      } else {
+        toast.success('Section saved! Moving to next section...');
+        setSelectedModId(modulesList[currentModIndex + 1].id);
+      }
+
       if (onOrganizerSaved) onOrganizerSaved();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Failed to save intake data');
@@ -251,26 +359,9 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     }
   };
 
-  const m1 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m1_demographics || {};
-  const m2 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m2_dependents || {};
-  const m3 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m3_presence || {};
-  const m4 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m4_wages || {};
-  const m5 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m5_interest || {};
-  const m10 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m10_retirement || {};
-  const m6 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m6_stocks || {};
-  const m7 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m7_foreign || {};
-  const m8 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m8_deductions || {};
-  const m9 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).m9_directDeposit || {};
-  const b1 = (viewMode === 'AGENT_EDIT' ? localOrganizer : organizer).b1_companyInfo || {};
-
-  const currentOrgData = viewMode === 'AGENT_EDIT' ? localOrganizer : organizer;
-  const completedCount = modulesList.filter((m) => isModuleCompleted(m.id, currentOrgData)).length;
-  const progressPercent = Math.round((completedCount / modulesList.length) * 100);
-  const currentModIndex = Math.max(0, modulesList.findIndex((m) => m.id === selectedModId));
-
   return (
-    <div className="space-y-6 font-sans animate-in fade-in duration-150">
-      {/* 2. Top Horizontal 5-Module Navigator Bar */}
+    <div className="space-y-4 font-sans animate-in fade-in duration-150">
+      {/* 1. Top Horizontal 5-Module Navigator Bar */}
       <AppTabs
         tabs={[
           ...modulesList.map((m) => ({ id: m.id, label: m.label })),
@@ -280,76 +371,74 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
         onChange={(tabId) => {
           setSelectedModId(tabId);
           onTabChange?.(tabId);
-          if (viewMode === 'GRID' && !extraTabs.some((t) => t.id === tabId)) setViewMode(canEdit ? 'AGENT_EDIT' : 'INSPECTOR');
         }}
         size="sm"
       />
 
-      {/* 3A. AGENT EDIT MODE: Full-Width Client-Styled Organizer Workspace */}
-      {/* 1. Header Bar matching Client Side Tax Organizer */}
+      {/* 2. Top Header Bar with Save & Preview Controls */}
       {!hideHeader && !activeExtraTab && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
-                Tax Info and Files {viewMode === 'AGENT_EDIT' ? '' : '— Audit'}
-              </h2>
-              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
-                {progressPercent}% Complete
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
-              ATH Tax Services IRS-compliant intake wizard. Entering responses for {customerName}.
-            </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+              {isBusiness ? 'Business Tax Info & Files' : 'Tax Info & Files'}
+            </h3>
+            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-300">
+              {progressPercent}% Complete
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {/* Mode Tabs */}
-            <AppTabs
-              tabs={[
-                ...(canEdit
-                  ? [
-                      {
-                        id: 'AGENT_EDIT',
-                        label: 'Live Entry',
-                        icon: Edit3,
-                      },
-                    ]
-                  : []),
-                {
-                  id: 'INSPECTOR',
-                  label: 'Review',
-                  icon: Eye,
-                },
-                {
-                  id: 'GRID',
-                  label: 'Grid',
-                  icon: LayoutGrid,
-                },
-              ]}
-              activeTab={viewMode}
-              onChange={(mode) => setViewMode(mode as any)}
-              className="border-b-0"
-            />
-
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsPreviewModalOpen(true)}
+              className="text-xs flex items-center gap-1.5 cursor-pointer border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Preview</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrev}
+              disabled={currentModIndex === 0 || isSaving}
+              className="text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Previous</span>
+            </Button>
+            {canEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveDraft}
+                disabled={isSaving}
+                className="text-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{isSaving ? 'Saving...' : 'Save Draft'}</span>
+              </Button>
+            )}
             {canEdit && (
               <Button
                 size="sm"
-                onClick={handleSaveOrganizerOnCall}
+                onClick={handleSaveAndNext}
                 disabled={isSaving}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 shadow-xs cursor-pointer px-4"
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs flex items-center gap-1.5 cursor-pointer px-4 shadow-xs"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>{isSaving ? 'Saving to DB...' : 'Save All Drafts'}</span>
+                <span>{currentModIndex === modulesList.length - 1 ? 'Save & Finish' : 'Save & Next'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             )}
           </div>
         </div>
       )}
 
+      {/* Extra Tabs (e.g. Notes, Call History) */}
       {activeExtraTab && <div>{activeExtraTab.content}</div>}
 
-      {!activeExtraTab && viewMode === 'AGENT_EDIT' && (
+      {/* Main Interactive Intake Form */}
+      {!activeExtraTab && (
         <div className="w-full">
           <OrganizerModuleContent
             selectedModId={selectedModId}
@@ -358,295 +447,29 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
             updateModuleField={updateModuleField}
             errors={validationErrors}
             clearError={clearError}
-            onNext={() => {
-              if (!validateActiveModule()) return;
-              if (currentModIndex < modulesList.length - 1) {
-                setSelectedModId(modulesList[currentModIndex + 1].id);
-              }
-            }}
-            onPrev={() => {
-              if (currentModIndex > 0) {
-                setSelectedModId(modulesList[currentModIndex - 1].id);
-              }
-            }}
-            onSave={handleSaveOrganizerOnCall}
+            onNext={handleSaveAndNext}
+            onPrev={handlePrev}
+            onSave={handleSaveDraft}
             currentModIndex={currentModIndex}
             saving={isSaving}
             readOnly={!canEdit}
             filingType={effectiveFilingType}
+            leadId={leadId}
+            hideFooter
           />
         </div>
       )}
 
-      {/* 3B. INSPECTOR VIEW (Audit Review with Edit CTA - Full Width) */}
-      {!activeExtraTab && viewMode === 'INSPECTOR' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-800">
-                Viewing Module 0{currentModIndex + 1}: {modulesList[currentModIndex]?.title}
-              </span>
-            </div>
-            {canEdit && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setViewMode('AGENT_EDIT')}
-                className="border-emerald-300 text-[#16A34A] hover:bg-emerald-50 text-xs font-bold flex items-center gap-1.5 h-7.5 px-3 cursor-pointer"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit this Module on Call</span>
-              </Button>
-            )}
-          </div>
-
-          {selectedModId === 'm1' && (
-            <div className="space-y-4">
-              <AppAccordion defaultOpenIndex={0} allowMultiple={true}>
-                <AppAccordionItem
-                  index={0}
-                  title="General Information"
-                  icon={<User className="w-4 h-4" />}
-                >
-                  <ReviewModule1Demographics
-                    m1={m1}
-                    customerName={customerName}
-                    showSensitive={showSensitive}
-                    toggleShow={toggleShow}
-                  />
-                </AppAccordionItem>
-
-                <AppAccordionItem
-                  index={1}
-                  title="Dependents"
-                  icon={<Users className="w-4 h-4" />}
-                >
-                  <ReviewModule2Dependents
-                    m2={m2}
-                    showSensitive={showSensitive}
-                    toggleShow={toggleShow}
-                  />
-                </AppAccordionItem>
-
-                <AppAccordionItem
-                  index={2}
-                  title="State & Residency"
-                  icon={<Globe className="w-4 h-4" />}
-                >
-                  <ReviewModule3Presence
-                    m3={m3}
-                    selectedTaxYear={activeTaxYear}
-                  />
-                </AppAccordionItem>
-
-                <AppAccordionItem
-                  index={3}
-                  title="Bank Details"
-                  icon={<Building2 className="w-4 h-4" />}
-                >
-                  <ReviewModule9DirectDeposit
-                    m9={m9}
-                    showSensitive={showSensitive}
-                    toggleShow={toggleShow}
-                  />
-                </AppAccordionItem>
-              </AppAccordion>
-            </div>
-          )}
-
-          {selectedModId === 'm7' && (
-            <ReviewModule7Foreign
-              m7={m7}
-              selectedTaxYear={activeTaxYear}
-              m1={m1}
-              m2={m2}
-              b1={b1}
-            />
-          )}
-
-          {selectedModId === 'm_vault' && (
-            <CustomerDocumentVault
-              selectedTaxYear={activeTaxYear}
-              lockTaxYear={true}
-              isOrganizerMode={true}
-              readOnly={!canEdit}
-              leadId={leadId}
-              filingType={effectiveFilingType}
-            />
-          )}
-
-          {(selectedModId === 'm_income' || selectedModId === 'm_income_expenses' || selectedModId === 'm4' || selectedModId === 'm5' || selectedModId === 'm10' || selectedModId === 'm6') && (
-            <div className="space-y-6">
-              {/* Part 1: W-2 Wages */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">Part 1</span>
-                  <h4 className="text-xs font-bold text-slate-800">Form W-2 Wages &amp; Taxable Earnings</h4>
-                </div>
-                <ReviewModule4Wages m4={m4} />
-              </div>
-
-              {/* Part 2: 1099 Interest & Dividends */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700">Part 2</span>
-                  <h4 className="text-xs font-bold text-slate-800">1099-INT / DIV / OID Interest &amp; Dividends</h4>
-                </div>
-                <ReviewModule5Interest m5={m5} />
-              </div>
-
-              {/* Part 3: Form 1099-R IRA & Retirement Distributions */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Part 3</span>
-                  <h4 className="text-xs font-bold text-slate-800">Form 1099-R IRA &amp; Retirement Distributions / Early Withdrawals</h4>
-                </div>
-                <ReviewModule10Retirement m10={m10} />
-              </div>
-
-              {/* Part 4: 1099-B Stocks & Gains */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700">Part 4</span>
-                  <h4 className="text-xs font-bold text-slate-800">1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</h4>
-                </div>
-                <ReviewModule6Stocks m6={m6} />
-              </div>
-            </div>
-          )}
-
-          {(selectedModId === 'm_expenses' || selectedModId === 'm_income_expenses' || selectedModId === 'm8') && (
-            <div className="space-y-6">
-              {/* Part 4: Itemized Deductions & Expenses */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">Part 1</span>
-                  <h4 className="text-xs font-bold text-slate-800">Itemized Deductions, State Rent &amp; Expenses</h4>
-                </div>
-                <ReviewModule8Deductions m8={m8} />
-              </div>
-            </div>
-          )}
-
-          {effectiveFilingType === 'BUSINESS' && selectedModId !== 'm_vault' && selectedModId !== 'm7' && (
-            <div className="space-y-4">
-              <OrganizerModuleContent
-                selectedModId={selectedModId}
-                selectedTaxYear={activeTaxYear}
-                organizerData={currentOrgData}
-                updateModuleField={updateModuleField}
-                errors={{}}
-                onNext={() => {
-                  if (currentModIndex < modulesList.length - 1) {
-                    setSelectedModId(modulesList[currentModIndex + 1].id);
-                  }
-                }}
-                onPrev={() => {
-                  if (currentModIndex > 0) {
-                    setSelectedModId(modulesList[currentModIndex - 1].id);
-                  }
-                }}
-                onSave={handleSaveOrganizerOnCall}
-                currentModIndex={currentModIndex}
-                saving={isSaving}
-                filingType={effectiveFilingType}
-                leadId={leadId}
-              />
-            </div>
-          )}
-
-          {/* Module Navigation Footer */}
-          <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 shadow-2xs mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentModIndex === 0}
-              onClick={() => {
-                if (currentModIndex > 0) {
-                  setSelectedModId(modulesList[currentModIndex - 1].id);
-                }
-              }}
-              className="text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Previous Module</span>
-            </Button>
-
-            <span className="text-xs font-semibold text-slate-500">
-              Module {currentModIndex + 1} of {modulesList.length}
-            </span>
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentModIndex === modulesList.length - 1}
-              onClick={() => {
-                if (currentModIndex < modulesList.length - 1) {
-                  setSelectedModId(modulesList[currentModIndex + 1].id);
-                }
-              }}
-              className="text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
-            >
-              <span>Next Module</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* 3C. 9-GRID OVERVIEW */}
-      {!activeExtraTab && viewMode === 'GRID' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {modulesList.map((mod) => {
-            const Icon = mod.icon;
-            const isDone = isModuleCompleted(mod.id, organizer);
-
-            return (
-              <div
-                key={mod.id}
-                onClick={() => {
-                  setSelectedModId(mod.id);
-                  setViewMode('INSPECTOR');
-                }}
-                className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs hover:border-[#16A34A] hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between gap-3 group"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${isDone ? 'bg-emerald-50 text-[#16A34A] border border-emerald-200' : 'bg-slate-100 text-slate-400'
-                        }`}>
-                        <Icon className="w-3.5 h-3.5" />
-                      </div>
-                      <h5 className="text-xs font-bold text-slate-900 truncate group-hover:text-[#16A34A] transition-colors">
-                        0{mod.number}. {mod.title}
-                      </h5>
-                    </div>
-
-                    <div className="shrink-0">
-                      {isDone ? (
-                        <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-amber-500" />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${isDone ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
-                      }`}>
-                      {isDone ? 'Submitted & Verified ✓' : 'Draft In Progress'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-[11px] text-[#16A34A] font-bold">
-                  <span>Inspect Full Details →</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Word-Document Styled Preview Modal */}
+      <TaxOrganizerDocumentPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        organizerData={localOrganizer}
+        taxYear={activeTaxYear}
+        customerName={customerName}
+        filingType={effectiveFilingType}
+        leadId={leadId}
+      />
     </div>
   );
 };

@@ -148,12 +148,7 @@ export function useTaxReviewerQueue() {
   }, [filteredReturns]);
 
   const handleOpenAudit = (lead: PrepReviewLead) => {
-    const myYears = allLeads.filter((l) => l.taxpayerId && l.taxpayerId === lead.taxpayerId);
-    if (myYears.length > 1) {
-      navigate(`/prep-review/reviewer/client/${lead.taxpayerId}`);
-    } else {
-      navigate(`/prep-review/reviewer/audit/${lead.id || lead.applicationId}`);
-    }
+    navigate(`/prep-review/reviewer/client/${lead.taxpayerId || lead.id}`);
   };
 
   const handleStartPriorityAudit = () => {

@@ -14,10 +14,14 @@ export function useTaxReviewerAudit() {
   // Application & Profile data
   const [applicationId, setApplicationId] = useState<string>('');
   const [taxYear, setTaxYear] = useState<number>(2025);
+  const [filingType, setFilingType] = useState<'INDIVIDUAL' | 'BUSINESS'>('INDIVIDUAL');
   const [currentStage, setCurrentStage] = useState<string>('QA_IN_REVIEW');
   const [taxpayer, setTaxpayer] = useState<WorkspaceTaxpayer | null>(null);
   const [assignedPreparer, setAssignedPreparer] = useState<{ id: string; name: string; email: string; role: string } | null>(null);
   const [assignedReviewer, setAssignedReviewer] = useState<WorkspaceAssignedReviewer | null>(null);
+  const [assignedDocAgent, setAssignedDocAgent] = useState<any | null>(null);
+  const [assignedSalesAgent, setAssignedSalesAgent] = useState<any | null>(null);
+  const [assignedFileOp, setAssignedFileOp] = useState<any | null>(null);
   const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<WorkspaceDocument | null>(null);
   const [drakeTaxFile, setDrakeTaxFile] = useState<any | null>(null);
@@ -74,10 +78,15 @@ export function useTaxReviewerAudit() {
       const data = await prepReviewService.getWorkspaceDetails(id);
       setApplicationId(data.applicationId || id);
       setTaxYear(data.taxYear || 2025);
+      const ft = (data.filingType || data.taxDraftSummary?.filingType || 'INDIVIDUAL').toUpperCase() as 'INDIVIDUAL' | 'BUSINESS';
+      setFilingType(ft);
       setCurrentStage(data.currentStage || 'QA_IN_REVIEW');
       setTaxpayer(data.taxpayer || null);
-      setAssignedPreparer(data.assignedPreparer || null);
-      setAssignedReviewer(data.assignedReviewer || null);
+      setAssignedPreparer(data.assignedPreparer || data.assignedPrepAgent || null);
+      setAssignedReviewer(data.assignedReviewer || data.assignedReviewAgent || null);
+      setAssignedDocAgent(data.assignedDocAgent || null);
+      setAssignedSalesAgent(data.assignedSalesAgent || null);
+      setAssignedFileOp(data.assignedFileOp || null);
       setDocuments(data.documents || []);
       setPrepNotes(data.prepNotes || '');
       setTaxDraftSummary(data.taxDraftSummary || {});
@@ -167,6 +176,9 @@ export function useTaxReviewerAudit() {
     taxpayer,
     assignedPreparer,
     assignedReviewer,
+    assignedDocAgent,
+    assignedSalesAgent,
+    assignedFileOp,
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
@@ -192,6 +204,7 @@ export function useTaxReviewerAudit() {
     auditLogs,
     clientPaymentStatus,
     availableApplications,
+    filingType,
     handleConfirmApprove,
     handleConfirmRevision,
   };

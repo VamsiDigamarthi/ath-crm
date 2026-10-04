@@ -19,7 +19,7 @@ import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
 import { ReturnItemsSummary } from '../components/workspace/ReturnItemsSummary';
-import { DrakeTaxUploadCard } from '../components/workspace/DrakeTaxUploadCard';
+import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
 
@@ -43,12 +43,12 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     priority,
     taxpayer,
     assignedReviewer,
+    assignedDocAgent,
+    assignedPrepAgent,
+    assignedSalesAgent,
+    assignedFileOp,
     selectedDocForPreview,
     setSelectedDocForPreview,
-    drakeTaxFile,
-    isUploadingDrakeFile,
-    handleUploadDrakeFile,
-    handleDeleteDrakeFile,
     availableApplications,
     taxDraftSummary,
     preparerNotes,
@@ -67,6 +67,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     stageHistories,
     callLogs,
     auditLogs,
+    filingType,
     handleSaveDraft,
     handleSubmitForQA,
   } = useTaxPreparerWorkspace();
@@ -136,9 +137,15 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/prep-review/preparer')}
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/prep-review/preparer');
+              }
+            }}
             className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
-            title="Back to queue"
+            title="Back"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -289,6 +296,17 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
         </div>
       </div>
 
+      {/* 1.1 Staff 5-Department Workflow Stage Stepper */}
+      <StaffTaxApplicationStageStepper
+        currentStage={currentStage}
+        taxDraftSummary={taxDraftSummary}
+        assignedDocAgent={assignedDocAgent}
+        assignedPrepAgent={assignedPrepAgent}
+        assignedReviewAgent={assignedReviewer}
+        assignedSalesAgent={assignedSalesAgent}
+        assignedFileOp={assignedFileOp}
+      />
+
       {/* 1.2 Profile Card */}
       <div className="bg-white rounded-xl border border-slate-200">
         <div className="p-5 flex flex-col lg:flex-row lg:items-start justify-between gap-4">
@@ -327,7 +345,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
               </span>
             </div>
             <p className="text-sm text-slate-500 mt-1.5">
-              {[`Form 1040`, taxpayerFilingStatus, taxpayer?.visaType].filter(Boolean).join(' · ')}
+              {[filingType === 'BUSINESS' ? 'Form 1120 / Business Return' : 'Form 1040', filingType !== 'BUSINESS' && taxpayerFilingStatus, filingType !== 'BUSINESS' && taxpayer?.visaType].filter(Boolean).join(' · ')}
             </p>
           </div>
 
@@ -571,7 +589,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
         customerName={taxpayerName}
         taxDraftSummary={taxDraftSummary}
         taxYear={taxYear}
-        filingType={(taxDraftSummary as any)?.filingType}
+        filingType={filingType}
         allowEdit={false}
         readOnly
         hideHeader
@@ -590,21 +608,6 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
                     currentStage.startsWith('FILING') ||
                     currentStage === 'QA_APPROVED'
                   }
-                />
-                <DrakeTaxUploadCard
-                  drakeTaxFile={drakeTaxFile}
-                  isUploading={isUploadingDrakeFile}
-                  isReadOnly={
-                    isSubmittedToQA ||
-                    isRevertedToDocs ||
-                    isRevertedToSales ||
-                    currentStage === 'QA_APPROVED' ||
-                    currentStage.startsWith('FILING') ||
-                    currentStage === 'PAID_AND_AUTHORIZED'
-                  }
-                  onUpload={handleUploadDrakeFile}
-                  onDelete={handleDeleteDrakeFile}
-                  onPreview={setSelectedDocForPreview}
                 />
               {(() => {
                   const draft = (taxDraftSummary as any) || {};
@@ -925,6 +928,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             customerName={taxpayerName}
             taxDraftSummary={taxDraftSummary}
             taxYear={taxYear}
+            filingType={filingType}
             allowEdit={false}
             readOnly={true}
           />

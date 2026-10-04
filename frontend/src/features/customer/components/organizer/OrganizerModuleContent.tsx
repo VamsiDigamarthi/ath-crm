@@ -11,6 +11,7 @@ import { CustomerDocumentVault } from '../CustomerDocumentVault';
 import { BusinessGeneralInfo } from './business/BusinessGeneralInfo';
 import { BusinessIncome } from './business/BusinessIncome';
 import { BusinessExpenses } from './business/BusinessExpenses';
+import { CustomerReviewDraftModule } from './modules/CustomerReviewDraftModule';
 
 interface OrganizerModuleContentProps {
   selectedModId: string;
@@ -213,10 +214,18 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
             leadId={leadId}
           />
         )}
+
+        {selectedModId === 'm_review_draft' && (
+          <CustomerReviewDraftModule
+            selectedTaxYear={selectedTaxYear}
+            leadId={leadId}
+            readOnly={readOnly}
+          />
+        )}
       </div>
 
       {/* Navigation & Action Footer */}
-      {!hideFooter && <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
+      {!hideFooter && selectedModId !== 'm_review_draft' && <div className="pt-4 border-t border-slate-200 flex items-center justify-between gap-3">
         <Button
           variant="outline"
           size="sm"

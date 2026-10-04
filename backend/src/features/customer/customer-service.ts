@@ -20,9 +20,11 @@ export class CustomerService {
     userId: string,
     taxYearQuery?: string | number,
     leadId?: string,
-    currentUser?: any
+    currentUser?: any,
+    filingTypeQuery?: string
   ) {
     const selectedYear = taxYearQuery ? parseInt(String(taxYearQuery), 10) : 2025;
+    const requestedFilingType = filingTypeQuery?.toUpperCase();
 
     // 1. If leadId is explicitly provided (e.g. from Staff workspace or query param)
     if (leadId) {
@@ -57,14 +59,17 @@ export class CustomerService {
       });
 
       if (cust) {
-        let matchedApp = cust.applications.find((a) => a.taxYear === selectedYear) || cust.applications[0];
+        let matchedApp = cust.applications.find(
+          (a) => a.taxYear === selectedYear && (!requestedFilingType || a.filingType === requestedFilingType)
+        ) || cust.applications.find((a) => a.taxYear === selectedYear) || cust.applications[0];
+
         if (!matchedApp) {
           matchedApp = await prisma.taxApplication.create({
             data: {
               customerId: cust.id,
               taxYear: selectedYear,
               currentStage: 'DOC_OUTREACH',
-              filingType: 'INDIVIDUAL',
+              filingType: requestedFilingType === 'BUSINESS' ? 'BUSINESS' : 'INDIVIDUAL',
             },
             include: {
               customer: true,
@@ -159,14 +164,17 @@ export class CustomerService {
       });
     }
 
-    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
+    let activeApp = profile.applications.find(
+      (a) => a.taxYear === selectedYear && (!requestedFilingType || a.filingType === requestedFilingType)
+    ) || profile.applications.find((a) => a.taxYear === selectedYear);
+
     if (!activeApp) {
       activeApp = await prisma.taxApplication.create({
         data: {
           customerId: profile.id,
           taxYear: selectedYear,
           currentStage: 'DOC_OUTREACH',
-          filingType: 'INDIVIDUAL',
+          filingType: requestedFilingType === 'BUSINESS' ? 'BUSINESS' : 'INDIVIDUAL',
         },
         include: {
           customer: true,
@@ -276,23 +284,53 @@ export class CustomerService {
     let activeApp = profile.applications.find((a) => a.taxYear === selectedYear) || profile.applications[0];
 
     if (!activeApp) {
-      activeApp = await prisma.taxApplication.create({
-        data: {
-          customerId: profile.id,
-          taxYear: selectedYear,
-          currentStage: 'DOC_OUTREACH',
-          filingType: 'INDIVIDUAL',
+      return {
+        taxpayer: {
+          id: profile.id,
+          name: `${profile.firstName} ${profile.lastName || ''}`.trim(),
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          email: profile.email,
+          phone: profile.phone,
+          ssnMasked: profile.ssnTin ? `•••-••-${profile.ssnTin.slice(-4)}` : '-',
+          visaType: profile.visaType || '-',
+          maritalStatus: profile.maritalStatus || '-',
+          city: profile.city || '-',
+          state: profile.state || '-',
+          isConvertedCustomer: profile.isConvertedCustomer,
         },
-        include: {
-          assignedDocAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
-          assignedPrepAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
-          assignedReviewAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
-          assignedSalesAgent: { select: { id: true, firstName: true, lastName: true, email: true } },
-          assignedFileOp: { select: { id: true, firstName: true, lastName: true, email: true } },
-          documents: { select: { id: true, fileName: true, documentCategory: true, verificationStatus: true, createdAt: true } },
-          quotes: { select: { id: true, quoteAmount: true, discountAmount: true, status: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+        application: null,
+        refund: {
+          fedRefund: 0,
+          fedDue: 0,
+          stateRefund: 0,
+          stateDue: 0,
+          totalRefund: 0,
+          totalBalanceDue: 0,
+          stateName: 'State Return',
+          bankMasked: 'Direct Deposit',
+          isDraft: true,
         },
-      });
+        assignedTeam: {
+          docAgent: { name: 'Assigned Documenter', email: 'support@taxcrm.com' },
+          prepAgent: null,
+          cpaReviewer: {
+            name: 'Assigned Senior CPA Reviewer',
+            credentials: 'IRS Enrolled Agent & Circular 230 Certified',
+          },
+        },
+        stats: {
+          docCount: 0,
+          organizerPercent: 0,
+          organizerVerifiedCount: 0,
+          quoteAmount: 0,
+          quoteStatus: profile.isConvertedCustomer ? 'PAID' : 'PENDING',
+          activeFilingsCount: 0,
+          completedFilingsCount: 0,
+        },
+        filings: [],
+        availableTaxYears: [],
+      };
     }
 
     // Parse draft summary
@@ -861,13 +899,14 @@ export class CustomerService {
   /**
    * Get 9-Module Organizer data for active tax return
    */
-  static async getOrganizer(userId: string, taxYearQuery?: string, leadId?: string, currentUser?: any) {
-    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYearQuery, leadId, currentUser);
+  static async getOrganizer(userId: string, taxYearQuery?: string, leadId?: string, currentUser?: any, filingTypeQuery?: string) {
+    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYearQuery, leadId, currentUser, filingTypeQuery);
 
     const user = profile.userId ? await prisma.user.findUnique({ where: { id: profile.userId } }) : null;
     const draft = (activeApp.taxDraftSummary as any) || {};
     const organizer = draft.organizer || {};
     const m1Saved = organizer.m1_demographics || {};
+    const isBusiness = activeApp.filingType === 'BUSINESS' || filingTypeQuery?.toUpperCase() === 'BUSINESS';
 
     const firstName = m1Saved.firstName || profile.firstName || user?.firstName || '';
     const middleName = m1Saved.middleName !== undefined ? m1Saved.middleName : (profile.middleName || '');
@@ -876,14 +915,60 @@ export class CustomerService {
     const email = m1Saved.email || profile.email || user?.email || '';
     const phone = m1Saved.phone || profile.phone || user?.mobile || '';
 
-    // Strictly load submittedModules from saved draft. Default only to ['m1'] if user has filled demographics
+    // Strictly load submittedModules from saved draft
     const submittedModules: string[] = Array.isArray(organizer.submittedModules)
       ? organizer.submittedModules
-      : (m1Saved.firstName || profile.firstName ? ['m1'] : []);
+      : (isBusiness ? ['b1_companyInfo'] : (m1Saved.firstName || profile.firstName ? ['m1'] : []));
 
     // Real customer data from CustomerProfile and saved TaxDraftSummary
     const defaultOrganizer = {
       submittedModules,
+      b1_companyInfo: organizer.b1_companyInfo || {
+        companyName: '',
+        ein: '',
+        formationDate: '',
+        businessStructure: 'LLC',
+        businessActivity: '',
+        naicsCode: '',
+        addressLine1: profile.addressLine1 || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        zipCode: profile.zipCode || '',
+        hasPartners: false,
+        partners: [],
+      },
+      b2_businessIncome: organizer.b2_businessIncome || {
+        grossReceipts: 0,
+        returnsAllowances: 0,
+        otherIncome: 0,
+        incomeSourcesList: [],
+      },
+      b3_businessExpenses: organizer.b3_businessExpenses || {
+        advertising: 0,
+        carAndTruck: 0,
+        commissions: 0,
+        contractLabor: 0,
+        depletion: 0,
+        employeeBenefits: 0,
+        insurance: 0,
+        legalAndProfessional: 0,
+        officeExpense: 0,
+        rentLease: 0,
+        repairsMaintenance: 0,
+        supplies: 0,
+        taxesLicenses: 0,
+        travel: 0,
+        meals: 0,
+        utilities: 0,
+        wages: 0,
+        otherExpenses: 0,
+        cogsBeginningInventory: 0,
+        cogsPurchases: 0,
+        cogsCostOfLabor: 0,
+        cogsMaterialsSupplies: 0,
+        cogsOtherCosts: 0,
+        cogsEndingInventory: 0,
+      },
       m1_demographics: {
         firstName,
         middleName,
@@ -1023,37 +1108,55 @@ export class CustomerService {
       },
     };
 
-    // Calculate real completion strictly based on 6 unified sections
+    // Calculate real completion strictly based on modules
     const effectiveCompletedSet = new Set<string>();
-    submittedModules.forEach((m) => {
-      if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
-        effectiveCompletedSet.add(m);
-      }
-      if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
-        effectiveCompletedSet.add('m_income_expenses');
-      }
-    });
+    if (isBusiness) {
+      ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7'].forEach((m) => {
+        if (submittedModules.includes(m)) {
+          effectiveCompletedSet.add(m);
+        }
+      });
+    } else {
+      submittedModules.forEach((m) => {
+        if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
+          effectiveCompletedSet.add(m);
+        }
+        if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
+          effectiveCompletedSet.add('m_income_expenses');
+        }
+      });
+    }
     const completedCount = effectiveCompletedSet.size;
-    const progressPercent = Math.min(100, Math.round((completedCount / 6) * 100));
+    const totalModules = isBusiness ? 4 : 6;
+    const progressPercent = Math.min(100, Math.round((completedCount / totalModules) * 100));
 
     return {
       taxYear: activeApp.taxYear,
       applicationId: activeApp.id,
+      filingType: activeApp.filingType || (isBusiness ? 'BUSINESS' : 'INDIVIDUAL'),
       organizer: defaultOrganizer,
       progressPercent,
       completedCount,
-      totalModules: 6,
+      totalModules,
     };
   }
 
   /**
    * Save / update 9-module organizer data with XSS sanitization and PostgreSQL sync
    */
-  static async saveOrganizer(userId: string, dataOrBody: any, taxYearParam?: number | string, leadId?: string, currentUser?: any) {
+  static async saveOrganizer(
+    userId: string,
+    dataOrBody: any,
+    taxYearParam?: number | string,
+    leadId?: string,
+    currentUser?: any,
+    filingTypeParam?: string
+  ) {
     const taxYear = dataOrBody?.taxYear || taxYearParam || 2025;
+    const filingTypeQuery = dataOrBody?.filingType || dataOrBody?.type || filingTypeParam;
     const organizerData = dataOrBody?.organizerData || dataOrBody;
 
-    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYear, leadId, currentUser);
+    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYear, leadId, currentUser, filingTypeQuery);
 
     // 1. Sanitize all incoming fields against XSS & script injection
     const cleanOrganizerData = sanitizeObject(organizerData);
@@ -1095,7 +1198,7 @@ export class CustomerService {
     const submittedModules = Array.from(new Set(newSubmitted));
 
     cleanOrganizerData.submittedModules = submittedModules;
-    const isBusiness = activeApp.filingType === 'BUSINESS' || Boolean(cleanOrganizerData.b1_companyInfo);
+    const isBusiness = activeApp.filingType === 'BUSINESS' || filingTypeQuery?.toUpperCase() === 'BUSINESS';
     const effectiveSavedSet = new Set<string>();
 
     if (isBusiness) {
@@ -1120,6 +1223,7 @@ export class CustomerService {
 
     const updatedSummary = {
       ...currentDraft,
+      filingType: activeApp.filingType,
       organizer: cleanOrganizerData,
       organizerPercent: progressPercent,
       organizerVerifiedCount: completedCount,
@@ -1222,6 +1326,7 @@ export class CustomerService {
     const priorDraft = (priorApp?.taxDraftSummary as any) || {};
 
     const initialTaxDraftSummary = {
+      filingType,
       leadSource: 'SELF_SIGNUP',
       source: 'SELF_SIGNUP',
       signupMethod: 'ONLINE_PORTAL',
@@ -1328,6 +1433,375 @@ export class CustomerService {
       applications: updatedApplications,
       taxYear: newApplication.taxYear,
       message: `${filingType === 'BUSINESS' ? 'Business' : 'Individual'} Tax Year ${taxYear} return initiated! Admin has been notified to assign your Documenter agent.`,
+    };
+  }
+
+  /**
+   * Get Tax Draft Review Details for Client Portal
+   */
+  public static async getDraftReview(
+    userId: string,
+    taxYearQuery?: string | number,
+    leadId?: string,
+    currentUser?: any,
+    filingTypeQuery?: string
+  ) {
+    const { profile, activeApp } = await this.resolveCustomerAndApp(
+      userId,
+      taxYearQuery,
+      leadId,
+      currentUser,
+      filingTypeQuery
+    );
+
+    if (!activeApp) {
+      throw new NotFoundError('Active tax application not found');
+    }
+
+    const appWithDetails = await prisma.taxApplication.findUnique({
+      where: { id: activeApp.id },
+      include: {
+        customer: true,
+        assignedSalesAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        assignedPrepAgent: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        quotes: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    const draft = (appWithDetails?.taxDraftSummary as any) || {};
+
+    return {
+      applicationId: activeApp.id,
+      taxYear: activeApp.taxYear,
+      filingType: activeApp.filingType,
+      currentStage: activeApp.currentStage,
+      taxDraftSummary: draft,
+      drakeTaxFile: draft.drakeTaxFile || null,
+      deliverableDocuments: Array.isArray(draft.deliverableDocuments) ? draft.deliverableDocuments : [],
+      draftVersion: draft.draftVersion || 1,
+      clientReviewStatus: draft.clientReviewStatus || 'NOT_SENT',
+      clientReviewSentAt: draft.clientReviewSentAt || null,
+      clientRevisionNotes: draft.clientRevisionNotes || null,
+      assignedSalesAgent: appWithDetails?.assignedSalesAgent || null,
+      customer: profile,
+    };
+  }
+
+  /**
+   * Client Approves Draft and E-Sign Documents
+   */
+  public static async approveDraft(userId: string, applicationId?: string, notes?: string, taxYear?: string | number) {
+    let app: any = null;
+
+    if (applicationId && applicationId !== 'undefined' && applicationId !== 'null') {
+      app = await prisma.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: { customer: true, assignedSalesAgent: true },
+      });
+    }
+
+    if (!app) {
+      const customer = await prisma.customerProfile.findFirst({
+        where: { userId },
+        include: {
+          applications: {
+            where: taxYear ? { taxYear: Number(taxYear) } : undefined,
+            include: { customer: true, assignedSalesAgent: true },
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+          },
+        },
+      });
+      if (customer?.applications?.[0]) {
+        app = customer.applications[0];
+      }
+    }
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const deliverables: any[] = Array.isArray(currentDraft.deliverableDocuments)
+      ? currentDraft.deliverableDocuments
+      : [];
+
+    // Check if any required signing documents are still missing signed copies
+    const missingSignatures = deliverables.filter(
+      (d) => d.requiresEsign && !d.signedDocument
+    );
+
+    if (missingSignatures.length > 0) {
+      const docNames = missingSignatures.map((d) => d.fileName).join(', ');
+      throw new BadRequestError(
+        `Please sign and upload the required document(s) before approving: ${docNames}`
+      );
+    }
+
+    const updatedSummary = {
+      ...currentDraft,
+      clientReviewStatus: 'CLIENT_APPROVED',
+      clientApprovedAt: new Date().toISOString(),
+      clientApprovalNotes: notes || '',
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: app.id },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    const clientName = `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || 'Taxpayer';
+
+    // Notify assigned sales agent
+    if (app.assignedSalesAgentId) {
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: app.assignedSalesAgentId,
+            targetRole: Role.SALES_AGENT,
+            applicationId: app.id,
+            category: NotificationCategory.SALES,
+            priority: NotificationPriority.HIGH,
+            title: `Tax Draft Approved: ${clientName} (TY ${app.taxYear})`,
+            message: `${clientName} has approved Form 1040 draft (v${currentDraft.draftVersion || 1}) and uploaded all signed documents. Ready for invoice & filing authorization!`,
+            actionUrl: `/sales/agent/pitch/${app.id}`,
+            actionLabel: 'Open Pitch Workspace',
+            relatedLeadName: clientName,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to notify sales closer of draft approval:', err);
+      }
+    }
+
+    return {
+      success: true,
+      clientReviewStatus: 'CLIENT_APPROVED',
+      taxDraftSummary: updatedSummary,
+      application: updatedApp,
+    };
+  }
+
+  /**
+   * Client Requests Changes / Rejects Draft
+   */
+  public static async rejectDraft(userId: string, applicationId?: string, revisionNotes?: string, taxYear?: string | number) {
+    if (!revisionNotes || !revisionNotes.trim()) {
+      throw new BadRequestError('Please provide details on what you would like adjusted or corrected.');
+    }
+
+    let app: any = null;
+
+    if (applicationId && applicationId !== 'undefined' && applicationId !== 'null') {
+      app = await prisma.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: { customer: true, assignedSalesAgent: true },
+      });
+    }
+
+    if (!app) {
+      const customer = await prisma.customerProfile.findFirst({
+        where: { userId },
+        include: {
+          applications: {
+            where: taxYear ? { taxYear: Number(taxYear) } : undefined,
+            include: { customer: true, assignedSalesAgent: true },
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+          },
+        },
+      });
+      if (customer?.applications?.[0]) {
+        app = customer.applications[0];
+      }
+    }
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+
+    const updatedSummary = {
+      ...currentDraft,
+      clientReviewStatus: 'CLIENT_REVISION_REQUESTED',
+      clientRevisionNotes: revisionNotes.trim(),
+      clientRevisionRequestedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: app.id },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    const clientName = `${app.customer?.firstName || ''} ${app.customer?.lastName || ''}`.trim() || 'Taxpayer';
+
+    // Notify assigned sales agent
+    if (app.assignedSalesAgentId) {
+      try {
+        await prisma.notification.create({
+          data: {
+            recipientUserId: app.assignedSalesAgentId,
+            targetRole: Role.SALES_AGENT,
+            applicationId: app.id,
+            category: NotificationCategory.SALES,
+            priority: NotificationPriority.CRITICAL,
+            title: `Client Requested Changes: ${clientName} (TY ${app.taxYear})`,
+            message: `${clientName} requested adjustments on return draft: "${revisionNotes.trim()}". Open workspace to modify or send back.`,
+            actionUrl: `/sales/agent/pitch/${app.id}`,
+            actionLabel: 'Revise in Pitch Workspace',
+            relatedLeadName: clientName,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to notify sales closer of draft revision request:', err);
+      }
+    }
+
+    return {
+      success: true,
+      clientReviewStatus: 'CLIENT_REVISION_REQUESTED',
+      taxDraftSummary: updatedSummary,
+      application: updatedApp,
+    };
+  }
+
+  /**
+   * Client Uploads Signed Deliverable Document
+   */
+  public static async uploadSignedDeliverable(
+    userId: string,
+    applicationId?: string,
+    docId?: string,
+    file?: Express.Multer.File,
+    taxYear?: string | number
+  ) {
+    if (!file) {
+      throw new BadRequestError('No file was uploaded');
+    }
+
+    let app: any = null;
+
+    // 1. Try finding application by direct applicationId
+    if (applicationId && applicationId !== 'undefined' && applicationId !== 'null') {
+      app = await prisma.taxApplication.findUnique({
+        where: { id: applicationId },
+        include: { customer: true },
+      });
+    }
+
+    // 2. Fallback: resolve application from the deliverable docId in TaxDocument table
+    if (!app && docId) {
+      const doc = await prisma.taxDocument.findUnique({
+        where: { id: docId },
+        include: {
+          application: {
+            include: { customer: true },
+          },
+        },
+      });
+      if (doc?.application) {
+        app = doc.application;
+      }
+    }
+
+    // 3. Fallback: resolve application by customer profile & taxYear
+    if (!app) {
+      const customer = await prisma.customerProfile.findFirst({
+        where: { userId },
+        include: {
+          applications: {
+            where: taxYear ? { taxYear: Number(taxYear) } : undefined,
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+          },
+        },
+      });
+      if (customer?.applications?.[0]) {
+        app = {
+          ...customer.applications[0],
+          customer,
+        };
+      }
+    }
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const storageResult = await StorageService.saveFile(
+      file,
+      `taxpayer_${app.customerId}_ty${app.taxYear || 2025}/signed_deliverables`
+    );
+
+    const signedDoc = await prisma.taxDocument.create({
+      data: {
+        applicationId: app.id,
+        uploadedByUserId: userId,
+        fileName: file.originalname,
+        filePath: storageResult.filePath,
+        documentCategory: 'SIGNED_CLIENT_DELIVERABLE',
+        verificationStatus: 'VERIFIED',
+      },
+    });
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const deliverables: any[] = Array.isArray(currentDraft.deliverableDocuments)
+      ? currentDraft.deliverableDocuments
+      : [];
+
+    const updatedDeliverables = deliverables.map((d) => {
+      if (d.id === docId) {
+        return {
+          ...d,
+          signedDocument: {
+            id: signedDoc.id,
+            fileName: file.originalname,
+            fileUrl: storageResult.fileUrl,
+            filePath: storageResult.filePath,
+            fileSize: storageResult.fileSize || file.size,
+            uploadedAt: new Date().toISOString(),
+          },
+        };
+      }
+      return d;
+    });
+
+    const updatedSummary = {
+      ...currentDraft,
+      deliverableDocuments: updatedDeliverables,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: app.id },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    return {
+      success: true,
+      signedDocument: {
+        id: signedDoc.id,
+        fileName: file.originalname,
+        fileUrl: storageResult.fileUrl,
+      },
+      deliverableDocuments: updatedDeliverables,
+      taxDraftSummary: updatedSummary,
     };
   }
 }

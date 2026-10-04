@@ -22,6 +22,9 @@ export interface AppInputProps {
   name?: string
   className?: string
   maxLength?: number
+  step?: string | number
+  min?: string | number
+  max?: string | number
   autoComplete?: string
   helperText?: React.ReactNode
 }
@@ -58,6 +61,9 @@ export function AppInput({
   name,
   className,
   maxLength,
+  step,
+  min,
+  max,
   autoComplete,
   helperText,
 }: AppInputProps) {
@@ -95,6 +101,9 @@ export function AppInput({
           readOnly={readOnly}
           required={required}
           maxLength={maxLength}
+          step={step}
+          min={min}
+          max={max}
           autoComplete={autoComplete}
           className={cn(
             'w-full rounded-md border bg-white px-3.5 transition-all duration-200 outline-none',

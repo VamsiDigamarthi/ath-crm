@@ -92,11 +92,13 @@ export const useReturnItems = (applicationId?: string) => {
         const effectiveQty = qty ?? item.quantity;
         const effectivePrice = price ?? item.unitPrice;
         const amountCents = Math.round(effectivePrice * 100) * effectiveQty;
-        const taxCents = Math.round(amountCents * (TAX_RATES[item.taxType] ?? 0));
+        const itemTaxRate = Number(item.taxRate ?? (TAX_RATES[item.taxType] ? TAX_RATES[item.taxType] * 100 : 0));
+        const taxCents = Math.round(amountCents * (itemTaxRate / 100));
         return {
           ...item,
           quantity: effectiveQty,
           unitPrice: effectivePrice,
+          taxRate: itemTaxRate,
           isPriceOverridden: Math.round(effectivePrice * 100) !== Math.round(item.catalogPrice * 100),
           amount: amountCents / 100,
           tax: taxCents / 100,

@@ -162,5 +162,34 @@ export const prepReviewService = {
   async deleteDrakeTaxFile(id: string, docId?: string): Promise<any> {
     return apiClient.delete(`/prep-review/workspace/${id}/drake-file/${docId || 'current'}`);
   },
+
+  /**
+   * Upload Scalable Client Deliverable Document (e.g. Form 8879, State Signature Authorization, Engagement Letter)
+   */
+  async uploadDeliverableDocument(id: string, file: File, requiresEsign: boolean = false): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('requiresEsign', String(requiresEsign));
+    return apiClient.post(`/prep-review/workspace/${id}/deliverable-document`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  /**
+   * Remove / Delete Deliverable Document
+   */
+  async deleteDeliverableDocument(id: string, docId: string): Promise<any> {
+    return apiClient.delete(`/prep-review/workspace/${id}/deliverable-document/${docId}`);
+  },
+
+  /**
+   * Toggle Requires E-Sign / Client Re-upload flag
+   */
+  async toggleDeliverableEsign(id: string, docId: string, requiresEsign: boolean): Promise<any> {
+    return apiClient.patch(`/prep-review/workspace/${id}/deliverable-document/${docId}`, { requiresEsign });
+  },
 };
+
 

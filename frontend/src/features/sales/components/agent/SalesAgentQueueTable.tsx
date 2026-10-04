@@ -43,11 +43,21 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
         id: 'taxYear',
         header: 'TY',
         accessorFn: (row) => `TY ${row.taxYear || 2025}`,
-        cell: ({ row }) => (
-          <span className="text-xs font-medium text-slate-700">
-            {row.original.taxYear || 2025}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const appCount = row.original.allApplications?.length || row.original.totalTaxYears || 1;
+          return (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-semibold text-slate-800">
+                {row.original.taxYear || 2025}
+              </span>
+              {appCount > 1 && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                  {appCount} Filings
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: 'state',
@@ -202,13 +212,13 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
 
               <Button
                 size="sm"
-                onClick={() => navigate(`/sales/agent/pitch/${lead.id || lead.applicationId}`)}
+                onClick={() => navigate(`/sales/agent/client/${lead.taxpayerId || lead.id || lead.applicationId}`)}
                 className={`h-7 px-2.5 text-[11px] text-white font-medium flex items-center gap-1 shadow-2xs cursor-pointer ${
                   isReverted ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
                 }`}
               >
                 {isReverted ? <RotateCcw className="w-3 h-3" /> : <PhoneCall className="w-3 h-3" />}
-                <span>{isReverted ? 'View' : 'Pitch'}</span>
+                <span>{isReverted ? 'View Filings' : 'Pitch Returns'}</span>
                 <ArrowRight className="w-3 h-3" />
               </Button>
             </div>
@@ -248,7 +258,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer, email, state, status..."
         onExportExcel={handleExportExcel}
-        onRowClick={(item) => navigate(`/sales/agent/pitch/${item.id || item.applicationId}`)}
+        onRowClick={(item) => navigate(`/sales/agent/client/${item.taxpayerId || item.id || item.applicationId}`)}
       />
 
       {/* Return to Admin Modal */}

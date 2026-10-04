@@ -6,8 +6,6 @@ import {
   User,
   Mail,
   Phone,
-  Globe,
-  Calendar,
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
@@ -21,30 +19,6 @@ import { useReferralCodeCheck } from '../hooks/useReferralCodeCheck';
 import { AppInput } from '@/shared/components/AppInput';
 import { Button } from '@/shared/components/Button';
 import toast from 'react-hot-toast';
-
-const VISA_OPTIONS = [
-  { value: 'H1B', label: 'H-1B (Work Visa)' },
-  { value: 'F1_OPT', label: 'F-1 Student (OPT / STEM)' },
-  { value: 'L1', label: 'L-1 (Intracompany)' },
-  { value: 'GREEN_CARD', label: 'Permanent Resident (Green Card)' },
-  { value: 'US_CITIZEN', label: 'U.S. Citizen' },
-  { value: 'B1_B2', label: 'B-1 / B-2 (Visitor)' },
-  { value: 'OTHER', label: 'Other Visa / Non-Resident' },
-];
-
-// Dynamically generate tax years: 2 years in the future to 6 years in the past (descending)
-// E.g., for currentYear 2025: [2027, 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019]
-export const generateTaxYears = (futureOffset = 2, pastOffset = 6): number[] => {
-  const currentYear = new Date().getFullYear();
-  const years: number[] = [];
-  for (let yr = currentYear + futureOffset; yr >= currentYear - pastOffset; yr--) {
-    years.push(yr);
-  }
-  return years;
-};
-
-const TAX_YEARS = generateTaxYears(2, 6);
-const CURRENT_TAX_YEAR = new Date().getFullYear();
 
 export const TaxpayerSignupForm: React.FC = () => {
   const navigate = useNavigate();
@@ -64,8 +38,6 @@ export const TaxpayerSignupForm: React.FC = () => {
       lastName: '',
       email: '',
       phone: '',
-      taxYear: CURRENT_TAX_YEAR,
-      visaType: 'H1B',
       ssnTin: '',
       referralCode: '',
     },
@@ -80,7 +52,7 @@ export const TaxpayerSignupForm: React.FC = () => {
     if (digits.length > 6) {
       formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
     } else if (digits.length > 3) {
-      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+      formatted = `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}`;
     } else if (digits.length > 0) {
       formatted = `(${digits}`;
     }
@@ -111,8 +83,6 @@ export const TaxpayerSignupForm: React.FC = () => {
         lastName: data.lastName.trim(),
         email: data.email.trim().toLowerCase(),
         phone: data.phone.trim(),
-        taxYear: Number(data.taxYear) || CURRENT_TAX_YEAR,
-        visaType: data.visaType,
         ssnTin: data.ssnTin?.trim() || null,
         referralCode: data.referralCode?.trim().toUpperCase() || null,
       };
@@ -236,63 +206,6 @@ export const TaxpayerSignupForm: React.FC = () => {
             onChange={handlePhoneChange}
             error={errors.phone?.message}
           />
-        </div>
-
-        {/* Tax Year & Visa Status */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Tax Year Selector with exact AppInput styling */}
-          <div className="flex flex-col gap-1 w-full">
-            <label className="text-xs font-semibold text-gray-700 tracking-tight">
-              Filing Tax Year <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none z-10">
-                <Calendar className="w-4 h-4 text-gray-400" />
-              </div>
-              <select
-                value={watch('taxYear')}
-                onChange={(e) => setValue('taxYear', Number(e.target.value), { shouldValidate: true })}
-                className="h-10 text-xs font-semibold text-slate-900 w-full rounded-xl border-[1.5px] border-gray-200 bg-white pl-10 pr-8 transition-all duration-200 outline-none hover:border-gray-300 focus:ring-2 focus:ring-emerald-500/15 focus:border-[#16A34A] cursor-pointer"
-              >
-                {TAX_YEARS.map((yr) => (
-                  <option key={yr} value={yr}>
-                    Tax Year {yr}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {errors.taxYear && (
-              <p className="text-[11px] text-rose-500 font-medium">{errors.taxYear.message}</p>
-            )}
-          </div>
-
-          {/* Visa Type Selector with exact AppInput styling */}
-          <div className="flex flex-col gap-1 w-full">
-            <label className="text-xs font-semibold text-gray-700 tracking-tight">
-              Visa / Residency Status <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 pointer-events-none z-10">
-                <Globe className="w-4 h-4 text-gray-400" />
-              </div>
-              <select
-                value={watch('visaType')}
-                onChange={(e) => setValue('visaType', e.target.value, { shouldValidate: true })}
-                className={`h-10 text-xs font-semibold text-slate-900 w-full rounded-xl border-[1.5px] bg-white pl-10 pr-8 transition-all duration-200 outline-none hover:border-gray-300 focus:ring-2 focus:ring-emerald-500/15 focus:border-[#16A34A] cursor-pointer ${
-                  errors.visaType ? 'border-rose-400 focus:border-rose-500' : 'border-gray-200'
-                }`}
-              >
-                {VISA_OPTIONS.map((v) => (
-                  <option key={v.value} value={v.value}>
-                    {v.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {errors.visaType && (
-              <p className="text-[11px] text-rose-500 font-medium">{errors.visaType.message}</p>
-            )}
-          </div>
         </div>
 
         {/* SSN / ITIN (Optional) with native AppInput password toggle */}

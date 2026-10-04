@@ -207,4 +207,86 @@ export class SalesController {
       res.status(500).json({ message: err.message || 'Failed to return sales leads to admin pool' });
     }
   }
+
+  public static async updateDraftValues(req: Request, res: Response) {
+    try {
+      const id = String(req.params.id);
+      const userId = req.currentUser?.id || (req as any).user?.id || 'SYSTEM';
+      const result = await SalesService.updateDraftValues(id, userId, req.body);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to update draft calculation values' });
+    }
+  }
+
+  public static async uploadDeliverableDocument(req: Request, res: Response) {
+    try {
+      const id = String(req.params.id);
+      const userId = req.currentUser?.id || (req as any).user?.id || 'SYSTEM';
+      const file = req.file;
+      const requiresEsign = req.body.requiresEsign === 'true' || req.body.requiresEsign === true;
+
+      if (!file) {
+        return res.status(400).json({ message: 'No file was uploaded' });
+      }
+
+      const result = await SalesService.uploadDeliverableDocument(id, userId, file, requiresEsign);
+      res.status(201).json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to upload deliverable document' });
+    }
+  }
+
+  public static async deleteDeliverableDocument(req: Request, res: Response) {
+    try {
+      const id = String(req.params.id);
+      const docId = String(req.params.docId || req.body?.documentId || '');
+      const userId = req.currentUser?.id || (req as any).user?.id || 'SYSTEM';
+
+      const result = await SalesService.deleteDeliverableDocument(id, docId, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to delete deliverable document' });
+    }
+  }
+
+  public static async toggleDeliverableEsign(req: Request, res: Response) {
+    try {
+      const id = String(req.params.id);
+      const docId = String(req.params.docId || '');
+      const requiresEsign = req.body.requiresEsign === true || req.body.requiresEsign === 'true';
+      const userId = req.currentUser?.id || (req as any).user?.id || 'SYSTEM';
+
+      const result = await SalesService.toggleDeliverableEsign(id, docId, requiresEsign, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to update deliverable e-sign status' });
+    }
+  }
+
+  public static async sendDraftToClient(req: Request, res: Response) {
+    try {
+      const id = String(req.params.id);
+      const userId = req.currentUser?.id || (req as any).user?.id || 'SYSTEM';
+      const notes = req.body?.notes || '';
+
+      const result = await SalesService.sendDraftToClient(id, userId, notes);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to send draft to client' });
+    }
+  }
+
+  public static async reopenDraftVersion(req: Request, res: Response) {
+    try {
+      const id = String(req.params.id);
+      const userId = req.currentUser?.id || (req as any).user?.id || 'SYSTEM';
+      const reason = req.body?.reason || '';
+
+      const result = await SalesService.reopenDraftVersion(id, userId, reason);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Failed to reopen draft version' });
+    }
+  }
 }

@@ -10,6 +10,7 @@ const EMPTY: ProductSchemaInput = {
   price: '' as unknown as number,
   unit: 'PER_RETURN',
   taxType: 'NO_TAX',
+  taxRate: 0,
   status: 'ACTIVE',
 };
 
@@ -33,6 +34,7 @@ export const useProductForm = (
             price: item.price,
             unit: item.unit,
             taxType: item.taxType,
+            taxRate: item.taxRate !== undefined ? item.taxRate : (item.taxType === 'VAT_10' ? 10 : 0),
             status: item.status,
           }
         : EMPTY

@@ -64,7 +64,7 @@ export const SalesManagerQueueScreen: React.FC = () => {
   const columns = useMemo(
     () =>
       getSalesColumns({
-        onOpenPitch: (lead) => navigate(`/sales/manager/pitch/${lead.id}`),
+        onOpenPitch: (lead) => navigate(`/sales/manager/client/${lead.taxpayerId || lead.id || lead.applicationId}`),
         onOpenAssignModal: (lead) => handleOpenAssignModal(lead),
       }),
     [navigate, handleOpenAssignModal]

@@ -17,6 +17,7 @@ import {
   validateBusinessCompanyInfo,
   validateBusinessIncome,
   validateBusinessExpenses,
+  validateEntireOrganizer,
   type ValidationErrorMap 
 } from '../components/organizer/utils/organizer-validation';
 import toast from 'react-hot-toast';
@@ -42,8 +43,8 @@ export const useCustomerOrganizer = (
 
   const moduleIds = useMemo(() => {
     return isBusiness
-      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7', 'm_vault']
-      : ['m1', 'm_income', 'm_expenses', 'm7', 'm_vault'];
+      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7', 'm_vault', 'm_review_draft']
+      : ['m1', 'm_income', 'm_expenses', 'm7', 'm_vault', 'm_review_draft'];
   }, [isBusiness]);
 
   const currentModIndex = moduleIds.indexOf(selectedModId);
@@ -89,7 +90,7 @@ export const useCustomerOrganizer = (
     } finally {
       setLoading(false);
     }
-  }, [selectedTaxYear]);
+  }, [selectedTaxYear, isBusiness, leadIdParam]);
 
   useEffect(() => {
     if (taxYearParam) {
@@ -347,7 +348,7 @@ export const useCustomerOrganizer = (
       };
       setOrganizerData(dataToSave);
 
-      const res = await customerApi.saveOrganizer(selectedTaxYear, dataToSave, leadIdParam);
+      const res = await customerApi.saveOrganizer(selectedTaxYear, dataToSave, leadIdParam, isBusiness ? 'BUSINESS' : 'INDIVIDUAL');
       if (res.data) {
         setProgressPercent(res.data.progressPercent);
         setCompletedCount(res.data.completedCount);
@@ -372,7 +373,7 @@ export const useCustomerOrganizer = (
     if (!organizerData) return false;
     try {
       setSaving(true);
-      const res = await customerApi.saveOrganizer(selectedTaxYear, organizerData, leadIdParam);
+      const res = await customerApi.saveOrganizer(selectedTaxYear, organizerData, leadIdParam, isBusiness ? 'BUSINESS' : 'INDIVIDUAL');
       if (res.data) {
         setProgressPercent(res.data.progressPercent);
         setCompletedCount(res.data.completedCount);
@@ -392,16 +393,69 @@ export const useCustomerOrganizer = (
 
   // Navigation handlers
   const handleNext = async () => {
-    const success = await saveOrganizer(true);
-    if (!success) {
-      // Stay on current module so user can correct highlighted errors
-      return;
-    }
+    const isFinalTab = currentModIndex === moduleIds.length - 1;
 
-    if (currentModIndex >= 0 && currentModIndex < moduleIds.length - 1) {
-      setSelectedModId(moduleIds[currentModIndex + 1]);
+    if (isFinalTab) {
+      // Final step: validate ALL modules across the entire organizer!
+      const validation = validateEntireOrganizer(
+        organizerData,
+        selectedTaxYear,
+        isBusiness ? 'BUSINESS' : 'INDIVIDUAL'
+      );
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        if (validation.firstFailedModuleId && validation.firstFailedModuleId !== selectedModId) {
+          setSelectedModId(validation.firstFailedModuleId);
+        }
+        toast.error(validation.firstErrorMessage || 'Please complete all required fields before finishing.');
+        return;
+      }
+
+      // All modules valid! Save with all modules marked as submitted
+      try {
+        setSaving(true);
+        const allModuleIds = isBusiness
+          ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7', 'm_vault']
+          : ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'm10', 'm_income', 'm_expenses', 'm_vault'];
+        const updatedSubmitted = Array.from(
+          new Set([...(organizerData?.submittedModules || []), ...allModuleIds])
+        );
+        const m3 = organizerData?.m3_presence;
+        const dataToSave: OrganizerData = {
+          ...organizerData!,
+          ...(m3 && {
+            m3_presence: {
+              ...m3,
+              days2024: m3.days2024 ?? 0,
+              days2023: m3.days2023 ?? 0,
+            },
+          }),
+          submittedModules: updatedSubmitted,
+        };
+        setOrganizerData(dataToSave);
+        const res = await customerApi.saveOrganizer(selectedTaxYear, dataToSave, leadIdParam);
+        if (res.data) {
+          setProgressPercent(res.data.progressPercent);
+          setCompletedCount(res.data.completedCount);
+          setValidationErrors({});
+          toast.success('All intake sections validated & saved! Ready for CPA return preparation.');
+        }
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Failed to save organizer');
+      } finally {
+        setSaving(false);
+      }
     } else {
-      toast.success('All intake sections reviewed! Ready for CPA return preparation.');
+      // Intermediate tab: validate current module only
+      const success = await saveOrganizer(true);
+      if (!success) {
+        // Stay on current module so user can correct highlighted errors
+        return;
+      }
+
+      if (currentModIndex >= 0 && currentModIndex < moduleIds.length - 1) {
+        setSelectedModId(moduleIds[currentModIndex + 1]);
+      }
     }
   };
 

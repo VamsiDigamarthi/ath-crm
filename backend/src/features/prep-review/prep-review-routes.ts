@@ -14,6 +14,9 @@ import {
   downloadPrepReviewDocument,
   signOffPrepReviewQAReturn,
   requestRevisionPrepReviewQAReturn,
+  uploadDeliverableDocument,
+  deleteDeliverableDocument,
+  toggleDeliverableEsign,
 } from './prep-review-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
 import { authorize } from '../../middlewares/authorize.js';
@@ -48,6 +51,9 @@ router.post('/workspace/:id/submit-qa', requireAuth, authorize(...PREP_ROLES), s
 router.post('/workspace/:id/revert', requireAuth, authorize(...PREP_ROLES), revertPrepReviewWorkspace);
 router.post('/workspace/:id/upload-drake-file', requireAuth, authorize(...PREP_ROLES), uploadTaxDocument.single('file'), uploadDrakeTaxFile);
 router.delete('/workspace/:id/drake-file/:docId', requireAuth, authorize(...PREP_ROLES), deleteDrakeTaxFile);
+router.post('/workspace/:id/deliverable-document', requireAuth, authorize(...PREP_ROLES), uploadTaxDocument.single('file'), uploadDeliverableDocument);
+router.delete('/workspace/:id/deliverable-document/:docId', requireAuth, authorize(...PREP_ROLES), deleteDeliverableDocument);
+router.patch('/workspace/:id/deliverable-document/:docId', requireAuth, authorize(...PREP_ROLES), toggleDeliverableEsign);
 
 // 6. Document View & Download
 router.get('/documents/:id/view', requireAuth, authorize(...PREP_ROLES), viewPrepReviewDocument);

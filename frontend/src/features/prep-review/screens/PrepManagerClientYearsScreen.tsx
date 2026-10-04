@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
-import { ArrowLeft, Eye, UserCheck } from 'lucide-react';
+import { ArrowLeft, Eye, UserCheck, Calculator } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
@@ -70,18 +70,27 @@ export const PrepManagerClientYearsScreen: React.FC = () => {
               {row.original.assignedPreparer ? 'Reassign' : 'Assign'}
             </Button>
             <Button
+              variant="outline"
               size="sm"
               onClick={() => setInspectLead(row.original)}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+              className="text-xs font-medium flex items-center gap-1.5 cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5" />
               Inspect
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => navigate(`/prep-review/preparer/workspace/${row.original.id}`)}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              Workspace
             </Button>
           </div>
         ),
       },
     ],
-    [setAssignLeads, setInspectLead]
+    [navigate, setAssignLeads, setInspectLead]
   );
 
   return (

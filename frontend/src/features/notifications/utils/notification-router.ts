@@ -40,7 +40,7 @@ export function isRouteAllowedForRole(url: string, role?: string): boolean {
     return role === 'FILE_OP_MANAGER' || role === 'FILE_OP_TEAM_LEAD' || role === 'FILE_OP_AGENT';
   }
   if (url.startsWith('/customer')) {
-    return role === 'TAXPAYER_USER';
+    return role === 'TAXPAYER_USER' || role === 'CLIENT';
   }
   return false;
 }

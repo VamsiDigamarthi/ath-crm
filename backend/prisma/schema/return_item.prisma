@@ -7,6 +7,7 @@ model TaxApplicationItem {
   name          String
   description   String?
   unit          String
+  taxRate       Decimal        @default(0) @db.Decimal(5, 2)
   taxType       ProductTaxType
   catalogPrice  Decimal        @db.Decimal(10, 2)
   unitPrice     Decimal        @db.Decimal(10, 2)

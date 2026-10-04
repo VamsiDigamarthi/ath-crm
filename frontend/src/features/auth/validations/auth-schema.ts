@@ -22,8 +22,6 @@ export const registerTaxpayerSchema = z.object({
   lastName: z.string().trim().min(2, 'Last name is required (min 2 characters)'),
   email: z.string().trim().email('Please enter a valid email address'),
   phone: z.string().trim().refine((val) => val.replace(/\D/g, '').length >= 10, 'Please enter a valid 10-digit phone number'),
-  taxYear: z.coerce.number(),
-  visaType: z.string().min(1, 'Please select your visa or residency status'),
   ssnTin: z.string().trim().optional(),
   referralCode: z.string().trim().max(20).optional(),
 });

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { StartFilingModal } from '../components/StartFilingModal';
@@ -8,6 +9,7 @@ import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 
 export const DocumenterAgentCallbacksScreen: React.FC = () => {
+  const navigate = useNavigate();
   const {
     leads,
     agents,
@@ -63,6 +65,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
         isLoading={isLoading}
         searchPlaceholder="Search scheduled callbacks by name, email, phone..."
         onExportExcel={handleExport}
+        onRowClick={(item) => navigate(`/documenter/agent/documents/${item.id}?from=callbacks`, { state: { from: 'agent_callbacks' } })}
         emptyText="No pending callback commitments in your queue."
       />
 

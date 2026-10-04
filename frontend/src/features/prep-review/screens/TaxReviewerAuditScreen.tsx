@@ -20,6 +20,7 @@ import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
+import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 
 export const TaxReviewerAuditScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -35,7 +36,10 @@ export const TaxReviewerAuditScreen: React.FC = () => {
     priority,
     taxpayer,
     assignedPreparer,
-    // assignedReviewer,
+    assignedReviewer,
+    assignedDocAgent,
+    assignedSalesAgent,
+    assignedFileOp,
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
@@ -43,6 +47,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
     prepNotes,
     taxDraftSummary,
     availableApplications,
+    filingType,
     checks,
     toggleCheck,
     handleSelectAllChecks,
@@ -146,6 +151,17 @@ export const TaxReviewerAuditScreen: React.FC = () => {
         </div>
       </div>
 
+      {/* Staff 5-Department Workflow Stage Stepper */}
+      <StaffTaxApplicationStageStepper
+        currentStage={currentStage}
+        taxDraftSummary={taxDraftSummary}
+        assignedDocAgent={assignedDocAgent}
+        assignedPrepAgent={assignedPreparer}
+        assignedReviewAgent={assignedReviewer}
+        assignedSalesAgent={assignedSalesAgent}
+        assignedFileOp={assignedFileOp}
+      />
+
       {/* Profile card */}
       <div className="bg-white rounded-xl border border-slate-200">
         <div className="p-5 flex flex-col lg:flex-row lg:items-start justify-between gap-4">
@@ -170,7 +186,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
               </span>
             </div>
             <p className="text-sm text-slate-500 mt-1.5">
-              {['Form 1040', taxpayer?.maritalStatus, taxpayer?.visaType].filter(Boolean).join(' · ')}
+              {[filingType === 'BUSINESS' ? 'Form 1120 / Business Return' : 'Form 1040', filingType !== 'BUSINESS' && taxpayer?.maritalStatus, filingType !== 'BUSINESS' && taxpayer?.visaType].filter(Boolean).join(' · ')}
             </p>
           </div>
           <div className="text-sm lg:text-right shrink-0">
@@ -209,7 +225,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
         customerName={taxpayerName}
         taxDraftSummary={taxDraftSummary}
         taxYear={taxYear}
-        filingType={(taxDraftSummary as any)?.filingType}
+        filingType={filingType}
         allowEdit={false}
         readOnly
         hideHeader
@@ -445,6 +461,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
         taxDraftSummary={taxDraftSummary}
         assignedPreparer={assignedPreparer}
         auditorRemarks={auditorRemarks}
+        setAuditorRemarks={setAuditorRemarks}
         isApproveModalOpen={isApproveModalOpen}
         onCloseApproveModal={() => setIsApproveModalOpen(false)}
         onConfirmApprove={handleConfirmApprove}
@@ -478,6 +495,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
             customerName={taxpayerName}
             taxDraftSummary={taxDraftSummary}
             taxYear={availableApplications?.find((a: { id: string }) => a.id === applicationId)?.taxYear}
+            filingType={filingType}
             allowEdit={false}
             readOnly={true}
           />

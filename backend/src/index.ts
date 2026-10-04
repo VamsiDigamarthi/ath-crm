@@ -1,4 +1,5 @@
 import "dotenv/config";
+import path from "path";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -53,6 +54,9 @@ app.use(morgan("dev"));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
+
+// Static file hosting for document uploads
+app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
 // 4. Rate Limiting (Never block OPTIONS preflights, generous window)
 const limiter = rateLimit({

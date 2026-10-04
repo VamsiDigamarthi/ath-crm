@@ -21,17 +21,20 @@ export const CustomerFilingsTable: React.FC<CustomerFilingsTableProps> = ({
 
   const handleView = (item: CustomerFilingItem) => {
     if (onSelectTaxYear) onSelectTaxYear(item.taxYear.toString());
+    const fType = item.filingType || 'INDIVIDUAL';
     if (item.isCompleted || item.currentStage === 'FILING_SUCCESS') {
-      navigate(`/customer/organizer?year=${item.taxYear}&tab=m_vault`);
+      navigate(`/customer/organizer?taxYear=${item.taxYear}&year=${item.taxYear}&type=${fType}&tab=m_vault`);
     } else if (
       item.currentStage === 'QA_APPROVED' ||
       item.currentStage === 'SALES_PITCH_QUEUE' ||
       item.currentStage === 'SALES_PITCHING' ||
-      item.currentStage === 'PAYMENT_PENDING'
+      item.currentStage === 'PAYMENT_PENDING' ||
+      item.currentStage === 'CLIENT_REVIEW' ||
+      item.currentStage === 'REVIEW_DRAFT'
     ) {
-      navigate('/customer/billing');
+      navigate(`/customer/organizer?taxYear=${item.taxYear}&year=${item.taxYear}&type=${fType}&tab=m_review_draft`);
     } else {
-      navigate(`/customer/organizer?year=${item.taxYear}&type=${item.filingType || 'INDIVIDUAL'}`);
+      navigate(`/customer/organizer?taxYear=${item.taxYear}&year=${item.taxYear}&type=${fType}`);
     }
   };
 

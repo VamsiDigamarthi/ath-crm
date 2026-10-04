@@ -73,6 +73,39 @@ export const deleteDrakeTaxFile = async (req: Request, res: Response) => {
   return SuccessHandler.handle(res, 'Drake Tax calculation file removed successfully', result, 200);
 };
 
+export const uploadDeliverableDocument = async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const userId = req.currentUser?.id || 'SYSTEM';
+  const file = req.file;
+  const requiresEsign = req.body.requiresEsign === 'true' || req.body.requiresEsign === true;
+
+  if (!file) {
+    return res.status(400).json({ success: false, message: 'No file was uploaded' });
+  }
+
+  const result = await PrepReviewService.uploadDeliverableDocument(id, userId, file, requiresEsign);
+  return SuccessHandler.handle(res, 'Client deliverable document uploaded successfully', result, 201);
+};
+
+export const deleteDeliverableDocument = async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const docId = String(req.params.docId || req.body?.documentId || '');
+  const userId = req.currentUser?.id || 'SYSTEM';
+
+  const result = await PrepReviewService.deleteDeliverableDocument(id, docId, userId);
+  return SuccessHandler.handle(res, 'Client deliverable document removed successfully', result, 200);
+};
+
+export const toggleDeliverableEsign = async (req: Request, res: Response) => {
+  const id = String(req.params.id);
+  const docId = String(req.params.docId || '');
+  const requiresEsign = req.body.requiresEsign === true || req.body.requiresEsign === 'true';
+  const userId = req.currentUser?.id || 'SYSTEM';
+
+  const result = await PrepReviewService.toggleDeliverableEsign(id, docId, requiresEsign, userId);
+  return SuccessHandler.handle(res, 'Deliverable e-sign status updated', result, 200);
+};
+
 export const submitPrepReviewWorkspaceToQA = async (req: Request, res: Response) => {
   const id = String(req.params.id);
   const userId = req.currentUser?.id || 'SYSTEM';

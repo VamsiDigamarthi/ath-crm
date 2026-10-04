@@ -3,8 +3,6 @@ import toast from 'react-hot-toast';
 import { documenterService } from '../services/documenter-service';
 import type { DocumenterLeadItem, DocumenterTaxYearSummary } from '../types/documenter.types';
 
-const NOT_YET_IN_PREP = ['RAW_PROSPECT', 'DOC_OUTREACH'];
-
 export const useTaxpayerYears = (applicationId?: string) => {
   const [lead, setLead] = useState<DocumenterLeadItem | null>(null);
   const [years, setYears] = useState<DocumenterTaxYearSummary[]>([]);
@@ -23,12 +21,11 @@ export const useTaxpayerYears = (applicationId?: string) => {
               taxYear: res.data.taxYear,
               filingType: res.data.filingType,
               currentStage: res.data.currentStage,
+              documentsCount: res.data.documents?.length || 0,
             },
           ];
       setYears(
-        list
-          .filter((y) => !NOT_YET_IN_PREP.includes(y.currentStage))
-          .sort((a, b) => b.taxYear - a.taxYear)
+        [...list].sort((a: any, b: any) => Number(b.taxYear) - Number(a.taxYear))
       );
     } catch (err) {
       toast.error((err as Error).message || 'Failed to load tax years');

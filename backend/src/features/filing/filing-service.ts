@@ -172,6 +172,31 @@ export class FilingService {
         name: `${app.assignedFileOp.firstName || ''} ${app.assignedFileOp.lastName || ''}`.trim() || 'Filing Specialist',
         email: app.assignedFileOp.email || '',
       } : null,
+      assignedDocAgent: app.assignedDocAgent ? {
+        id: app.assignedDocAgent.id,
+        name: `${app.assignedDocAgent.firstName || ''} ${app.assignedDocAgent.lastName || ''}`.trim() || 'Documenter Specialist',
+        email: app.assignedDocAgent.email || '',
+      } : null,
+      assignedPrepAgent: app.assignedPrepAgent ? {
+        id: app.assignedPrepAgent.id,
+        name: `${app.assignedPrepAgent.firstName || ''} ${app.assignedPrepAgent.lastName || ''}`.trim() || 'Tax Preparer',
+        email: app.assignedPrepAgent.email || '',
+      } : null,
+      assignedReviewAgent: app.assignedReviewAgent ? {
+        id: app.assignedReviewAgent.id,
+        name: `${app.assignedReviewAgent.firstName || ''} ${app.assignedReviewAgent.lastName || ''}`.trim() || 'Senior Reviewer',
+        email: app.assignedReviewAgent.email || '',
+      } : null,
+      assignedSalesAgent: app.assignedSalesAgent ? {
+        id: app.assignedSalesAgent.id,
+        name: `${app.assignedSalesAgent.firstName || ''} ${app.assignedSalesAgent.lastName || ''}`.trim() || 'Sales Closer',
+        email: app.assignedSalesAgent.email || '',
+      } : null,
+      assignedFileOp: app.assignedFileOp ? {
+        id: app.assignedFileOp.id,
+        name: `${app.assignedFileOp.firstName || ''} ${app.assignedFileOp.lastName || ''}`.trim() || 'Filing Specialist',
+        email: app.assignedFileOp.email || '',
+      } : null,
       lastRevert: draft.lastRevert || null,
       taxDraftSummary: draft,
       transmissionInfo,
@@ -435,6 +460,10 @@ export class FilingService {
       where: { id },
       include: {
         customer: true,
+        assignedDocAgent: true,
+        assignedPrepAgent: true,
+        assignedReviewAgent: true,
+        assignedSalesAgent: true,
         assignedFileOp: true,
         documents: true,
         stageHistories: {

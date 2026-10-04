@@ -44,10 +44,15 @@ export function useTaxPreparerWorkspace() {
   // Application & Profile data
   const [applicationId, setApplicationId] = useState<string>('');
   const [taxYear, setTaxYear] = useState<number>(2025);
+  const [filingType, setFilingType] = useState<'INDIVIDUAL' | 'BUSINESS'>('INDIVIDUAL');
   const [currentStage, setCurrentStage] = useState<string>('PREP_IN_PROGRESS');
   const [priority, setPriority] = useState<string>('NO_PRIORITY');
   const [taxpayer, setTaxpayer] = useState<WorkspaceTaxpayer | null>(null);
   const [assignedReviewer, setAssignedReviewer] = useState<WorkspaceAssignedReviewer | null>(null);
+  const [assignedDocAgent, setAssignedDocAgent] = useState<any | null>(null);
+  const [assignedPrepAgent, setAssignedPrepAgent] = useState<any | null>(null);
+  const [assignedSalesAgent, setAssignedSalesAgent] = useState<any | null>(null);
+  const [assignedFileOp, setAssignedFileOp] = useState<any | null>(null);
   const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
   const [selectedDocForPreview, setSelectedDocForPreview] = useState<WorkspaceDocument | null>(null);
   const [taxDraftSummary, setTaxDraftSummary] = useState<any>(null);
@@ -55,6 +60,8 @@ export function useTaxPreparerWorkspace() {
   const [availableApplications, setAvailableApplications] = useState<any[]>([]);
   const [drakeTaxFile, setDrakeTaxFile] = useState<any | null>(null);
   const [isUploadingDrakeFile, setIsUploadingDrakeFile] = useState(false);
+  const [deliverableDocuments, setDeliverableDocuments] = useState<any[]>([]);
+  const [isUploadingDeliverable, setIsUploadingDeliverable] = useState(false);
 
   // Form 1040 Calculation Inputs (Default to 0 / Clean DB State)
   const [w2Wages, setW2Wages] = useState<number>(0);
@@ -94,10 +101,16 @@ export function useTaxPreparerWorkspace() {
       const data = await prepReviewService.getWorkspaceDetails(id);
       setApplicationId(data.applicationId || id);
       setTaxYear(data.taxYear || 2025);
+      const ft = (data.filingType || data.taxDraftSummary?.filingType || 'INDIVIDUAL').toUpperCase() as 'INDIVIDUAL' | 'BUSINESS';
+      setFilingType(ft);
       setCurrentStage(data.currentStage || 'PREP_IN_PROGRESS');
       if (data.priority) setPriority(data.priority);
       setTaxpayer(data.taxpayer || null);
-      setAssignedReviewer(data.assignedReviewer || null);
+      setAssignedReviewer(data.assignedReviewer || data.assignedReviewAgent || null);
+      setAssignedPrepAgent(data.assignedPreparer || data.assignedPrepAgent || null);
+      setAssignedDocAgent(data.assignedDocAgent || null);
+      setAssignedSalesAgent(data.assignedSalesAgent || null);
+      setAssignedFileOp(data.assignedFileOp || null);
       setDocuments(data.documents || []);
       setTaxDraftSummary(data.taxDraftSummary || {});
       if (data.clientPaymentStatus) setClientPaymentStatus(data.clientPaymentStatus);
@@ -110,6 +123,10 @@ export function useTaxPreparerWorkspace() {
       } else {
         setDrakeTaxFile(null);
       }
+
+      // Extract Client Deliverables (e-sign documents, engagement, 8879)
+      const deliverables = data.taxDraftSummary?.deliverableDocuments || data.deliverableDocuments || [];
+      setDeliverableDocuments(Array.isArray(deliverables) ? deliverables : []);
 
       if (data.stageHistories) setStageHistories(data.stageHistories);
       if (data.callLogs) setCallLogs(data.callLogs);
@@ -310,6 +327,71 @@ export function useTaxPreparerWorkspace() {
     }
   };
 
+  const handleUploadDeliverable = async (file: File, requiresEsign: boolean = false) => {
+    if (!id) return;
+    setIsUploadingDeliverable(true);
+    const toastId = toast.loading(`Uploading deliverable "${file.name}"...`);
+    try {
+      const response: any = await prepReviewService.uploadDeliverableDocument(id, file, requiresEsign);
+      const resData = response?.data || response;
+      const docs = resData?.deliverableDocuments || resData?.taxDraftSummary?.deliverableDocuments;
+      if (Array.isArray(docs)) {
+        setDeliverableDocuments(docs);
+      }
+      if (resData?.taxDraftSummary) {
+        setTaxDraftSummary(resData.taxDraftSummary);
+      }
+      toast.success(`Deliverable "${file.name}" uploaded successfully!`, { id: toastId });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to upload deliverable document', { id: toastId });
+    } finally {
+      setIsUploadingDeliverable(false);
+    }
+  };
+
+  const handleDeleteDeliverable = async (docId: string) => {
+    if (!id) return;
+    const toastId = toast.loading('Removing deliverable document...');
+    try {
+      const response: any = await prepReviewService.deleteDeliverableDocument(id, docId);
+      const resData = response?.data || response;
+      const docs = resData?.deliverableDocuments || resData?.taxDraftSummary?.deliverableDocuments;
+      if (Array.isArray(docs)) {
+        setDeliverableDocuments(docs);
+      } else {
+        setDeliverableDocuments((prev) => prev.filter((d) => d.id !== docId));
+      }
+      if (resData?.taxDraftSummary) {
+        setTaxDraftSummary(resData.taxDraftSummary);
+      }
+      toast.success('Deliverable document removed', { id: toastId });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to delete deliverable document', { id: toastId });
+    }
+  };
+
+  const handleToggleDeliverableEsign = async (docId: string, requiresEsign: boolean) => {
+    if (!id) return;
+    try {
+      const response: any = await prepReviewService.toggleDeliverableEsign(id, docId, requiresEsign);
+      const resData = response?.data || response;
+      const docs = resData?.deliverableDocuments || resData?.taxDraftSummary?.deliverableDocuments;
+      if (Array.isArray(docs)) {
+        setDeliverableDocuments(docs);
+      } else {
+        setDeliverableDocuments((prev) =>
+          prev.map((d) => (d.id === docId ? { ...d, requiresEsign } : d))
+        );
+      }
+      if (resData?.taxDraftSummary) {
+        setTaxDraftSummary(resData.taxDraftSummary);
+      }
+      toast.success(requiresEsign ? 'E-Sign / Re-upload required for this document' : 'Marked as reference only (no e-sign needed)');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to update deliverable signature setting');
+    }
+  };
+
   return {
     id,
     isLoading,
@@ -323,6 +405,10 @@ export function useTaxPreparerWorkspace() {
     priority,
     taxpayer,
     assignedReviewer,
+    assignedDocAgent,
+    assignedPrepAgent,
+    assignedSalesAgent,
+    assignedFileOp,
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
@@ -330,6 +416,11 @@ export function useTaxPreparerWorkspace() {
     isUploadingDrakeFile,
     handleUploadDrakeFile,
     handleDeleteDrakeFile,
+    deliverableDocuments,
+    isUploadingDeliverable,
+    handleUploadDeliverable,
+    handleDeleteDeliverable,
+    handleToggleDeliverableEsign,
     w2Wages,
     setW2Wages,
     taxableInterest,
@@ -383,7 +474,9 @@ export function useTaxPreparerWorkspace() {
     auditLogs,
     clientPaymentStatus,
     availableApplications,
+    filingType,
     handleSaveDraft,
     handleSubmitForQA,
   };
 }
+

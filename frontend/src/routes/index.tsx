@@ -52,6 +52,7 @@ import { SalesTeamScorecardsScreen } from '@/features/sales/screens/SalesTeamSco
 import { SalesAgentDashboardScreen } from '@/features/sales/screens/SalesAgentDashboardScreen';
 import { SalesAgentQueueScreen } from '@/features/sales/screens/SalesAgentQueueScreen';
 import { SalesPitchWorkspaceScreen } from '@/features/sales/screens/SalesPitchWorkspaceScreen';
+import { SalesClientYearsScreen } from '@/features/sales/screens/SalesClientYearsScreen';
 import { FilingDepartmentScreen } from '@/features/filing/screens/FilingDepartmentScreen';
 import { FilingLayout } from '@/features/filing/layouts/FilingLayout';
 import { FilingManagerDashboardScreen } from '@/features/filing/screens/FilingManagerDashboardScreen';
@@ -514,6 +515,10 @@ export const router = createBrowserRouter([
             element: <SalesPitchWorkspaceScreen />,
           },
           {
+            path: 'manager/client/:taxpayerId',
+            element: <SalesClientYearsScreen />,
+          },
+          {
             path: 'manager/dual-role',
             element: <SalesManagerDualRoleScreen />,
           },
@@ -551,8 +556,16 @@ export const router = createBrowserRouter([
             element: <SalesPitchWorkspaceScreen />,
           },
           {
+            path: 'agent/client/:taxpayerId',
+            element: <SalesClientYearsScreen />,
+          },
+          {
             path: 'pitch/:id',
             element: <SalesPitchWorkspaceScreen />,
+          },
+          {
+            path: 'client/:taxpayerId',
+            element: <SalesClientYearsScreen />,
           },
           {
             path: 'notifications',

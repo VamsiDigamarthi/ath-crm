@@ -9,6 +9,7 @@
     "build": "tsc",
     "seed": "tsx src/scripts/seed-employees.ts",
     "seed:staff": "tsx src/scripts/seed-staff.ts",
+    "db:clear-clients": "tsx src/scripts/clear-clients.ts",
     "backfill:referral-codes": "tsx src/scripts/backfill-referral-codes.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

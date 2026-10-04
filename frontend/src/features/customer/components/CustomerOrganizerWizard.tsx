@@ -16,9 +16,14 @@ export const CustomerOrganizerWizard: React.FC = () => {
   const activeTaxYear = urlYear || contextTaxYear;
 
   const urlType = searchParams.get('type') || searchParams.get('filingType');
-  const matchedApp = customerProfile?.applications?.find(
-    (a: any) => a.taxYear?.toString() === activeTaxYear?.toString()
-  );
+  const matchedApp = customerProfile?.applications?.find((a: any) => {
+    const yearMatch = a.taxYear?.toString() === activeTaxYear?.toString();
+    if (!yearMatch) return false;
+    if (urlType) {
+      return a.filingType?.toUpperCase() === urlType.toUpperCase();
+    }
+    return true;
+  });
   const filingType = (urlType || matchedApp?.filingType || 'INDIVIDUAL').toUpperCase();
   const isBusiness = filingType === 'BUSINESS';
 
@@ -40,7 +45,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
     handleNext,
     handlePrev,
     moduleIds,
-  } = useCustomerOrganizer(activeTaxYear, filingType);
+  } = useCustomerOrganizer(activeTaxYear, filingType, matchedApp?.id);
 
   // Deep-link to specific tab (e.g. ?tab=m_vault or ?module=b2_businessIncome)
   const tabParam = searchParams.get('tab') || searchParams.get('module');
