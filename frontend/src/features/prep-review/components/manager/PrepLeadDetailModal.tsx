@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   X, 
   User, 
@@ -37,6 +38,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
   onClose,
   onAssign,
 }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'DOCUMENTS' | 'COMPUTATION' | 'AUDIT_TRAIL'>('OVERVIEW');
   const [selectedAppId, setSelectedAppId] = useState<string>(lead?.id || '');
   const [fullDetails, setFullDetails] = useState<any | null>(null);
@@ -171,14 +173,44 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+            <Button
+              size="sm"
+              onClick={() => {
+                onClose();
+                navigate(`/prep-review/preparer/workspace/${currentAppId}`);
+              }}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Open Form 1040 Drafting Workspace"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>Open Form 1040 Workspace</span>
+            </Button>
+
+            {['QA_IN_REVIEW', 'QA_REVIEW_QUEUE', 'QA_APPROVED', 'QA_REVISION_REQUESTED'].includes(activeAppLead.prepStage || activeAppLead.currentStage) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onClose();
+                  navigate(`/prep-review/reviewer/audit/${currentAppId}`);
+                }}
+                className="border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                title="Open QA Compliance Audit Deck"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                <span>QA Audit Deck</span>
+              </Button>
+            )}
+
             {!isAssigned && onAssign && (
               <Button
                 size="sm"
+                variant="outline"
                 onClick={() => {
                   onClose();
                   onAssign(activeAppLead);
                 }}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <UserCheck className="w-3.5 h-3.5" />
                 <span>Assign Staff</span>
@@ -492,15 +524,28 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
           <span className="text-xs text-slate-400 font-medium">
             Case ID: <span className="font-mono text-slate-700 font-semibold">{currentAppId}</span>
           </span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
-          >
-            Close
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
+            >
+              Close
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                onClose();
+                navigate(`/prep-review/preparer/workspace/${currentAppId}`);
+              }}
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>Launch Preparer Workspace</span>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -92,6 +92,31 @@ export interface FilingLeadItem {
     name: string;
     email: string;
   } | null;
+  assignedDocAgent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  assignedPrepAgent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  assignedReviewAgent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  assignedSalesAgent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  assignedFileOp?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   transmissionInfo?: {
     submissionId?: string;
     efin?: string;

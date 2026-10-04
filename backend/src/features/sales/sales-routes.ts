@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { SalesController } from './sales-controller.js';
 import { requireAuth } from '../../middlewares/require-auth.js';
+import { uploadTaxDocument } from '../../middlewares/file-upload-middleware.js';
 
 const router = Router();
 
@@ -23,5 +24,13 @@ router.post('/leads/:id/record-esign', SalesController.recordEsign);
 router.post('/leads/:id/send-payment-link', SalesController.sendPaymentLink);
 router.post('/leads/:id/return-to-admin', SalesController.returnLeadToAdmin);
 router.post('/return-to-admin', SalesController.returnLeadsBulkToAdmin);
+
+// Sales Draft Editing, Deliverables & Client Dispatch
+router.post('/leads/:id/update-draft-values', SalesController.updateDraftValues);
+router.post('/leads/:id/deliverable-document', uploadTaxDocument.single('file'), SalesController.uploadDeliverableDocument);
+router.delete('/leads/:id/deliverable-document/:docId', SalesController.deleteDeliverableDocument);
+router.patch('/leads/:id/deliverable-document/:docId', SalesController.toggleDeliverableEsign);
+router.post('/leads/:id/send-draft-to-client', SalesController.sendDraftToClient);
+router.post('/leads/:id/reopen-draft-version', SalesController.reopenDraftVersion);
 
 export { router as salesRouter };

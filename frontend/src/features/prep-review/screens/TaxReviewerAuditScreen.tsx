@@ -20,6 +20,7 @@ import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
+import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 
 export const TaxReviewerAuditScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -35,7 +36,10 @@ export const TaxReviewerAuditScreen: React.FC = () => {
     priority,
     taxpayer,
     assignedPreparer,
-    // assignedReviewer,
+    assignedReviewer,
+    assignedDocAgent,
+    assignedSalesAgent,
+    assignedFileOp,
     documents,
     selectedDocForPreview,
     setSelectedDocForPreview,
@@ -146,6 +150,17 @@ export const TaxReviewerAuditScreen: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Staff 5-Department Workflow Stage Stepper */}
+      <StaffTaxApplicationStageStepper
+        currentStage={currentStage}
+        taxDraftSummary={taxDraftSummary}
+        assignedDocAgent={assignedDocAgent}
+        assignedPrepAgent={assignedPreparer}
+        assignedReviewAgent={assignedReviewer}
+        assignedSalesAgent={assignedSalesAgent}
+        assignedFileOp={assignedFileOp}
+      />
 
       {/* Profile card */}
       <div className="bg-white rounded-xl border border-slate-200">
@@ -446,6 +461,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
         taxDraftSummary={taxDraftSummary}
         assignedPreparer={assignedPreparer}
         auditorRemarks={auditorRemarks}
+        setAuditorRemarks={setAuditorRemarks}
         isApproveModalOpen={isApproveModalOpen}
         onCloseApproveModal={() => setIsApproveModalOpen(false)}
         onConfirmApprove={handleConfirmApprove}

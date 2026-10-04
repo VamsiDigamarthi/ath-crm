@@ -68,6 +68,26 @@ export class DocumenterService {
             role: true,
           },
         },
+        assignedReviewAgent: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobile: true,
+            role: true,
+          },
+        },
+        assignedFileOp: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobile: true,
+            role: true,
+          },
+        },
         callLogs: {
           orderBy: { createdAt: 'desc' },
           include: {

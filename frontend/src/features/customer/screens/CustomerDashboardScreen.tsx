@@ -37,25 +37,33 @@ export const CustomerDashboardScreen: React.FC = () => {
       return dashboardData.filings;
     }
 
+    if (Array.isArray(dashboardData?.filings) && dashboardData.filings.length === 0) {
+      return [];
+    }
+
+    if (!dashboardData?.application) {
+      return [];
+    }
+
     // Fallback: construct from current active application & history
-    const activeTaxYearNum = selectedTaxYear ? parseInt(selectedTaxYear, 10) : 2025;
+    const activeTaxYearNum = selectedTaxYear ? parseInt(selectedTaxYear, 10) : dashboardData.application.taxYear;
     const isSuccess = isConverted || currentStage === 'FILING_SUCCESS';
 
     const currentFiling: CustomerFilingItem = {
-      id: dashboardData?.application?.id || 'app-current',
+      id: dashboardData.application.id,
       taxYear: activeTaxYearNum,
-      filingType: dashboardData?.application?.filingType || 'INDIVIDUAL',
+      filingType: dashboardData.application.filingType || 'INDIVIDUAL',
       currentStage: currentStage,
       isCompleted: isSuccess,
       isActive: !isSuccess,
-      totalRefund: totalRefund || 6450,
+      totalRefund: totalRefund || 0,
       totalBalanceDue: totalBalanceDue || 0,
-      fedRefund: fedRefund || 5250,
+      fedRefund: fedRefund || 0,
       fedDue: fedDue || 0,
-      stateRefund: stateRefund || 1200,
+      stateRefund: stateRefund || 0,
       stateDue: stateDue || 0,
-      documentsCount: docCount || (isSuccess ? 5 : 3),
-      organizerPercent: organizerPercent || (isSuccess ? 100 : 85),
+      documentsCount: docCount || 0,
+      organizerPercent: organizerPercent || 0,
       assignedSpecialist: assignedAgentName,
       updatedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),

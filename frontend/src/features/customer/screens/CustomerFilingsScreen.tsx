@@ -66,16 +66,18 @@ export const CustomerFilingsScreen: React.FC = () => {
   const handleView = (item: CustomerFilingItem) => {
     const fType = item.filingType || 'INDIVIDUAL';
     if (item.isCompleted || item.currentStage === 'FILING_SUCCESS') {
-      navigate(`/customer/organizer?year=${item.taxYear}&type=${fType}&tab=m_vault`);
+      navigate(`/customer/organizer?taxYear=${item.taxYear}&year=${item.taxYear}&type=${fType}&tab=m_vault`);
     } else if (
       item.currentStage === 'QA_APPROVED' ||
       item.currentStage === 'SALES_PITCH_QUEUE' ||
       item.currentStage === 'SALES_PITCHING' ||
-      item.currentStage === 'PAYMENT_PENDING'
+      item.currentStage === 'PAYMENT_PENDING' ||
+      item.currentStage === 'CLIENT_REVIEW' ||
+      item.currentStage === 'REVIEW_DRAFT'
     ) {
-      navigate('/customer/billing');
+      navigate(`/customer/organizer?taxYear=${item.taxYear}&year=${item.taxYear}&type=${fType}&tab=m_review_draft`);
     } else {
-      navigate(`/customer/organizer?year=${item.taxYear}&type=${fType}`);
+      navigate(`/customer/organizer?taxYear=${item.taxYear}&year=${item.taxYear}&type=${fType}`);
     }
   };
 

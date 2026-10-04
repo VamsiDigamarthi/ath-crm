@@ -129,11 +129,21 @@ export interface SalesLeadItem extends Record<string, unknown> {
     name: string;
     email: string;
   } | null;
+  assignedReviewAgent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   assignedSalesAgent?: {
     id: string;
     name: string;
     email: string;
     avatar?: string;
+  } | null;
+  assignedFileOp?: {
+    id: string;
+    name: string;
+    email: string;
   } | null;
 
   // Complete Form 1040 Tax Calculation Draft from Preparer & QA Reviewer

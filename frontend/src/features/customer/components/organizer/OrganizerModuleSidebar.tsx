@@ -5,7 +5,8 @@ import {
   Receipt, 
   FolderArchive, 
   TrendingUp,
-  Building2
+  Building2,
+  FileCheck
 } from 'lucide-react';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { type OrganizerData } from '../../services/customer-api';
@@ -66,6 +67,15 @@ export const INDIVIDUAL_MODULES: ModuleDefinition[] = [
     description: 'Upload W-2, 1099, FBAR statements, tax records & Google Drive links',
     icon: FolderArchive,
   },
+  {
+    id: 'm_review_draft',
+    number: 6,
+    section: 'Tax Return & E-Sign',
+    title: 'Review Tax Return Draft & E-Sign',
+    label: 'Review Draft & E-Sign',
+    description: 'Inspect Form 1040 calculations, download return draft copy, and e-sign required deliverables',
+    icon: FileCheck,
+  },
 ];
 
 export const BUSINESS_MODULES: ModuleDefinition[] = [
@@ -113,6 +123,15 @@ export const BUSINESS_MODULES: ModuleDefinition[] = [
     label: 'Upload Documents',
     description: 'Corporate records, P&L, 1099s, bank statements & tax audit files',
     icon: FolderArchive,
+  },
+  {
+    id: 'm_review_draft',
+    number: 6,
+    section: 'Tax Return & E-Sign',
+    title: 'Review Tax Return Draft & E-Sign',
+    label: 'Review Draft & E-Sign',
+    description: 'Inspect Form 1120 calculations, download return draft copy, and e-sign required deliverables',
+    icon: FileCheck,
   },
 ];
 

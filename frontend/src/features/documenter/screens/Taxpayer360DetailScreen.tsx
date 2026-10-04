@@ -35,6 +35,7 @@ import type { DocumenterLeadItem, CallLogItem } from '../types/documenter.types'
 import toast from 'react-hot-toast';
 import { useChangeTaxYear } from '../hooks/useChangeTaxYear';
 import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
+import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 
 export const Taxpayer360DetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -458,6 +459,17 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 1.8 Staff 5-Department Workflow Stage Stepper */}
+      <StaffTaxApplicationStageStepper
+        currentStage={currentLead.currentStage}
+        taxDraftSummary={lead?.taxDraftSummary || (currentLead as any)?.taxDraftSummary}
+        assignedDocAgent={(lead as any)?.assignedDocAgent || (currentLead as any)?.assignedDocAgent}
+        assignedPrepAgent={(lead as any)?.assignedPrepAgent || (currentLead as any)?.assignedPrepAgent}
+        assignedReviewAgent={(lead as any)?.assignedReviewAgent}
+        assignedSalesAgent={(lead as any)?.assignedSalesAgent || (currentLead as any)?.assignedSalesAgent}
+        assignedFileOp={(lead as any)?.assignedFileOp}
+      />
 
       {/* 2. Profile Card */}
       <div className="bg-white rounded-xl border border-slate-200">

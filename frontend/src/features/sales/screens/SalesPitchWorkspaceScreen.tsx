@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { RotateCcw, Calendar, FileSpreadsheet, Calculator } from 'lucide-react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { RotateCcw, Calendar } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
-import { AppTabs } from '@/shared/components/AppTabs';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
 import { PitchNegotiationBar } from '../components/pitch/PitchNegotiationBar';
-import { PitchTaxDraftSummaryCard } from '../components/pitch/PitchTaxDraftSummaryCard';
 import { PitchFeeCalculator } from '../components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
@@ -16,19 +14,24 @@ import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModa
 import { SalesReturnToAdminModal } from '../components/common/SalesReturnToAdminModal';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesFeeBreakdown } from '../types/sales.types';
+import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
 
 export const SalesPitchWorkspaceScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
   const backQueuePath = isManager ? '/sales/manager/queue' : '/sales/agent/queue';
 
+  const queryParams = new URLSearchParams(location.search);
+  const tabParam = queryParams.get('tab')?.toUpperCase();
+  const requestedTabId = tabParam === 'PITCH' || tabParam === 'FEES' ? 'FEES' : tabParam === 'DISPATCH' ? 'DISPATCH' : undefined;
+
   const [lead, setLead] = useState<SalesLeadItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'PITCH' | 'ORGANIZER'>('PITCH');
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isEsignModalOpen, setIsEsignModalOpen] = useState(false);
@@ -298,13 +301,24 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         onOpenReturnToAdmin={() => setIsReturnToAdminOpen(true)}
       />
 
+      {/* 1.0 Staff 5-Department Workflow Stage Stepper */}
+      <StaffTaxApplicationStageStepper
+        currentStage={lead.currentStage}
+        taxDraftSummary={lead.taxDraftSummary}
+        assignedDocAgent={lead.assignedDocAgent}
+        assignedPrepAgent={lead.assignedPrepAgent}
+        assignedReviewAgent={lead.assignedReviewAgent}
+        assignedSalesAgent={lead.assignedSalesAgent}
+        assignedFileOp={lead.assignedFileOp}
+      />
+
       {/* 1.05 Multi-Year Return Switcher Tabs */}
-      {lead.availableApplications && lead.availableApplications.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
+      {lead.availableApplications && lead.availableApplications.length > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 bg-white rounded-xl border border-slate-200/90 shadow-2xs">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
-              <Calendar className="w-4 h-4 text-purple-600" />
-              <span>Tax Year Filings:</span>
+            <div className="flex items-center gap-1.5 px-2 text-xs font-semibold text-slate-500">
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <span>Tax Filings:</span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               {lead.availableApplications.map((appItem: any) => {
@@ -318,17 +332,16 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
                         navigate(isManager ? `/sales/manager/pitch/${appItem.id}` : `/sales/agent/pitch/${appItem.id}`);
                       }
                     }}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                       isSelected
-                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
-                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
+                        ? 'bg-slate-900 text-white shadow-2xs'
+                        : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
                     }`}
                   >
                     <span>TY {appItem.taxYear}</span>
-                    <span className="text-[10px] font-medium opacity-80">
-                      ({appItem.filingType || 'INDIVIDUAL'})
+                    <span className="text-[10px] opacity-75">
+                      ({appItem.filingType === 'BUSINESS' ? 'Business' : 'Individual'})
                     </span>
-                    <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-purple-400' : 'bg-slate-300'}`} />
                   </button>
                 );
               })}
@@ -337,171 +350,107 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 1.1 Workspace Navigation Tabs (Pitch Engine vs Tax info and Files) */}
-      <AppTabs
-        tabs={[
+      {/* 2. Unified Tax Organizer with Fee Quotation & Dispatch Extra Tabs */}
+      <TaxPrepOrganizerReview
+        leadId={appId}
+        customerName={lead.taxpayerName}
+        taxDraftSummary={lead.taxDraftSummary}
+        taxYear={lead.taxYear}
+        allowEdit={!isLocked}
+        readOnly={isLocked}
+        filingType={(lead as any).filingType as string | undefined}
+        hideHeader={true}
+        requestedTabId={requestedTabId}
+        extraTabs={[
           {
-            id: 'PITCH',
-            label: 'Tax Pitch, QA Audit & Fee Negotiation',
-            icon: Calculator,
+            id: 'FEES',
+            label: 'Fee Quotation & Pricing',
+            content: (
+              <div className="space-y-6">
+                <PitchNegotiationBar
+                  lead={lead}
+                  onUpdateSuccess={async (updated) => {
+                    setLead((prev) => (prev ? { ...prev, ...updated } : prev));
+                    const refreshed = await salesService.getLeadById(appId);
+                    if (refreshed) {
+                      setLead(refreshed);
+                    }
+                  }}
+                />
+
+                {isReverted && lastRevert && (
+                  <div className="bg-amber-50/70 border border-amber-300/80 rounded-xl p-3.5 sm:p-4 text-amber-950 shadow-2xs">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200 mt-0.5">
+                        <RotateCcw className="w-4 h-4 text-amber-700" />
+                      </div>
+                      <div className="space-y-2 flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-bold text-xs sm:text-sm text-amber-950">
+                            Return Reverted by {lastRevert.sourceDepartment === 'FILING' ? 'IRS Filing Operations' : lastRevert.sourceDepartment}
+                          </span>
+                        </div>
+                        <p className="text-xs font-semibold text-slate-900 leading-relaxed">
+                          "{lastRevert.revertNotes || 'Filing Operations requested clarification or re-authorization.'}"
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <PitchFeeCalculator
+                  feeBreakdown={lead.feeBreakdown}
+                  onUpdateFeeBreakdown={handleUpdateFeeBreakdown}
+                  onOpenPaymentModal={() => setIsPaymentModalOpen(true)}
+                  onOpenEsignModal={() => setIsEsignModalOpen(true)}
+                  paymentStatus={lead.paymentStatus}
+                  paidAmount={lead.paidAmount}
+                  remainingBalance={lead.remainingBalance}
+                  paymentHistory={lead.paymentHistory}
+                  esignStatus={lead.esignStatus}
+                  applicationId={lead.id || lead.applicationId}
+                  customerId={lead.taxpayerId || (lead as any).customerId}
+                  isLocked={isLocked}
+                  lockReason={lockReason}
+                />
+              </div>
+            ),
           },
           {
-            id: 'ORGANIZER',
-            label: 'Tax info and Files',
-            icon: FileSpreadsheet,
+            id: 'DISPATCH',
+            label: 'Closer Notes & Filing Dispatch',
+            content: (
+              <div className="space-y-6">
+                <PitchCallAssistant
+                  lead={lead}
+                  paymentStatus={lead.paymentStatus}
+                  esignStatus={lead.esignStatus}
+                  onNotesSaved={async () => {
+                    const refreshed = await salesService.getLeadById(appId);
+                    if (refreshed) {
+                      setLead(refreshed);
+                    }
+                  }}
+                  onDispatchToFiling={(notes) => {
+                    setPendingDispatchNotes(notes || '');
+                    setIsDispatchConfirmOpen(true);
+                  }}
+                />
+
+                <LeadAuditTrailSection
+                  leadId={lead.id || lead.applicationId}
+                  taxpayerName={lead.taxpayerName}
+                  taxpayerEmail={lead.taxpayerEmail}
+                  currentStage={lead.currentStage}
+                  stageHistories={(lead.stageHistories as any) || []}
+                  callLogs={(lead.callLogs as any) || []}
+                  auditLogs={(lead.auditLogs as any) || []}
+                />
+              </div>
+            ),
           },
         ]}
-        activeTab={activeWorkspaceTab}
-        onChange={(tab) => setActiveWorkspaceTab(tab as any)}
       />
-
-      {/* VIEW 1: TAX PITCH, QA AUDIT & FEE NEGOTIATION */}
-      {activeWorkspaceTab === 'PITCH' && (
-        <div className="space-y-6">
-          {/* 1.1 Closer Pitch Status & Fee Negotiation Toolbar */}
-          <PitchNegotiationBar
-            lead={lead}
-            onUpdateSuccess={async (updated) => {
-              setLead((prev) => (prev ? { ...prev, ...updated } : prev));
-              const refreshed = await salesService.getLeadById(appId);
-              if (refreshed) {
-                setLead(refreshed);
-              }
-            }}
-          />
-
-          {/* 1.2 Revert Alert Banner */}
-          {isReverted && lastRevert && (
-            <div className="bg-amber-50/70 border border-amber-300/80 rounded-xl p-3.5 sm:p-4 text-amber-950 shadow-2xs animate-in fade-in duration-200">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200 mt-0.5">
-                  <RotateCcw className="w-4 h-4 text-amber-700" />
-                </div>
-                <div className="space-y-2 flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2 font-bold text-xs sm:text-sm text-amber-950">
-                      <span>Return Reverted by {lastRevert.sourceDepartment === 'FILING' ? 'IRS Filing Operations' : lastRevert.sourceDepartment}:</span>
-                      {lastRevert.reasonCategory && (
-                        <span className="px-2 py-0.5 rounded-md bg-amber-200/90 text-amber-950 text-[10px] font-bold border border-amber-300">
-                          {lastRevert.reasonCategory.replace(/_/g, ' ')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
-                      {lastRevert.revertedByName && (
-                        <span>By <strong>{lastRevert.revertedByName}</strong> ({lastRevert.revertedByRole || 'Filing Specialist'})</span>
-                      )}
-                      {lastRevert.revertedAt && (
-                        <span>• {new Date(lastRevert.revertedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Specialist's Note Box */}
-                  <div className="bg-white/95 p-3 rounded-lg border border-amber-200 shadow-2xs space-y-1">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-                      Filing Specialist Revert Instructions &amp; Feedback:
-                    </div>
-                    <p className="text-xs font-semibold text-slate-900 leading-relaxed">
-                      "{lastRevert.revertNotes || 'Filing Operations requested clarification or re-authorization.'}"
-                    </p>
-                    {lastRevert.missingDocumentTypes && lastRevert.missingDocumentTypes.length > 0 && (
-                      <div className="pt-1.5 flex flex-wrap items-center gap-1.5 border-t border-amber-100">
-                        <span className="text-[10px] font-bold text-amber-900">Requested Items:</span>
-                        {lastRevert.missingDocumentTypes.map((doc: string, idx: number) => (
-                          <span key={idx} className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] border border-rose-200">
-                            {doc}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Action guidance */}
-                  <div className="pt-0.5 text-[11px] text-amber-800 font-medium flex items-center gap-1.5">
-                    <span>👉 <strong>Closer Action Required:</strong> Contact client to review the requested data/notes above. Once addressed, collect any updated authorization and click <strong>"Dispatch to IRS E-Filing Queue 🚀"</strong> below.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2. Main Two-Column Pitching Workspace */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left 7 Cols: Tax Calculations & Interactive Fee Engine */}
-            <div className="lg:col-span-7 space-y-6">
-              {/* Section A: Complete Tax Preparer Form 1040 Schedule & Deductions Breakdown */}
-              <PitchTaxDraftSummaryCard
-                lead={lead}
-                onViewOrganizer={() => setActiveWorkspaceTab('ORGANIZER')}
-              />
-
-              {/* Section B: Interactive Fee Quotation & Pricing Engine */}
-              <PitchFeeCalculator
-                feeBreakdown={lead.feeBreakdown}
-                onUpdateFeeBreakdown={handleUpdateFeeBreakdown}
-                onOpenPaymentModal={() => setIsPaymentModalOpen(true)}
-                onOpenEsignModal={() => setIsEsignModalOpen(true)}
-                paymentStatus={lead.paymentStatus}
-                paidAmount={lead.paidAmount}
-                remainingBalance={lead.remainingBalance}
-                paymentHistory={lead.paymentHistory}
-                esignStatus={lead.esignStatus}
-                applicationId={lead.id || lead.applicationId}
-                customerId={lead.taxpayerId || (lead as any).customerId}
-                isLocked={isLocked}
-                lockReason={lockReason}
-              />
-            </div>
-
-            {/* Right 5 Cols: Phone Call Controller, Talking Points & Filing Handoff */}
-            <div className="lg:col-span-5 space-y-6">
-              <PitchCallAssistant
-                lead={lead}
-                paymentStatus={lead.paymentStatus}
-                esignStatus={lead.esignStatus}
-                onNotesSaved={async () => {
-                  const refreshed = await salesService.getLeadById(appId);
-                  if (refreshed) {
-                    setLead(refreshed);
-                  }
-                }}
-                onDispatchToFiling={(notes) => {
-                  setPendingDispatchNotes(notes || '');
-                  setIsDispatchConfirmOpen(true);
-                }}
-              />
-            </div>
-          </div>
-
-          {/* 3. Full Lead Audit Trail & Lifecycle Activity Stream (Matching Reviewer Screen) */}
-          <LeadAuditTrailSection
-            leadId={lead.id || lead.applicationId}
-            taxpayerName={lead.taxpayerName}
-            taxpayerEmail={lead.taxpayerEmail}
-            currentStage={lead.currentStage}
-            stageHistories={(lead.stageHistories as any) || []}
-            callLogs={(lead.callLogs as any) || []}
-            auditLogs={(lead.auditLogs as any) || []}
-          />
-        </div>
-      )}
-
-      {/* VIEW 2: TAX INFO AND FILES */}
-      {activeWorkspaceTab === 'ORGANIZER' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-4">
-          <TaxPrepOrganizerReview
-            leadId={appId}
-            customerName={lead.taxpayerName}
-            taxDraftSummary={lead.taxDraftSummary}
-            taxYear={lead.taxYear}
-            allowEdit={false}
-            readOnly={true}
-            filingType={(lead as any).filingType as string | undefined}
-            hideHeader={true}
-          />
-        </div>
-      )}
 
       {/* 4. Checkout Modals (Stripe Simulation & E-Sign 8879) */}
       <PitchPaymentAndEsignModals

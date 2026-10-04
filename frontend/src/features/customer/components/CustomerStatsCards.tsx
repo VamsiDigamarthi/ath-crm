@@ -38,8 +38,8 @@ export const CustomerStatsCards: React.FC<CustomerStatsCardsProps> = ({
     if (years.length > 0) {
       return Array.from(new Set(years)).sort((a, b) => b - a);
     }
-    return [Number(activeTaxYear)];
-  }, [propAvailableYears, filings, activeTaxYear]);
+    return [];
+  }, [propAvailableYears, filings]);
 
   const [localYear, setLocalYear] = useState<number | 'ALL'>('ALL');
   const effectiveYear = selectedYearFilter !== undefined ? selectedYearFilter : localYear;

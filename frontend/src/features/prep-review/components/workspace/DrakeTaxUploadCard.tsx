@@ -109,8 +109,8 @@ export const DrakeTaxUploadCard: React.FC<DrakeTaxUploadCardProps> = ({
       {/* Card Header */}
       <div className="px-4 py-3 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="min-w-0">
-          <h4 className="text-sm font-semibold text-slate-900">Drake return file</h4>
-          <p className="text-xs text-slate-500 mt-0.5">Form 1040 computation exported from Drake Tax.</p>
+          <h4 className="text-sm font-semibold text-slate-900">1. Prepared Tax Return / Draft File (1040/1120 Export)</h4>
+          <p className="text-xs text-slate-500 mt-0.5">Form 1040/1120 computation and return package exported from Drake Tax or PDF.</p>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0 flex-wrap">

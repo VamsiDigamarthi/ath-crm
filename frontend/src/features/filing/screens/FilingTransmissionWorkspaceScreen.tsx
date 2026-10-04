@@ -21,6 +21,7 @@ import { FilingTransmissionStatusCard } from '../components/workspace/FilingTran
 import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
+import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 import { useFilingWorkspace } from '../hooks/useFilingWorkspace';
 
 export type WorkspaceViewMode = 'AUDIT_FILE' | 'XML_SCHEMA' | 'FULL_INSPECTION';
@@ -196,6 +197,17 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Staff 5-Department Workflow Stage Stepper */}
+      <StaffTaxApplicationStageStepper
+        currentStage={lead.currentStage}
+        taxDraftSummary={lead.taxDraftSummary}
+        assignedDocAgent={lead.assignedDocAgent}
+        assignedPrepAgent={lead.assignedPrepAgent}
+        assignedReviewAgent={lead.assignedReviewAgent}
+        assignedSalesAgent={lead.assignedSalesAgent}
+        assignedFileOp={lead.assignedFileOp || lead.assignedFilingAgent}
+      />
 
       {/* 1.05 Multi-Year Return Switcher Tabs */}
       {lead.availableApplications && lead.availableApplications.length > 0 && (

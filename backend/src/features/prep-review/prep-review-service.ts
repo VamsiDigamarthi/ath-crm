@@ -863,10 +863,19 @@ export class PrepReviewService {
             },
             orderBy: { createdAt: 'desc' },
           },
+          assignedDocAgent: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
           assignedPrepAgent: {
             select: { id: true, firstName: true, lastName: true, email: true },
           },
           assignedReviewAgent: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          assignedSalesAgent: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          assignedFileOp: {
             select: { id: true, firstName: true, lastName: true, email: true },
           },
         },
@@ -1045,6 +1054,12 @@ export class PrepReviewService {
         city: customer?.city || 'Springfield',
         ssnMasked: '***-**-8842',
       },
+      assignedDocAgent: app.assignedDocAgent ? {
+        id: app.assignedDocAgent.id,
+        name: `${app.assignedDocAgent.firstName || ''} ${app.assignedDocAgent.lastName || ''}`.trim() || app.assignedDocAgent.email || 'Doc Specialist',
+        email: app.assignedDocAgent.email || '',
+        role: 'Documenter Specialist',
+      } : null,
       assignedReviewer: app.assignedReviewAgent ? {
         id: app.assignedReviewAgent.id,
         name: `${app.assignedReviewAgent.firstName || ''} ${app.assignedReviewAgent.lastName || ''}`.trim() || app.assignedReviewAgent.email,
@@ -1056,6 +1071,30 @@ export class PrepReviewService {
         name: `${app.assignedPrepAgent.firstName || ''} ${app.assignedPrepAgent.lastName || ''}`.trim() || app.assignedPrepAgent.email,
         email: app.assignedPrepAgent.email,
         role: 'Tax Preparer',
+      } : null,
+      assignedPrepAgent: app.assignedPrepAgent ? {
+        id: app.assignedPrepAgent.id,
+        name: `${app.assignedPrepAgent.firstName || ''} ${app.assignedPrepAgent.lastName || ''}`.trim() || app.assignedPrepAgent.email,
+        email: app.assignedPrepAgent.email,
+        role: 'Tax Preparer',
+      } : null,
+      assignedReviewAgent: app.assignedReviewAgent ? {
+        id: app.assignedReviewAgent.id,
+        name: `${app.assignedReviewAgent.firstName || ''} ${app.assignedReviewAgent.lastName || ''}`.trim() || app.assignedReviewAgent.email,
+        email: app.assignedReviewAgent.email,
+        role: 'Senior QA Reviewer',
+      } : null,
+      assignedSalesAgent: app.assignedSalesAgent ? {
+        id: app.assignedSalesAgent.id,
+        name: `${app.assignedSalesAgent.firstName || ''} ${app.assignedSalesAgent.lastName || ''}`.trim() || app.assignedSalesAgent.email || 'Sales Closer',
+        email: app.assignedSalesAgent.email || '',
+        role: 'Sales Closer',
+      } : null,
+      assignedFileOp: app.assignedFileOp ? {
+        id: app.assignedFileOp.id,
+        name: `${app.assignedFileOp.firstName || ''} ${app.assignedFileOp.lastName || ''}`.trim() || app.assignedFileOp.email || 'Filing Specialist',
+        email: app.assignedFileOp.email || '',
+        role: 'IRS Filing Specialist',
       } : null,
       documents: (app.documents || []).map((doc: any) => ({
         id: doc.id,
@@ -1326,6 +1365,237 @@ export class PrepReviewService {
 
     return {
       success: true,
+      taxDraftSummary: updatedSummary,
+    };
+  }
+
+  /**
+   * Upload Client Deliverable Document (e.g., Form 8879, state declarations, disclosures)
+   */
+  public static async uploadDeliverableDocument(
+    applicationId: string,
+    userId: string,
+    file: Express.Multer.File,
+    requiresEsign: boolean = true
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Staff';
+
+    // Store file in storage
+    const storageResult = await StorageService.saveFile(
+      file,
+      `taxpayer_${app.customerId}_ty${app.taxYear || 2025}/deliverables`
+    );
+
+    // Save document to TaxDocument table
+    const document = await prisma.taxDocument.create({
+      data: {
+        applicationId,
+        uploadedByUserId: userId,
+        fileName: file.originalname,
+        filePath: storageResult.filePath,
+        documentCategory: 'CLIENT_DELIVERABLE',
+        verificationStatus: 'VERIFIED',
+      },
+    });
+
+    const fileUrl = storageResult.fileUrl;
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const existingDeliverables: any[] = Array.isArray(currentDraft.deliverableDocuments)
+      ? currentDraft.deliverableDocuments
+      : [];
+
+    const newDeliverable = {
+      id: document.id,
+      fileName: file.originalname,
+      fileUrl,
+      filePath: storageResult.filePath,
+      fileSize: storageResult.fileSize || file.size,
+      category: 'CLIENT_DELIVERABLE',
+      requiresEsign: Boolean(requiresEsign),
+      uploadedAt: new Date().toISOString(),
+      uploadedByUserId: userId,
+      uploadedByName: actorName,
+      signedDocument: null,
+    };
+
+    const updatedDeliverables = [...existingDeliverables, newDeliverable];
+
+    const updatedSummary = {
+      ...currentDraft,
+      deliverableDocuments: updatedDeliverables,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    // Create Audit Log
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: userId,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'TAX_PREPARER',
+          action: AuditActionType.DOCUMENT_UPLOAD,
+          moduleKey: 'PREPARATION_WORKSPACE',
+          details: {
+            documentId: document.id,
+            fileName: file.originalname,
+            documentCategory: 'CLIENT_DELIVERABLE',
+            requiresEsign: Boolean(requiresEsign),
+            fileSize: storageResult.fileSize || file.size,
+            remarks: `${actorName} uploaded Client Deliverable Document: "${file.originalname}" (${Boolean(requiresEsign) ? 'E-Sign Required' : 'Informational'}).`,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    } catch {
+      // Resilience
+    }
+
+    return {
+      document: newDeliverable,
+      deliverableDocuments: updatedDeliverables,
+      taxDraftSummary: updatedSummary,
+    };
+  }
+
+  /**
+   * Delete Client Deliverable Document
+   */
+  public static async deleteDeliverableDocument(applicationId: string, documentId: string, userId: string) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Staff';
+
+    if (documentId) {
+      const doc = await prisma.taxDocument.findUnique({ where: { id: documentId } });
+      if (doc) {
+        await prisma.taxDocument.delete({ where: { id: documentId } });
+        await StorageService.deleteFile(doc.filePath).catch(() => {});
+      }
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const existingDeliverables: any[] = Array.isArray(currentDraft.deliverableDocuments)
+      ? currentDraft.deliverableDocuments
+      : [];
+
+    const updatedDeliverables = existingDeliverables.filter((d) => d.id !== documentId);
+
+    const updatedSummary = {
+      ...currentDraft,
+      deliverableDocuments: updatedDeliverables,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: userId,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'TAX_PREPARER',
+          action: AuditActionType.DOCUMENT_DELETE,
+          moduleKey: 'PREPARATION_WORKSPACE',
+          details: {
+            documentId,
+            remarks: `${actorName} removed Client Deliverable Document.`,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    } catch {
+      // Resilience
+    }
+
+    return {
+      success: true,
+      deliverableDocuments: updatedDeliverables,
+      taxDraftSummary: updatedSummary,
+    };
+  }
+
+  /**
+   * Toggle requiresEsign on Client Deliverable Document
+   */
+  public static async toggleDeliverableEsign(
+    applicationId: string,
+    documentId: string,
+    requiresEsign: boolean,
+    userId: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!app) {
+      throw new NotFoundError('Tax application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const existingDeliverables: any[] = Array.isArray(currentDraft.deliverableDocuments)
+      ? currentDraft.deliverableDocuments
+      : [];
+
+    const updatedDeliverables = existingDeliverables.map((d) => {
+      if (d.id === documentId) {
+        return {
+          ...d,
+          requiresEsign: Boolean(requiresEsign),
+        };
+      }
+      return d;
+    });
+
+    const updatedSummary = {
+      ...currentDraft,
+      deliverableDocuments: updatedDeliverables,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    return {
+      success: true,
+      deliverableDocuments: updatedDeliverables,
       taxDraftSummary: updatedSummary,
     };
   }

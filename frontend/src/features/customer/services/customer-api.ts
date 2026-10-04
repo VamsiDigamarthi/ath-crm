@@ -40,7 +40,7 @@ export interface CustomerDashboardResponse {
     taxYear: number;
     currentStage: string;
     filingType: string;
-  };
+  } | null;
   refund: {
     fedRefund: number;
     fedDue?: number;
@@ -222,7 +222,60 @@ export const customerApi = {
     const res: any = await apiClient.post('/customer/tax-years', { taxYear, filingType, leadId });
     return res;
   },
+
+  /**
+   * Fetch Return Draft Review, Form 1040/1120 summary and Client Deliverable Documents
+   */
+  getDraftReview: async (taxYear?: string | number, leadId?: string): Promise<{ success: boolean; data: any }> => {
+    const params: Record<string, any> = {};
+    if (taxYear) params.taxYear = String(taxYear);
+    if (leadId) params.leadId = leadId;
+    const res: any = await apiClient.get('/customer/draft-review', { params });
+    return res;
+  },
+
+  /**
+   * Client Approves Draft Return and Uploaded Deliverables
+   */
+  approveDraft: async (payload: { notes?: string; taxYear?: string | number; leadId?: string; applicationId?: string }): Promise<{ success: boolean; data: any }> => {
+    const res: any = await apiClient.post('/customer/draft-review/approve', payload);
+    return res;
+  },
+
+  /**
+   * Client Rejects / Requests Changes on Draft Return
+   */
+  rejectDraft: async (payload: { reason: string; taxYear?: string | number; leadId?: string; applicationId?: string }): Promise<{ success: boolean; data: any }> => {
+    const res: any = await apiClient.post('/customer/draft-review/reject', payload);
+    return res;
+  },
+
+  /**
+   * Client Uploads Signed Deliverable Document (e.g. Form 8879 scan/pdf)
+   */
+  uploadSignedDeliverable: async (
+    docId: string,
+    file: File,
+    taxYear?: string | number,
+    leadId?: string
+  ): Promise<{ success: boolean; data: any }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (taxYear) formData.append('taxYear', String(taxYear));
+    if (leadId) {
+      formData.append('leadId', leadId);
+      formData.append('applicationId', leadId);
+    }
+
+    const res: any = await apiClient.post(`/customer/draft-review/upload-signed/${docId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res;
+  },
 };
+
 
 export interface OrganizerData {
   submittedModules?: string[];

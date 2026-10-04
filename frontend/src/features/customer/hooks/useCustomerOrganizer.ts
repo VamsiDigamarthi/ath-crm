@@ -43,8 +43,8 @@ export const useCustomerOrganizer = (
 
   const moduleIds = useMemo(() => {
     return isBusiness
-      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7', 'm_vault']
-      : ['m1', 'm_income', 'm_expenses', 'm7', 'm_vault'];
+      ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7', 'm_vault', 'm_review_draft']
+      : ['m1', 'm_income', 'm_expenses', 'm7', 'm_vault', 'm_review_draft'];
   }, [isBusiness]);
 
   const currentModIndex = moduleIds.indexOf(selectedModId);

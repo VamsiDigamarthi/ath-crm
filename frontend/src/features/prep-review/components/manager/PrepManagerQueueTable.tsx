@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { UserCheck, Eye, Sparkles } from 'lucide-react';
+import { UserCheck, Sparkles, Calculator } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
@@ -146,10 +146,11 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
               <Button
                 size="sm"
                 onClick={() => onViewLeadDetail(lead)}
-                className="h-7 px-2.5 text-[11px] font-semibold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1 cursor-pointer"
+                className="h-7 px-2.5 text-[11px] font-semibold bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1 cursor-pointer shadow-2xs"
+                title="Open Form 1040 Drafting Workspace"
               >
-                <Eye className="w-3 h-3" />
-                <span>View</span>
+                <Calculator className="w-3 h-3" />
+                <span>{lead.filingType === 'BUSINESS' ? 'Draft 1120' : 'Draft 1040'}</span>
               </Button>
             </div>
           );

@@ -26,6 +26,7 @@ router.post('/documents/upload-multiple', uploadTaxDocument.array('files', 20), 
 router.post('/documents/drive-links', CustomerController.uploadDriveLink);
 router.delete('/documents/:id', CustomerController.deleteDocument);
 router.get('/documents/:id/download', CustomerController.downloadDocument);
+router.get('/documents/:id', CustomerController.downloadDocument);
 
 /**
  * 9-Module Intake Organizer Routes
@@ -37,6 +38,14 @@ router.put('/organizer', validateRequest(saveOrganizerSchema), CustomerControlle
  * Tax Year Management Routes
  */
 router.post('/tax-years', validateRequest(startTaxYearReturnSchema), CustomerController.startTaxYearReturn);
+
+/**
+ * Draft Review, Signing Documents & Approval / Revision Routes
+ */
+router.get('/draft-review', CustomerController.getDraftReview);
+router.post('/draft-review/approve', CustomerController.approveDraft);
+router.post('/draft-review/reject', CustomerController.rejectDraft);
+router.post('/draft-review/upload-signed/:docId', uploadTaxDocument.single('file'), CustomerController.uploadSignedDeliverable);
 
 export { router as customerRouter };
 

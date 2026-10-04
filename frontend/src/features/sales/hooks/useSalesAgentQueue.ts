@@ -170,13 +170,24 @@ export function useSalesAgentQueue() {
     });
   }, [allLeads, activeTab, priorityFilter, searchQuery]);
 
+  const clientRows = useMemo(() => {
+    const seen = new Set<string>();
+    return filteredLeads.filter((l) => {
+      const key = l.taxpayerId || l.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [filteredLeads]);
+
   const handleOpenPitch = (leadId: string) => {
     navigate(`/sales/agent/pitch/${leadId}`);
   };
 
   const handleOpenNextPriority = () => {
     if (filteredLeads.length > 0) {
-      navigate(`/sales/agent/pitch/${filteredLeads[0].id || filteredLeads[0].applicationId}`);
+      const next = filteredLeads[0];
+      navigate(`/sales/agent/client/${next.taxpayerId || next.id || next.applicationId}`);
     } else {
       toast('No pending returns in pitch queue', { icon: 'ℹ️' });
     }
@@ -189,6 +200,7 @@ export function useSalesAgentQueue() {
     counts,
     stats,
     filteredLeads,
+    clientRows,
     activeTab,
     setActiveTab,
     searchQuery,

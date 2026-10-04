@@ -1,5 +1,6 @@
 import { prisma } from "../../config/db.js";
 import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType, CouponStatus, Prisma } from "@prisma/client";
+import { StorageService } from "../../utils/storage-service.js";
 
 export class SalesService {
   /**
@@ -884,6 +885,9 @@ export class SalesService {
           assignedSalesAgent: {
             select: { id: true, firstName: true, lastName: true, email: true, role: true },
           },
+          assignedFileOp: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
           quotes: {
             orderBy: { createdAt: 'desc' },
             take: 1,
@@ -1097,16 +1101,35 @@ export class SalesService {
       qaAuditorName: qaAuditor,
       qaAuditorRemarks: draft.remarks || draft.auditorRemarks || draft.qaRemarks || '',
       qaApprovedAt: draft.qaApprovedAt || app.updatedAt.toISOString(),
+      assignedDocAgent: app.assignedDocAgent ? {
+        id: app.assignedDocAgent.id,
+        name: `${app.assignedDocAgent.firstName || ''} ${app.assignedDocAgent.lastName || ''}`.trim() || app.assignedDocAgent.email || 'Doc Specialist',
+        email: app.assignedDocAgent.email || '-',
+        role: 'Documenter Specialist',
+      } : null,
       assignedPrepAgent: app.assignedPrepAgent ? {
         id: app.assignedPrepAgent.id,
         name: `${app.assignedPrepAgent.firstName || ''} ${app.assignedPrepAgent.lastName || ''}`.trim() || app.assignedPrepAgent.email || 'Senior Preparer',
         email: app.assignedPrepAgent.email || '-',
+        role: 'Tax Preparer',
+      } : null,
+      assignedReviewAgent: app.assignedReviewAgent ? {
+        id: app.assignedReviewAgent.id,
+        name: `${app.assignedReviewAgent.firstName || ''} ${app.assignedReviewAgent.lastName || ''}`.trim() || app.assignedReviewAgent.email || 'Senior Reviewer',
+        email: app.assignedReviewAgent.email || '-',
+        role: 'Senior QA Reviewer',
       } : null,
       assignedSalesAgent: app.assignedSalesAgent ? {
         id: app.assignedSalesAgent.id,
         name: `${app.assignedSalesAgent.firstName || ''} ${app.assignedSalesAgent.lastName || ''}`.trim() || app.assignedSalesAgent.email || '-',
         email: app.assignedSalesAgent.email || '-',
         role: app.assignedSalesAgent.role,
+      } : null,
+      assignedFileOp: app.assignedFileOp ? {
+        id: app.assignedFileOp.id,
+        name: `${app.assignedFileOp.firstName || ''} ${app.assignedFileOp.lastName || ''}`.trim() || app.assignedFileOp.email || 'Filing Specialist',
+        email: app.assignedFileOp.email || '-',
+        role: 'IRS Filing Specialist',
       } : null,
       taxDraftSummary: {
         ...draft,
@@ -2475,6 +2498,403 @@ export class SalesService {
       success: true,
       count: results.length,
       message: `Successfully returned ${results.length} sales lead(s) to Admin Unassigned Pool`,
+    };
+  }
+
+  /**
+   * Update Form 1040 Calculation Draft Values from Sales Workspace
+   */
+  public static async updateDraftValues(applicationId: string, userId: string, payload: any) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Sales Closer';
+
+    const currentDraft: any = app.taxDraftSummary || {};
+
+    const updatedSummary = {
+      ...currentDraft,
+      ...payload,
+      updatedAt: new Date().toISOString(),
+      lastModifiedByUserId: userId,
+      lastModifiedByName: actorName,
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: userId,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'SALES_AGENT',
+          action: AuditActionType.ORGANIZER_UPDATE,
+          moduleKey: 'SALES_WORKSPACE',
+          details: {
+            actorEmail: user?.email,
+            clientName: app.customer?.firstName ? `${app.customer.firstName} ${app.customer.lastName}` : 'Client',
+            remarks: `Sales closer ${actorName} updated Form 1040 draft values & calculation summary.`,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    } catch {
+      // Resilience
+    }
+
+    return {
+      success: true,
+      taxDraftSummary: updatedSummary,
+      application: updatedApp,
+    };
+  }
+
+  /**
+   * Upload Deliverable Document from Sales Workspace
+   */
+  public static async uploadDeliverableDocument(
+    applicationId: string,
+    userId: string,
+    file: Express.Multer.File,
+    requiresEsign: boolean = true
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Sales Closer';
+
+    const storageResult = await StorageService.saveFile(
+      file,
+      `taxpayer_${app.customerId}_ty${app.taxYear || 2025}/deliverables`
+    );
+
+    const document = await prisma.taxDocument.create({
+      data: {
+        applicationId,
+        uploadedByUserId: userId,
+        fileName: file.originalname,
+        filePath: storageResult.filePath,
+        documentCategory: 'CLIENT_DELIVERABLE',
+        verificationStatus: 'VERIFIED',
+      },
+    });
+
+    const fileUrl = storageResult.fileUrl;
+    const currentDraft: any = app.taxDraftSummary || {};
+    const existingDeliverables: any[] = Array.isArray(currentDraft.deliverableDocuments)
+      ? currentDraft.deliverableDocuments
+      : [];
+
+    const newDeliverable = {
+      id: document.id,
+      fileName: file.originalname,
+      fileUrl,
+      filePath: storageResult.filePath,
+      fileSize: storageResult.fileSize || file.size,
+      category: 'CLIENT_DELIVERABLE',
+      requiresEsign: Boolean(requiresEsign),
+      uploadedAt: new Date().toISOString(),
+      uploadedByUserId: userId,
+      uploadedByName: actorName,
+      signedDocument: null,
+    };
+
+    const updatedDeliverables = [...existingDeliverables, newDeliverable];
+
+    const updatedSummary = {
+      ...currentDraft,
+      deliverableDocuments: updatedDeliverables,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    return {
+      document: newDeliverable,
+      deliverableDocuments: updatedDeliverables,
+      taxDraftSummary: updatedSummary,
+    };
+  }
+
+  /**
+   * Delete Deliverable Document from Sales Workspace
+   */
+  public static async deleteDeliverableDocument(applicationId: string, documentId: string, userId: string) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    if (documentId) {
+      const doc = await prisma.taxDocument.findUnique({ where: { id: documentId } });
+      if (doc) {
+        await prisma.taxDocument.delete({ where: { id: documentId } });
+        await StorageService.deleteFile(doc.filePath).catch(() => {});
+      }
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const existingDeliverables: any[] = Array.isArray(currentDraft.deliverableDocuments)
+      ? currentDraft.deliverableDocuments
+      : [];
+
+    const updatedDeliverables = existingDeliverables.filter((d) => d.id !== documentId);
+
+    const updatedSummary = {
+      ...currentDraft,
+      deliverableDocuments: updatedDeliverables,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    return {
+      success: true,
+      deliverableDocuments: updatedDeliverables,
+      taxDraftSummary: updatedSummary,
+    };
+  }
+
+  /**
+   * Toggle requiresEsign on Deliverable Document from Sales Workspace
+   */
+  public static async toggleDeliverableEsign(
+    applicationId: string,
+    documentId: string,
+    requiresEsign: boolean,
+    userId: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const existingDeliverables: any[] = Array.isArray(currentDraft.deliverableDocuments)
+      ? currentDraft.deliverableDocuments
+      : [];
+
+    const updatedDeliverables = existingDeliverables.map((d) => {
+      if (d.id === documentId) {
+        return {
+          ...d,
+          requiresEsign: Boolean(requiresEsign),
+        };
+      }
+      return d;
+    });
+
+    const updatedSummary = {
+      ...currentDraft,
+      deliverableDocuments: updatedDeliverables,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    return {
+      success: true,
+      deliverableDocuments: updatedDeliverables,
+      taxDraftSummary: updatedSummary,
+    };
+  }
+
+  /**
+   * Send Tax Draft & Deliverables to Client (Creates Notification + Email + Versioning)
+   */
+  public static async sendDraftToClient(applicationId: string, userId: string, notes?: string) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Sales Closer';
+    const clientName = app.customer
+      ? `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Taxpayer'
+      : 'Taxpayer';
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    const nextVersion = (Number(currentDraft.draftVersion) || 0) + 1;
+
+    const updatedSummary = {
+      ...currentDraft,
+      draftVersion: nextVersion,
+      clientReviewStatus: 'SENT_TO_CLIENT',
+      clientReviewSentAt: new Date().toISOString(),
+      clientReviewSentByUserId: userId,
+      clientReviewSentByName: actorName,
+      dispatchNotesToClient: notes || '',
+      clientRevisionNotes: null, // Clear past rejection notes upon new version dispatch
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    // Send in-app notification to client
+    try {
+      await prisma.notification.create({
+        data: {
+          recipientUserId: app.customer?.userId || null,
+          targetRole: Role.TAXPAYER_USER,
+          applicationId: app.id,
+          category: NotificationCategory.SALES,
+          priority: NotificationPriority.HIGH,
+          title: `Your TY ${app.taxYear} Tax Return Draft (v${nextVersion}) is Ready`,
+          message: notes?.trim()
+            ? `Your Form 1040 draft is ready for review. Note from advisor: "${notes}". Please review calculations and sign required documents.`
+            : `Your Form 1040 draft is ready for review. Please inspect your return summary, sign required forms, and approve.`,
+          actionUrl: `/customer/organizer?taxYear=${app.taxYear}&tab=m_review_draft`,
+          actionLabel: 'Review Draft & E-Sign',
+          relatedLeadName: clientName,
+        },
+      });
+    } catch (notifErr) {
+      console.error('Failed to create client notification for draft dispatch:', notifErr);
+    }
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: userId,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'SALES_AGENT',
+          action: AuditActionType.STAGE_CHANGE,
+          moduleKey: 'SALES_PITCH',
+          details: {
+            version: nextVersion,
+            clientName,
+            remarks: `Sales closer ${actorName} dispatched Form 1040 draft (v${nextVersion}) to client for review & e-sign.`,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    } catch {
+      // Resilience
+    }
+
+    return {
+      success: true,
+      draftVersion: nextVersion,
+      clientReviewStatus: 'SENT_TO_CLIENT',
+      taxDraftSummary: updatedSummary,
+      application: updatedApp,
+    };
+  }
+
+  /**
+   * Reopen Draft Version for Sales to modify values & documents without waiting for client rejection
+   */
+  public static async reopenDraftVersion(applicationId: string, userId: string, reason?: string) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+
+    if (!app) {
+      throw new Error('Application not found');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Sales Closer';
+
+    const currentDraft: any = app.taxDraftSummary || {};
+
+    const updatedSummary = {
+      ...currentDraft,
+      clientReviewStatus: 'NOT_SENT',
+      reopenedAt: new Date().toISOString(),
+      reopenedByUserId: userId,
+      reopenReason: reason || 'Adjustment during client consultation',
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedApp = await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: updatedSummary,
+      },
+    });
+
+    try {
+      await prisma.auditLog.create({
+        data: {
+          applicationId,
+          actorId: userId,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'SALES_AGENT',
+          action: AuditActionType.STAGE_CHANGE,
+          moduleKey: 'SALES_PITCH',
+          details: {
+            reason: reason || 'Sales reopened draft for live revision',
+            remarks: `Sales closer ${actorName} reopened return draft for editing new version.`,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+    } catch {
+      // Resilience
+    }
+
+    return {
+      success: true,
+      clientReviewStatus: 'NOT_SENT',
+      taxDraftSummary: updatedSummary,
+      application: updatedApp,
     };
   }
 }

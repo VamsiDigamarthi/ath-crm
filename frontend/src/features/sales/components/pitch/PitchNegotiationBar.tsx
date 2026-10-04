@@ -132,11 +132,11 @@ export const PitchNegotiationBar: React.FC<PitchNegotiationBarProps> = ({ lead, 
   const currentOption = PITCH_STATUS_OPTIONS.find((o) => o.value === pitchStatus) || PITCH_STATUS_OPTIONS[0];
 
   return (
-    <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 font-sans animate-in fade-in duration-150">
+    <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-4 font-sans animate-in fade-in duration-150">
       {/* Top Header Label */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100 shrink-0">
             <Tag className="w-3.5 h-3.5" />
           </div>
           <div>

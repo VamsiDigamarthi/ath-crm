@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin, ChevronDown, ChevronUp, RotateCcw, UserCheck, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../common/SalesStageBadge';
@@ -19,7 +19,16 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
-  const backQueuePath = isManager ? '/sales/manager/queue' : '/sales/agent/queue';
+
+  // Navigate back to client filings screen if taxpayerId is present, else back to queue
+  const backPath = lead.taxpayerId
+    ? isManager
+      ? `/sales/manager/client/${lead.taxpayerId}`
+      : `/sales/agent/client/${lead.taxpayerId}`
+    : isManager
+    ? '/sales/manager/queue'
+    : '/sales/agent/queue';
+
   const [isExpandedRemarks, setIsExpandedRemarks] = useState(false);
 
   const rawRemarks = lead.qaAuditorRemarks || 'Form 1040 certified and approved for Sales pitch.';
@@ -28,18 +37,21 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
     ? `${rawRemarks.slice(0, 160)}...` 
     : rawRemarks;
 
+  const isBusiness = lead.filingType === 'BUSINESS';
+  const formLabel = isBusiness ? 'Form 1120' : 'Form 1040';
+
   return (
     <div className="space-y-4">
-      {/* 1. Navigation & Quick Meta Header */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* 1. Navigation & Taxpayer Profile Card */}
+      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <button
             type="button"
-            onClick={() => navigate(backQueuePath)}
-            className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1.5 transition-colors cursor-pointer mb-2"
+            onClick={() => navigate(backPath)}
+            className="text-xs font-semibold text-slate-500 hover:text-slate-900 flex items-center gap-1.5 transition-colors cursor-pointer mb-2"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>{isManager ? 'Back to Department Queue' : 'Back to Outreach Pending'}</span>
+            <span>{lead.taxpayerId ? 'Back to Taxpayer Filings' : isManager ? 'Back to Caseload Queue' : 'Back to Closer Queue'}</span>
           </button>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -48,11 +60,12 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
             </h2>
             <ClientPaymentStatusChip lead={lead} scope="return" size="sm" />
             <PriorityBadge priority={lead.priority || 'NO_PRIORITY'} size="sm" />
-            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-              TY {lead.taxYear} Form 1040
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+              TY {lead.taxYear} {formLabel}
             </span>
             <SalesStageBadge stage={lead.currentStage} />
             <ReturnComplexityBadge lead={lead} size="md" />
+
             {(() => {
               const lastRevert =
                 (lead.taxDraftSummary as any)?.revertsByTarget?.SALES ||
@@ -61,8 +74,8 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
               const isDispatched = ['FILING_QUEUE', 'FILING_IN_PROGRESS', 'FILING_SUCCESS'].includes(lead.currentStage as string);
               if (lastRevert && !lastRevert.resolved && !isDispatched) {
                 return (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-950 border border-amber-300 shadow-2xs animate-pulse">
-                    <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                    <RotateCcw className="w-3 h-3 text-amber-600" />
                     <span>Reverted from {lastRevert.sourceDepartment === 'FILING' ? 'IRS Filing Ops' : lastRevert.sourceDepartment}</span>
                   </span>
                 );
@@ -71,7 +84,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
             })()}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium mt-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium mt-1.5">
             <span className="flex items-center gap-1">
               <Mail className="w-3.5 h-3.5 text-slate-400" />
               {lead.taxpayerEmail}
@@ -82,26 +95,27 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
             </span>
             <span className="flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5 text-slate-400" />
-              {lead.stateOfResidence} • {lead.visaType}
+              {lead.stateOfResidence}{lead.visaType && lead.visaType !== '-' ? ` • ${lead.visaType}` : ''}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* 1. Return to Admin Pool Button */}
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          {/* Return to Admin Pool Button */}
           {onOpenReturnToAdmin && (
             <Button
               variant="outline"
               size="sm"
               onClick={onOpenReturnToAdmin}
-              className="text-xs font-bold flex items-center gap-1.5 shadow-2xs h-10 px-3.5 border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-900 cursor-pointer transition-all"
+              className="text-xs font-semibold flex items-center gap-1.5 shadow-2xs h-8 px-3 border-rose-200 bg-white hover:bg-rose-50 text-rose-700 cursor-pointer transition-colors"
               title="Release this lead back to Super Admin Pool if client does not convert"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+              <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
               <span>Return to Admin</span>
             </Button>
           )}
 
+          {/* Send Back Lead Button */}
           {onOpenSendBack && (() => {
             const isDispatchedToFiling =
               lead.currentStage === 'FILING_QUEUE' ||
@@ -124,24 +138,17 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
               ? 'Sent to Preparer'
               : 'Send Back Lead';
 
-            const buttonTitle = isDispatchedToFiling
-              ? 'Return is currently in IRS Filing Operations. Cannot be reverted from Sales.'
-              : isRevertedToPrecedingDept
-              ? `Return has already been sent back for revision and is currently with ${lead.currentStage === 'DOC_OUTREACH' ? 'Documenter Intake' : 'Tax Preparation (CPA)'}.`
-              : 'Send return back to Tax Preparer or Documenter based on client pitch discussion';
-
             return (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => !isDisabled && onOpenSendBack()}
                 disabled={isDisabled}
-                className={`text-xs font-bold flex items-center gap-1.5 shadow-2xs h-10 px-3.5 transition-all ${
+                className={`text-xs font-semibold flex items-center gap-1.5 shadow-2xs h-8 px-3 transition-colors ${
                   isDisabled
                     ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-75 shadow-none'
-                    : 'border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 cursor-pointer'
+                    : 'border-amber-200 bg-white hover:bg-amber-50 text-amber-800 cursor-pointer'
                 }`}
-                title={buttonTitle}
               >
                 <RotateCcw className={`w-3.5 h-3.5 ${isDisabled ? 'text-slate-400' : 'text-amber-600'}`} />
                 <span>{buttonLabel}</span>
@@ -149,87 +156,79 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
             );
           })()}
 
-          {/* Assigned Closer Pill */}
-          <div className="flex items-center gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-            <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs">
-              {lead.assignedSalesAgent?.name?.charAt(0) || 'S'}
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                Assigned Closer
-              </div>
-              <div className="text-xs font-bold text-slate-900">
+          {/* Assigned Closer Badge */}
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <UserCheck className="w-3.5 h-3.5 text-slate-500" />
+            <div className="text-xs">
+              <span className="text-slate-400 mr-1">Closer:</span>
+              <span className="font-semibold text-slate-800">
                 {lead.assignedSalesAgent?.name || 'Unassigned'}
-              </div>
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Hero Certified 1040 Refund / Balance Due Banner */}
-      <div className={`text-white p-6 rounded-2xl shadow-md space-y-4 ${
-        lead.federalRefund > 0 
-          ? 'bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800' 
-          : lead.balanceDue > 0 
-            ? 'bg-gradient-to-r from-slate-900 via-slate-800 to-rose-950' 
-            : 'bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900'
-      }`}>
+      {/* 2. Sleek QA Certified Calculation Summary Card (Clean, modern, uncluttered) */}
+      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-1 text-white/80">
-              <ShieldCheck className={`w-4 h-4 ${lead.federalRefund > 0 ? 'text-emerald-300' : 'text-rose-300'}`} />
-              <span>4-Eyes QA Certified Form 1040 Calculation Result</span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-1">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>4-Eyes QA Certified Calculation Result</span>
             </div>
-            <div className="text-3xl sm:text-4xl font-black tracking-tight text-white flex items-baseline gap-2">
-              {lead.federalRefund > 0 ? (
-                <span className="text-emerald-200">+{lead.federalRefund.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>
-              ) : lead.balanceDue > 0 ? (
-                <span className="text-rose-300">-{lead.balanceDue.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</span>
-              ) : (
-                <span>$0.00</span>
-              )}
-              <span className={`text-base font-bold ${lead.federalRefund > 0 ? 'text-emerald-200' : 'text-rose-200'}`}>
-                {lead.federalRefund > 0 ? 'Federal Tax Refund' : lead.balanceDue > 0 ? 'Federal Balance Due' : 'Federal Tax Balanced'}
+            <div className="flex items-baseline gap-2.5">
+              <span className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${lead.federalRefund > 0 ? 'text-emerald-600' : lead.balanceDue > 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                {lead.federalRefund > 0
+                  ? `+$${lead.federalRefund.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                  : lead.balanceDue > 0
+                  ? `-$${lead.balanceDue.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+                  : '$0'}
+              </span>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${lead.federalRefund > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : lead.balanceDue > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-100 text-slate-600'}`}>
+                {lead.federalRefund > 0 ? 'Federal Refund' : lead.balanceDue > 0 ? 'Balance Due' : 'Zero Balance'}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-xs p-3.5 rounded-xl border border-white/15">
-            <div>
-              <div className="text-[10px] text-white/70 font-bold uppercase">State Refund</div>
-              <div className="text-base font-black text-white">
+          <div className="flex items-center gap-3">
+            <div className="bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-100 min-w-[120px]">
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">State Refund</div>
+              <div className="text-sm font-bold text-slate-800">
                 {lead.stateRefund > 0 ? `+$${lead.stateRefund.toLocaleString()}` : '$0'}
               </div>
             </div>
-            <div className="w-px h-8 bg-white/20" />
-            <div>
-              <div className="text-[10px] text-white/70 font-bold uppercase">Gross Income (Line 9)</div>
-              <div className="text-base font-black text-white">
+            <div className="bg-slate-50 px-3.5 py-2 rounded-lg border border-slate-100 min-w-[140px]">
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gross Income (Line 9)</div>
+              <div className="text-sm font-bold text-slate-800">
                 ${lead.grossIncome.toLocaleString()}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Auditor Remarks Stamp with Interactive Read More / Read Less Toggle */}
-        <div className="pt-3 border-t border-white/15 flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs text-white/90 font-medium">
-          <div className="flex-1 min-w-0">
-            <span className="font-bold text-white mr-1.5">Audited by {lead.qaAuditorName}:</span>
-            <span className="italic break-words">
-              "{displayedRemarks}"
-            </span>
-            {isLongRemarks && (
-              <button
-                type="button"
-                onClick={() => setIsExpandedRemarks(!isExpandedRemarks)}
-                className="ml-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-200 hover:text-amber-100 underline underline-offset-2 cursor-pointer transition-colors bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded"
-              >
-                <span>{isExpandedRemarks ? 'Read Less' : 'Read More'}</span>
-                {isExpandedRemarks ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              </button>
-            )}
+        {/* Auditor Remarks Strip */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs text-slate-600">
+          <div className="flex-1 min-w-0 flex items-start gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold text-slate-800 mr-1.5">Audited by {lead.qaAuditorName}:</span>
+              <span className="italic text-slate-600">
+                &ldquo;{displayedRemarks}&rdquo;
+              </span>
+              {isLongRemarks && (
+                <button
+                  type="button"
+                  onClick={() => setIsExpandedRemarks(!isExpandedRemarks)}
+                  className="ml-2 inline-flex items-center gap-0.5 text-[11px] font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
+                >
+                  <span>{isExpandedRemarks ? 'Read Less' : 'Read More'}</span>
+                  {isExpandedRemarks ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              )}
+            </div>
           </div>
-          <span className="text-[10px] text-white/70 shrink-0 self-start sm:self-center">
+          <span className="text-[11px] text-slate-400 shrink-0">
             Sign-Off: {new Date(lead.qaApprovedAt).toLocaleDateString()}
           </span>
         </div>

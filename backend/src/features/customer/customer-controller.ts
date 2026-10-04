@@ -196,5 +196,92 @@ export class CustomerController {
 
     return SuccessHandler.handle(res, result.message, result, 201);
   }
+
+  /**
+   * GET /api/v1/customer/draft-review
+   * Fetch draft return summary & deliverables for customer review
+   */
+  static async getDraftReview(req: Request, res: Response) {
+    if (!req.currentUser?.id) {
+      throw new NotAuthorizedError();
+    }
+
+    const taxYear = req.query.taxYear as string | undefined;
+    const leadId = (req.query.leadId || req.query.applicationId || req.query.customerId) as string | undefined;
+    const filingType = (req.query.type || req.query.filingType) as string | undefined;
+
+    const data = await CustomerService.getDraftReview(
+      req.currentUser.id,
+      taxYear,
+      leadId,
+      req.currentUser,
+      filingType
+    );
+
+    return SuccessHandler.handle(res, 'Tax draft review details fetched successfully', data);
+  }
+
+  /**
+   * POST /api/v1/customer/draft-review/approve
+   * Customer approves Form 1040 draft return & signatures
+   */
+  static async approveDraft(req: Request, res: Response) {
+    if (!req.currentUser?.id) {
+      throw new NotAuthorizedError();
+    }
+
+    const applicationId = (req.body.applicationId || req.body.leadId || req.query.applicationId || req.query.leadId) as string | undefined;
+    const taxYear = (req.body.taxYear || req.query.taxYear) as string | undefined;
+    const notes = req.body.notes || req.body.reason || '';
+    const result = await CustomerService.approveDraft(req.currentUser.id, applicationId, notes, taxYear);
+
+    return SuccessHandler.handle(res, 'Tax return draft approved successfully', result);
+  }
+
+  /**
+   * POST /api/v1/customer/draft-review/reject
+   * Customer requests changes / revisions on return draft
+   */
+  static async rejectDraft(req: Request, res: Response) {
+    if (!req.currentUser?.id) {
+      throw new NotAuthorizedError();
+    }
+
+    const applicationId = (req.body.applicationId || req.body.leadId || req.query.applicationId || req.query.leadId) as string | undefined;
+    const taxYear = (req.body.taxYear || req.query.taxYear) as string | undefined;
+    const revisionNotes = req.body.revisionNotes || req.body.reason || req.body.notes || '';
+    const result = await CustomerService.rejectDraft(req.currentUser.id, applicationId, revisionNotes, taxYear);
+
+    return SuccessHandler.handle(res, 'Revision request submitted to your tax advisor', result);
+  }
+
+  /**
+   * POST /api/v1/customer/draft-review/upload-signed/:docId
+   * Customer uploads signed deliverable document
+   */
+  static async uploadSignedDeliverable(req: Request, res: Response) {
+    if (!req.currentUser?.id) {
+      throw new NotAuthorizedError();
+    }
+
+    const docId = String(req.params.docId);
+    const applicationId = (req.body.applicationId || req.query.applicationId || req.body.leadId || req.query.leadId) as string | undefined;
+    const taxYear = (req.body.taxYear || req.query.taxYear) as string | undefined;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: 'No file was uploaded' });
+    }
+
+    const result = await CustomerService.uploadSignedDeliverable(
+      req.currentUser.id,
+      applicationId,
+      docId,
+      file,
+      taxYear
+    );
+
+    return SuccessHandler.handle(res, 'Signed document uploaded successfully', result, 201);
+  }
 }
 
