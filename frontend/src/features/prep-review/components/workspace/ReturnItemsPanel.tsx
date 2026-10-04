@@ -63,15 +63,15 @@ export const ReturnItemsPanel: React.FC<ReturnItemsPanelProps> = ({ applicationI
               disabled={isBusy || productOptions.length === 0}
             />
           </div>
-          <div className="w-full sm:w-24">
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Qty</label>
+          <div className="w-full sm:w-28 flex flex-col gap-1">
+            <label className="text-xs font-semibold text-gray-700 tracking-tight">Qty</label>
             <input
               type="number"
               min={1}
               max={999}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
-              className={`${inlineInput} w-full h-10`}
+              className="w-full h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 text-center focus:outline-none focus:ring-2 focus:ring-[#16A34A]/20 focus:border-[#16A34A] disabled:bg-slate-50 disabled:text-slate-500"
               disabled={isBusy}
             />
           </div>
@@ -79,7 +79,7 @@ export const ReturnItemsPanel: React.FC<ReturnItemsPanelProps> = ({ applicationI
             size="md"
             onClick={addItem}
             disabled={isBusy || !selectedProductId}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold flex items-center gap-2 cursor-pointer"
+            className="h-10 px-5 bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold flex items-center justify-center gap-2 cursor-pointer rounded-md shrink-0"
           >
             <Plus className="w-4 h-4" />
             Add
@@ -188,8 +188,20 @@ export const ReturnItemsPanel: React.FC<ReturnItemsPanelProps> = ({ applicationI
                       <div className="text-xs text-slate-400 line-through">{money(item.catalogPrice)}</div>
                     )}
                   </td>
-                  <td className="px-3 py-3 text-slate-600 whitespace-nowrap">{taxLabel(item.taxType)}</td>
-                  <td className="px-3 py-3 text-right font-medium text-slate-900 whitespace-nowrap">{money(item.amount)}</td>
+                  <td className="px-3 py-3 text-slate-600 whitespace-nowrap">
+                    <div>{taxLabel(item.taxType, item.taxRate)}</div>
+                    {item.tax > 0 ? (
+                      <div className="text-[11px] text-emerald-700 font-medium">+{money(item.tax)}</div>
+                    ) : (
+                      <div className="text-[11px] text-slate-400">$0.00</div>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-right font-medium text-slate-900 whitespace-nowrap">
+                    <div>{money(item.total)}</div>
+                    {item.tax > 0 && (
+                      <div className="text-[11px] text-slate-400 font-normal">Sub: {money(item.amount)}</div>
+                    )}
+                  </td>
                   {!readOnly && (
                     <td className="px-2 py-3 text-right">
                       <button

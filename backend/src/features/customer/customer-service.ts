@@ -20,9 +20,11 @@ export class CustomerService {
     userId: string,
     taxYearQuery?: string | number,
     leadId?: string,
-    currentUser?: any
+    currentUser?: any,
+    filingTypeQuery?: string
   ) {
     const selectedYear = taxYearQuery ? parseInt(String(taxYearQuery), 10) : 2025;
+    const requestedFilingType = filingTypeQuery?.toUpperCase();
 
     // 1. If leadId is explicitly provided (e.g. from Staff workspace or query param)
     if (leadId) {
@@ -57,14 +59,17 @@ export class CustomerService {
       });
 
       if (cust) {
-        let matchedApp = cust.applications.find((a) => a.taxYear === selectedYear) || cust.applications[0];
+        let matchedApp = cust.applications.find(
+          (a) => a.taxYear === selectedYear && (!requestedFilingType || a.filingType === requestedFilingType)
+        ) || cust.applications.find((a) => a.taxYear === selectedYear) || cust.applications[0];
+
         if (!matchedApp) {
           matchedApp = await prisma.taxApplication.create({
             data: {
               customerId: cust.id,
               taxYear: selectedYear,
               currentStage: 'DOC_OUTREACH',
-              filingType: 'INDIVIDUAL',
+              filingType: requestedFilingType === 'BUSINESS' ? 'BUSINESS' : 'INDIVIDUAL',
             },
             include: {
               customer: true,
@@ -159,14 +164,17 @@ export class CustomerService {
       });
     }
 
-    let activeApp = profile.applications.find((a) => a.taxYear === selectedYear);
+    let activeApp = profile.applications.find(
+      (a) => a.taxYear === selectedYear && (!requestedFilingType || a.filingType === requestedFilingType)
+    ) || profile.applications.find((a) => a.taxYear === selectedYear);
+
     if (!activeApp) {
       activeApp = await prisma.taxApplication.create({
         data: {
           customerId: profile.id,
           taxYear: selectedYear,
           currentStage: 'DOC_OUTREACH',
-          filingType: 'INDIVIDUAL',
+          filingType: requestedFilingType === 'BUSINESS' ? 'BUSINESS' : 'INDIVIDUAL',
         },
         include: {
           customer: true,
@@ -861,13 +869,14 @@ export class CustomerService {
   /**
    * Get 9-Module Organizer data for active tax return
    */
-  static async getOrganizer(userId: string, taxYearQuery?: string, leadId?: string, currentUser?: any) {
-    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYearQuery, leadId, currentUser);
+  static async getOrganizer(userId: string, taxYearQuery?: string, leadId?: string, currentUser?: any, filingTypeQuery?: string) {
+    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYearQuery, leadId, currentUser, filingTypeQuery);
 
     const user = profile.userId ? await prisma.user.findUnique({ where: { id: profile.userId } }) : null;
     const draft = (activeApp.taxDraftSummary as any) || {};
     const organizer = draft.organizer || {};
     const m1Saved = organizer.m1_demographics || {};
+    const isBusiness = activeApp.filingType === 'BUSINESS' || filingTypeQuery?.toUpperCase() === 'BUSINESS';
 
     const firstName = m1Saved.firstName || profile.firstName || user?.firstName || '';
     const middleName = m1Saved.middleName !== undefined ? m1Saved.middleName : (profile.middleName || '');
@@ -876,14 +885,60 @@ export class CustomerService {
     const email = m1Saved.email || profile.email || user?.email || '';
     const phone = m1Saved.phone || profile.phone || user?.mobile || '';
 
-    // Strictly load submittedModules from saved draft. Default only to ['m1'] if user has filled demographics
+    // Strictly load submittedModules from saved draft
     const submittedModules: string[] = Array.isArray(organizer.submittedModules)
       ? organizer.submittedModules
-      : (m1Saved.firstName || profile.firstName ? ['m1'] : []);
+      : (isBusiness ? ['b1_companyInfo'] : (m1Saved.firstName || profile.firstName ? ['m1'] : []));
 
     // Real customer data from CustomerProfile and saved TaxDraftSummary
     const defaultOrganizer = {
       submittedModules,
+      b1_companyInfo: organizer.b1_companyInfo || {
+        companyName: '',
+        ein: '',
+        formationDate: '',
+        businessStructure: 'LLC',
+        businessActivity: '',
+        naicsCode: '',
+        addressLine1: profile.addressLine1 || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        zipCode: profile.zipCode || '',
+        hasPartners: false,
+        partners: [],
+      },
+      b2_businessIncome: organizer.b2_businessIncome || {
+        grossReceipts: 0,
+        returnsAllowances: 0,
+        otherIncome: 0,
+        incomeSourcesList: [],
+      },
+      b3_businessExpenses: organizer.b3_businessExpenses || {
+        advertising: 0,
+        carAndTruck: 0,
+        commissions: 0,
+        contractLabor: 0,
+        depletion: 0,
+        employeeBenefits: 0,
+        insurance: 0,
+        legalAndProfessional: 0,
+        officeExpense: 0,
+        rentLease: 0,
+        repairsMaintenance: 0,
+        supplies: 0,
+        taxesLicenses: 0,
+        travel: 0,
+        meals: 0,
+        utilities: 0,
+        wages: 0,
+        otherExpenses: 0,
+        cogsBeginningInventory: 0,
+        cogsPurchases: 0,
+        cogsCostOfLabor: 0,
+        cogsMaterialsSupplies: 0,
+        cogsOtherCosts: 0,
+        cogsEndingInventory: 0,
+      },
       m1_demographics: {
         firstName,
         middleName,
@@ -1023,37 +1078,55 @@ export class CustomerService {
       },
     };
 
-    // Calculate real completion strictly based on 6 unified sections
+    // Calculate real completion strictly based on modules
     const effectiveCompletedSet = new Set<string>();
-    submittedModules.forEach((m) => {
-      if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
-        effectiveCompletedSet.add(m);
-      }
-      if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
-        effectiveCompletedSet.add('m_income_expenses');
-      }
-    });
+    if (isBusiness) {
+      ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7'].forEach((m) => {
+        if (submittedModules.includes(m)) {
+          effectiveCompletedSet.add(m);
+        }
+      });
+    } else {
+      submittedModules.forEach((m) => {
+        if (m === 'm1' || m === 'm2' || m === 'm3' || m === 'm7' || m === 'm9') {
+          effectiveCompletedSet.add(m);
+        }
+        if (m === 'm_income_expenses' || m === 'm4' || m === 'm5' || m === 'm6' || m === 'm8') {
+          effectiveCompletedSet.add('m_income_expenses');
+        }
+      });
+    }
     const completedCount = effectiveCompletedSet.size;
-    const progressPercent = Math.min(100, Math.round((completedCount / 6) * 100));
+    const totalModules = isBusiness ? 4 : 6;
+    const progressPercent = Math.min(100, Math.round((completedCount / totalModules) * 100));
 
     return {
       taxYear: activeApp.taxYear,
       applicationId: activeApp.id,
+      filingType: activeApp.filingType || (isBusiness ? 'BUSINESS' : 'INDIVIDUAL'),
       organizer: defaultOrganizer,
       progressPercent,
       completedCount,
-      totalModules: 6,
+      totalModules,
     };
   }
 
   /**
    * Save / update 9-module organizer data with XSS sanitization and PostgreSQL sync
    */
-  static async saveOrganizer(userId: string, dataOrBody: any, taxYearParam?: number | string, leadId?: string, currentUser?: any) {
+  static async saveOrganizer(
+    userId: string,
+    dataOrBody: any,
+    taxYearParam?: number | string,
+    leadId?: string,
+    currentUser?: any,
+    filingTypeParam?: string
+  ) {
     const taxYear = dataOrBody?.taxYear || taxYearParam || 2025;
+    const filingTypeQuery = dataOrBody?.filingType || dataOrBody?.type || filingTypeParam;
     const organizerData = dataOrBody?.organizerData || dataOrBody;
 
-    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYear, leadId, currentUser);
+    const { profile, activeApp } = await this.resolveCustomerAndApp(userId, taxYear, leadId, currentUser, filingTypeQuery);
 
     // 1. Sanitize all incoming fields against XSS & script injection
     const cleanOrganizerData = sanitizeObject(organizerData);
@@ -1095,7 +1168,7 @@ export class CustomerService {
     const submittedModules = Array.from(new Set(newSubmitted));
 
     cleanOrganizerData.submittedModules = submittedModules;
-    const isBusiness = activeApp.filingType === 'BUSINESS' || Boolean(cleanOrganizerData.b1_companyInfo);
+    const isBusiness = activeApp.filingType === 'BUSINESS' || filingTypeQuery?.toUpperCase() === 'BUSINESS';
     const effectiveSavedSet = new Set<string>();
 
     if (isBusiness) {
@@ -1120,6 +1193,7 @@ export class CustomerService {
 
     const updatedSummary = {
       ...currentDraft,
+      filingType: activeApp.filingType,
       organizer: cleanOrganizerData,
       organizerPercent: progressPercent,
       organizerVerifiedCount: completedCount,
@@ -1222,6 +1296,7 @@ export class CustomerService {
     const priorDraft = (priorApp?.taxDraftSummary as any) || {};
 
     const initialTaxDraftSummary = {
+      filingType,
       leadSource: 'SELF_SIGNUP',
       source: 'SELF_SIGNUP',
       signupMethod: 'ONLINE_PORTAL',

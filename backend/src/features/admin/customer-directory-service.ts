@@ -452,19 +452,18 @@ export class CustomerDirectoryService {
       throw new BadRequestError("Customer profile not found");
     }
 
-    // Check if an application for this tax year already exists for this customer
-    const existingYearApp = await prisma.taxApplication.findUnique({
+    // Check if an application for this tax year and filing type already exists for this customer
+    const existingYearApp = await prisma.taxApplication.findFirst({
       where: {
-        customerId_taxYear: {
-          customerId,
-          taxYear,
-        },
+        customerId,
+        taxYear,
+        filingType,
       },
     });
 
     if (existingYearApp) {
       throw new BadRequestError(
-        `A tax application for Tax Year ${taxYear} already exists for this client (Stage: ${existingYearApp.currentStage.replace(/_/g, ' ')}). Please select a different tax year.`
+        `A ${filingType.toLowerCase()} tax application for Tax Year ${taxYear} already exists for this client (Stage: ${existingYearApp.currentStage.replace(/_/g, ' ')}). Please select a different tax year or filing type.`
       );
     }
 

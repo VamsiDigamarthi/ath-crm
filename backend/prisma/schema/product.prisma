@@ -6,6 +6,7 @@ enum ProductStatus {
 enum ProductTaxType {
   NO_TAX
   VAT_10
+  CUSTOM
 }
 
 model Product {
@@ -14,6 +15,7 @@ model Product {
   description String?
   price       Decimal        @db.Decimal(10, 2)
   unit        String
+  taxRate     Decimal        @default(0) @db.Decimal(5, 2)
   taxType     ProductTaxType @default(NO_TAX)
   status      ProductStatus  @default(ACTIVE)
   createdById String?

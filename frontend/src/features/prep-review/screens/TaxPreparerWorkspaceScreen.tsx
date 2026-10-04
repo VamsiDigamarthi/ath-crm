@@ -67,6 +67,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
     stageHistories,
     callLogs,
     auditLogs,
+    filingType,
     handleSaveDraft,
     handleSubmitForQA,
   } = useTaxPreparerWorkspace();
@@ -327,7 +328,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
               </span>
             </div>
             <p className="text-sm text-slate-500 mt-1.5">
-              {[`Form 1040`, taxpayerFilingStatus, taxpayer?.visaType].filter(Boolean).join(' · ')}
+              {[filingType === 'BUSINESS' ? 'Form 1120 / Business Return' : 'Form 1040', filingType !== 'BUSINESS' && taxpayerFilingStatus, filingType !== 'BUSINESS' && taxpayer?.visaType].filter(Boolean).join(' · ')}
             </p>
           </div>
 
@@ -571,7 +572,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
         customerName={taxpayerName}
         taxDraftSummary={taxDraftSummary}
         taxYear={taxYear}
-        filingType={(taxDraftSummary as any)?.filingType}
+        filingType={filingType}
         allowEdit={false}
         readOnly
         hideHeader
@@ -925,6 +926,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
             customerName={taxpayerName}
             taxDraftSummary={taxDraftSummary}
             taxYear={taxYear}
+            filingType={filingType}
             allowEdit={false}
             readOnly={true}
           />

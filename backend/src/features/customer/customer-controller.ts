@@ -160,7 +160,8 @@ export class CustomerController {
 
     const taxYear = req.query.taxYear as string | undefined;
     const leadId = (req.query.leadId || req.query.applicationId || req.query.customerId) as string | undefined;
-    const organizerData = await CustomerService.getOrganizer(req.currentUser.id, taxYear, leadId, req.currentUser);
+    const filingType = (req.query.type || req.query.filingType) as string | undefined;
+    const organizerData = await CustomerService.getOrganizer(req.currentUser.id, taxYear, leadId, req.currentUser, filingType);
 
     return SuccessHandler.handle(res, 'Organizer data fetched successfully', organizerData);
   }
@@ -175,7 +176,8 @@ export class CustomerController {
     }
 
     const leadId = (req.body.leadId || req.body.applicationId || req.query.leadId || req.query.applicationId) as string | undefined;
-    const result = await CustomerService.saveOrganizer(req.currentUser.id, req.body, req.body.taxYear, leadId, req.currentUser);
+    const filingType = (req.body.type || req.body.filingType || req.query.type || req.query.filingType) as string | undefined;
+    const result = await CustomerService.saveOrganizer(req.currentUser.id, req.body, req.body.taxYear, leadId, req.currentUser, filingType);
 
     return SuccessHandler.handle(res, 'Organizer saved successfully', result);
   }

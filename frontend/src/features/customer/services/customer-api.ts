@@ -213,8 +213,8 @@ export const customerApi = {
     return res;
   },
 
-  saveOrganizer: async (taxYear: number, organizerData: OrganizerData, leadId?: string): Promise<{ success: boolean; data: any }> => {
-    const res: any = await apiClient.put('/customer/organizer', { taxYear, organizerData, leadId });
+  saveOrganizer: async (taxYear: number, organizerData: OrganizerData, leadId?: string, filingType?: string): Promise<{ success: boolean; data: any }> => {
+    const res: any = await apiClient.put('/customer/organizer', { taxYear, organizerData, leadId, filingType });
     return res;
   },
 

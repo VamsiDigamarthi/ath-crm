@@ -43,6 +43,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
     prepNotes,
     taxDraftSummary,
     availableApplications,
+    filingType,
     checks,
     toggleCheck,
     handleSelectAllChecks,
@@ -170,7 +171,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
               </span>
             </div>
             <p className="text-sm text-slate-500 mt-1.5">
-              {['Form 1040', taxpayer?.maritalStatus, taxpayer?.visaType].filter(Boolean).join(' · ')}
+              {[filingType === 'BUSINESS' ? 'Form 1120 / Business Return' : 'Form 1040', filingType !== 'BUSINESS' && taxpayer?.maritalStatus, filingType !== 'BUSINESS' && taxpayer?.visaType].filter(Boolean).join(' · ')}
             </p>
           </div>
           <div className="text-sm lg:text-right shrink-0">
@@ -209,7 +210,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
         customerName={taxpayerName}
         taxDraftSummary={taxDraftSummary}
         taxYear={taxYear}
-        filingType={(taxDraftSummary as any)?.filingType}
+        filingType={filingType}
         allowEdit={false}
         readOnly
         hideHeader
@@ -478,6 +479,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
             customerName={taxpayerName}
             taxDraftSummary={taxDraftSummary}
             taxYear={availableApplications?.find((a: { id: string }) => a.id === applicationId)?.taxYear}
+            filingType={filingType}
             allowEdit={false}
             readOnly={true}
           />

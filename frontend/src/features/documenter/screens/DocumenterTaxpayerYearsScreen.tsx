@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ArrowLeft, Eye } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
@@ -14,14 +14,34 @@ const titleCase = (v?: string) => (v || '').toLowerCase().replace(/_/g, ' ').rep
 export const DocumenterTaxpayerYearsScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { lead, years, isLoading } = useTaxpayerYears(id);
   const customer = lead?.customer;
   const name = customer ? customer.fullName || `${customer.firstName} ${customer.lastName}` : '';
 
+  const fromQuery = new URLSearchParams(location.search).get('from') || (location.state as any)?.from;
+  let parentTitle = 'My Documents';
+  let parentUrl = '/documenter/agent/documents';
+  if (fromQuery === 'queue' || fromQuery === 'agent_queue') {
+    parentTitle = 'Calling Workspace';
+    parentUrl = '/documenter/agent/queue';
+  } else if (fromQuery === 'callbacks' || fromQuery === 'agent_callbacks') {
+    parentTitle = 'Scheduled Callbacks';
+    parentUrl = '/documenter/agent/callbacks';
+  } else if (fromQuery === 'fallback' || fromQuery === 'agent_fallback') {
+    parentTitle = 'Follow-up Leads';
+    parentUrl = '/documenter/agent/fallback';
+  } else if (fromQuery === 'caseload' || fromQuery === 'manager') {
+    parentTitle = 'Department Queue';
+    parentUrl = '/documenter/manager/queue';
+  }
+
   const openYear = useCallback(
     (appId: string) =>
-      navigate(`/documenter/agent/lead/${appId}?tab=ORGANIZER&from=documents`, { state: { from: 'documents' } }),
-    [navigate]
+      navigate(`/documenter/agent/lead/${appId}?from=${fromQuery || 'documents'}`, {
+        state: { from: fromQuery || 'documents' },
+      }),
+    [navigate, fromQuery]
   );
 
   const columns = useMemo<ColumnDef<DocumenterTaxYearSummary, unknown>[]>(
@@ -93,14 +113,14 @@ export const DocumenterTaxpayerYearsScreen: React.FC = () => {
     <div className="space-y-6 pb-12 font-sans">
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate('/documenter/agent/documents')}
+          onClick={() => navigate(parentUrl)}
           className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
-          title="Back to My Documents"
+          title={`Back to ${parentTitle}`}
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-1.5 text-sm text-slate-500">
-          <span>My Documents</span>
+          <span>{parentTitle}</span>
           <span className="text-slate-300">/</span>
           <span className="text-slate-900 font-medium">Tax years</span>
         </div>
@@ -142,7 +162,7 @@ export const DocumenterTaxpayerYearsScreen: React.FC = () => {
         isLoading={isLoading}
         searchPlaceholder="Search tax years..."
         onRowClick={(item) => openYear(item.id)}
-        emptyText="No tax years have been moved to tax preparation yet."
+        emptyText="No tax years recorded for this taxpayer."
       />
     </div>
   );

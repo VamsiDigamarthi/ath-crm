@@ -12,10 +12,14 @@ export interface ListProductsOptions {
   limit?: number;
 }
 
-const toResponse = (p: Prisma.ProductGetPayload<object>) => ({
-  ...p,
-  price: Number(p.price),
-});
+const toResponse = (p: Prisma.ProductGetPayload<object>) => {
+  const taxRate = Number((p as any).taxRate ?? (p.taxType === "VAT_10" ? 10 : 0));
+  return {
+    ...p,
+    price: Number(p.price),
+    taxRate,
+  };
+};
 
 export class ProductService {
   private static async ensureUniqueName(name: string, excludeId?: string) {
@@ -64,13 +68,16 @@ export class ProductService {
 
   static async create(input: ProductInput, userId?: string) {
     await this.ensureUniqueName(input.name);
+    const computedTaxRate = input.taxRate !== undefined ? Number(input.taxRate) : input.taxType === "VAT_10" ? 10 : 0;
+    const computedTaxType = computedTaxRate === 0 ? "NO_TAX" : computedTaxRate === 10 ? "VAT_10" : "CUSTOM";
     const product = await prisma.product.create({
       data: {
         name: input.name.trim(),
         description: input.description?.trim() || null,
         price: new Prisma.Decimal(input.price),
-        unit: input.unit,
-        taxType: input.taxType,
+        unit: input.unit.trim(),
+        taxRate: new Prisma.Decimal(computedTaxRate),
+        taxType: computedTaxType,
         status: input.status,
         createdById: userId || null,
       },
@@ -83,14 +90,18 @@ export class ProductService {
     if (!existing) throw new NotFoundError("Item not found");
     await this.ensureUniqueName(input.name, id);
 
+    const computedTaxRate = input.taxRate !== undefined ? Number(input.taxRate) : input.taxType === "VAT_10" ? 10 : 0;
+    const computedTaxType = computedTaxRate === 0 ? "NO_TAX" : computedTaxRate === 10 ? "VAT_10" : "CUSTOM";
+
     const product = await prisma.product.update({
       where: { id },
       data: {
         name: input.name.trim(),
         description: input.description?.trim() || null,
         price: new Prisma.Decimal(input.price),
-        unit: input.unit,
-        taxType: input.taxType,
+        unit: input.unit.trim(),
+        taxRate: new Prisma.Decimal(computedTaxRate),
+        taxType: computedTaxType,
         status: input.status,
       },
     });

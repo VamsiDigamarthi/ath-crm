@@ -18,6 +18,7 @@ export interface PrepReviewLead {
   taxpayerEmail: string;
   taxpayerPhone: string;
   taxYear: number;
+  filingType?: 'INDIVIDUAL' | 'BUSINESS' | string;
   visaType: string;
   maritalStatus: string;
   stateOfResidence: string;

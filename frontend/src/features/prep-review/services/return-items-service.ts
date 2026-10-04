@@ -13,6 +13,7 @@ export interface ReturnItem {
   name: string;
   description: string | null;
   unit: string;
+  taxRate?: number;
   taxType: ProductTaxType;
   catalogPrice: number;
   unitPrice: number;

@@ -1004,16 +1004,36 @@ export class PrepReviewService {
       }
     }
 
+    const appFilingType = app.filingType || 'INDIVIDUAL';
+    const draftOrganizer = { ...((draft.organizer || draft.organizerData || {}) as any) };
+    if (appFilingType === 'BUSINESS') {
+      if (!draftOrganizer.b1_companyInfo) {
+        draftOrganizer.b1_companyInfo = {
+          companyName: (customer as any)?.companyName || `${customer?.firstName || ''} ${customer?.lastName || ''} LLC`.trim(),
+          formationState: customer?.state || 'IL',
+          structure: 'LLC',
+          partners: [],
+        };
+      }
+      if (!draftOrganizer.b2_businessIncome) draftOrganizer.b2_businessIncome = {};
+      if (!draftOrganizer.b3_businessExpenses) draftOrganizer.b3_businessExpenses = {};
+    }
+
     return {
       applicationId: app.id,
       taxYear: app.taxYear || 2025,
+      filingType: appFilingType,
       currentStage: effectiveStage,
       targetDueDate: draft.targetDueDate || null,
       prepNotes: draft.preparerNotes || draft.prepNotes || '',
       documenterNotes,
       documenterNotesBy,
       documenterNotesAt,
-      taxDraftSummary: app.taxDraftSummary,
+      taxDraftSummary: {
+        ...(app.taxDraftSummary as any || {}),
+        filingType: appFilingType,
+        organizer: draftOrganizer,
+      },
       taxpayer: {
         id: customer?.id || '',
         name: fullName,

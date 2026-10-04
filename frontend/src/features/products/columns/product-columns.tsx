@@ -43,7 +43,7 @@ export const getProductColumns = ({ onEdit, onToggleStatus }: ProductColumnActio
     id: 'tax',
     header: 'Tax',
     accessorKey: 'taxType',
-    cell: ({ row }) => <span className="text-sm text-slate-600">{taxLabel(row.original.taxType)}</span>,
+    cell: ({ row }) => <span className="text-sm text-slate-600">{taxLabel(row.original.taxType, row.original.taxRate)}</span>,
   },
   {
     id: 'status',

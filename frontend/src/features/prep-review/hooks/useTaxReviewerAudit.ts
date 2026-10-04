@@ -14,6 +14,7 @@ export function useTaxReviewerAudit() {
   // Application & Profile data
   const [applicationId, setApplicationId] = useState<string>('');
   const [taxYear, setTaxYear] = useState<number>(2025);
+  const [filingType, setFilingType] = useState<'INDIVIDUAL' | 'BUSINESS'>('INDIVIDUAL');
   const [currentStage, setCurrentStage] = useState<string>('QA_IN_REVIEW');
   const [taxpayer, setTaxpayer] = useState<WorkspaceTaxpayer | null>(null);
   const [assignedPreparer, setAssignedPreparer] = useState<{ id: string; name: string; email: string; role: string } | null>(null);
@@ -74,6 +75,8 @@ export function useTaxReviewerAudit() {
       const data = await prepReviewService.getWorkspaceDetails(id);
       setApplicationId(data.applicationId || id);
       setTaxYear(data.taxYear || 2025);
+      const ft = (data.filingType || data.taxDraftSummary?.filingType || 'INDIVIDUAL').toUpperCase() as 'INDIVIDUAL' | 'BUSINESS';
+      setFilingType(ft);
       setCurrentStage(data.currentStage || 'QA_IN_REVIEW');
       setTaxpayer(data.taxpayer || null);
       setAssignedPreparer(data.assignedPreparer || null);
@@ -192,6 +195,7 @@ export function useTaxReviewerAudit() {
     auditLogs,
     clientPaymentStatus,
     availableApplications,
+    filingType,
     handleConfirmApprove,
     handleConfirmRevision,
   };

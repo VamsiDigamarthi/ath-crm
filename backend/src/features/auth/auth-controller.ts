@@ -124,6 +124,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
             select: {
               id: true,
               taxYear: true,
+              filingType: true,
               currentStage: true,
             },
             orderBy: { taxYear: "desc" },
@@ -182,6 +183,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
             select: {
               id: true,
               taxYear: true,
+              filingType: true,
               currentStage: true,
             },
             orderBy: { taxYear: "desc" },
@@ -424,6 +426,7 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
             select: {
               id: true,
               taxYear: true,
+              filingType: true,
               currentStage: true,
             },
             orderBy: { taxYear: "desc" },

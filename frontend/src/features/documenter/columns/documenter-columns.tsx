@@ -212,10 +212,10 @@ export const getDocumenterColumns = ({
 
           {canView && (
             <Link
-              to={`/documenter/agent/lead/${item.id}?from=queue`}
-              state={{ from: 'agent_queue' }}
+              to={`/documenter/agent/documents/${item.id}?from=${isManagerView ? 'caseload' : 'queue'}`}
+              state={{ from: isManagerView ? 'caseload' : 'agent_queue' }}
               className="h-7 px-2 text-[11px] font-normal border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-1 shadow-2xs rounded-lg cursor-pointer"
-              title="View Lead Details"
+              title="View Tax Years"
             >
               <Eye className="w-3 h-3" />
               <span>View</span>

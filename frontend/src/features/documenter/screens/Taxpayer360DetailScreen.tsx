@@ -57,6 +57,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'TIMELINE' | 'CALCULATOR' | 'ORGANIZER' | 'SALES_PITCH'>(initialTab);
   const [lead, setLead] = useState<DocumenterLeadItem | null>(null);
+  const [isLoadingLead, setIsLoadingLead] = useState<boolean>(true);
   const [isCallModalOpen, setIsCallModalOpen] = useState<boolean>(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
   const [isMoveToPrepModalOpen, setIsMoveToPrepModalOpen] = useState<boolean>(false);
@@ -87,12 +88,15 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const fetchLeadDetails = async () => {
     if (!id) return;
     try {
+      setIsLoadingLead(true);
       const res = await documenterService.getLeadDetails(id);
       if (res && res.data) {
         setLead(res.data);
       }
     } catch (err) {
       console.error('Failed to load full lead details:', err);
+    } finally {
+      setIsLoadingLead(false);
     }
   };
 
@@ -239,8 +243,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   );
 
   const availableApplications = (lead as any)?.availableApplications || (currentLead as any)?.availableApplications || [];
-  const openedFrom = new URLSearchParams(location.search).get('from') || (location.state as any)?.from;
-  const showYearSwitcher = openedFrom === 'queue' || openedFrom === 'agent_queue';
   const callingYears = availableApplications.filter(
     (a: any) => ['RAW_PROSPECT', 'DOC_OUTREACH'].includes(a.currentStage) || a.id === (lead?.id || id)
   );
@@ -257,24 +259,33 @@ export const Taxpayer360DetailScreen: React.FC = () => {
     navigate(`/documenter/agent/lead/${targetAppId}${location.search || ''}`, { state: location.state });
   };
 
+  if (isLoadingLead && !lead) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[360px] text-slate-500 font-sans">
+        <div className="w-7 h-7 border-2 border-[#16A34A] border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs font-medium text-slate-600">Loading taxpayer profile and filing data...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 pb-16 font-sans animate-in fade-in duration-150">
+    <div className="space-y-4 pb-12 font-sans animate-in fade-in duration-150">
       {/* 1. Back Navigation & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => {
               const fromQuery = new URLSearchParams(location.search).get('from') || (location.state as any)?.from;
               if (fromQuery === 'documents' || fromQuery === 'agent_documents') {
-                navigate(`/documenter/agent/documents/${currentLead.id}`);
+                navigate(`/documenter/agent/documents/${currentLead.id}?from=documents`);
               } else if (fromQuery === 'queue' || fromQuery === 'agent_queue') {
-                navigate('/documenter/agent/queue');
+                navigate(`/documenter/agent/documents/${currentLead.id}?from=queue`);
               } else if (fromQuery === 'callbacks' || fromQuery === 'agent_callbacks') {
-                navigate('/documenter/agent/callbacks');
+                navigate(`/documenter/agent/documents/${currentLead.id}?from=callbacks`);
               } else if (fromQuery === 'fallback' || fromQuery === 'agent_fallback') {
-                navigate('/documenter/agent/fallback');
+                navigate(`/documenter/agent/documents/${currentLead.id}?from=fallback`);
               } else if (fromQuery === 'caseload') {
-                navigate('/documenter/manager/queue');
+                navigate(`/documenter/agent/documents/${currentLead.id}?from=caseload`);
               } else {
                 navigate(-1);
               }
@@ -284,8 +295,18 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-1.5 text-sm text-slate-500">
-            <span>{new URLSearchParams(location.search).get('from') === 'documents' || (location.state as any)?.from === 'documents' ? 'My Documents' : 'Calling Workspace'}</span>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span>{new URLSearchParams(location.search).get('from') === 'queue' || (location.state as any)?.from === 'agent_queue' ? 'Calling Workspace' : 'My Documents'}</span>
+            <span className="text-slate-300">/</span>
+            <button
+              onClick={() => {
+                const fromQuery = new URLSearchParams(location.search).get('from') || (location.state as any)?.from;
+                navigate(`/documenter/agent/documents/${currentLead.id}?from=${fromQuery || 'documents'}`);
+              }}
+              className="hover:text-slate-800 transition-colors cursor-pointer"
+            >
+              Tax years
+            </button>
             <span className="text-slate-300">/</span>
             <span className="text-slate-900 font-medium">Taxpayer Profile</span>
           </div>
@@ -440,7 +461,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
       {/* 2. Profile Card */}
       <div className="bg-white rounded-xl border border-slate-200">
-        <div className="p-5 flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+        <div className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">
@@ -454,12 +475,55 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                   Doc + Sales
                 </span>
               )}
+
+              {/* Tax Year Badge / Switcher at top */}
+              <div className="flex items-center gap-1.5 ml-1">
+                <span className="text-xs text-slate-500 font-medium">Tax year</span>
+                {callingYears.length > 0 ? (
+                  callingYears.map((appItem: any) => {
+                    const isSelected = appItem.id === (lead?.id || id);
+                    return (
+                      <button
+                        key={appItem.id}
+                        type="button"
+                        onClick={() => handleSwitchTaxYear(appItem.id)}
+                        className={`px-2.5 py-0.5 rounded-full text-xs border transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'border-[#16A34A] bg-emerald-50 text-[#15803D] font-semibold'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                        }`}
+                        title={appItem.currentStage?.replace(/_/g, ' ')}
+                      >
+                        TY {appItem.taxYear}
+                        <span className="text-slate-400 font-normal"> · {(appItem.filingType || 'INDIVIDUAL').toLowerCase()}</span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs border border-[#16A34A] bg-emerald-50 text-[#15803D] font-semibold">
+                    TY {currentLead.taxYear}
+                    <span className="text-slate-400 font-normal"> · {(currentLead.filingType || 'INDIVIDUAL').toLowerCase()}</span>
+                  </span>
+                )}
+                {canEditTaxYear && (
+                  <button
+                    type="button"
+                    onClick={taxYearEditor.open}
+                    className="p-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
+                    title="Change tax year"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
-            <p className="text-sm text-slate-500 mt-1.5">
-              {[customer.occupation, customer.dob ? `DOB ${customer.dob}` : null, customer.visaType]
-                .filter(Boolean)
-                .join(' · ') || 'Taxpayer Client'}
-            </p>
+            {Boolean([customer.occupation, customer.dob ? `DOB ${customer.dob}` : null, customer.visaType].filter(Boolean).length) && (
+              <p className="text-xs text-slate-500 mt-1">
+                {[customer.occupation, customer.dob ? `DOB ${customer.dob}` : null, customer.visaType]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
+            )}
           </div>
 
           <div className="text-sm lg:text-right shrink-0">
@@ -469,41 +533,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {showYearSwitcher && callingYears.length > 0 && (
-          <div className="px-5 pb-4 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-slate-500 mr-1">Tax year</span>
-            {callingYears.map((appItem: any) => {
-              const isSelected = appItem.id === (lead?.id || id);
-              return (
-                <button
-                  key={appItem.id}
-                  type="button"
-                  onClick={() => handleSwitchTaxYear(appItem.id)}
-                  className={`px-3 py-1 rounded-full text-xs border transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'border-[#16A34A] bg-emerald-50 text-[#15803D] font-semibold'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                  title={appItem.currentStage?.replace(/_/g, ' ')}
-                >
-                  TY {appItem.taxYear}
-                  <span className="text-slate-400 font-normal"> · {(appItem.filingType || 'INDIVIDUAL').toLowerCase()}</span>
-                </button>
-              );
-            })}
-            {canEditTaxYear && (
-              <button
-                type="button"
-                onClick={taxYearEditor.open}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
-                title="Change tax year"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-slate-100 divide-y sm:divide-y-0 lg:divide-x divide-slate-100">
           {[
@@ -516,7 +545,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             },
             { label: 'SSN / ITIN', value: customer.ssnTin || '—', copy: customer.ssnTin },
           ].map((item) => (
-            <div key={item.label} className="px-5 py-3 flex items-center justify-between gap-2 min-w-0">
+            <div key={item.label} className="px-4 py-2.5 sm:px-5 flex items-center justify-between gap-2 min-w-0">
               <div className="min-w-0">
                 <div className="text-xs text-slate-500">{item.label}</div>
                 <div className="text-sm font-medium text-slate-900 truncate" title={item.value || undefined}>
@@ -531,6 +560,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
       {/* 3. Tax Info, Call History & Sales Pitch */}
       <TaxPrepOrganizerReview
+        key={currentLead.id}
         leadId={currentLead.id}
         customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
         taxDraftSummary={currentLead.taxDraftSummary}

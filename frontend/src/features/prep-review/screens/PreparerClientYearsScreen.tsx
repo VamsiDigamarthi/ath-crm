@@ -6,7 +6,6 @@ import { ArrowLeft, Calculator } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { useAuthStore } from '@/features/auth/store/auth-store';
 import { prepReviewService } from '../services/prep-review-service';
 import type { PrepReviewLead } from '../types/prep-review.types';
 
@@ -23,7 +22,6 @@ const STATUS_META: Record<string, { label: string; dot: string }> = {
 };
 
 const usePreparerClientYears = (taxpayerId?: string) => {
-  const { user } = useAuthStore();
   const [years, setYears] = useState<PrepReviewLead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,23 +29,54 @@ const usePreparerClientYears = (taxpayerId?: string) => {
     if (!taxpayerId) return;
     try {
       const res = await prepReviewService.getPipelineLeads({ limit: 100 });
-      const me = user?.id;
-      const myEmail = user?.email?.toLowerCase().trim();
-      setYears(
-        (res.leads || [])
-          .filter(
-            (l: PrepReviewLead) =>
-              l.taxpayerId === taxpayerId &&
-              (l.assignedPreparer?.id === me || l.assignedPreparer?.email?.toLowerCase().trim() === myEmail)
-          )
-          .sort((a: PrepReviewLead, b: PrepReviewLead) => b.taxYear - a.taxYear)
+      const leads = res.leads || [];
+      const baseLead = leads.find(
+        (l: PrepReviewLead) =>
+          l.taxpayerId === taxpayerId || l.id === taxpayerId || l.applicationId === taxpayerId
       );
+
+      if (baseLead?.allApplications && baseLead.allApplications.length > 0) {
+        const fullList: PrepReviewLead[] = baseLead.allApplications.map((appItem: any) => {
+          const existing = leads.find((l: PrepReviewLead) => l.id === appItem.id);
+          return (
+            existing || {
+              ...baseLead,
+              id: appItem.id,
+              applicationId: appItem.id,
+              taxYear: appItem.taxYear,
+              filingType: appItem.filingType || 'INDIVIDUAL',
+              currentStage: appItem.currentStage,
+              assignedPreparer: appItem.assignedPrepAgent
+                ? {
+                    id: appItem.assignedPrepAgent.id,
+                    name: `${appItem.assignedPrepAgent.firstName || ''} ${appItem.assignedPrepAgent.lastName || ''}`.trim() || appItem.assignedPrepAgent.email,
+                    email: appItem.assignedPrepAgent.email,
+                  }
+                : baseLead.assignedPreparer,
+              assignedReviewer: appItem.assignedReviewAgent
+                ? {
+                    id: appItem.assignedReviewAgent.id,
+                    name: `${appItem.assignedReviewAgent.firstName || ''} ${appItem.assignedReviewAgent.lastName || ''}`.trim() || appItem.assignedReviewAgent.email,
+                    email: appItem.assignedReviewAgent.email,
+                  }
+                : baseLead.assignedReviewer,
+            }
+          );
+        });
+        setYears(fullList.sort((a, b) => b.taxYear - a.taxYear));
+      } else {
+        const matched = leads.filter(
+          (l: PrepReviewLead) =>
+            l.taxpayerId === taxpayerId || l.id === taxpayerId || l.applicationId === taxpayerId
+        );
+        setYears(matched.sort((a, b) => b.taxYear - a.taxYear));
+      }
     } catch (err) {
       toast.error((err as Error).message || 'Failed to load tax years');
     } finally {
       setIsLoading(false);
     }
-  }, [taxpayerId, user]);
+  }, [taxpayerId]);
 
   useEffect(() => {
     load();
@@ -73,6 +102,16 @@ export const PreparerClientYearsScreen: React.FC = () => {
         header: 'Tax year',
         accessorKey: 'taxYear',
         cell: ({ row }) => <span className="text-sm font-semibold text-slate-900">TY {row.original.taxYear}</span>,
+      },
+      {
+        id: 'type',
+        header: 'Type',
+        accessorKey: 'filingType',
+        cell: ({ row }) => (
+          <span className="text-sm font-medium text-slate-700">
+            {row.original.filingType === 'BUSINESS' ? 'Business' : 'Individual'}
+          </span>
+        ),
       },
       {
         id: 'status',
@@ -112,7 +151,7 @@ export const PreparerClientYearsScreen: React.FC = () => {
               className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
             >
               <Calculator className="w-3.5 h-3.5" />
-              Draft 1040
+              {row.original.filingType === 'BUSINESS' ? 'Draft 1120' : 'Draft 1040'}
             </Button>
           </div>
         ),
@@ -144,7 +183,7 @@ export const PreparerClientYearsScreen: React.FC = () => {
             {isLoading ? 'Loading…' : client?.taxpayerName || 'Taxpayer'}
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            {years.length} tax {years.length === 1 ? 'year' : 'years'} assigned to you · choose a year to open
+            {years.length} tax {years.length === 1 ? 'filing' : 'filings'} available · choose a return to open
           </p>
         </div>
         {client && (

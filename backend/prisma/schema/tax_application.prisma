@@ -62,7 +62,7 @@ model TaxApplication {
   items          TaxApplicationItem[]
   notes          ApplicationNote[]
 
-  @@unique([customerId, taxYear])
+  @@unique([customerId, taxYear, filingType])
   @@index([currentStage])
   @@index([priority])
   @@index([taxYear])

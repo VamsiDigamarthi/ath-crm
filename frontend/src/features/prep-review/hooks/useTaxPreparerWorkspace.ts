@@ -44,6 +44,7 @@ export function useTaxPreparerWorkspace() {
   // Application & Profile data
   const [applicationId, setApplicationId] = useState<string>('');
   const [taxYear, setTaxYear] = useState<number>(2025);
+  const [filingType, setFilingType] = useState<'INDIVIDUAL' | 'BUSINESS'>('INDIVIDUAL');
   const [currentStage, setCurrentStage] = useState<string>('PREP_IN_PROGRESS');
   const [priority, setPriority] = useState<string>('NO_PRIORITY');
   const [taxpayer, setTaxpayer] = useState<WorkspaceTaxpayer | null>(null);
@@ -94,6 +95,8 @@ export function useTaxPreparerWorkspace() {
       const data = await prepReviewService.getWorkspaceDetails(id);
       setApplicationId(data.applicationId || id);
       setTaxYear(data.taxYear || 2025);
+      const ft = (data.filingType || data.taxDraftSummary?.filingType || 'INDIVIDUAL').toUpperCase() as 'INDIVIDUAL' | 'BUSINESS';
+      setFilingType(ft);
       setCurrentStage(data.currentStage || 'PREP_IN_PROGRESS');
       if (data.priority) setPriority(data.priority);
       setTaxpayer(data.taxpayer || null);
@@ -383,6 +386,7 @@ export function useTaxPreparerWorkspace() {
     auditLogs,
     clientPaymentStatus,
     availableApplications,
+    filingType,
     handleSaveDraft,
     handleSubmitForQA,
   };

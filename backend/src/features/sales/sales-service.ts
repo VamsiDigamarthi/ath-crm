@@ -326,6 +326,7 @@ export class SalesService {
         taxpayerEmail: customer?.email || '-',
         taxpayerPhone: customer?.phone || '-',
         taxYear: app.taxYear || 2025,
+        filingType: app.filingType || 'INDIVIDUAL',
         visaType: customer?.visaType || '-',
         maritalStatus: customer?.maritalStatus || 'Single',
         stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
@@ -1083,6 +1084,7 @@ export class SalesService {
       taxpayerEmail: customer?.email || '-',
       taxpayerPhone: customer?.phone || '-',
       taxYear: app.taxYear || 2025,
+      filingType: app.filingType || 'INDIVIDUAL',
       visaType: customer?.visaType || '-',
       maritalStatus: customer?.maritalStatus || 'Single',
       stateOfResidence: customer?.state && customer?.city ? `${customer.city}, ${customer.state}` : (customer?.state || '-'),
@@ -1108,6 +1110,7 @@ export class SalesService {
       } : null,
       taxDraftSummary: {
         ...draft,
+        filingType: app.filingType || 'INDIVIDUAL',
         status: draft.status || null,
         lastRevert: draft.lastRevert || null,
         w2Wages: Number(draft.w2Wages) || grossIncome,

@@ -105,10 +105,17 @@ export const Module3Presence: React.FC<Module3Props> = ({
             size="sm"
             type="button"
             onClick={() => {
+              const existingYears = historyList
+                .map((r) => Number(r.taxYear))
+                .filter((y) => !isNaN(y) && y > 1900);
+              const nextYear = existingYears.length > 0
+                ? Math.min(...existingYears) - 1
+                : selectedTaxYear - 1;
+
               const updated = [
                 ...historyList,
                 {
-                  taxYear: selectedTaxYear,
+                  taxYear: nextYear,
                   state: fallbackState,
                   fromDate: '',
                   toDate: '',

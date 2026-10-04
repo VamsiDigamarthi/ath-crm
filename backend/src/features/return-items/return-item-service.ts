@@ -17,13 +17,15 @@ type ItemRow = Prisma.TaxApplicationItemGetPayload<object>;
 const formatItem = (item: ItemRow) => {
   const unitCents = toCents(item.unitPrice);
   const amountCents = unitCents * item.quantity;
-  const taxCents = Math.round(amountCents * (TAX_RATES[item.taxType] ?? 0));
+  const itemTaxRate = Number((item as any).taxRate ?? (TAX_RATES[item.taxType] ? TAX_RATES[item.taxType] * 100 : 0));
+  const taxCents = Math.round(amountCents * (itemTaxRate / 100));
   return {
     id: item.id,
     productId: item.productId,
     name: item.name,
     description: item.description,
     unit: item.unit,
+    taxRate: itemTaxRate,
     taxType: item.taxType,
     catalogPrice: Number(item.catalogPrice),
     unitPrice: Number(item.unitPrice),
@@ -97,6 +99,7 @@ export class ReturnItemService {
           name: product.name,
           description: product.description,
           unit: product.unit,
+          taxRate: (product as any).taxRate ?? new Prisma.Decimal(product.taxType === "VAT_10" ? 10 : 0),
           taxType: product.taxType,
           catalogPrice: product.price,
           unitPrice: product.price,

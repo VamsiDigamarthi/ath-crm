@@ -180,12 +180,7 @@ export function useTaxPreparerQueue() {
   }, [filteredReturns]);
 
   const handleOpenClient = (lead: PrepReviewLead) => {
-    const myYears = allLeads.filter((l) => l.taxpayerId && l.taxpayerId === lead.taxpayerId);
-    if (myYears.length > 1) {
-      navigate(`/prep-review/preparer/client/${lead.taxpayerId}`);
-    } else {
-      navigate(`/prep-review/preparer/workspace/${lead.id || lead.applicationId}`);
-    }
+    navigate(`/prep-review/preparer/client/${lead.taxpayerId || lead.id}`);
   };
 
   const handleOpenNextReturn = () => {
