@@ -53,6 +53,11 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
   );
   const isStaff = !isClient;
 
+  const isDocumenter = user?.role === 'DOC_AGENT' || 
+    user?.role === 'DOC_TEAM_LEAD' || 
+    user?.role === 'DOC_MANAGER' || 
+    (typeof window !== 'undefined' && window.location.pathname.includes('/documenter/'));
+
   const [loading, setLoading] = useState(true);
   const [draftData, setDraftData] = useState<any>(null);
 
@@ -75,6 +80,10 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
   const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
 
   const fetchDraftReview = useCallback(async () => {
+    if (isDocumenter) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await customerApi.getDraftReview(selectedTaxYear, effectiveLeadId);
@@ -370,6 +379,10 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  if (isDocumenter) {
+    return null;
+  }
 
   if (loading) {
     return (

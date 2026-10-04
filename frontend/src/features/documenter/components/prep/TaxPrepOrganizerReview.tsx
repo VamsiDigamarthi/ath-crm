@@ -27,6 +27,8 @@ import apiClient from '@/lib/api-client';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { TaxOrganizerDocumentPreviewModal } from './TaxOrganizerDocumentPreviewModal';
 
+import { useAuthStore } from '@/features/auth/store/auth-store';
+
 interface TaxPrepOrganizerReviewProps {
   leadId?: string;
   customerName: string;
@@ -40,6 +42,7 @@ interface TaxPrepOrganizerReviewProps {
   extraTabs?: { id: string; label: string; count?: number; content: React.ReactNode }[];
   requestedTabId?: string;
   onTabChange?: (tabId: string) => void;
+  hideReviewDraftTab?: boolean;
 }
 
 export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
@@ -55,7 +58,13 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   extraTabs = [],
   requestedTabId,
   onTabChange,
+  hideReviewDraftTab,
 }) => {
+  const { user } = useAuthStore();
+  const isDocumenterRole = user?.role === 'DOC_AGENT' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'DOC_MANAGER';
+  const isDocumenterPath = typeof window !== 'undefined' && window.location.pathname.includes('/documenter/');
+  const isDocumenter = isDocumenterRole || isDocumenterPath;
+
   const canEdit = allowEdit && !readOnly;
   const organizer = taxDraftSummary?.organizer || taxDraftSummary?.organizerData || {};
   const activeTaxYear = taxYear || taxDraftSummary?.taxYear || organizer.taxYear || new Date().getFullYear();
@@ -66,7 +75,13 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
     'INDIVIDUAL';
   const effectiveFilingType = String(rawFilingType || 'INDIVIDUAL').toUpperCase();
   const isBusiness = effectiveFilingType === 'BUSINESS';
-  const modulesList = getModulesForFilingType(effectiveFilingType);
+  
+  const shouldHideReviewDraft = hideReviewDraftTab ?? isDocumenter;
+  const rawModulesList = getModulesForFilingType(effectiveFilingType);
+  const modulesList = shouldHideReviewDraft
+    ? rawModulesList.filter((m) => m.id !== 'm_review_draft')
+    : rawModulesList;
+
   const initialModId = isBusiness ? 'b1_companyInfo' : 'm1';
 
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
