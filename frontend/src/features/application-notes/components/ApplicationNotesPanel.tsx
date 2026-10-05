@@ -16,6 +16,8 @@ const TEAM_OPTIONS: { value: NoteTeam; label: string }[] = [
   { value: 'DOCUMENTER', label: 'Documenter' },
   { value: 'PREPARER', label: 'Preparer' },
   { value: 'QA_REVIEWER', label: 'QA reviewer' },
+  { value: 'SALES', label: 'Sales' },
+  { value: 'FILING', label: 'Filing' },
 ];
 
 const TEAM_LABEL: Record<string, string> = {
@@ -24,6 +26,8 @@ const TEAM_LABEL: Record<string, string> = {
   PREPARER: 'Preparer',
   QA_REVIEWER: 'QA reviewer',
   PREP_MANAGER: 'Prep manager',
+  SALES: 'Sales',
+  FILING: 'Filing',
   ADMIN: 'Admin',
 };
 
@@ -32,6 +36,8 @@ const CONTEXT_LABEL: Record<string, string> = {
   SUBMITTED_TO_QA: 'Submitted to QA',
   QA_REVISION: 'Revision requested',
   QA_SIGN_OFF: 'QA signed off',
+  SALES_SEND_BACK: 'Sent back by sales',
+  SENT_TO_FILING: 'Sent to filing',
 };
 
 const formatTime = (iso: string) =>

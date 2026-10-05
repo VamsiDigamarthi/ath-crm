@@ -12,6 +12,7 @@ import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAudi
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
 import { SalesReturnToAdminModal } from '../components/common/SalesReturnToAdminModal';
+import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesFeeBreakdown } from '../types/sales.types';
 import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
@@ -448,6 +449,11 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
                 />
               </div>
             ),
+          },
+          {
+            id: 'NOTES',
+            label: 'Notes',
+            content: <ApplicationNotesPanel applicationId={appId} />,
           },
         ]}
       />

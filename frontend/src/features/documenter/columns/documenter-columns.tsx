@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/shared/components/Button';
 import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
+import { PriorityEditMenu } from '@/shared/components/PriorityEditMenu';
 import {
   PhoneCall,
   UserCheck,
@@ -16,6 +17,7 @@ export interface GetDocumenterColumnsProps {
   onOpenCallModal: (lead: DocumenterLeadItem) => void;
   onOpenAssignModal: (lead: DocumenterLeadItem) => void;
   onOpenStartFilingModal?: (lead: DocumenterLeadItem) => void;
+  onUpdatePriority?: (applicationId: string, priority: string) => void;
   hideAssignedStaff?: boolean;
   isManagerView?: boolean;
   isAdmin?: boolean;
@@ -94,6 +96,7 @@ export const getDocumenterColumns = ({
   onOpenCallModal,
   onOpenAssignModal,
   onOpenStartFilingModal,
+  onUpdatePriority,
   hideAssignedStaff = false,
   isManagerView = false,
   isAdmin: isAdminProp = false,
@@ -220,6 +223,13 @@ export const getDocumenterColumns = ({
               <Eye className="w-3 h-3" />
               <span>View</span>
             </Link>
+          )}
+
+          {onUpdatePriority && !item.id?.startsWith('raw-') && (
+            <PriorityEditMenu
+              priority={item.priority}
+              onChange={(priority) => onUpdatePriority(item.id, priority)}
+            />
           )}
 
           <Button

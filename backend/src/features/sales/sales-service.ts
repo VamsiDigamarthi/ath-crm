@@ -1,6 +1,7 @@
 import { prisma } from "../../config/db.js";
 import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType, CouponStatus, Prisma } from "@prisma/client";
 import { StorageService } from "../../utils/storage-service.js";
+import { ApplicationNoteService } from "../application-notes/application-note-service.js";
 
 export class SalesService {
   /**
@@ -1406,6 +1407,16 @@ export class SalesService {
         taxDraftSummary: updatedDraftSummary,
       },
     });
+
+    if (effectiveActorId) {
+      await ApplicationNoteService.recordHandoff({
+        applicationId,
+        authorId: effectiveActorId,
+        targetTeam: 'FILING',
+        message: notes,
+        context: 'SENT_TO_FILING',
+      });
+    }
 
     // 1. Stage History Trail
     if (effectiveActorId) {

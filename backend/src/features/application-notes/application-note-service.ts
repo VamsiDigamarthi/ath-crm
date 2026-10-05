@@ -2,7 +2,7 @@ import { Role } from "@prisma/client";
 import { prisma } from "../../config/db.js";
 import { NotFoundError } from "../../errors/not-found-error.js";
 
-export const NOTE_TEAMS = ["ALL", "DOCUMENTER", "PREPARER", "QA_REVIEWER"] as const;
+export const NOTE_TEAMS = ["ALL", "DOCUMENTER", "PREPARER", "QA_REVIEWER", "SALES", "FILING"] as const;
 export type NoteTeam = (typeof NOTE_TEAMS)[number];
 
 export const NOTE_CONTEXTS = [
@@ -11,6 +11,8 @@ export const NOTE_CONTEXTS = [
   "SUBMITTED_TO_QA",
   "QA_REVISION",
   "QA_SIGN_OFF",
+  "SALES_SEND_BACK",
+  "SENT_TO_FILING",
 ] as const;
 export type NoteContext = (typeof NOTE_CONTEXTS)[number];
 
@@ -26,6 +28,10 @@ const roleToTeam = (role?: string): string => {
       return "QA_REVIEWER";
     case Role.PREP_MANAGER:
       return "PREP_MANAGER";
+    case Role.SALES_AGENT:
+    case Role.SALES_TEAM_LEAD:
+    case Role.SALES_MANAGER:
+      return "SALES";
     case Role.ADMIN:
       return "ADMIN";
     default:

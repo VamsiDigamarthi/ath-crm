@@ -5,6 +5,7 @@ import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { PriorityEditMenu } from '@/shared/components/PriorityEditMenu';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import { SalesReturnToAdminModal } from '../common/SalesReturnToAdminModal';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
@@ -15,12 +16,14 @@ interface SalesAgentQueueTableProps {
   leads: SalesLeadItem[];
   isLoading?: boolean;
   onRefresh?: () => void;
+  onUpdatePriority?: (applicationId: string, priority: string) => void;
 }
 
 export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
   leads,
   isLoading = false,
   onRefresh,
+  onUpdatePriority,
 }) => {
   const navigate = useNavigate();
   const [selectedLeadForReturn, setSelectedLeadForReturn] = useState<SalesLeadItem | null>(null);
@@ -210,6 +213,13 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
                 <span className="hidden xl:inline">Return</span>
               </Button>
 
+              {onUpdatePriority && (
+                <PriorityEditMenu
+                  priority={lead.priority}
+                  onChange={(priority) => onUpdatePriority(lead.id || lead.applicationId, priority)}
+                />
+              )}
+
               <Button
                 size="sm"
                 onClick={() => navigate(`/sales/agent/client/${lead.taxpayerId || lead.id || lead.applicationId}`)}
@@ -226,7 +236,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
         },
       },
     ],
-    [navigate]
+    [navigate, onUpdatePriority]
   );
 
   const handleExportExcel = () => {

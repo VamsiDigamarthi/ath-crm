@@ -23,6 +23,7 @@ router.post('/leads/:id/record-payment', SalesController.recordPayment);
 router.post('/leads/:id/record-esign', SalesController.recordEsign);
 router.post('/leads/:id/send-payment-link', SalesController.sendPaymentLink);
 router.post('/leads/:id/return-to-admin', SalesController.returnLeadToAdmin);
+router.patch('/leads/:id/priority', SalesController.updateLeadPriority);
 router.post('/return-to-admin', SalesController.returnLeadsBulkToAdmin);
 
 // Sales Draft Editing, Deliverables & Client Dispatch

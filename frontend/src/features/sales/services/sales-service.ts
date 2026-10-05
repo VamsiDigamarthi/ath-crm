@@ -247,6 +247,14 @@ export const salesService = {
   },
 
   /**
+   * Sales Closer sets the tax application priority
+   */
+  async updatePriority(id: string, priority: string) {
+    const res: any = await apiClient.patch(`/sales/leads/${id}/priority`, { priority });
+    return res?.data || res;
+  },
+
+  /**
    * Bulk return multiple leads back to Admin Unassigned Pool
    */
   async returnLeadsBulkToAdmin(applicationIds: string[], reason?: string) {

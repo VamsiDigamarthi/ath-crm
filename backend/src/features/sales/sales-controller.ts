@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { SalesService } from './sales-service.js';
+import { DocumenterService } from '../documenter/documenter-service.js';
 
 export class SalesController {
   public static async getPipelineLeads(req: Request, res: Response) {
@@ -190,6 +191,17 @@ export class SalesController {
       res.json(result);
     } catch (err: any) {
       res.status(500).json({ message: err.message || 'Failed to return sales lead to admin pool' });
+    }
+  }
+
+  public static async updateLeadPriority(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await DocumenterService.updateLeadPriority(id, req.body?.priority, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(err.statusCode || 500).json({ message: err.message || 'Failed to update priority' });
     }
   }
 

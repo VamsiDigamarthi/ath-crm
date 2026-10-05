@@ -1,6 +1,6 @@
 import apiClient from '@/lib/api-client';
 
-export type NoteTeam = 'ALL' | 'DOCUMENTER' | 'PREPARER' | 'QA_REVIEWER';
+export type NoteTeam = 'ALL' | 'DOCUMENTER' | 'PREPARER' | 'QA_REVIEWER' | 'SALES' | 'FILING';
 
 export interface ApplicationNote {
   id: string;

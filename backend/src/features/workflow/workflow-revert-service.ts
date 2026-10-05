@@ -3,6 +3,7 @@ import { ApplicationStage, Role, NotificationCategory, NotificationPriority, Aud
 import { StorageService } from '../../utils/storage-service.js';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { BadRequestError } from '../../errors/bad-request-error.js';
+import { ApplicationNoteService } from '../application-notes/application-note-service.js';
 
 export interface RevertLeadPayload {
   applicationId: string;
@@ -98,6 +99,17 @@ export class WorkflowRevertService {
     const actorName = actorUser
       ? `${actorUser.firstName || ''} ${actorUser.lastName || ''}`.trim() || actorUser.email?.split('@')[0] || 'Staff'
       : 'Staff Agent';
+
+    // Sales send-backs land in the shared notes thread for the receiving team
+    if (sourceDepartment === 'SALES' && actorUser && actorUser.id !== 'SYSTEM' && targetDepartment !== 'SALES') {
+      await ApplicationNoteService.recordHandoff({
+        applicationId,
+        authorId: actorUser.id,
+        targetTeam: targetDepartment === 'DOCUMENTER' ? 'DOCUMENTER' : 'PREPARER',
+        message: revertNotes,
+        context: 'SALES_SEND_BACK',
+      });
+    }
 
     // Compute target stage and primary notification recipient
     let toStage: ApplicationStage = ApplicationStage.DOC_OUTREACH;

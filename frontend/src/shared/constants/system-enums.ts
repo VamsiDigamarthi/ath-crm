@@ -69,7 +69,10 @@ export const SYSTEM_IRS_STATUSES: EnumOption[] = [
 ];
 
 export const SYSTEM_PRIORITIES: EnumOption[] = [
+  { label: 'Urgent', value: 'URGENT' },
+  { label: 'Important', value: 'IMPORTANT' },
   { label: 'High', value: 'HIGH' },
   { label: 'Medium', value: 'MEDIUM' },
   { label: 'Low', value: 'LOW' },
+  { label: 'No priority', value: 'NO_PRIORITY' },
 ];
