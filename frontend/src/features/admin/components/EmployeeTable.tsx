@@ -90,8 +90,6 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       <UnifiedTable<EmployeeItem>
         columns={columns}
         data={employees}
-        title="STAFF & EMPLOYEE DIRECTORY"
-        subtitle="Track and manage records, roles, login credentials, and department assignments for all employees."
         isLoading={isLoading}
         searchPlaceholder="Search by name, email, phone, designation..."
         searchValue={searchQuery}

@@ -4,9 +4,6 @@ import {
   Sparkles, 
   Search, 
   RefreshCw, 
-  Phone, 
-  Mail, 
-  ShieldCheck, 
   CheckCircle2, 
   Clock, 
   DollarSign, 
@@ -14,10 +11,11 @@ import {
   Layers,
   Rocket
 } from 'lucide-react';
+import type { ColumnDef } from '@tanstack/react-table';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem } from '../types/sales.types';
-import { AppTable } from '@/shared/components/AppTable';
-import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
@@ -178,169 +176,160 @@ export const SalesManagerDualRoleScreen: React.FC = () => {
   }, [leads, activeTab, selectedAgent, priorityFilter, paymentFilter, visaFilter, searchQuery]);
 
   // Table Columns
-  const columns = useMemo(() => [
+  const columns = useMemo<ColumnDef<SalesLeadItem, any>[]>(() => [
     {
-      header: 'Taxpayer Client',
-      accessorKey: 'taxpayerName' as keyof SalesLeadItem,
-      render: (row: SalesLeadItem) => (
-        <div className="flex items-center gap-3 py-1">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-emerald-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
-            {row.taxpayerName?.charAt(0) || 'T'}
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-bold text-slate-900 text-xs sm:text-sm hover:text-indigo-600 transition-colors">
-                {row.taxpayerName}
-              </span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                TY {row.taxYear}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                <Sparkles className="w-2.5 h-2.5 text-indigo-600" />
-                Dual Doc + Sales
-              </span>
-              {row.visaType && row.visaType !== '-' && (
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  {row.visaType}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+      id: 'name',
+      header: 'NAME',
+      accessorFn: (row) => row.taxpayerName || '—',
+      cell: ({ row }) => (
+        <ClientNameCell
+          name={row.original.taxpayerName || '—'}
+          badge={
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              Dual
+            </span>
+          }
+        />
       ),
     },
     {
-      header: 'Contact Info',
-      render: (row: SalesLeadItem) => (
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center gap-1.5 text-slate-700">
-            <Mail className="w-3 h-3 text-slate-400 shrink-0" />
-            <span className="truncate max-w-[150px] font-medium">{row.taxpayerEmail || 'N/A'}</span>
-            {row.taxpayerEmail && <AppCopyButton text={row.taxpayerEmail} size="sm" />}
-          </div>
-          <div className="flex items-center gap-1.5 text-slate-700">
-            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-            <span className="font-medium">{row.taxpayerPhone || 'N/A'}</span>
-            {row.taxpayerPhone && <AppCopyButton text={row.taxpayerPhone} size="sm" />}
-          </div>
-        </div>
+      id: 'email',
+      header: 'EMAIL',
+      accessorFn: (row) => row.taxpayerEmail || '—',
+      cell: ({ row }) => (
+        <ClientEmailCell email={row.original.taxpayerEmail} />
       ),
     },
     {
-      header: 'Dual Calling Agent',
-      render: (row: SalesLeadItem) => {
+      id: 'phone',
+      header: 'MOBILE',
+      accessorFn: (row) => row.taxpayerPhone || '—',
+      cell: ({ row }) => (
+        <ClientPhoneCell phone={row.original.taxpayerPhone} />
+      ),
+    },
+    {
+      id: 'taxYear',
+      header: 'TY',
+      accessorFn: (row) => `TY ${row.taxYear || 2025}`,
+      cell: ({ row }) => (
+        <span className="text-xs font-semibold text-slate-800">
+          {row.original.taxYear || 2025}
+        </span>
+      ),
+    },
+    {
+      id: 'callingAgent',
+      header: 'CALLING AGENT',
+      accessorFn: (row) => {
         const agent = row.assignedDocAgent || row.assignedSalesAgent;
+        return agent?.name || agent?.email?.split('@')[0] || 'Unassigned';
+      },
+      cell: ({ row }) => {
+        const agent = row.original.assignedDocAgent || row.original.assignedSalesAgent;
         const agentName = agent?.name || agent?.email?.split('@')[0] || 'Unassigned';
         return (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-800 font-bold text-xs flex items-center justify-center shrink-0 border border-indigo-200">
-              {agentName.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <span className="font-bold text-slate-900 text-xs block truncate">{agentName}</span>
-              <span className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                Intake &amp; Closer
-              </span>
-            </div>
-          </div>
+          <span className="text-xs font-medium text-slate-800">
+            {agentName}
+          </span>
         );
       },
     },
     {
-      header: 'Current Workflow Phase',
-      render: (row: SalesLeadItem) => {
-        const phase = getPhaseCategory(row);
+      id: 'workflowPhase',
+      header: 'WORKFLOW PHASE',
+      accessorFn: (row) => getPhaseCategory(row),
+      cell: ({ row }) => {
+        const phase = getPhaseCategory(row.original);
         switch (phase) {
           case 'FILING':
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-extrabold bg-purple-100 text-purple-900 border border-purple-300 shadow-2xs">
-                <Rocket className="w-3.5 h-3.5 text-purple-700" />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                <Rocket className="w-3 h-3 text-purple-600" />
                 IRS E-Filing Queue
               </span>
             );
           case 'PAID_SIGNED':
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-2xs">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                Fee Paid &amp; E-Signed
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                Paid &amp; E-Signed
               </span>
             );
           case 'READY_PITCH':
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-extrabold bg-blue-100 text-blue-900 border border-blue-300 shadow-2xs">
-                <DollarSign className="w-3.5 h-3.5 text-blue-700" />
-                QA Signed Off (Pitch Ready)
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                <DollarSign className="w-3 h-3 text-blue-600" />
+                Pitch Ready
               </span>
             );
           case 'TAX_PREP':
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs">
-                <Clock className="w-3.5 h-3.5 text-amber-700" />
-                With Tax Preparer (CPA)
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                <Clock className="w-3 h-3 text-amber-600" />
+                With Preparer
               </span>
             );
           default:
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-extrabold bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs">
-                <FileText className="w-3.5 h-3.5 text-slate-600" />
-                Document Intake &amp; Outreach
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                <FileText className="w-3 h-3 text-slate-500" />
+                Doc Intake
               </span>
             );
         }
       },
     },
     {
-      header: '1040 Net & Fee',
-      render: (row: SalesLeadItem) => {
-        const fedRefund = Number(row.federalRefund) || 0;
-        const balDue = Number(row.balanceDue) || 0;
-        const fee = row.feeBreakdown?.totalServiceFee || 227;
-        const isPaid = row.paymentStatus === 'PAID';
+      id: 'netFee',
+      header: '1040 NET & FEE',
+      cell: ({ row }) => {
+        const item = row.original;
+        const fedRefund = Number(item.federalRefund) || 0;
+        const balDue = Number(item.balanceDue) || 0;
+        const fee = item.feeBreakdown?.totalServiceFee || 0;
 
         return (
           <div className="space-y-0.5 text-xs">
-            <div className="font-bold text-slate-900">
+            <div>
               {fedRefund > 0 ? (
-                <span className="text-emerald-700">+${fedRefund.toLocaleString()} Ref</span>
+                <span className="text-emerald-700 font-medium">+${fedRefund.toLocaleString()}</span>
               ) : balDue > 0 ? (
-                <span className="text-rose-700">-${balDue.toLocaleString()} Due</span>
+                <span className="text-rose-700 font-medium">-${balDue.toLocaleString()}</span>
               ) : (
-                <span className="text-slate-500">$0 Net</span>
+                <span className="text-slate-500">$0</span>
               )}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-slate-600">${fee} Fee</span>
-              <span className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold ${
-                isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-              }`}>
-                {isPaid ? 'PAID' : 'UNPAID'}
-              </span>
+              {fee > 0 && <span className="text-slate-400 ml-1.5">• Fee ${fee}</span>}
             </div>
           </div>
         );
       },
     },
     {
-      header: 'Priority',
-      render: (row: SalesLeadItem) => (
-        <PriorityBadge priority={row.priority} size="sm" />
-      ),
+      id: 'priority',
+      header: 'PRIORITY',
+      accessorKey: 'priority',
+      cell: ({ row }) => <PriorityBadge priority={row.original.priority} size="sm" />,
     },
     {
-      header: 'Actions',
-      render: (row: SalesLeadItem) => (
-        <div className="flex items-center gap-2">
+      id: 'actions',
+      header: 'ACTION',
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        disableMenu: true,
+        disableFilter: true,
+      },
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
           <Button
             size="sm"
-            onClick={() => navigate(`/sales/agent/pitch/${row.id}`)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1 shadow-2xs cursor-pointer h-8 px-3.5 whitespace-nowrap"
+            onClick={() => navigate(`/sales/agent/pitch/${row.original.id}`)}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-[11px] font-medium flex items-center gap-1 shadow-2xs cursor-pointer h-7 px-2.5"
             title="Open Sales Pitch & Fee Closer Workspace"
           >
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>Pitch View</span>
+            <DollarSign className="w-3 h-3" />
+            <span>Pitch</span>
           </Button>
         </div>
       ),
@@ -535,26 +524,19 @@ export const SalesManagerDualRoleScreen: React.FC = () => {
       </div>
 
       {/* 5. Dual-Role Leads Data Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-        <AppTable
-          columns={columns as any}
-          data={filteredLeads}
-          isLoading={isLoading}
-          emptyMessage={
-            <div className="text-center py-12 space-y-3">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <h4 className="font-bold text-slate-800 text-sm">No Dual-Role Leads Found</h4>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                {activeTab === 'ALL'
-                  ? 'When the Documenter Manager assigns leads with "Also Assign as Sales Closer", they will automatically appear in this dedicated caseload.'
-                  : `No dual-role leads currently matching the "${activeTab}" filter tab.`}
-              </p>
-            </div>
-          }
-        />
-      </div>
+      <UnifiedTable<SalesLeadItem>
+        columns={columns}
+        data={filteredLeads}
+        isLoading={isLoading}
+        searchPlaceholder="Search taxpayer, email, phone, agent..."
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        emptyText={
+          activeTab === 'ALL'
+            ? 'When the Documenter Manager assigns leads with "Also Assign as Sales Closer", they will automatically appear in this dedicated caseload.'
+            : `No dual-role leads currently matching the "${activeTab}" filter tab.`
+        }
+      />
     </div>
   );
 };

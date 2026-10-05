@@ -9,19 +9,17 @@ import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModa
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { useTaxPreparerWorkspace } from '../hooks/useTaxPreparerWorkspace';
 import { DocumentPreviewModal } from '../components/workspace/DocumentPreviewModal';
-import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
 import { RequestMissingDocumentsModal } from '@/features/documenter/components/prep/RequestMissingDocumentsModal';
 import apiClient from '@/lib/api-client';
 import toast from 'react-hot-toast';
 import { AppTextarea } from '@/shared/components/AppTextarea';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
 import { ReturnItemsSummary } from '../components/workspace/ReturnItemsSummary';
 import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 import { useAuthStore } from '@/features/auth/store/auth-store';
-import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
+import { TaxApplicationNotesAndAuditTab } from '@/shared/components/workflow/TaxApplicationNotesAndAuditTab';
 
 export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -29,7 +27,6 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
   const [isRequestDocsModalOpen, setIsRequestDocsModalOpen] = useState(false);
-  const [isAuditCollapsed, setIsAuditCollapsed] = useState(true);
   const { user: currentUser } = useAuthStore();
   const {
     isLoading,
@@ -653,99 +650,22 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
           },
           {
             id: 'NOTES',
-            label: 'Notes',
-            content: <ApplicationNotesPanel applicationId={applicationId} />,
+            label: 'Notes & Audit',
+            content: (
+              <TaxApplicationNotesAndAuditTab
+                applicationId={applicationId}
+                taxpayerName={taxpayerName}
+                taxpayerEmail={taxpayer?.email}
+                currentStage={currentStage}
+                taxYear={taxYear}
+                stageHistories={stageHistories}
+                callLogs={callLogs}
+                auditLogs={auditLogs}
+              />
+            ),
           },
         ]}
       />
-
-      {/* Previous split workspace layout (kept for reference)
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <ClientProfilePanel
-            taxpayer={taxpayer}
-            assignedReviewer={assignedReviewer}
-            documents={documents}
-            standardDeductionAmount={standardDeductionAmount}
-            taxDraftSummary={taxDraftSummary}
-            onPreviewDoc={setSelectedDocForPreview}
-            onOpenOrganizerModal={() => setIsOrganizerModalOpen(true)}
-            onApplyValue={handleApplyFieldValue}
-            onOpenRequestDocsModal={() => setIsRequestDocsModalOpen(true)}
-            drakeTaxComponent={
-              <DrakeTaxUploadCard
-                drakeTaxFile={drakeTaxFile}
-                isUploading={isUploadingDrakeFile}
-                isReadOnly={currentStage.startsWith('FILING') || currentStage === 'PAID_AND_AUTHORIZED'}
-                onUpload={handleUploadDrakeFile}
-                onDelete={handleDeleteDrakeFile}
-                onPreview={setSelectedDocForPreview}
-              />
-            }
-          />
-        </div>
-
-        <div className="lg:col-span-2 space-y-6">
-          <Tax1040FormEngine
-            w2Wages={w2Wages}
-            setW2Wages={setW2Wages}
-            taxableInterest={taxableInterest}
-            setTaxableInterest={setTaxableInterest}
-            capitalGains={capitalGains}
-            setCapitalGains={setCapitalGains}
-            otherIncome={otherIncome}
-            setOtherIncome={setOtherIncome}
-            deductionType={deductionType}
-            setDeductionType={setDeductionType}
-            itemizedDeduction={itemizedDeduction}
-            setItemizedDeduction={setItemizedDeduction}
-            taxCredits={taxCredits}
-            setTaxCredits={setTaxCredits}
-            fedWithheld={fedWithheld}
-            setFedWithheld={setFedWithheld}
-            stateWithheld={stateWithheld}
-            setStateWithheld={setStateWithheld}
-            preparerNotes={preparerNotes}
-            setPreparerNotes={setPreparerNotes}
-            standardDeductionAmount={standardDeductionAmount}
-            isReadOnly={isSubmittedToQA || isRevertedToDocs}
-            readOnlyReason={isRevertedToDocs ? 'REVERTED_DOCS' : isSubmittedToQA ? 'QA_AUDIT' : undefined}
-            calculations={calculations}
-          />
-        </div>
-      </div>
-      */}
-
-      {/* 2.5 Collapsible Audit Trail */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setIsAuditCollapsed((prev) => !prev)}
-          className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left hover:bg-slate-50 transition-colors cursor-pointer"
-        >
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold text-slate-900">Audit trail</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Stage handoffs, calls and updates for TY {taxYear} · {(stageHistories?.length || 0) + (callLogs?.length || 0) + (auditLogs?.length || 0)} events
-            </p>
-          </div>
-          {isAuditCollapsed ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronUp className="w-4 h-4 text-slate-500" />}
-        </button>
-        {!isAuditCollapsed && (
-          <div className="p-4 sm:p-5 border-t border-slate-100">
-      <LeadAuditTrailSection
-        leadId={applicationId}
-        taxpayerName={taxpayerName}
-        taxpayerEmail={taxpayer?.email}
-        currentStage={currentStage}
-        stageHistories={stageHistories}
-        callLogs={callLogs}
-        auditLogs={auditLogs}
-      />
-          </div>
-        )}
-      </div>
 
       <DocumentPreviewModal
         document={selectedDocForPreview}

@@ -126,8 +126,6 @@ export const FilingStaffWorkloadTable: React.FC<FilingStaffWorkloadTableProps> =
   return (
     <div className="space-y-4 font-sans">
       <UnifiedTable<FilingStaffMember>
-        title="CPA FILING SPECIALISTS WORKLOAD"
-        subtitle="Monitor active e-file transmissions, MeF batch submissions, and IRS acknowledgements."
         data={staffList}
         columns={columns}
         isLoading={isLoading}

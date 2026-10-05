@@ -95,8 +95,6 @@ export const BulkImportTable: React.FC<BulkImportTableProps> = ({
       </div>
 
       <UnifiedTable<ParsedLeadRow>
-        title="PARSED LEAD DATASET PREVIEW"
-        subtitle={`Records parsed from CSV file for Tax Year ${taxYear}. Records will be deduplicated upon ingestion.`}
         data={rows}
         columns={columns}
         isLoading={false}

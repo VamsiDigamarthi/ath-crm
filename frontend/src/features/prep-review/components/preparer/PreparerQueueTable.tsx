@@ -3,7 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Calculator, ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { PrepStageBadge } from '../common/PrepStageBadge';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { PrepReviewLead } from '../../types/prep-review.types';
@@ -26,14 +26,27 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
   const columns = useMemo<ColumnDef<PrepReviewLead, any>[]>(
     () => [
       {
-        id: 'taxpayer',
-        header: 'Taxpayer',
-        accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
+        id: 'name',
+        header: 'Name',
+        accessorFn: (row) => row.taxpayerName || '—',
         cell: ({ row }) => (
-          <TaxpayerCell
-            name={row.original.taxpayerName}
-            email={row.original.taxpayerEmail}
-          />
+          <ClientNameCell name={row.original.taxpayerName} />
+        ),
+      },
+      {
+        id: 'email',
+        header: 'Email',
+        accessorFn: (row) => row.taxpayerEmail || '—',
+        cell: ({ row }) => (
+          <ClientEmailCell email={row.original.taxpayerEmail} />
+        ),
+      },
+      {
+        id: 'phone',
+        header: 'Mobile',
+        accessorFn: (row) => row.taxpayerPhone || '—',
+        cell: ({ row }) => (
+          <ClientPhoneCell phone={row.original.taxpayerPhone} />
         ),
       },
       {
@@ -142,6 +155,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       [
         { header: 'Taxpayer Name', key: 'taxpayerName' },
         { header: 'Email', key: 'taxpayerEmail' },
+        { header: 'Mobile', key: 'taxpayerPhone' },
         { header: 'Tax Year', key: 'taxYear' },
         { header: 'Filing Status', key: 'maritalStatus' },
         { header: 'State', key: 'stateOfResidence' },

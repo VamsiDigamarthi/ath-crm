@@ -45,6 +45,7 @@ export const AdminSelfSignupsScreen: React.FC = () => {
       [
         { header: 'Taxpayer', key: 'taxpayer', format: (r) => `${r.customer?.firstName || ''} ${r.customer?.lastName || ''}` },
         { header: 'Email', key: 'email', format: (r) => r.customer?.email || '—' },
+        { header: 'Mobile', key: 'mobile', format: (r) => r.customer?.phone || '—' },
         { header: 'Visa', key: 'visa', format: (r) => r.customer?.visaType || '—' },
         { header: 'Tax Year', key: 'taxYear', format: (r) => `TY${r.taxYear}` },
         { header: 'Stage', key: 'stage', format: (r) => r.currentStage },
@@ -57,6 +58,16 @@ export const AdminSelfSignupsScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+      {/* 1. Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Direct Sign-ups</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Manage and assign self-registered taxpayer accounts from the client portal.
+          </p>
+        </div>
+      </div>
+
       {/* Selected Rows Action Banner */}
       {selectedRows.length > 0 && (
         <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs">
@@ -87,8 +98,6 @@ export const AdminSelfSignupsScreen: React.FC = () => {
       )}
 
       <UnifiedTable<SelfSignupLeadItem>
-        title="DIRECT ONLINE SIGN-UPS DIRECTORY"
-        subtitle="Manage and assign self-registered taxpayer accounts from the client portal."
         data={leads}
         columns={columns}
         isLoading={isLoading}

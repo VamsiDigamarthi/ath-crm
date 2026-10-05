@@ -99,8 +99,6 @@ export const AdminCouponsScreen: React.FC = () => {
 
       {activeTab === 'DIRECTORY' ? (
         <UnifiedTable
-          title="COUPON DIRECTORY"
-          subtitle="All promotional codes, discount values, and manager authorizations."
           data={coupons}
           columns={directoryColumns}
           isLoading={isLoading}
@@ -110,8 +108,6 @@ export const AdminCouponsScreen: React.FC = () => {
         />
       ) : (
         <UnifiedTable
-          title="REDEMPTION AUDIT TRAIL"
-          subtitle="Complete audit history of applied discount coupons on client service fees."
           data={auditRecords}
           columns={auditColumns}
           isLoading={isAuditLoading}

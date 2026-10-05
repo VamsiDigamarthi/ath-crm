@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/shared/components/Button';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import {
   PhoneCall,
@@ -102,24 +102,26 @@ export const getDocumenterColumns = ({
 
   const cols: ColumnDef<DocumenterLeadItem, any>[] = [
     {
-      id: 'taxpayer',
-      header: 'Taxpayer',
-      accessorFn: (row) => `${row.customer.fullName || `${row.customer.firstName} ${row.customer.lastName}`} ${row.customer.email}`,
+      id: 'name',
+      header: 'Name',
+      accessorFn: (row) => row.customer?.fullName || `${row.customer?.firstName || ''} ${row.customer?.lastName || ''}`.trim() || '—',
       cell: ({ row }) => {
         const c = row.original.customer;
-        const name = c.fullName || `${c.firstName} ${c.lastName || ''}`.trim();
-        return <TaxpayerCell name={name} email={c.email || undefined} />;
+        const name = c?.fullName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || '—';
+        return <ClientNameCell name={name} />;
       },
     },
     {
+      id: 'email',
+      header: 'Email',
+      accessorFn: (row) => row.customer?.email || '—',
+      cell: ({ row }) => <ClientEmailCell email={row.original.customer?.email} />,
+    },
+    {
       id: 'phone',
-      header: 'Phone',
-      accessorKey: 'customer.phone',
-      cell: ({ row }) => (
-        <span className="text-xs font-normal text-slate-700">
-          {row.original.customer.phone || '—'}
-        </span>
-      ),
+      header: 'Mobile',
+      accessorFn: (row) => row.customer?.phone || '—',
+      cell: ({ row }) => <ClientPhoneCell phone={row.original.customer?.phone} />,
     },
     {
       id: 'priority',

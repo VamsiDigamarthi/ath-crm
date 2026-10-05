@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { ReturnedLeadItem } from '../hooks/useReturnedLeads';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table/ClientContactCells';
 import { Button } from '@/shared/components/Button';
 import { Eye, UserCheck } from 'lucide-react';
 
@@ -9,15 +9,26 @@ export const createReturnedLeadColumns = (
   onAssign: (lead: ReturnedLeadItem) => void
 ): ColumnDef<ReturnedLeadItem, any>[] => [
   {
-    id: 'taxpayer',
-    header: 'TAXPAYER',
-    accessorFn: (row) => `${row.customer?.firstName || ''} ${row.customer?.lastName || ''} ${row.customer?.email || ''}`,
+    id: 'name',
+    header: 'NAME',
+    accessorFn: (row) => `${row.customer?.firstName || ''} ${row.customer?.lastName || ''}`.trim() || 'Taxpayer',
     cell: ({ row }) => (
-      <TaxpayerCell
-        name={`${row.original.customer?.firstName || ''} ${row.original.lastName || ''}`.trim() || 'Taxpayer'}
-        email={row.original.customer?.email || '—'}
+      <ClientNameCell
+        name={`${row.original.customer?.firstName || ''} ${row.original.customer?.lastName || ''}`.trim() || 'Taxpayer'}
       />
     ),
+  },
+  {
+    id: 'email',
+    header: 'EMAIL',
+    accessorFn: (row) => row.customer?.email || '—',
+    cell: ({ row }) => <ClientEmailCell email={row.original.customer?.email} />,
+  },
+  {
+    id: 'mobile',
+    header: 'MOBILE',
+    accessorFn: (row) => row.customer?.phone || '—',
+    cell: ({ row }) => <ClientPhoneCell phone={row.original.customer?.phone} />,
   },
   {
     id: 'department',

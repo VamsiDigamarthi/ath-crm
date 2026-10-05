@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMasterTaxpayers } from '../hooks/useMasterTaxpayers';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table/ClientContactCells';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { Button } from '@/shared/components/Button';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -29,15 +29,26 @@ export const AdminMasterTaxpayerDirectoryScreen: React.FC = () => {
   const columns = useMemo<ColumnDef<MasterTaxpayerRecord, any>[]>(
     () => [
       {
-        id: 'taxpayer',
-        header: 'TAXPAYER',
-        accessorFn: (row) => `${row.firstName} ${row.lastName} ${row.email}`,
+        id: 'name',
+        header: 'NAME',
+        accessorFn: (row) => `${row.firstName} ${row.lastName}`.trim() || 'Taxpayer',
         cell: ({ row }) => (
-          <TaxpayerCell
-            name={`${row.original.firstName} ${row.original.lastName}`}
-            email={row.original.email}
+          <ClientNameCell
+            name={`${row.original.firstName} ${row.original.lastName}`.trim() || 'Taxpayer'}
           />
         ),
+      },
+      {
+        id: 'email',
+        header: 'EMAIL',
+        accessorKey: 'email',
+        cell: ({ row }) => <ClientEmailCell email={row.original.email} />,
+      },
+      {
+        id: 'mobile',
+        header: 'MOBILE',
+        accessorKey: 'phone',
+        cell: ({ row }) => <ClientPhoneCell phone={row.original.phone} />,
       },
       {
         id: 'source',
@@ -157,9 +168,17 @@ export const AdminMasterTaxpayerDirectoryScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+      {/* 1. Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Master Taxpayer Directory</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Global taxpayer ledger, cross-department lifecycle stages, multi-year returns, and SLA tracking.
+          </p>
+        </div>
+      </div>
+
       <UnifiedTable<MasterTaxpayerRecord>
-        title="MASTER TAXPAYER LIFECYCLE DIRECTORY"
-        subtitle="Global taxpayer ledger, cross-department lifecycle stages, multi-year returns, and SLA tracking."
         data={records}
         columns={columns}
         isLoading={isLoading}

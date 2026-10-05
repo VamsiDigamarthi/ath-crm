@@ -55,8 +55,6 @@ export interface UnifiedTableProps<TData> {
 export function UnifiedTable<TData extends Record<string, any>>({
   columns,
   data,
-  title,
-  subtitle,
   isLoading = false,
   skeletonRows = 8,
   searchPlaceholder = 'Search...',
@@ -366,8 +364,6 @@ export function UnifiedTable<TData extends Record<string, any>>({
       {/* 1. Top Controls & Pagination Toolbar */}
       <TableTopToolbar
         table={table}
-        title={title}
-        subtitle={subtitle}
         globalFilter={currentGlobalFilter}
         onGlobalFilterChange={handleGlobalFilterChange}
         searchPlaceholder={searchPlaceholder}

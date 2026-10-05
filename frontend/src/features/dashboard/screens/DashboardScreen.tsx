@@ -3,7 +3,7 @@ import { useAuthStore } from '@/features/auth/store/auth-store';
 import { getRoleDefaultRoute } from '@/features/auth/utils/auth-redirect';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { useNavigate } from 'react-router-dom';
@@ -57,14 +57,27 @@ export const DashboardScreen: React.FC = () => {
   const columns = useMemo<ColumnDef<MockLead, any>[]>(
     () => [
       {
-        id: 'taxpayer',
-        header: 'TAXPAYER',
-        accessorFn: (row) => `${row.name} ${row.email}`,
+        id: 'name',
+        header: 'NAME',
+        accessorFn: (row) => row.name,
         cell: ({ row }) => (
-          <TaxpayerCell
-            name={row.original.name}
-            email={row.original.email}
-          />
+          <ClientNameCell name={row.original.name} />
+        ),
+      },
+      {
+        id: 'email',
+        header: 'EMAIL',
+        accessorFn: (row) => row.email,
+        cell: ({ row }) => (
+          <ClientEmailCell email={row.original.email} />
+        ),
+      },
+      {
+        id: 'phone',
+        header: 'MOBILE',
+        accessorFn: (row) => row.phone,
+        cell: ({ row }) => (
+          <ClientPhoneCell phone={row.original.phone} />
         ),
       },
       {
@@ -105,8 +118,9 @@ export const DashboardScreen: React.FC = () => {
     exportTableToExcel(
       MOCK_LEADS,
       [
-        { header: 'Taxpayer', key: 'name' },
+        { header: 'Name', key: 'name' },
         { header: 'Email', key: 'email' },
+        { header: 'Mobile', key: 'phone' },
         { header: 'Tax Year', key: 'taxYear' },
         { header: 'Stage', key: 'stage' },
         { header: 'Status', key: 'status' },
