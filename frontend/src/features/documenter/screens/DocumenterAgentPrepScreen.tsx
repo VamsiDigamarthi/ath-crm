@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { Button } from '@/shared/components/Button';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -19,24 +19,28 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
   const columns = useMemo<ColumnDef<DocumenterLeadItem, any>[]>(
     () => [
       {
-        id: 'taxpayer',
-        header: 'TAXPAYER',
-        accessorFn: (row) => `${row.customer.fullName || `${row.customer.firstName} ${row.customer.lastName}`} ${row.customer.email}`,
+        id: 'name',
+        header: 'NAME',
+        accessorFn: (row) => row.customer.fullName || `${row.customer.firstName || ''} ${row.customer.lastName || ''}`.trim() || '—',
+        cell: ({ row }) => {
+          const name = row.original.customer.fullName || `${row.original.customer.firstName || ''} ${row.original.customer.lastName || ''}`.trim() || '—';
+          return <ClientNameCell name={name} />;
+        },
+      },
+      {
+        id: 'email',
+        header: 'EMAIL',
+        accessorFn: (row) => row.customer.email || '—',
         cell: ({ row }) => (
-          <TaxpayerCell
-            name={row.original.customer.fullName || `${row.original.customer.firstName} ${row.original.customer.lastName}`}
-            email={row.original.customer.email || undefined}
-          />
+          <ClientEmailCell email={row.original.customer.email} />
         ),
       },
       {
         id: 'phone',
-        header: 'PHONE',
+        header: 'MOBILE',
         accessorFn: (row) => row.customer.phone || '—',
         cell: ({ row }) => (
-          <span className="text-xs text-zinc-600">
-            {row.original.customer.phone || '—'}
-          </span>
+          <ClientPhoneCell phone={row.original.customer.phone} />
         ),
       },
       {

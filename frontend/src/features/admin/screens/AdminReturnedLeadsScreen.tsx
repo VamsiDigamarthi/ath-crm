@@ -59,9 +59,17 @@ export const AdminReturnedLeadsScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+      {/* 1. Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Returned Leads</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Manage returned prospect and quotation leads released by Calling Agents and Sales Closers.
+          </p>
+        </div>
+      </div>
+
       <UnifiedTable<ReturnedLeadItem>
-        title="RETURNED & UNASSIGNED LEADS POOL"
-        subtitle="Manage returned prospect and quotation leads released by Calling Agents and Sales Closers."
         data={leads}
         columns={columns}
         isLoading={isLoading}

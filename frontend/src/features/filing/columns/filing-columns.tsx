@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/shared/components/Button';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { ArrowRight, Send } from 'lucide-react';
 import type { FilingLeadItem } from '../types/filing.types';
 import { SYSTEM_PAYMENT_STATUSES, SYSTEM_STAGES } from '@/shared/constants/system-enums';
@@ -17,14 +17,27 @@ export function getFilingColumns({
 }: FilingColumnsOptions): ColumnDef<FilingLeadItem, any>[] {
   return [
     {
-      id: 'taxpayer',
-      header: 'TAXPAYER',
-      accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
+      id: 'name',
+      header: 'NAME',
+      accessorFn: (row) => row.taxpayerName || '—',
       cell: ({ row }) => (
-        <TaxpayerCell
-          name={row.original.taxpayerName}
-          email={row.original.taxpayerEmail}
-        />
+        <ClientNameCell name={row.original.taxpayerName} />
+      ),
+    },
+    {
+      id: 'email',
+      header: 'EMAIL',
+      accessorFn: (row) => row.taxpayerEmail || '—',
+      cell: ({ row }) => (
+        <ClientEmailCell email={row.original.taxpayerEmail} />
+      ),
+    },
+    {
+      id: 'phone',
+      header: 'MOBILE',
+      accessorFn: (row) => row.taxpayerPhone || '—',
+      cell: ({ row }) => (
+        <ClientPhoneCell phone={row.original.taxpayerPhone} />
       ),
     },
     {

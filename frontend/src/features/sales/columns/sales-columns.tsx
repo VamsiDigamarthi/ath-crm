@@ -1,16 +1,14 @@
-import type { ColumnDef } from '@/shared/components/AppTable';
-import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/shared/components/Button';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { SalesStageBadge } from '../components/common/SalesStageBadge';
-import { PriorityBadge } from '@/shared/components/PriorityBadge';
-import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
-import { ReturnComplexityBadge } from '../components/common/ReturnComplexityBadge';
 import { PhoneCall, UserCheck } from 'lucide-react';
 import type { SalesLeadItem } from '../types/sales.types';
+import { SYSTEM_PAYMENT_STATUSES } from '@/shared/constants/system-enums';
 
 export interface SalesColumnsOptions {
   onOpenPitch: (lead: SalesLeadItem) => void;
-  onOpenAssignModal: (lead: SalesLeadItem) => void;
+  onOpenAssignModal?: (lead: SalesLeadItem) => void;
   isAdmin?: boolean;
 }
 
@@ -18,251 +16,190 @@ export function getSalesColumns({
   onOpenPitch,
   onOpenAssignModal,
   isAdmin = false,
-}: SalesColumnsOptions): ColumnDef<SalesLeadItem>[] {
-  const columns: ColumnDef<SalesLeadItem>[] = [
+}: SalesColumnsOptions): ColumnDef<SalesLeadItem, any>[] {
+  const columns: ColumnDef<SalesLeadItem, any>[] = [
     {
-      header: 'Taxpayer Client',
-      accessorKey: 'taxpayerName',
-      sortable: true,
-      render: (item) => {
-        const initial = (item.taxpayerName?.[0] || 'T').toUpperCase();
+      id: 'name',
+      header: 'NAME',
+      accessorFn: (row) => row.taxpayerName || '—',
+      cell: ({ row }) => {
+        const item = row.original;
         return (
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs bg-gradient-to-br from-purple-100 to-purple-200 border border-purple-300 text-purple-800">
-              {initial}
-            </div>
-            <div>
-              <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5 flex-wrap">
-                <span>{item.taxpayerName}</span>
-                <ClientPaymentStatusChip lead={item} size="xs" />
-                {item.visaType && item.visaType !== '-' && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                    {item.visaType}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                <span className="text-[11px] text-slate-500 font-medium">
-                  TY {item.taxYear || 2025} • INDIVIDUAL
+          <ClientNameCell
+            name={item.taxpayerName || '—'}
+            badge={
+              item.visaType && item.visaType !== '-' ? (
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+                  {item.visaType}
                 </span>
-                {(() => {
-                  const lastRevert =
-                    (item.taxDraftSummary as any)?.revertsByTarget?.SALES ||
-                    (item.taxDraftSummary as any)?.revertsByTarget?.['FILING_TO_SALES'] ||
-                    ((item.taxDraftSummary as any)?.lastRevert?.targetDepartment === 'SALES' ? (item.taxDraftSummary as any)?.lastRevert : null);
-                  if (lastRevert && !lastRevert.resolved) {
-                    return (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-950 border border-amber-300">
-                        Reverted from {lastRevert.sourceDepartment === 'FILING' ? 'Filing' : lastRevert.sourceDepartment}
-                      </span>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
-            </div>
+              ) : undefined
+            }
+          />
+        );
+      },
+    },
+    {
+      id: 'email',
+      header: 'EMAIL',
+      accessorFn: (row) => row.taxpayerEmail || '—',
+      cell: ({ row }) => (
+        <ClientEmailCell email={row.original.taxpayerEmail} />
+      ),
+    },
+    {
+      id: 'phone',
+      header: 'MOBILE',
+      accessorFn: (row) => row.taxpayerPhone || '—',
+      cell: ({ row }) => (
+        <ClientPhoneCell phone={row.original.taxpayerPhone} />
+      ),
+    },
+    {
+      id: 'taxYear',
+      header: 'TY',
+      accessorFn: (row) => `TY ${row.taxYear || 2025}`,
+      cell: ({ row }) => {
+        const item = row.original;
+        const appCount = item.allApplications?.length || item.totalTaxYears || 1;
+        return (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-semibold text-slate-800">
+              {item.taxYear || 2025}
+            </span>
+            {appCount > 1 && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                {appCount} Filings
+              </span>
+            )}
           </div>
         );
       },
     },
     {
-      header: 'Contact Information',
-      accessorKey: 'taxpayerEmail',
-      render: (item) => (
-        <div className="space-y-0.5">
-          <div className="text-[11px] text-slate-700 font-medium flex items-center gap-1.5">
-            <span>{item.taxpayerEmail}</span>
-            {item.taxpayerEmail && item.taxpayerEmail !== '-' && (
-              <AppCopyButton text={item.taxpayerEmail} size="sm" />
-            )}
-          </div>
-          <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
-            <span>{item.taxpayerPhone}</span>
-            {item.taxpayerPhone && item.taxpayerPhone !== '-' && (
-              <AppCopyButton text={item.taxpayerPhone} size="sm" />
-            )}
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: 'Location & Year',
+      id: 'state',
+      header: 'STATE',
       accessorKey: 'stateOfResidence',
-      render: (item) => {
-        const hasMultipleYears = Boolean(item.allApplications && item.allApplications.length > 1);
+      cell: ({ row }) => (
+        <span className="text-xs font-normal text-slate-700">
+          {row.original.stateOfResidence || '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'refund',
+      header: '1040 REFUND',
+      accessorFn: (row) => row.federalRefund || row.balanceDue || 0,
+      cell: ({ row }) => {
+        const fed = Number(row.original.federalRefund) || 0;
+        const due = Number(row.original.balanceDue) || 0;
+        if (fed > 0) {
+          return (
+            <span className="text-xs font-medium text-emerald-600">
+              +${fed.toLocaleString()}
+            </span>
+          );
+        }
+        if (due > 0) {
+          return (
+            <span className="text-xs font-medium text-rose-600">
+              -${due.toLocaleString()}
+            </span>
+          );
+        }
+        return <span className="text-xs font-normal text-slate-500">$0</span>;
+      },
+    },
+    {
+      id: 'quotedFee',
+      header: 'QUOTED FEE',
+      accessorFn: (row) => row.feeBreakdown?.totalServiceFee || 0,
+      cell: ({ row }) => {
+        const fee = Number(row.original.feeBreakdown?.totalServiceFee) || 0;
+        const isQuoted = Boolean(row.original.feeBreakdown?.isQuoted || fee > 0);
         return (
-          <div className="space-y-0.5">
-            <div className="text-xs font-semibold text-slate-800">
-              {item.stateOfResidence || 'United States'}
-            </div>
-            {hasMultipleYears ? (
-              <div className="flex flex-wrap items-center gap-1 mt-0.5">
-                {item.allApplications?.map((app) => (
-                  <span
-                    key={app.id}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
-                      app.id === item.id
-                        ? 'bg-purple-50 text-purple-800 border-purple-300 ring-1 ring-purple-500/20'
-                        : 'bg-slate-100 text-slate-600 border-slate-200'
-                    }`}
-                    title={`TY ${app.taxYear} (${app.filingType || 'INDIVIDUAL'})`}
-                  >
-                    TY {app.taxYear}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div className="text-[10px] text-slate-400 font-medium">
-                TY {item.taxYear || 2025}
-              </div>
-            )}
-          </div>
+          <span className={`text-xs ${isQuoted ? 'font-medium text-slate-900' : 'font-normal text-slate-500'}`}>
+            {fee > 0 ? `$${fee}` : 'Unquoted'}
+          </span>
         );
       },
     },
     {
-      header: 'Priority',
-      accessorKey: 'priority',
-      render: (item) => (
-        <PriorityBadge priority={item.priority || 'NO_PRIORITY'} size="sm" />
-      ),
-    },
-    {
-      header: 'Return Complexity',
-      accessorKey: 'complexityScore',
-      render: (item) => (
-        <ReturnComplexityBadge lead={item} size="sm" />
-      ),
-    },
-    {
-      header: 'Certified 1040 Refund',
-      accessorKey: 'federalRefund',
-      render: (item) => {
-        const hasRefund = item.federalRefund > 0;
-        const hasDue = item.balanceDue > 0;
-
-        return (
-          <div className="space-y-0.5">
-            {hasRefund ? (
-              <span className="font-bold text-[#16A34A] text-xs bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-block">
-                +${item.federalRefund.toLocaleString()} Fed Refund
-              </span>
-            ) : hasDue ? (
-              <span className="font-bold text-rose-600 text-xs bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 inline-block">
-                -${item.balanceDue.toLocaleString()} Tax Due
-              </span>
-            ) : (
-              <span className="font-semibold text-slate-500 text-xs bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200 inline-block">
-                $0 Liability
-              </span>
-            )}
-            <div className="text-[10px] text-slate-400">
-              QA by {item.qaAuditorName || 'Auditor'}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      header: 'Quoted Fee',
+      id: 'payment',
+      header: 'PAYMENT',
       accessorKey: 'paymentStatus',
-      render: (item) => {
-        const isQuoted = item.feeBreakdown?.totalServiceFee > 0;
-
+      meta: {
+        filterType: 'enum',
+        filterOptions: SYSTEM_PAYMENT_STATUSES,
+      },
+      cell: ({ row }) => {
+        const status = row.original.paymentStatus || 'UNPAID';
+        const isPaid = status === 'PAID';
         return (
-          <div className="space-y-0.5">
-            {isQuoted ? (
-              <>
-                <div className="font-bold text-slate-900 text-xs">
-                  ${item.feeBreakdown.totalServiceFee}
-                </div>
-                <span
-                  className={`text-[9px] font-bold px-1.5 py-0.2 rounded inline-block ${
-                    item.paymentStatus === 'PAID'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}
-                >
-                  {item.paymentStatus}
-                </span>
-              </>
-            ) : (
-              <>
-                <div className="font-semibold text-slate-400 text-xs">
-                  Pending Pitch
-                </div>
-                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 inline-block">
-                  UNPAID
-                </span>
-              </>
-            )}
-          </div>
+          <span
+            className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded ${
+              isPaid
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : status === 'PAYMENT_LINK_SENT'
+                ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {status.replace(/_/g, ' ')}
+          </span>
         );
       },
     },
     {
-      header: 'Assigned Staff',
-      accessorKey: 'assignedSalesAgent',
-      render: (item) => {
-        const isCompletedOrLocked =
-          (item.paymentStatus === 'PAID' && item.esignStatus === 'SIGNED') ||
-          item.currentStage === 'PAID_AND_AUTHORIZED' ||
-          item.currentStage === 'FILING_QUEUE' ||
-          item.currentStage === 'FILING_IN_PROGRESS' ||
-          item.currentStage === 'FILING_SUCCESS';
-
-        if (!item.assignedSalesAgent) {
-          if (isCompletedOrLocked || isAdmin) {
-            return (
-              <span className="text-slate-400 font-medium text-[11px] bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
-                {isCompletedOrLocked ? 'Completed' : 'Unassigned'}
-              </span>
-            );
+      id: 'stage',
+      header: 'STAGE',
+      accessorKey: 'currentStage',
+      cell: ({ row }) => <SalesStageBadge stage={row.original.currentStage} />,
+    },
+    {
+      id: 'closer',
+      header: 'ASSIGNED CLOSER',
+      accessorFn: (row) => row.assignedSalesAgent?.name || 'Unassigned',
+      cell: ({ row }) => {
+        const item = row.original;
+        const agent = item.assignedSalesAgent;
+        if (!agent) {
+          if (!onOpenAssignModal || isAdmin) {
+            return <span className="text-xs text-slate-400">Unassigned</span>;
           }
-
           return (
             <button
               type="button"
-              onClick={() => onOpenAssignModal(item)}
-              className="text-amber-700 font-bold text-[11px] bg-amber-50 px-2 py-1 rounded-md border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenAssignModal(item);
+              }}
+              className="text-xs font-semibold text-amber-700 hover:text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 cursor-pointer"
             >
-              Unassigned (Click)
+              Assign
             </button>
           );
         }
-
-        const initial = (item.assignedSalesAgent.name?.[0] || item.assignedSalesAgent.email?.[0] || 'C').toUpperCase();
-
         return (
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center">
-              {initial}
-            </div>
-            <div>
-              <div className="text-xs font-bold text-slate-800">
-                {item.assignedSalesAgent.name}
-              </div>
-              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                CLOSER
-              </span>
-            </div>
-          </div>
+          <span className="text-xs font-medium text-slate-800">
+            {agent.name}
+          </span>
         );
       },
-    },
-    {
-      header: 'Sales Stage',
-      accessorKey: 'currentStage',
-      render: (item) => <SalesStageBadge stage={item.currentStage} />,
     },
   ];
 
   if (!isAdmin) {
     columns.push({
-      header: 'Actions',
-      headerClassName: 'text-right',
-      cellClassName: 'text-right',
-      render: (item) => {
+      id: 'actions',
+      header: 'ACTION',
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        disableMenu: true,
+        disableFilter: true,
+      },
+      cell: ({ row }) => {
+        const item = row.original;
         const isAssigned = Boolean(item.assignedSalesAgent);
         const isCompletedOrLocked =
           (item.paymentStatus === 'PAID' && item.esignStatus === 'SIGNED') ||
@@ -273,33 +210,35 @@ export function getSalesColumns({
         const isAssignDisabled = isAssigned || isCompletedOrLocked;
 
         return (
-          <div className="flex items-center justify-end gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isAssignDisabled}
-              title={
-                isAssigned
-                  ? `Already assigned to ${item.assignedSalesAgent?.name || 'closer'}`
-                  : isCompletedOrLocked
-                  ? "Lead is already Paid & E-Signed / Completed"
-                  : "Assign to closer"
-              }
-              onClick={() => !isAssignDisabled && onOpenAssignModal(item)}
-              className={`border-slate-200 text-[11px] font-semibold flex items-center gap-1 h-7 px-2 ${
-                isAssignDisabled
-                  ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 pointer-events-none'
-                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer'
-              }`}
-            >
-              <UserCheck className="w-3 h-3" />
-              <span>Assign</span>
-            </Button>
+          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+            {onOpenAssignModal && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isAssignDisabled}
+                title={
+                  isAssigned
+                    ? `Already assigned to ${item.assignedSalesAgent?.name || 'closer'}`
+                    : isCompletedOrLocked
+                    ? 'Lead is already Paid & E-Signed / Completed'
+                    : 'Assign to closer'
+                }
+                onClick={() => !isAssignDisabled && onOpenAssignModal(item)}
+                className={`border-slate-200 text-[11px] font-normal flex items-center gap-1 h-7 px-2 ${
+                  isAssignDisabled
+                    ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400 pointer-events-none'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer'
+                }`}
+              >
+                <UserCheck className="w-3 h-3" />
+                <span>Assign</span>
+              </Button>
+            )}
 
             <Button
               size="sm"
               onClick={() => onOpenPitch(item)}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer h-7 px-2.5 shadow-2xs"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-[11px] font-medium flex items-center gap-1 cursor-pointer h-7 px-2.5 shadow-2xs"
             >
               <PhoneCall className="w-3 h-3" />
               <span>Pitch</span>

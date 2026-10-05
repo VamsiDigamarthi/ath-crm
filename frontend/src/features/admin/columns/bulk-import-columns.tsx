@@ -1,32 +1,29 @@
 import type { ColumnDef } from '@tanstack/react-table';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table/ClientContactCells';
 import type { ParsedLeadRow } from '../types/bulk-import.types';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const getBulkImportColumns = (): ColumnDef<ParsedLeadRow, any>[] => [
   {
-    id: 'taxpayer',
-    header: 'TAXPAYER',
-    accessorFn: (row) => `${row.fullName || `${row.firstName || ''} ${row.lastName || ''}`} ${row.email || ''}`,
+    id: 'name',
+    header: 'NAME',
+    accessorFn: (row) => row.fullName || `${row.firstName || ''} ${row.lastName || ''}`.trim() || 'Taxpayer',
     cell: ({ row }) => {
       const displayName = row.original.fullName || `${row.original.firstName || ''} ${row.original.lastName || ''}`.trim() || 'Taxpayer';
-      return (
-        <TaxpayerCell
-          name={displayName}
-          email={row.original.email || '—'}
-        />
-      );
+      return <ClientNameCell name={displayName} />;
     },
   },
   {
-    id: 'phone',
-    header: 'PHONE',
+    id: 'email',
+    header: 'EMAIL',
+    accessorKey: 'email',
+    cell: ({ row }) => <ClientEmailCell email={row.original.email} />,
+  },
+  {
+    id: 'mobile',
+    header: 'MOBILE',
     accessorKey: 'phone',
-    cell: ({ row }) => (
-      <span className="text-xs text-zinc-600">
-        {row.original.phone || '—'}
-      </span>
-    ),
+    cell: ({ row }) => <ClientPhoneCell phone={row.original.phone} />,
   },
   {
     id: 'rowNumber',

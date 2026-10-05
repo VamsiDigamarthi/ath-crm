@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -9,10 +9,6 @@ import {
   Paperclip,
   Download,
   FileText,
-  History,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
@@ -26,7 +22,6 @@ import { renderStageBadge } from '../columns/documenter-columns';
 import { TaxpayerCallHistoryTimeline } from '../components/TaxpayerCallHistoryTimeline';
 import { TaxPrepOrganizerReview } from '../components/prep/TaxPrepOrganizerReview';
 import { DualRoleSalesPitchTab } from '../components/prep/DualRoleSalesPitchTab';
-import { LeadAuditTrailSection } from '../components/LeadAuditTrailSection';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
@@ -34,7 +29,7 @@ import { documenterService } from '../services/documenter-service';
 import type { DocumenterLeadItem, CallLogItem } from '../types/documenter.types';
 import toast from 'react-hot-toast';
 import { useChangeTaxYear } from '../hooks/useChangeTaxYear';
-import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
+import { TaxApplicationNotesAndAuditTab } from '@/shared/components/workflow/TaxApplicationNotesAndAuditTab';
 import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 import { useMyEditAccess } from '@/features/edit-access/hooks/useMyEditAccess';
 import { RequestEditAccessButton } from '@/features/edit-access/components/RequestEditAccessButton';
@@ -68,25 +63,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const [isMovingToPrep, setIsMovingToPrep] = useState<boolean>(false);
   const [prepTransferNotes, setPrepTransferNotes] = useState<string>('');
 
-  // Audit Logs State (Initially Collapsed, Scoped to selected Tax Year)
-  const [isAuditCollapsed, setIsAuditCollapsed] = useState<boolean>(true);
-  const [auditData, setAuditData] = useState<{
-    auditLogs: any[];
-    stageHistories: any[];
-    callLogs: any[];
-    stats?: {
-      totalEvents: number;
-      systemAudits: number;
-      stageHandoffs: number;
-      outreachCalls: number;
-    };
-  }>({
-    auditLogs: [],
-    stageHistories: [],
-    callLogs: [],
-  });
-  const [isAuditLoading, setIsAuditLoading] = useState<boolean>(false);
-
   // Fetch full 360 lead details including all historical call logs
   const fetchLeadDetails = async () => {
     if (!id) return;
@@ -102,22 +78,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
       setIsLoadingLead(false);
     }
   };
-
-  // Fetch audit logs specifically for this selected Tax Year / Lead ID
-  const fetchLeadAuditLogs = useCallback(async (appId: string) => {
-    if (!appId) return;
-    try {
-      setIsAuditLoading(true);
-      const res = await documenterService.getAuditLogs({ leadId: appId });
-      if (res?.data) {
-        setAuditData(res.data);
-      }
-    } catch (err) {
-      console.error('Failed to load audit logs for lead:', err);
-    } finally {
-      setIsAuditLoading(false);
-    }
-  }, []);
 
   const handleConfirmMoveToPrep = async () => {
     if (!id && !lead?.id) return;
@@ -141,10 +101,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
 
   useEffect(() => {
     fetchLeadDetails();
-    if (id) {
-      fetchLeadAuditLogs(id);
-    }
-  }, [id, fetchLeadAuditLogs]);
+  }, [id]);
 
   useEffect(() => {
     const tabParam = new URLSearchParams(location.search).get('tab')?.toUpperCase();
@@ -608,8 +565,16 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         extraTabs={[
           {
             id: 'NOTES',
-            label: 'Notes',
-            content: <ApplicationNotesPanel applicationId={currentLead.id} />,
+            label: 'Notes & Audit',
+            content: (
+              <TaxApplicationNotesAndAuditTab
+                applicationId={currentLead.id}
+                taxYear={currentLead.taxYear}
+                customerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
+                customerEmail={customer.email || undefined}
+                currentStage={currentLead.currentStage}
+              />
+            ),
           },
           {
             id: 'CALL_HISTORY',
@@ -646,75 +611,6 @@ export const Taxpayer360DetailScreen: React.FC = () => {
             : []),
         ]}
       />
-
-      {/* 5. Collapsible Tax Year Audit Trail & Lifecycle Activity Section */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all font-sans">
-        {/* Clickable Header Accordion Bar */}
-        <button
-          type="button"
-          onClick={() => setIsAuditCollapsed((prev) => !prev)}
-          className="w-full p-4 sm:p-5 flex items-center justify-between gap-4 text-left hover:bg-slate-50/80 transition-colors cursor-pointer"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-[#16A34A] flex items-center justify-center shrink-0 shadow-2xs">
-              <History className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                  Audit Trail &amp; System Activity Logs
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                  TY {currentLead.taxYear} ({currentLead.filingType || 'INDIVIDUAL'})
-                </span>
-                {(auditData.stats?.totalEvents || auditData.stageHistories?.length || 0) > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    {auditData.stats?.totalEvents ?? ((auditData.stageHistories?.length || 0) + (auditData.callLogs?.length || 0) + (auditData.auditLogs?.length || 0))} Events Logged
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
-                Immutable audit record of all stage handoffs, outreach calls, document updates, and user allocations for this specific return.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs font-bold text-slate-600 hidden sm:inline">
-              {isAuditCollapsed ? 'Expand Audit Logs' : 'Collapse Audit Logs'}
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
-              {isAuditCollapsed ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronUp className="w-4 h-4" />
-              )}
-            </div>
-          </div>
-        </button>
-
-        {/* Collapsible Content */}
-        {!isAuditCollapsed && (
-          <div className="p-4 sm:p-6 border-t border-slate-100 bg-slate-50/40 animate-in fade-in slide-in-from-top-2 duration-200">
-            {isAuditLoading ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-500">
-                <RefreshCw className="w-6 h-6 animate-spin text-emerald-600" />
-                <span className="text-xs font-semibold">Loading audit logs for TY {currentLead.taxYear}...</span>
-              </div>
-            ) : (
-              <LeadAuditTrailSection
-                stageHistories={auditData.stageHistories?.length ? auditData.stageHistories : (currentLead.stageHistories || [])}
-                auditLogs={auditData.auditLogs || []}
-                callLogs={auditData.callLogs?.length ? auditData.callLogs : (currentLead.callLogs || [])}
-                leadId={currentLead.id}
-                taxpayerName={customer.fullName || `${customer.firstName} ${customer.lastName}`}
-                taxpayerEmail={customer.email || undefined}
-                currentStage={currentLead.currentStage}
-              />
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Change Tax Year */}
       <AppModal

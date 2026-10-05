@@ -73,8 +73,6 @@ export const EmailTemplateTable: React.FC<EmailTemplateTableProps> = ({
       </div>
 
       <UnifiedTable<EmailTemplateItem>
-        title="EMAIL NOTIFICATION TEMPLATES"
-        subtitle="Configure and manage dynamic transactional and promotional email templates per role."
         data={templates}
         columns={columns}
         isLoading={isLoading}

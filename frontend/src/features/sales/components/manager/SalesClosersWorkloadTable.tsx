@@ -126,8 +126,6 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
   return (
     <div className="space-y-4 font-sans">
       <UnifiedTable<SalesRepItem>
-        title="SALES CLOSERS & REVENUE SCORECARDS"
-        subtitle="Monitor live closer capacity, daily pitch volume, and closed conversions."
         data={salesReps}
         columns={columns}
         isLoading={isLoading}
