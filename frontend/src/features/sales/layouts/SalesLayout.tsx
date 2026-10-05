@@ -72,18 +72,18 @@ export const SalesLayout: React.FC = () => {
   // Role-specific Navigation Items (Matching PrepReview and Documenter standard)
   const navItems = isManager
     ? [
-        { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/sales/manager' },
-        { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/manager/queue' },
-        { id: 'dual_role', label: 'Dual Doc + Sales', icon: Sparkles, section: 'Operations', badge: dualBadgeCount !== null ? String(dualBadgeCount) : undefined, path: '/sales/manager/dual-role' },
-        { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/sales/manager/team' },
-        { id: 'coupons', label: 'Discount Coupons', icon: Tag, section: 'Management', path: '/sales/coupons' },
-        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
-      ]
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Management', path: '/sales/manager' },
+      { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/manager/queue' },
+      { id: 'dual_role', label: 'Dual Doc + Sales', icon: Sparkles, section: 'Operations', badge: dualBadgeCount !== null ? String(dualBadgeCount) : undefined, path: '/sales/manager/dual-role' },
+      { id: 'team', label: 'Staff Matrix & Capacity', icon: Users, section: 'Operations', path: '/sales/manager/team' },
+      { id: 'coupons', label: 'Discount Coupons', icon: Tag, section: 'Management', path: '/sales/coupons' },
+      { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
+    ]
     : [
-        { id: 'agent_hub', label: 'Closer Hub', icon: LayoutDashboard, section: 'Closer Workspace', path: '/sales/agent' },
-        { id: 'pitch_queue', label: 'Outreach Pending', icon: PhoneCall, section: 'Active Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/agent/queue' },
-        { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Closer Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
-      ];
+      { id: 'agent_hub', label: 'Closer Hub', icon: LayoutDashboard, section: 'Closer Workspace', path: '/sales/agent' },
+      { id: 'pitch_queue', label: 'My Leads', icon: PhoneCall, section: 'Active Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/agent/queue' },
+      { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Closer Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
+    ];
 
   const currentPath = location.pathname;
   const getActiveId = () => {

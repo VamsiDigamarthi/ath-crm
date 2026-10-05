@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { AdminCustomerItem } from '../types/customer-directory.types';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table/ClientContactCells';
 import { Button } from '@/shared/components/Button';
 import { Eye } from 'lucide-react';
 import { SYSTEM_STAGES, SYSTEM_PAYMENT_STATUSES, SYSTEM_IRS_STATUSES } from '@/shared/constants/system-enums';
@@ -9,25 +9,22 @@ export const createAdminCustomerColumns = (
   onInspect: (item: AdminCustomerItem) => void
 ): ColumnDef<AdminCustomerItem, any>[] => [
   {
-    id: 'customer',
-    header: 'TAXPAYER',
-    accessorFn: (row) => `${row.fullName} ${row.email}`,
-    cell: ({ row }) => (
-      <TaxpayerCell
-        name={row.original.fullName}
-        email={row.original.email}
-      />
-    ),
+    id: 'name',
+    header: 'NAME',
+    accessorKey: 'fullName',
+    cell: ({ row }) => <ClientNameCell name={row.original.fullName} />,
   },
   {
-    id: 'phone',
-    header: 'PHONE',
+    id: 'email',
+    header: 'EMAIL',
+    accessorKey: 'email',
+    cell: ({ row }) => <ClientEmailCell email={row.original.email} />,
+  },
+  {
+    id: 'mobile',
+    header: 'MOBILE',
     accessorKey: 'phone',
-    cell: ({ row }) => (
-      <span className="text-xs text-zinc-600">
-        {row.original.phone || '—'}
-      </span>
-    ),
+    cell: ({ row }) => <ClientPhoneCell phone={row.original.phone} />,
   },
   {
     id: 'taxYear',

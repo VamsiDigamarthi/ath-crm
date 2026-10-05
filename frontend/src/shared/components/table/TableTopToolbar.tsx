@@ -18,8 +18,6 @@ import {
 
 interface TableTopToolbarProps<TData> {
   table: Table<TData>;
-  title?: string;
-  subtitle?: string;
   globalFilter: string;
   onGlobalFilterChange: (value: string) => void;
   searchPlaceholder?: string;
@@ -38,8 +36,6 @@ interface TableTopToolbarProps<TData> {
 
 export function TableTopToolbar<TData>({
   table,
-  title,
-  subtitle,
   globalFilter,
   onGlobalFilterChange,
   searchPlaceholder = 'Search...',
@@ -96,30 +92,7 @@ export function TableTopToolbar<TData>({
 
   return (
     <div className="space-y-3 font-sans">
-      {/* 1. Page Title & Subtitle Header */}
-      {(title || subtitle) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            {title && (
-              <h1 className="text-base sm:text-lg font-bold text-zinc-900">
-                {title}
-              </h1>
-            )}
-            {subtitle && (
-              <p className="text-xs text-zinc-500 font-normal mt-0.5">
-                {subtitle}
-              </p>
-            )}
-          </div>
-          {extraActions && (
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              {extraActions}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 2. Top Controls Row: Search Input & Action Buttons */}
+      {/* Top Controls Row: Search Input & Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Left: Global Search Input with 300ms debounce */}
         <div className="relative w-full sm:w-80">
@@ -133,8 +106,10 @@ export function TableTopToolbar<TData>({
           />
         </div>
 
-        {/* Right: Columns Toggle & Export Excel */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        {/* Right: Extra Actions, Columns Toggle & Export Excel */}
+        <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+          {extraActions}
+
           {/* Columns Visibility Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

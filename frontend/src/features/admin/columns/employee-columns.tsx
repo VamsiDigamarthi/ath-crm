@@ -1,5 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table/ClientContactCells';
 import { Button } from '@/shared/components/Button';
 import { Edit3, Power } from 'lucide-react';
 import type { EmployeeItem } from '../types/employee.types';
@@ -15,15 +15,22 @@ export const getEmployeeColumns = ({
   onToggleStatus,
 }: ColumnActionsProps): ColumnDef<EmployeeItem, any>[] => [
   {
-    id: 'employee',
-    header: 'EMPLOYEE',
-    accessorFn: (row) => `${row.fullName} ${row.email}`,
-    cell: ({ row }) => (
-      <TaxpayerCell
-        name={row.original.fullName}
-        email={row.original.email}
-      />
-    ),
+    id: 'name',
+    header: 'NAME',
+    accessorKey: 'fullName',
+    cell: ({ row }) => <ClientNameCell name={row.original.fullName} />,
+  },
+  {
+    id: 'email',
+    header: 'EMAIL',
+    accessorKey: 'email',
+    cell: ({ row }) => <ClientEmailCell email={row.original.email} />,
+  },
+  {
+    id: 'mobile',
+    header: 'MOBILE',
+    accessorKey: 'mobile',
+    cell: ({ row }) => <ClientPhoneCell phone={row.original.mobile} />,
   },
   {
     id: 'empId',

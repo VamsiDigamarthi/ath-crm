@@ -4,7 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import { SalesReturnToAdminModal } from '../common/SalesReturnToAdminModal';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
@@ -29,14 +29,27 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
   const columns = useMemo<ColumnDef<SalesLeadItem, any>[]>(
     () => [
       {
-        id: 'taxpayer',
-        header: 'TAXPAYER',
-        accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
+        id: 'name',
+        header: 'NAME',
+        accessorFn: (row) => row.taxpayerName || '—',
         cell: ({ row }) => (
-          <TaxpayerCell
-            name={row.original.taxpayerName}
-            email={row.original.taxpayerEmail}
-          />
+          <ClientNameCell name={row.original.taxpayerName} />
+        ),
+      },
+      {
+        id: 'email',
+        header: 'EMAIL',
+        accessorFn: (row) => row.taxpayerEmail || '—',
+        cell: ({ row }) => (
+          <ClientEmailCell email={row.original.taxpayerEmail} />
+        ),
+      },
+      {
+        id: 'phone',
+        header: 'MOBILE',
+        accessorFn: (row) => row.taxpayerPhone || '—',
+        cell: ({ row }) => (
+          <ClientPhoneCell phone={row.original.taxpayerPhone} />
         ),
       },
       {
@@ -235,6 +248,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
       [
         { header: 'Taxpayer Name', key: 'taxpayerName' },
         { header: 'Taxpayer Email', key: 'taxpayerEmail' },
+        { header: 'Mobile', key: 'taxpayerPhone' },
         { header: 'Tax Year', key: 'taxYear' },
         { header: 'State', key: 'stateOfResidence' },
         { header: 'Federal Refund', key: 'federalRefund', format: (l) => l.federalRefund || 0 },
@@ -253,8 +267,6 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
       <UnifiedTable<SalesLeadItem>
         columns={columns}
         data={leads}
-        title="SALES CLOSER QUEUE"
-        subtitle="Review certified 1040 refund amounts, call taxpayers, quote custom filing fees, and process payment links."
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer, email, state, status..."
         onExportExcel={handleExportExcel}

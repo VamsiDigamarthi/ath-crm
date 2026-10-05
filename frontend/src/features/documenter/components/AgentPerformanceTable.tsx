@@ -128,8 +128,6 @@ export const AgentPerformanceTable: React.FC<AgentPerformanceTableProps> = ({
   return (
     <div className="space-y-4 font-sans">
       <UnifiedTable<AgentPerformanceRow>
-        title="CALLING AGENT SCORECARDS & WORKLOAD HEALTH"
-        subtitle="Monitor live caseload capacity, daily outreach activity, call connectivity, and conversion rates."
         data={agents}
         columns={columns}
         isLoading={isLoading}

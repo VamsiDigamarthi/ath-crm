@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Sparkles, ArrowLeft, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShieldCheck, Sparkles, ArrowLeft, RotateCcw } from 'lucide-react';
 import { AppModal } from '@/shared/components/AppModal';
 import { useTaxReviewerAudit } from '../hooks/useTaxReviewerAudit';
 // import { ReviewerAuditHeader } from '../components/reviewer/audit/ReviewerAuditHeader';
@@ -10,7 +10,6 @@ import { ReviewerDrakeTaxCard } from '../components/reviewer/audit/ReviewerDrake
 import { ReviewerComplianceChecklist } from '../components/reviewer/audit/ReviewerComplianceChecklist';
 import { DocumentPreviewModal } from '../components/workspace/DocumentPreviewModal';
 import { ReviewerSignOffModals } from '../components/reviewer/audit/ReviewerSignOffModals';
-import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
 import { Button } from '@/shared/components/Button';
 import { AppTextarea } from '@/shared/components/AppTextarea';
@@ -19,13 +18,12 @@ import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatus
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { ReturnItemsPanel } from '../components/workspace/ReturnItemsPanel';
 import { useAuthStore } from '@/features/auth/store/auth-store';
-import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
+import { TaxApplicationNotesAndAuditTab } from '@/shared/components/workflow/TaxApplicationNotesAndAuditTab';
 import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 
 export const TaxReviewerAuditScreen: React.FC = () => {
   const navigate = useNavigate();
   const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
-  const [isAuditCollapsed, setIsAuditCollapsed] = useState(true);
   const { user: currentUser } = useAuthStore();
   const {
     isLoading,
@@ -282,41 +280,22 @@ export const TaxReviewerAuditScreen: React.FC = () => {
           },
           {
             id: 'NOTES',
-            label: 'Notes',
-            content: <ApplicationNotesPanel applicationId={applicationId} />,
+            label: 'Notes & Audit',
+            content: (
+              <TaxApplicationNotesAndAuditTab
+                applicationId={applicationId}
+                taxpayerName={taxpayerName}
+                taxpayerEmail={taxpayer?.email}
+                currentStage={currentStage}
+                taxYear={taxYear}
+                stageHistories={stageHistories}
+                callLogs={callLogs}
+                auditLogs={auditLogs}
+              />
+            ),
           },
         ]}
       />
-
-      {/* Collapsible audit trail */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setIsAuditCollapsed((prev) => !prev)}
-          className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left hover:bg-slate-50 transition-colors cursor-pointer"
-        >
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold text-slate-900">Audit trail</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Stage handoffs, calls and updates for TY {taxYear} · {(stageHistories?.length || 0) + (callLogs?.length || 0) + (auditLogs?.length || 0)} events
-            </p>
-          </div>
-          {isAuditCollapsed ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronUp className="w-4 h-4 text-slate-500" />}
-        </button>
-        {!isAuditCollapsed && (
-          <div className="p-4 sm:p-5 border-t border-slate-100">
-            <LeadAuditTrailSection
-              leadId={applicationId}
-              taxpayerName={taxpayerName}
-              taxpayerEmail={taxpayer?.email}
-              currentStage={currentStage}
-              stageHistories={stageHistories}
-              callLogs={callLogs}
-              auditLogs={auditLogs}
-            />
-          </div>
-        )}
-      </div>
 
       {/* Previous audit layout (kept for reference)
       

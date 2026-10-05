@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useSalesManagerQueue, type SalesManagerTab } from '../hooks/useSalesManagerQueue';
 import { SalesManagerMetrics } from '../components/manager/SalesManagerMetrics';
 import { getSalesColumns } from '../columns/sales-columns';
-import { AppTable } from '@/shared/components/AppTable';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
@@ -197,13 +197,13 @@ export const SalesDepartmentScreen: React.FC = () => {
       </div>
 
       {/* 4. Separate Dedicated Table Section (View-Only, No Checkboxes, No Action Buttons) */}
-      <AppTable<SalesLeadItem>
-        title="Sales & Fee Quotation Caseload Pipeline"
-        description="Monitor QA-approved tax returns, assigned closers, payment checkouts and Form 8879 e-sign authorizations in real-time."
+      <UnifiedTable<SalesLeadItem>
         data={leads}
         columns={columns}
-        rowKey="id"
         isLoading={isLoading}
+        searchPlaceholder="Search taxpayer, email, phone, state..."
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
         emptyText={
           activeTab === 'AWAITING_PITCH'
             ? 'All QA-approved returns have been pitched, or no returns are awaiting pitch.'

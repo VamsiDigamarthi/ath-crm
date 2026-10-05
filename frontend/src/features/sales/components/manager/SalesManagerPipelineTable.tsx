@@ -4,7 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Sparkles, PhoneCall, UserCheck } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import { SalesLeadAssignmentModal } from './SalesLeadAssignmentModal';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
@@ -32,14 +32,27 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
   const columns = useMemo<ColumnDef<SalesLeadItem, any>[]>(
     () => [
       {
-        id: 'taxpayer',
-        header: 'TAXPAYER',
-        accessorFn: (row) => `${row.taxpayerName} ${row.taxpayerEmail}`,
+        id: 'name',
+        header: 'NAME',
+        accessorFn: (row) => row.taxpayerName || '—',
         cell: ({ row }) => (
-          <TaxpayerCell
-            name={row.original.taxpayerName}
-            email={row.original.taxpayerEmail}
-          />
+          <ClientNameCell name={row.original.taxpayerName} />
+        ),
+      },
+      {
+        id: 'email',
+        header: 'EMAIL',
+        accessorFn: (row) => row.taxpayerEmail || '—',
+        cell: ({ row }) => (
+          <ClientEmailCell email={row.original.taxpayerEmail} />
+        ),
+      },
+      {
+        id: 'phone',
+        header: 'MOBILE',
+        accessorFn: (row) => row.taxpayerPhone || '—',
+        cell: ({ row }) => (
+          <ClientPhoneCell phone={row.original.taxpayerPhone} />
         ),
       },
       {
@@ -210,6 +223,7 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
       [
         { header: 'Taxpayer Name', key: 'taxpayerName' },
         { header: 'Taxpayer Email', key: 'taxpayerEmail' },
+        { header: 'Mobile', key: 'taxpayerPhone' },
         { header: 'Tax Year', key: 'taxYear' },
         { header: 'State', key: 'stateOfResidence' },
         { header: 'Refund', key: 'federalRefund', format: (l) => l.federalRefund || 0 },
@@ -227,8 +241,6 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
       <UnifiedTable<SalesLeadItem>
         columns={columns}
         data={leads}
-        title="SALES OPERATIONS PIPELINE"
-        subtitle="Master closer queue, dispatch tracking, workload balancing, and stage governance."
         enableSelection={true}
         selectedRows={selectedRows}
         onSelectionChange={setSelectedRows}

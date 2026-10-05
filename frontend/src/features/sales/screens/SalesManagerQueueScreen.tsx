@@ -6,7 +6,7 @@ import { SalesFloatingActionBar } from '../components/manager/SalesFloatingActio
 import { SalesLeadAssignmentModal } from '../components/manager/SalesLeadAssignmentModal';
 import { getSalesColumns } from '../columns/sales-columns';
 import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
-import { AppTable } from '@/shared/components/AppTable';
+import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
@@ -246,17 +246,17 @@ export const SalesManagerQueueScreen: React.FC = () => {
       </div>
 
       {/* 4. Separate Dedicated Table Section with Checkboxes */}
-      <AppTable<SalesLeadItem>
-        title="Sales & Fee Quotation Caseload Pipeline"
-        description="Oversee QA-approved tax returns, assign closers, track payment checkouts and Form 8879 e-sign authorizations."
+      <UnifiedTable<SalesLeadItem>
         data={leads}
         columns={columns}
-        selectable
-        isRowSelectable={(item) => !item.assignedSalesAgent}
+        enableSelection={true}
         selectedRows={selectedRows}
-        rowKey="id"
-        onSelectionChange={(selected) => setSelectedRows(selected)}
+        onSelectionChange={setSelectedRows}
         isLoading={isLoading}
+        searchPlaceholder="Search taxpayer, email, phone, state..."
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        onRowClick={(item) => navigate(`/sales/manager/client/${item.taxpayerId || item.id || item.applicationId}`)}
         emptyText={
           activeTab === 'AWAITING_PITCH'
             ? 'All QA-approved returns have been pitched, or no returns are awaiting pitch.'
