@@ -61,6 +61,7 @@ model TaxApplication {
   couponUsages   CouponUsage[]
   items          TaxApplicationItem[]
   notes          ApplicationNote[]
+  editAccessRequests EditAccessRequest[]
 
   @@unique([customerId, taxYear, filingType])
   @@index([currentStage])

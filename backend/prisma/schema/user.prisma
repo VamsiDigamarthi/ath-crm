@@ -54,6 +54,8 @@ model User {
   grantedPermissions UserPermission[] @relation("GrantedPermissions")
   addedReturnItems  TaxApplicationItem[] @relation("AddedReturnItems")
   authoredNotes     ApplicationNote[] @relation("AuthoredApplicationNotes")
+  editAccessRequests EditAccessRequest[] @relation("RequestedEditAccess")
+  reviewedEditAccess EditAccessRequest[] @relation("ReviewedEditAccess")
 
   @@index([email])
   @@index([mobile])

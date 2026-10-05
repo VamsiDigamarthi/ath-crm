@@ -1,0 +1,27 @@
+enum EditAccessStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVOKED
+}
+
+model EditAccessRequest {
+  id            String           @id @default(uuid())
+  applicationId String
+  application   TaxApplication   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  requesterId   String
+  requester     User             @relation("RequestedEditAccess", fields: [requesterId], references: [id], onDelete: Cascade)
+  department    String
+  reason        String
+  status        EditAccessStatus @default(PENDING)
+  accessUntil   DateTime?
+  reviewedById  String?
+  reviewedBy    User?            @relation("ReviewedEditAccess", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt    DateTime?
+  reviewNote    String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([status, createdAt])
+  @@index([applicationId, requesterId])
+}

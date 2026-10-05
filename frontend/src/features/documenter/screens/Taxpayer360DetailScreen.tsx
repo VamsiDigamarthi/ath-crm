@@ -36,6 +36,8 @@ import toast from 'react-hot-toast';
 import { useChangeTaxYear } from '../hooks/useChangeTaxYear';
 import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
 import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
+import { useMyEditAccess } from '@/features/edit-access/hooks/useMyEditAccess';
+import { RequestEditAccessButton } from '@/features/edit-access/components/RequestEditAccessButton';
 
 export const Taxpayer360DetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -228,7 +230,9 @@ export const Taxpayer360DetailScreen: React.FC = () => {
   const isRevertedToDocumenter = currentStage === 'DOC_OUTREACH' && Boolean(lastRevert && !lastRevert.resolved);
   const canMoveToPrep = currentStage === 'RAW_PROSPECT' || currentStage === 'DOC_OUTREACH';
   const isTransferredToPrep = currentStage !== 'RAW_PROSPECT' && currentStage !== 'DOC_OUTREACH';
-  const isReadOnly = isTransferredToPrep && !isRevertedToDocumenter;
+  const isSubmittedLock = isTransferredToPrep && !isRevertedToDocumenter;
+  const editAccess = useMyEditAccess(lead?.id, isSubmittedLock && !isAdmin);
+  const isReadOnly = isSubmittedLock && !editAccess.hasAccess;
 
   const hasAssignedPreparer = Boolean(assignedPrepAgent?.id || (lead as any)?.assignedPrepAgentId);
   const isRevertedFromPrep = lastRevert?.sourceDepartment === 'PREPARATION' || hasAssignedPreparer;
@@ -314,6 +318,21 @@ export const Taxpayer360DetailScreen: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {!isAdmin && isSubmittedLock && Boolean(lead?.id) && (
+            <RequestEditAccessButton
+              hasAccess={editAccess.hasAccess}
+              accessUntil={editAccess.accessUntil}
+              isPending={editAccess.isPending}
+              isModalOpen={editAccess.isModalOpen}
+              onOpen={editAccess.openModal}
+              onClose={editAccess.closeModal}
+              reason={editAccess.reason}
+              onReasonChange={editAccess.setReason}
+              reasonError={editAccess.reasonError}
+              isSubmitting={editAccess.isSubmitting}
+              onSubmit={editAccess.submitRequest}
+            />
+          )}
           {!isAdmin && (
             <Button
               size="sm"

@@ -107,10 +107,18 @@ export const AppAccordionItem: React.FC<AppAccordionItemProps> = ({
       className={`bg-white rounded-md border border-slate-300 shadow-2xs overflow-hidden transition-all duration-150 ${isOpen ? 'ring-1 ring-[#16A34A]/25' : ''
         } ${className}`}
     >
-      <button
-        type="button"
+      {/* Not a <button>, so a disabled (read-only) fieldset around the form still lets sections open and close */}
+      <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
         onClick={handleToggle}
-        disabled={disabled}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleToggle();
+          }
+        }}
+        aria-disabled={disabled || undefined}
         aria-expanded={isOpen}
         className={`w-full px-4 py-3 flex items-center justify-between text-left transition-colors cursor-pointer select-none bg-white hover:bg-slate-50/80 ${isOpen ? 'border-b border-slate-200' : ''
           } ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${headerClassName}`}
@@ -145,7 +153,7 @@ export const AppAccordionItem: React.FC<AppAccordionItemProps> = ({
             <ChevronDown className="w-4 h-4" />
           </div>
         </div>
-      </button>
+      </div>
 
       {isOpen && (
         <div className={`p-4 sm:p-5 bg-white space-y-4 animate-in fade-in duration-150 ${contentClassName}`}>

@@ -4,7 +4,12 @@ import { permissionService } from '../services/permission-service';
 import type { PermissionItem, PermissionUser } from '../types/permission.types';
 import { ROLE_LABELS } from '../types/permission.types';
 
-export type PermissionViewMode = 'PERMISSION' | 'MEMBER';
+export type PermissionViewMode = 'PERMISSION' | 'MEMBER' | 'REQUESTS';
+
+const initialViewMode = (): PermissionViewMode => {
+  const tab = new URLSearchParams(window.location.search).get('tab')?.toUpperCase();
+  return tab === 'MEMBER' || tab === 'REQUESTS' ? tab : 'PERMISSION';
+};
 
 export interface PermissionGroup {
   module: string;
@@ -27,7 +32,7 @@ export const usePermissions = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [pending, setPending] = useState<Set<string>>(new Set());
 
-  const [viewMode, setViewMode] = useState<PermissionViewMode>('PERMISSION');
+  const [viewMode, setViewMode] = useState<PermissionViewMode>(initialViewMode);
   const [listSearch, setListSearch] = useState('');
   const [detailSearch, setDetailSearch] = useState('');
   const [selectedKey, setSelectedKey] = useState<string | null>(null);

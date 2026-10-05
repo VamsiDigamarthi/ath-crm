@@ -6,6 +6,12 @@ import { usePermissions, type PermissionViewMode } from '../hooks/usePermissions
 import { PermissionSidebarList } from '../components/PermissionSidebarList';
 import { PermissionDetailPanel } from '../components/PermissionDetailPanel';
 import { MemberDetailPanel } from '../components/MemberDetailPanel';
+import { useEditAccessRequests } from '@/features/edit-access/hooks/useEditAccessRequests';
+import { EditAccessRequestsPanel } from '@/features/edit-access/components/EditAccessRequestsPanel';
+import {
+  ApproveEditAccessModal,
+  RejectEditAccessModal,
+} from '@/features/edit-access/components/EditAccessDecisionModals';
 
 export const AdminPermissionsScreen: React.FC = () => {
   const {
@@ -31,6 +37,8 @@ export const AdminPermissionsScreen: React.FC = () => {
     setAllForSelected,
   } = usePermissions();
 
+  const access = useEditAccessRequests(viewMode === 'REQUESTS');
+
   return (
     <div className="space-y-6 pb-12 font-sans">
       <div>
@@ -42,13 +50,52 @@ export const AdminPermissionsScreen: React.FC = () => {
         tabs={[
           { id: 'PERMISSION', label: 'By permission', count: totalPermissions },
           { id: 'MEMBER', label: 'By member', count: totalMembers },
+          { id: 'REQUESTS', label: 'Edit requests', count: access.pendingCount || undefined },
         ]}
         activeTab={viewMode}
         onChange={(id) => changeViewMode(id as PermissionViewMode)}
         size="sm"
       />
 
-      {isLoading ? (
+      {viewMode === 'REQUESTS' ? (
+        <>
+          <EditAccessRequestsPanel
+            isLoading={access.isLoading}
+            filter={access.filter}
+            onFilterChange={access.setFilter}
+            pendingCount={access.pendingCount}
+            requests={access.visibleRequests}
+            busyId={access.busyId}
+            onApprove={access.openApprove}
+            onReject={access.openReject}
+            onRevoke={access.revoke}
+          />
+          <ApproveEditAccessModal
+            request={access.approving}
+            onClose={access.closeApprove}
+            preset={access.preset}
+            onPresetChange={access.setPreset}
+            customDate={access.customDate}
+            onCustomDateChange={access.setCustomDate}
+            customTime={access.customTime}
+            onCustomTimeChange={access.setCustomTime}
+            note={access.approveNote}
+            onNoteChange={access.setApproveNote}
+            error={access.approveError}
+            accessUntilPreview={access.accessUntilPreview}
+            isSaving={Boolean(access.approving && access.busyId === access.approving.id)}
+            onConfirm={access.confirmApprove}
+          />
+          <RejectEditAccessModal
+            request={access.rejecting}
+            onClose={access.closeReject}
+            note={access.rejectNote}
+            onNoteChange={access.setRejectNote}
+            isSaving={Boolean(access.rejecting && access.busyId === access.rejecting.id)}
+            onConfirm={access.confirmReject}
+          />
+        </>
+      ) : isLoading ? (
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 animate-pulse">
           <div className="h-72 bg-white border border-slate-200 rounded-xl" />
           <div className="h-72 bg-white border border-slate-200 rounded-xl" />
