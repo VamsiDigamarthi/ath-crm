@@ -25,7 +25,15 @@ const VIEW_ROLES = [
   Role.FILE_OP_TEAM_LEAD,
   Role.FILE_OP_AGENT,
 ];
-const EDIT_ROLES = [Role.ADMIN, Role.PREP_MANAGER, Role.TAX_PREPARER, Role.TAX_REVIEWER];
+const EDIT_ROLES = [
+  Role.ADMIN,
+  Role.PREP_MANAGER,
+  Role.TAX_PREPARER,
+  Role.TAX_REVIEWER,
+  Role.SALES_MANAGER,
+  Role.SALES_TEAM_LEAD,
+  Role.SALES_AGENT,
+];
 
 router.get("/:applicationId/items", requireAuth, authorize(...VIEW_ROLES), validateRequest(listReturnItemsSchema), listReturnItems);
 router.post("/:applicationId/items", requireAuth, authorize(...EDIT_ROLES), validateRequest(addReturnItemSchema), addReturnItem);

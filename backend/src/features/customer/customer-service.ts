@@ -3,6 +3,7 @@ import { ApplicationStage, ApplicationPriority, AuditActorType, AuditActionType,
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { BadRequestError } from '../../errors/bad-request-error.js';
 import { StorageService } from '../../utils/storage-service.js';
+import { generateUniqueReferralCode } from '../../utils/referral.js';
 import { sanitizeObject } from './customer-validator.js';
 
 export class CustomerService {
@@ -280,6 +281,13 @@ export class CustomerService {
       });
     }
 
+    // Older profiles (created before referral codes existed) get one on first dashboard visit
+    if (!profile.referralCode) {
+      const referralCode = await generateUniqueReferralCode(profile.firstName);
+      await prisma.customerProfile.update({ where: { id: profile.id }, data: { referralCode } });
+      profile.referralCode = referralCode;
+    }
+
     const selectedYear = taxYearQuery ? parseInt(taxYearQuery, 10) : 2025;
     let activeApp = profile.applications.find((a) => a.taxYear === selectedYear) || profile.applications[0];
 
@@ -298,6 +306,7 @@ export class CustomerService {
           city: profile.city || '-',
           state: profile.state || '-',
           isConvertedCustomer: profile.isConvertedCustomer,
+          referralCode: profile.referralCode,
         },
         application: null,
         refund: {
@@ -433,6 +442,7 @@ export class CustomerService {
         city: profile.city || '-',
         state: profile.state || '-',
         isConvertedCustomer: profile.isConvertedCustomer,
+          referralCode: profile.referralCode,
       },
       application: {
         id: activeApp.id,
@@ -510,6 +520,7 @@ export class CustomerService {
       applicationId: activeApp.id,
       currentStage: activeApp.currentStage,
       isConvertedCustomer: profile.isConvertedCustomer,
+          referralCode: profile.referralCode,
       documents: docs,
     };
   }

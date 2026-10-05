@@ -1,31 +1,43 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSalesManagerQueue, type SalesManagerTab } from '../hooks/useSalesManagerQueue';
-import { SalesManagerMetrics } from '../components/manager/SalesManagerMetrics';
+// import { SalesManagerMetrics } from '../components/manager/SalesManagerMetrics';
 import { SalesFloatingActionBar } from '../components/manager/SalesFloatingActionBar';
 import { SalesLeadAssignmentModal } from '../components/manager/SalesLeadAssignmentModal';
 import { getSalesColumns } from '../columns/sales-columns';
-import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
+// import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
-import { 
-  Users, 
-  PhoneCall, 
-  ListFilter, 
-  Zap, 
-  RefreshCw, 
-  Globe, 
-  ShieldCheck, 
-  DollarSign, 
-  CheckCircle2, 
-  Rocket,
-  CreditCard,
-  Scale,
-  Sparkles
-} from 'lucide-react';
+import { Users, Zap, RefreshCw } from 'lucide-react';
 import type { SalesLeadItem } from '../types/sales.types';
+
+/* Filter row is hidden for now; uncomment with the filter block in the screen
+interface FilterSelectProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+}
+
+// Neutral inline filter, matching the plain controls used on Team & Staff
+const FilterSelect: React.FC<FilterSelectProps> = ({ label, value, onChange, options }) => (
+  <label className="h-8 inline-flex items-center gap-1.5 bg-white pl-3 pr-2 rounded-lg border border-slate-200 shadow-2xs text-xs text-slate-500 cursor-pointer hover:border-slate-300 transition-colors">
+    <span>{label}</span>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="bg-transparent text-slate-800 font-medium focus:outline-none cursor-pointer"
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+*/
 
 export const SalesManagerQueueScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -40,16 +52,17 @@ export const SalesManagerQueueScreen: React.FC = () => {
     setActiveTab,
     searchQuery,
     setSearchQuery,
-    paymentFilter,
-    setPaymentFilter,
-    liabilityFilter,
-    setLiabilityFilter,
-    visaFilter,
-    setVisaFilter,
-    priorityFilter,
-    setPriorityFilter,
-    complexityFilter,
-    setComplexityFilter,
+    // Filter controls are hidden for now; uncomment together with the filter row below
+    // paymentFilter,
+    // setPaymentFilter,
+    // liabilityFilter,
+    // setLiabilityFilter,
+    // visaFilter,
+    // setVisaFilter,
+    // priorityFilter,
+    // setPriorityFilter,
+    // complexityFilter,
+    // setComplexityFilter,
     selectedRows,
     setSelectedRows,
     isAssignModalOpen,
@@ -72,30 +85,22 @@ export const SalesManagerQueueScreen: React.FC = () => {
 
   // 6 Domain-Accurate Sales Workflow Tabs
   const tabs = [
-    { id: 'AWAITING_PITCH' as SalesManagerTab, label: 'Awaiting Pitch', count: counts.awaitingPitch, icon: ShieldCheck },
-    { id: 'IN_PITCH' as SalesManagerTab, label: 'In Active Pitch', count: counts.inPitch, icon: PhoneCall },
-    { id: 'QUOTED' as SalesManagerTab, label: 'Pending Payment', count: counts.quoted, icon: DollarSign },
-    { id: 'PAID_SIGNED' as SalesManagerTab, label: 'Paid & E-Signed', count: counts.paidSigned, icon: CheckCircle2 },
-    { id: 'FILING_READY' as SalesManagerTab, label: 'In Filing Queue', count: counts.filingReady, icon: Rocket },
-    { id: 'ALL' as SalesManagerTab, label: 'All Pipeline Returns', count: counts.all, icon: ListFilter },
+    { id: 'AWAITING_PITCH' as SalesManagerTab, label: 'Awaiting Pitch', count: counts.awaitingPitch },
+    { id: 'IN_PITCH' as SalesManagerTab, label: 'In Active Pitch', count: counts.inPitch },
+    { id: 'QUOTED' as SalesManagerTab, label: 'Pending Payment', count: counts.quoted },
+    { id: 'PAID_SIGNED' as SalesManagerTab, label: 'Paid & E-Signed', count: counts.paidSigned },
+    { id: 'FILING_READY' as SalesManagerTab, label: 'In Filing Queue', count: counts.filingReady },
+    { id: 'ALL' as SalesManagerTab, label: 'All Returns', count: counts.all },
   ];
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
-      {/* 1. Header & Live Team Capacity Action */}
+      {/* 1. Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Sales &amp; Fee Quotation Department Caseload
-            </h2>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Manager Full Queue
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Supervise certified 1040 returns, distribute leads to closers, monitor fee checkouts, and dispatch to IRS E-Filing.
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Sales Queue</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            {counts.all} returns · {counts.unassigned} unassigned
           </p>
         </div>
 
@@ -105,7 +110,7 @@ export const SalesManagerQueueScreen: React.FC = () => {
             size="sm"
             onClick={refreshData}
             disabled={isLoading}
-            className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            className="h-8 px-3 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 cursor-pointer shadow-2xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
@@ -116,16 +121,17 @@ export const SalesManagerQueueScreen: React.FC = () => {
               size="sm"
               onClick={handleAutoRoundRobin}
               disabled={isActionLoading}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              className="h-8 px-3 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-medium flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
-              <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-              <span>1-Click Auto Round-Robin ({counts.unassigned})</span>
+              <Zap className="w-3.5 h-3.5" />
+              <span>Auto-assign ({counts.unassigned})</span>
             </Button>
           )}
         </div>
       </div>
 
-      {/* 2. Top Metric Cards (5 Sales Domain KPI Cards) */}
+      {/* 2. Top Metric Cards: hidden to match the Team & Staff layout; tab counts carry the same numbers */}
+      {/*
       <SalesManagerMetrics
         awaitingPitchCount={counts.awaitingPitch}
         pitchingCount={counts.inPitch}
@@ -136,135 +142,99 @@ export const SalesManagerQueueScreen: React.FC = () => {
         onQuickAutoDistribute={handleAutoRoundRobin}
         isDistributing={isActionLoading}
       />
+      */}
 
-      {/* 3. Dedicated Tabs & Multi-Filter Card (Separate White Container) */}
-      <div className="rounded-xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
-        {/* Navigation Tabs Header */}
-        <AppTabs
-          tabs={tabs}
-          activeTab={activeTab}
-          onChange={(id) => setActiveTab(id as any)}
-          className="px-6 pt-3"
-        />
+      <div className="space-y-4">
+        {/* 3. Stage Tabs */}
+        <AppTabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as SalesManagerTab)} />
 
-        {/* Multi-Filter & Search Bar */}
-        <div className="p-4 sm:p-5 bg-slate-50/50 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          <div className="w-full lg:w-72">
-            <AppSearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search by taxpayer, phone, email, closer..."
-              debounceMs={300}
-            />
-          </div>
+        {/* 4. Filters: hidden for now; filter state and hook logic are unchanged */}
+        {/*
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterSelect
+            label="Payment"
+            value={paymentFilter}
+            onChange={(v) => setPaymentFilter(v as any)}
+            options={[
+              { value: 'ALL', label: 'All' },
+              { value: 'UNPAID', label: 'Unpaid' },
+              { value: 'PAYMENT_LINK_SENT', label: 'Link sent' },
+              { value: 'PAID', label: 'Paid' },
+            ]}
+          />
+          <FilterSelect
+            label="1040 balance"
+            value={liabilityFilter}
+            onChange={(v) => setLiabilityFilter(v as any)}
+            options={[
+              { value: 'ALL', label: 'All' },
+              { value: 'REFUND', label: 'Refund' },
+              { value: 'TAX_DUE', label: 'Tax due' },
+            ]}
+          />
+          <FilterSelect
+            label="Visa"
+            value={visaFilter}
+            onChange={setVisaFilter}
+            options={[
+              { value: 'ALL', label: 'All' },
+              { value: 'H-1B', label: 'H-1B' },
+              { value: 'L-1', label: 'L-1' },
+              { value: 'F-1 OPT', label: 'F-1 OPT' },
+              { value: 'H-4', label: 'H-4' },
+              { value: 'GREEN_CARD', label: 'Green Card' },
+              { value: 'US_CITIZEN', label: 'US Citizen' },
+            ]}
+          />
+          <FilterSelect
+            label="Complexity"
+            value={complexityFilter}
+            onChange={(v) => setComplexityFilter(v as any)}
+            options={[
+              { value: 'ALL', label: 'All' },
+              { value: 'BASIC', label: 'Basic' },
+              { value: 'MODERATE', label: 'Moderate' },
+              { value: 'COMPLEX', label: 'Complex' },
+              { value: 'SPECIALIZED_REVIEW', label: 'Specialized' },
+            ]}
+          />
+          <PriorityFilterSelect value={priorityFilter} onChange={setPriorityFilter} />
+        </div>
+        */}
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Payment Status Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <CreditCard className="w-3.5 h-3.5 text-purple-500" />
-              <span>Payment:</span>
-              <select
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Payments</option>
-                <option value="UNPAID">Unpaid / Pitching</option>
-                <option value="PAYMENT_LINK_SENT">Link Sent</option>
-                <option value="PAID">Paid</option>
-              </select>
-            </div>
-
-            {/* Refund / Due Liability Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Scale className="w-3.5 h-3.5 text-emerald-500" />
-              <span>1040 Balance:</span>
-              <select
-                value={liabilityFilter}
-                onChange={(e) => setLiabilityFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Balances</option>
-                <option value="REFUND">Refund (+$)</option>
-                <option value="TAX_DUE">Tax Due (-$)</option>
-              </select>
-            </div>
-
-            {/* Visa Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Globe className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Visa:</span>
-              <select
-                value={visaFilter}
-                onChange={(e) => setVisaFilter(e.target.value)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Visas</option>
-                <option value="H-1B">H-1B</option>
-                <option value="L-1">L-1</option>
-                <option value="F-1 OPT">F-1 OPT</option>
-                <option value="H-4">H-4</option>
-                <option value="GREEN_CARD">Green Card</option>
-                <option value="US_CITIZEN">US Citizen</option>
-              </select>
-            </div>
-
-            {/* Return Complexity Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Complexity:</span>
-              <select
-                value={complexityFilter}
-                onChange={(e) => setComplexityFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Complexities</option>
-                <option value="BASIC">🟢 Basic (1/4)</option>
-                <option value="MODERATE">🟡 Moderate (2/4)</option>
-                <option value="COMPLEX">🟠 Complex (3/4)</option>
-                <option value="SPECIALIZED_REVIEW">🔴 Specialized (4/4)</option>
-              </select>
-            </div>
-
-            <PriorityFilterSelect
-              value={priorityFilter}
-              onChange={setPriorityFilter}
-            />
-
-            {selectedRows.length > 0 && (
+        {/* 5. Table */}
+        <UnifiedTable<SalesLeadItem>
+          data={leads}
+          columns={columns}
+          enableSelection={true}
+          selectedRows={selectedRows}
+          onSelectionChange={setSelectedRows}
+          isLoading={isLoading}
+          searchPlaceholder="Search taxpayer, email, phone, closer..."
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          onRowClick={(item) => navigate(`/sales/manager/client/${item.taxpayerId || item.id || item.applicationId}`)}
+          extraHeaderActions={
+            selectedRows.length > 0 ? (
               <Button
                 size="sm"
                 onClick={() => handleOpenAssignModal()}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                className="h-8 px-3 text-xs font-medium bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <Users className="w-3.5 h-3.5" />
-                <span>Assign Selected ({selectedRows.length})</span>
+                <span>Assign selected ({selectedRows.length})</span>
               </Button>
-            )}
-          </div>
-        </div>
+            ) : undefined
+          }
+          emptyText={
+            activeTab === 'AWAITING_PITCH'
+              ? 'All QA-approved returns have been pitched, or no returns are awaiting pitch.'
+              : 'No sales returns match the selected filter criteria.'
+          }
+        />
       </div>
 
-      {/* 4. Separate Dedicated Table Section with Checkboxes */}
-      <UnifiedTable<SalesLeadItem>
-        data={leads}
-        columns={columns}
-        enableSelection={true}
-        selectedRows={selectedRows}
-        onSelectionChange={setSelectedRows}
-        isLoading={isLoading}
-        searchPlaceholder="Search taxpayer, email, phone, state..."
-        searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
-        onRowClick={(item) => navigate(`/sales/manager/client/${item.taxpayerId || item.id || item.applicationId}`)}
-        emptyText={
-          activeTab === 'AWAITING_PITCH'
-            ? 'All QA-approved returns have been pitched, or no returns are awaiting pitch.'
-            : 'No sales returns match the selected filter criteria.'
-        }
-      />
-
-      {/* 5. Floating Emerald Action Bar when rows are checked */}
+      {/* 6. Floating Action Bar when rows are checked */}
       <SalesFloatingActionBar
         selectedCount={selectedRows.length}
         onAutoRoundRobin={handleAutoRoundRobin}
@@ -273,7 +243,7 @@ export const SalesManagerQueueScreen: React.FC = () => {
         isLoading={isActionLoading}
       />
 
-      {/* 6. Lead Assignment Modal (Bulk or Single) */}
+      {/* 7. Lead Assignment Modal (Bulk or Single) */}
       <SalesLeadAssignmentModal
         isOpen={isAssignModalOpen}
         onClose={handleCloseAssignModal}

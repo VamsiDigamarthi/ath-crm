@@ -8,6 +8,7 @@ import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
 import { PriorityEditMenu } from '@/shared/components/PriorityEditMenu';
 import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { SalesStageBadge } from '../common/SalesStageBadge';
+import { ClientTypeBadge, CLIENT_TYPE_FILTER_OPTIONS } from '../common/ClientTypeBadge';
 import { SalesReturnToAdminModal } from '../common/SalesReturnToAdminModal';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { SYSTEM_PAYMENT_STATUSES } from '@/shared/constants/system-enums';
@@ -123,6 +124,13 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
             </span>
           );
         },
+      },
+      {
+        id: 'clientType',
+        header: 'CLIENT TYPE',
+        accessorKey: 'clientType',
+        meta: { filterType: 'enum', filterOptions: CLIENT_TYPE_FILTER_OPTIONS },
+        cell: ({ row }) => <ClientTypeBadge type={row.original.clientType} />,
       },
       {
         id: 'payment',

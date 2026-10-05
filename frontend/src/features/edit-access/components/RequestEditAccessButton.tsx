@@ -16,6 +16,9 @@ interface RequestEditAccessButtonProps {
   reasonError?: string;
   isSubmitting: boolean;
   onSubmit: () => void;
+  modalSubtitle?: string;
+  /** When set, the return is out of this user's hands: show a disabled button with this reason */
+  disabledReason?: string;
 }
 
 const formatUntil = (iso: string) =>
@@ -33,7 +36,21 @@ export const RequestEditAccessButton: React.FC<RequestEditAccessButtonProps> = (
   reasonError,
   isSubmitting,
   onSubmit,
+  modalSubtitle = 'This return has been submitted, so it is read-only. An admin can unlock it for you for a limited time.',
+  disabledReason,
 }) => {
+  if (disabledReason) {
+    return (
+      <span
+        className="h-8 px-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-400 cursor-not-allowed"
+        title={disabledReason}
+      >
+        <Lock className="w-3.5 h-3.5" />
+        Request edit access
+      </span>
+    );
+  }
+
   if (hasAccess && accessUntil) {
     return (
       <span
@@ -75,7 +92,7 @@ export const RequestEditAccessButton: React.FC<RequestEditAccessButtonProps> = (
         isOpen={isModalOpen}
         onClose={onClose}
         title="Request edit access"
-        subtitle="This return has been submitted, so it is read-only. An admin can unlock it for you for a limited time."
+        subtitle={modalSubtitle}
         size="md"
         footer={
           <div className="flex justify-end gap-2">

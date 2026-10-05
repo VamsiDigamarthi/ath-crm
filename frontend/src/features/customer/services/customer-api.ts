@@ -34,6 +34,7 @@ export interface CustomerDashboardResponse {
     city: string;
     state: string;
     isConvertedCustomer: boolean;
+    referralCode?: string | null;
   };
   application: {
     id: string;

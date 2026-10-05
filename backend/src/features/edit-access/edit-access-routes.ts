@@ -22,7 +22,14 @@ import {
 
 const router = Router();
 
-const REQUESTER_ROLES = [Role.DOC_AGENT, Role.DOC_TEAM_LEAD, Role.DOC_MANAGER];
+const REQUESTER_ROLES = [
+  Role.DOC_AGENT,
+  Role.DOC_TEAM_LEAD,
+  Role.DOC_MANAGER,
+  Role.SALES_AGENT,
+  Role.SALES_TEAM_LEAD,
+  Role.SALES_MANAGER,
+];
 
 // Staff side: check own access and raise a request for a submitted return
 router.get(

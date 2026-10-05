@@ -3,6 +3,44 @@ import { ApplicationStage, Role, NotificationCategory, NotificationPriority, Aud
 import { StorageService } from "../../utils/storage-service.js";
 import { ApplicationNoteService } from "../application-notes/application-note-service.js";
 
+export type ClientType = 'PAID' | 'UNPAID' | 'NEW_COLD_CALLING' | 'NEW_REFERRAL';
+
+const isAppPaid = (a: any) =>
+  a.currentStage === ApplicationStage.FILING_SUCCESS ||
+  a.currentStage === ApplicationStage.FILING_QUEUE ||
+  a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+  a.quotes?.some((q: any) => q.status === 'PAID') ||
+  a.taxDraftSummary?.paymentStatus === 'PAID' ||
+  Number(a.taxDraftSummary?.paidAmount) > 0;
+
+/**
+ * Client type for one tax year, based on the year before it:
+ * - PAID: previous year was filed & paid with us
+ * - UNPAID: previous year exists with us but was never paid
+ * - NEW_REFERRAL / NEW_COLD_CALLING: no previous year with us; split by how they came in
+ */
+export const computeClientType = (
+  taxYear: number,
+  filingType: string | null | undefined,
+  allCustomerApps: any[],
+  customer: any
+): ClientType => {
+  const previousYearApps = allCustomerApps.filter((a) => a.taxYear === taxYear - 1);
+  const previous =
+    previousYearApps.find((a) => (a.filingType || 'INDIVIDUAL') === (filingType || 'INDIVIDUAL')) || previousYearApps[0];
+
+  if (previous) return isAppPaid(previous) ? 'PAID' : 'UNPAID';
+
+  const isReferral = Boolean(
+    customer?.referredByCustomerId ||
+      allCustomerApps.some((a) => {
+        const source = String(a.taxDraftSummary?.leadSource || a.taxDraftSummary?.source || '').toUpperCase();
+        return source === 'REFERRAL';
+      })
+  );
+  return isReferral ? 'NEW_REFERRAL' : 'NEW_COLD_CALLING';
+};
+
 export class SalesService {
   /**
    * Helper to dynamically compute return complexity based on documents, schedules, deductions, and foreign reporting
@@ -335,11 +373,13 @@ export class SalesService {
         complexity: SalesService.computeReturnComplexity(app),
         currentStage,
         clientPaymentStatus,
+        clientType: computeClientType(app.taxYear, app.filingType, allCustomerApps, customer),
         allApplications: visibleApplications.map((a: any) => ({
           id: a.id,
           taxYear: a.taxYear,
           filingType: a.filingType,
           currentStage: a.currentStage,
+          clientType: computeClientType(a.taxYear, a.filingType, allCustomerApps, customer),
           assignedSalesAgentId: a.assignedSalesAgentId,
           assignedSalesAgent: a.assignedSalesAgent,
         })),

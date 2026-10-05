@@ -7,6 +7,7 @@ import { Button } from '@/shared/components/Button';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { SalesStageBadge } from '../components/common/SalesStageBadge';
+import { ClientTypeBadge } from '../components/common/ClientTypeBadge';
 import { SYSTEM_PAYMENT_STATUSES } from '@/shared/constants/system-enums';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { salesService } from '../services/sales-service';
@@ -37,6 +38,7 @@ const useSalesClientYears = (taxpayerId?: string) => {
               taxYear: appItem.taxYear,
               filingType: appItem.filingType || 'INDIVIDUAL',
               currentStage: appItem.currentStage || baseLead.currentStage,
+              clientType: appItem.clientType,
               assignedSalesAgent: appItem.assignedSalesAgent || baseLead.assignedSalesAgent,
             }
           );
@@ -146,6 +148,12 @@ export const SalesClientYearsScreen: React.FC = () => {
             </span>
           );
         },
+      },
+      {
+        id: 'clientType',
+        header: 'Client Type',
+        accessorKey: 'clientType',
+        cell: ({ row }) => <ClientTypeBadge type={row.original.clientType} />,
       },
       {
         id: 'payment',

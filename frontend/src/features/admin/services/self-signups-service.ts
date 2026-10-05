@@ -119,6 +119,7 @@ export interface SelfSignupsResponse {
     inProgressCount: number;
     completedFilingsCount: number;
   };
+  assignmentCounts?: { new: number; assigned: number };
   availableDocAgents: Array<{
     id: string;
     firstName: string;
@@ -143,6 +144,7 @@ export const selfSignupsService = {
     taxYear?: number;
     stage?: string;
     priority?: string;
+    assignment?: 'NEW' | 'ASSIGNED';
   }): Promise<SelfSignupsResponse> => {
     const res: any = await apiClient.get('/admin/self-signups', { params });
     return res.data?.data || res.data || res;

@@ -8,6 +8,29 @@ import { NotAllowedError } from "../../errors/not-allowed-error.js";
 const DOCUMENTER_OPEN_STAGES: ApplicationStage[] = [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH];
 
 const DOCUMENTER_ROLES: Role[] = [Role.DOC_AGENT, Role.DOC_TEAM_LEAD, Role.DOC_MANAGER];
+// Stages where the return has left sales (sent back or dispatched), so sales can't ask to edit
+const SALES_CLOSED_STAGES: ApplicationStage[] = [
+  ApplicationStage.CORRECTION_NEEDED,
+  ApplicationStage.DOC_OUTREACH,
+  ApplicationStage.DOC_PREP,
+  ApplicationStage.FILING_QUEUE,
+  ApplicationStage.FILING_IN_PROGRESS,
+  ApplicationStage.FILING_SUCCESS,
+];
+
+// Sales never edit tax data by default, so they request access while the return is with them
+const SALES_ROLES: Role[] = [Role.SALES_AGENT, Role.SALES_TEAM_LEAD, Role.SALES_MANAGER];
+
+export const EDIT_ACCESS_REQUESTER_ROLES: Role[] = [...DOCUMENTER_ROLES, ...SALES_ROLES];
+
+const departmentFor = (role: Role) => (SALES_ROLES.includes(role) ? "SALES" : "DOCUMENTER");
+
+// Where the requester lands from the decision notification
+const returnUrlFor = (role: Role, applicationId: string) => {
+  if (role === Role.SALES_AGENT) return `/sales/agent/pitch/${applicationId}`;
+  if (SALES_ROLES.includes(role)) return `/sales/manager/pitch/${applicationId}`;
+  return `/documenter/agent/lead/${applicationId}`;
+};
 
 const fullName = (u?: { firstName?: string | null; lastName?: string | null; email?: string | null } | null) =>
   u ? `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.email || "Staff" : "Staff";
@@ -45,9 +68,10 @@ export class EditAccessService {
   }
 
   static async createRequest(params: { applicationId: string; requesterId: string; requesterRole: Role; reason: string }) {
-    if (!DOCUMENTER_ROLES.includes(params.requesterRole)) {
+    if (!EDIT_ACCESS_REQUESTER_ROLES.includes(params.requesterRole)) {
       throw new NotAllowedError();
     }
+    const department = departmentFor(params.requesterRole);
 
     const app = await prisma.taxApplication.findUnique({
       where: { id: params.applicationId },
@@ -55,7 +79,11 @@ export class EditAccessService {
     });
     if (!app) throw new NotFoundError("Tax application not found");
 
-    if (DOCUMENTER_OPEN_STAGES.includes(app.currentStage)) {
+    if (department === "SALES" && SALES_CLOSED_STAGES.includes(app.currentStage)) {
+      throw new BadRequestError("This return is no longer with sales, so edit access can't be requested.");
+    }
+
+    if (department === "DOCUMENTER" && DOCUMENTER_OPEN_STAGES.includes(app.currentStage)) {
       throw new BadRequestError("You can already edit this return. Edit access is only needed after it has been submitted.");
     }
 
@@ -68,7 +96,7 @@ export class EditAccessService {
       data: {
         applicationId: params.applicationId,
         requesterId: params.requesterId,
-        department: "DOCUMENTER",
+        department,
         reason: params.reason,
       },
     });
@@ -146,7 +174,10 @@ export class EditAccessService {
   }) {
     const existing = await prisma.editAccessRequest.findUnique({
       where: { id: params.id },
-      include: { application: { select: { taxYear: true, customer: { select: { firstName: true, lastName: true } } } } },
+      include: {
+        application: { select: { taxYear: true, customer: { select: { firstName: true, lastName: true } } } },
+        requester: { select: { role: true } },
+      },
     });
     if (!existing) throw new NotFoundError("Edit access request not found");
     if (existing.status !== params.allowedFrom) {
@@ -187,11 +218,11 @@ export class EditAccessService {
         data: {
           recipientUserId: existing.requesterId,
           applicationId: existing.applicationId,
-          category: NotificationCategory.DOCUMENTER,
           priority: NotificationPriority.NORMAL,
           title: copy[params.status].title,
           message: copy[params.status].message,
-          actionUrl: `/documenter/agent/lead/${existing.applicationId}`,
+          category: existing.department === "SALES" ? NotificationCategory.SALES : NotificationCategory.DOCUMENTER,
+          actionUrl: returnUrlFor(existing.requester.role, existing.applicationId),
           actionLabel: "Open return",
           relatedLeadName: clientName,
         },

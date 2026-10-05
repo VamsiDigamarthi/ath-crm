@@ -435,10 +435,11 @@ export const autoRoundRobinReturnedLeads = async (req: Request, res: Response) =
 
 // Admin Self-Signups & Direct Web Registrations
 export const getSelfSignups = async (req: Request, res: Response) => {
-  const { search, visaType, taxYear, stage, priority, page, limit } = req.query;
+  const { search, visaType, taxYear, stage, priority, page, limit, assignment } = req.query;
 
   const { SelfSignupsService } = await import("./self-signups-service.js");
   const result = await SelfSignupsService.getSelfSignups({
+    assignment: assignment === 'NEW' || assignment === 'ASSIGNED' ? assignment : undefined,
     search: typeof search === 'string' ? search : undefined,
     visaType: typeof visaType === 'string' ? visaType : undefined,
     taxYear: taxYear ? Number(taxYear) : undefined,

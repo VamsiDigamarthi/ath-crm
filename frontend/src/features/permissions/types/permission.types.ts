@@ -24,6 +24,8 @@ export const ROLE_LABELS: Record<string, string> = {
   DOC_MANAGER: 'Documenter Manager',
   SALES_AGENT: 'Sales Agent',
   SALES_MANAGER: 'Sales Manager',
+  SALES_TEAM_LEAD: 'Sales Team Lead',
+  DOC_TEAM_LEAD: 'Documenter Team Lead',
   FILE_OP_AGENT: 'Filing Agent',
   FILE_OP_MANAGER: 'Filing Manager',
 };

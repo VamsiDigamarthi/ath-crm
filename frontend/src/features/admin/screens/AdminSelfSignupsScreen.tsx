@@ -6,6 +6,7 @@ import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { LeadAssignmentModal } from '@/features/documenter/components/LeadAssignmentModal';
 import { Button } from '@/shared/components/Button';
+import { AppTabs } from '@/shared/components/AppTabs';
 
 export const AdminSelfSignupsScreen: React.FC = () => {
   const {
@@ -28,6 +29,9 @@ export const AdminSelfSignupsScreen: React.FC = () => {
     handleCloseAssignModal,
     handleDirectAssign,
     handleAutoRoundRobin,
+    assignmentTab,
+    assignmentCounts,
+    handleAssignmentTabChange,
   } = useSelfSignups();
 
   const handleSingleAssign = (lead: SelfSignupLeadItem) => {
@@ -67,6 +71,16 @@ export const AdminSelfSignupsScreen: React.FC = () => {
           </p>
         </div>
       </div>
+
+      <AppTabs
+        tabs={[
+          { id: 'NEW', label: 'New leads', count: assignmentCounts.new },
+          { id: 'ASSIGNED', label: 'Assigned', count: assignmentCounts.assigned },
+        ]}
+        activeTab={assignmentTab}
+        onChange={(id) => handleAssignmentTabChange(id as 'NEW' | 'ASSIGNED')}
+        size="sm"
+      />
 
       {/* Selected Rows Action Banner */}
       {selectedRows.length > 0 && (
@@ -116,7 +130,11 @@ export const AdminSelfSignupsScreen: React.FC = () => {
           onPageSizeChange: handleLimitChange,
         }}
         onExportExcel={handleExport}
-        emptyText="No direct self-signups found matching your search criteria."
+        emptyText={
+          assignmentTab === 'NEW'
+            ? 'No new sign-ups waiting. Everyone has been assigned.'
+            : 'No assigned sign-ups yet.'
+        }
       />
 
       {isAssignModalOpen && (
