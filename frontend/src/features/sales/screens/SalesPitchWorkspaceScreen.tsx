@@ -455,6 +455,8 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
                   remainingBalance={lead.remainingBalance}
                   paymentHistory={lead.paymentHistory}
                   esignStatus={lead.esignStatus}
+                  form8879SendCount={lead.form8879SendCount}
+                  form8879LastSentAt={lead.form8879LastSentAt}
                   applicationId={lead.id || lead.applicationId}
                   customerId={lead.taxpayerId || (lead as any).customerId}
                   isLocked={isLocked}
@@ -514,6 +516,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         onCloseEsignModal={() => setIsEsignModalOpen(false)}
         onEsignSuccess={handleEsignSuccess}
         onPaymentLinkSent={fetchLeadDetail}
+        onForm8879Sent={fetchLeadDetail}
       />
 
       {/* 5. Dispatch to Filing Confirmation Dialog */}

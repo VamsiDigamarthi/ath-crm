@@ -179,6 +179,17 @@ export class SalesController {
     }
   }
 
+  public static async sendForm8879(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.currentUser?.id || (req as any).user?.id || '';
+      const result = await SalesService.sendForm8879(id, req.body, userId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(err.statusCode || 500).json({ message: err.message || 'Failed to send Form 8879' });
+    }
+  }
+
   public static async returnLeadToAdmin(req: Request, res: Response) {
     try {
       const id = req.params.id as string;

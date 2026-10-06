@@ -239,6 +239,19 @@ export const salesService = {
   },
 
   /**
+   * Email the Form 8879 signing link to the client (first send or a re-share)
+   */
+  async sendForm8879(id: string, payload: {
+    primaryEmail?: string;
+    secondaryEmail?: string;
+    sendToPrimary?: boolean;
+    sendToSecondary?: boolean;
+    emailedByStaff?: boolean;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/send-form-8879`, payload);
+  },
+
+  /**
    * Return a lead back to Admin / Unassigned Pool (when client does not convert or rejects fee)
    */
   async returnLeadToAdmin(id: string, reason?: string) {

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppTabs } from '@/shared/components/AppTabs';
+import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { salesService } from '../../services/sales-service';
 import type { SalesLeadItem, PaymentHistoryItem } from '../../types/sales.types';
 import toast from 'react-hot-toast';
@@ -47,6 +48,7 @@ interface PitchPaymentAndEsignModalsProps {
   onEsignSuccess: (meta?: { file?: File; fileName?: string; method?: string; pin?: string }) => void;
   onDispatchToFiling?: () => void;
   onPaymentLinkSent?: () => void;
+  onForm8879Sent?: () => void;
 }
 
 export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProps> = ({
@@ -58,6 +60,7 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
   onCloseEsignModal,
   onEsignSuccess,
   onPaymentLinkSent,
+  onForm8879Sent,
 }) => {
   const [paymentView, setPaymentView] = useState<'PAY' | 'HISTORY'>('PAY');
   const [paymentTab, setPaymentTab] = useState<'CARD' | 'LINK'>('CARD');
@@ -232,14 +235,27 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
     }
   };
 
+  // Form 8879 goes out through the staff template mailer (choose template, edit subject/body);
+  // once it is sent, the return is recorded as SENT (not signed) so it can be shared again later
+  const [isForm8879EmailOpen, setIsForm8879EmailOpen] = useState(false);
+  const form8879PortalLink = `${window.location.origin}/customer/organizer?taxYear=${lead.taxYear}&tab=m_review_draft`;
+
   const handleSendEsignLink = () => {
-    setIsProcessingEsign(true);
-    setTimeout(() => {
-      setIsProcessingEsign(false);
-      onEsignSuccess({ method: 'EMAIL_LINK', pin: taxpayerPin });
-      onCloseEsignModal();
-      toast.success(`Form 8879 E-Sign Link dispatched to ${lead.taxpayerEmail}! Signed audit log recorded in database. ✍️🌟`);
-    }, 800);
+    onCloseEsignModal();
+    setIsForm8879EmailOpen(true);
+  };
+
+  const handleForm8879EmailSent = async ({ recipientEmail }: { recipientEmail: string }) => {
+    try {
+      await salesService.sendForm8879(lead.id || lead.applicationId, {
+        primaryEmail: recipientEmail,
+        sendToPrimary: true,
+        emailedByStaff: true,
+      });
+      onForm8879Sent?.();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Email sent, but Form 8879 status was not updated');
+    }
   };
 
   const handleUploadSignedDoc = () => {
@@ -937,30 +953,23 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
             {/* Content for Mode 1: Send E-Sign Link to Client */}
             {esignTab === 'EMAIL_LINK' && (
               <div className="space-y-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-blue-900">
-                    <ShieldCheck className="w-4 h-4 text-blue-600" />
-                    <span>IRS Tamper-Evident DocuSign Link (100% Legal Proof)</span>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <div className="flex items-center gap-1.5 font-semibold text-slate-900">
+                    <ShieldCheck className="w-4 h-4 text-slate-500" />
+                    <span>Email the client a link to sign Form 8879</span>
                   </div>
-                  <p className="text-blue-800 text-[11px] leading-relaxed">
-                    A secure cryptographic e-sign link will be sent to the taxpayer's verified email. The taxpayer draws their signature, and the system generates an IRS audit certificate with <strong>IP Address, Geo-Location &amp; SHA-256 hash</strong>.
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Next you pick an email template (subject &amp; body are editable) and it goes to the client from your email. Use <code>{'{{portal_link}}'}</code> in the template for the signing link.
+                    The return stays <strong>Sent</strong> until they sign. If they didn't get it, share it again from here.
                   </p>
+                  {(lead.form8879SendCount || 0) > 0 && lead.form8879LastSentAt && (
+                    <p className="text-[11px] text-slate-500 pt-1">
+                      Already sent {lead.form8879SendCount}× · last on{' '}
+                      {new Date(lead.form8879LastSentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    </p>
+                  )}
                 </div>
 
-                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2 text-[11px]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Taxpayer Email:</span>
-                    <span className="font-bold text-slate-900">{lead.taxpayerEmail}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Taxpayer SMS:</span>
-                    <span className="font-bold text-slate-900">{lead.taxpayerPhone}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Certified Refund:</span>
-                    <span className="font-bold text-[#16A34A]">+${lead.federalRefund.toLocaleString()}</span>
-                  </div>
-                </div>
               </div>
             )}
 
@@ -1094,7 +1103,13 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
                   className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>{isProcessingEsign ? 'Sending...' : 'Send E-Sign Link to Client'}</span>
+                  <span>
+                    {isProcessingEsign
+                      ? 'Sending...'
+                      : (lead.form8879SendCount || 0) > 0
+                      ? 'Share Form 8879 again'
+                      : 'Send Form 8879 to client'}
+                  </span>
                 </Button>
               )}
 
@@ -1125,6 +1140,23 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
           </div>
         </div>
       )}
+
+      {/* Form 8879: choose an email template, edit subject/body, send to the customer */}
+      <SendEmailModal
+        isOpen={isForm8879EmailOpen}
+        onClose={() => setIsForm8879EmailOpen(false)}
+        title={(lead.form8879SendCount || 0) > 0 ? 'Share Form 8879 again' : 'Send Form 8879 to client'}
+        applicationId={lead.id || lead.applicationId}
+        recipientEmail={lead.taxpayerEmail}
+        recipientName={lead.taxpayerName}
+        taxYear={lead.taxYear}
+        visaType={lead.visaType}
+        fedRefund={lead.federalRefund}
+        stateRefund={lead.stateRefund}
+        totalRefund={(lead.federalRefund || 0) + (lead.stateRefund || 0)}
+        portalLink={form8879PortalLink}
+        onSuccess={handleForm8879EmailSent}
+      />
     </>
   );
 };

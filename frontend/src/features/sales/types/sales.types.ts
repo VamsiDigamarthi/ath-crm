@@ -206,6 +206,9 @@ export interface SalesLeadItem extends Record<string, unknown> {
   paidAt?: string;
   transactionRef?: string;
   esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';
+  /** How many times Form 8879 was emailed to the client, and when last */
+  form8879SendCount?: number;
+  form8879LastSentAt?: string | null;
   esignCompletedAt?: string;
 
   // Negotiation & Closer Outreach Status

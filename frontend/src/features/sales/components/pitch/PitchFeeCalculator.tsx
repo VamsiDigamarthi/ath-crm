@@ -14,7 +14,8 @@ import {
   Loader2,
   Search,
   ChevronDown,
-  X
+  X,
+  Send
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { CouponsApiService } from '@/features/coupons/services/coupon-service';
@@ -40,6 +41,8 @@ interface PitchFeeCalculatorProps {
   remainingBalance?: number;
   paymentHistory?: PaymentHistoryItem[];
   onOpenPaymentHistoryModal?: () => void;
+  form8879SendCount?: number;
+  form8879LastSentAt?: string | null;
 }
 
 export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
@@ -57,6 +60,8 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   remainingBalance,
   paymentHistory = [],
   onOpenPaymentHistoryModal,
+  form8879SendCount = 0,
+  form8879LastSentAt,
 }) => {
   const [couponCode, setCouponCode] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
@@ -760,7 +765,36 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
               </div>
             )}
 
-            {esignStatus !== 'SIGNED' ? (
+            {esignStatus === 'SENT' ? (
+              // Sent but not signed yet: show when, and let sales share it again
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col leading-tight text-right">
+                  <span className="text-xs font-bold text-amber-300">Form 8879 sent · awaiting signature</span>
+                  {form8879LastSentAt && (
+                    <span className="text-[10px] text-slate-400">
+                      Last sent{' '}
+                      {new Date(form8879LastSentAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      {form8879SendCount > 1 ? ` · ${form8879SendCount}×` : ''}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isLocked}
+                  title={isLocked ? lockReason || 'E-Sign is locked while return is in revision' : 'Send Form 8879 again, e.g. if the client did not receive it'}
+                  onClick={() => !isLocked && onOpenEsignModal()}
+                  className={`border-white/20 text-xs font-bold flex items-center gap-1.5 ${
+                    isLocked
+                      ? 'bg-white/5 text-slate-400 cursor-not-allowed opacity-60'
+                      : 'bg-white/10 hover:bg-white/20 text-white cursor-pointer'
+                  }`}
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Share again</span>
+                </Button>
+              </div>
+            ) : esignStatus !== 'SIGNED' ? (
               <Button
                 variant="outline"
                 size="sm"

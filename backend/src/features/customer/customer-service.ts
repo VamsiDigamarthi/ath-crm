@@ -1791,9 +1791,17 @@ export class CustomerService {
       return d;
     });
 
+    // Once every document that needs a signature is signed, the Form 8879 sent by sales counts as signed
+    const needsSignature = updatedDeliverables.filter((d) => d.requiresEsign !== false);
+    const allSigned = needsSignature.length > 0 && needsSignature.every((d) => Boolean(d.signedDocument));
+    const markSigned = allSigned && currentDraft.esignStatus !== 'SIGNED';
+
     const updatedSummary = {
       ...currentDraft,
       deliverableDocuments: updatedDeliverables,
+      ...(markSigned
+        ? { esignStatus: 'SIGNED', esignMethod: 'CLIENT_PORTAL', esignCompletedAt: new Date().toISOString() }
+        : {}),
       updatedAt: new Date().toISOString(),
     };
 
