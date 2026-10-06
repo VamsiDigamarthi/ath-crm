@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { 
   X, 
@@ -43,6 +44,24 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
   const [selectedAppId, setSelectedAppId] = useState<string>(lead?.id || '');
   const [fullDetails, setFullDetails] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const handleEsc = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    },
+    [onClose]
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.addEventListener('keydown', handleEsc);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen, handleEsc]);
 
   useEffect(() => {
     if (!isOpen || !lead?.id) {
@@ -128,29 +147,41 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
 
   const isAssigned = Boolean(fullDetails?.assignedPrepAgent?.id || lead.assignedPreparer?.id || activeAppLead.assignedPreparer?.id);
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 font-sans animate-in fade-in duration-150">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 font-sans animate-in fade-in duration-150"
+      aria-modal="true"
+      role="dialog"
+    >
+      {/* Backdrop */}
       <div 
-        className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Modal Dialog Card */}
+      <div 
+        className="relative z-10 bg-white rounded-md border border-slate-300 shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. Modal Header */}
-        <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-50 via-white to-slate-50">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold text-lg flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/10">
+        <div className="px-6 py-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-md bg-slate-100 border border-slate-200 text-slate-800 font-bold text-base flex items-center justify-center shrink-0">
               {taxpayerName.charAt(0).toUpperCase()}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight">
                   {taxpayerName}
                 </h3>
                 <ClientPaymentStatusChip lead={fullDetails || lead} scope="return" size="sm" />
                 <PriorityBadge priority={fullDetails?.priority || lead.priority || 'NO_PRIORITY'} size="sm" />
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                   TY {filingYear}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                   {visaType}
                 </span>
                 <PrepComplexityBadge complexity={fullDetails?.complexity || lead.complexity || 'STANDARD'} />
@@ -179,7 +210,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                 onClose();
                 navigate(`/prep-review/preparer/workspace/${currentAppId}`);
               }}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer rounded-md"
               title="Open Form 1040 Drafting Workspace"
             >
               <Calculator className="w-3.5 h-3.5" />
@@ -194,7 +225,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                   onClose();
                   navigate(`/prep-review/reviewer/audit/${currentAppId}`);
                 }}
-                className="border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                className="border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 cursor-pointer rounded-md"
                 title="Open QA Compliance Audit Deck"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
@@ -210,7 +241,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                   onClose();
                   onAssign(activeAppLead);
                 }}
-                className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                className="border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 cursor-pointer rounded-md"
               >
                 <UserCheck className="w-3.5 h-3.5" />
                 <span>Assign Staff</span>
@@ -220,20 +251,20 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+              className="p-1.5 rounded-md text-slate-500 hover:text-black hover:bg-slate-100 transition-colors cursor-pointer"
               title="Close Dialog"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* 1.2 Multi-Year Return Switcher Tabs */}
         {availableApplications && availableApplications.length > 0 && (
-          <div className="px-5 sm:px-6 py-2.5 bg-slate-100/90 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
-                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                <Calendar className="w-3.5 h-3.5 text-slate-500" />
                 <span>Tax Year Filings:</span>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -244,29 +275,21 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                       key={appItem.id}
                       type="button"
                       onClick={() => setSelectedAppId(appItem.id)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
                         isSelected
-                          ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
-                          : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                       }`}
                     >
-                      <span>TY {appItem.taxYear}</span>
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
-                        isSelected ? 'bg-slate-800 text-emerald-400' : 'bg-slate-100 text-slate-600'
+                      <span className="font-semibold">TY {appItem.taxYear}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                        isSelected ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
                       }`}>
                         {appItem.filingType || 'INDIVIDUAL'}
                       </span>
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
                         isSelected
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          : appItem.currentStage === 'DOC_OUTREACH'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                          : appItem.currentStage === 'DOC_PREP' || appItem.currentStage === 'CORRECTION_NEEDED'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : appItem.currentStage?.startsWith('SALES')
-                          ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                          : appItem.currentStage?.startsWith('FILING')
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                           : 'bg-slate-100 text-slate-600'
                       }`}>
                         {appItem.currentStage?.replace(/_/g, ' ') || 'Intake'}
@@ -278,13 +301,13 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
             </div>
 
             <div className="text-[11px] text-slate-500 font-medium">
-              Viewing: <strong className="text-slate-800 font-bold">TY {filingYear} ({fullDetails?.filingType || (lead as any).filingType || 'INDIVIDUAL'})</strong>
+              Viewing: <strong className="text-slate-800 font-semibold">TY {filingYear} ({fullDetails?.filingType || (lead as any).filingType || 'INDIVIDUAL'})</strong>
             </div>
           </div>
         )}
 
         {/* 2. Navigation Tabs */}
-        <div className="px-5 sm:px-6 bg-slate-50/50">
+        <div className="px-6 bg-white border-b border-slate-200">
           <AppTabs
             tabs={[
               { id: 'OVERVIEW', label: 'Profile & Allocation', icon: User },
@@ -299,64 +322,64 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
         </div>
 
         {/* 3. Tab Body Content */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {isLoading ? (
             <div className="py-16 text-center text-slate-400 space-y-2">
-              <RefreshCw className="w-8 h-8 animate-spin mx-auto text-emerald-600" />
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto text-[#16A34A]" />
               <p className="text-xs font-semibold">Loading taxpayer return file...</p>
             </div>
           ) : activeTab === 'OVERVIEW' ? (
             <div className="space-y-6 animate-in fade-in duration-150">
               {/* Demographics & Contact Grid */}
-              <div className="bg-slate-50/60 rounded-xl border border-slate-200 p-4 sm:p-5">
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">
+              <div className="bg-white rounded-md border border-slate-200 p-5">
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3.5 pb-2 border-b border-slate-100">
                   Taxpayer Master Demographics
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                   <div>
                     <span className="text-[11px] text-slate-400 font-medium block">Full Legal Name</span>
-                    <span className="font-bold text-slate-800">{taxpayerName}</span>
+                    <span className="font-semibold text-slate-900">{taxpayerName}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-medium block">Tax Filing Year</span>
-                    <span className="font-bold text-slate-800">TY {filingYear}</span>
+                    <span className="font-semibold text-slate-900">TY {filingYear}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-medium block">Visa Classification</span>
-                    <span className="font-bold text-slate-800">{visaType}</span>
+                    <span className="font-semibold text-slate-900">{visaType}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-medium block">Marital Filing Status</span>
-                    <span className="font-bold text-slate-800">{lead.maritalStatus || customer.maritalStatus || 'Single'}</span>
+                    <span className="font-semibold text-slate-900">{lead.maritalStatus || customer.maritalStatus || 'Single'}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-medium block">Occupation / Title</span>
-                    <span className="font-bold text-slate-800">{customer.occupation || 'Professional'}</span>
+                    <span className="font-semibold text-slate-900">{customer.occupation || 'Professional'}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-medium block">Date of Birth</span>
-                    <span className="font-bold text-slate-800">{customer.dob || 'On File'}</span>
+                    <span className="font-semibold text-slate-900">{customer.dob || 'On File'}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-medium block">Primary Phone</span>
-                    <span className="font-bold text-slate-800">{taxpayerPhone}</span>
+                    <span className="font-semibold text-slate-900">{taxpayerPhone}</span>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-medium block">Email Address</span>
-                    <span className="font-bold text-slate-800">{taxpayerEmail}</span>
+                    <span className="font-semibold text-slate-900">{taxpayerEmail}</span>
                   </div>
                 </div>
               </div>
 
               {/* Staff Assignments Matrix Card */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs space-y-3">
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <div className="bg-white rounded-md border border-slate-200 p-5 space-y-3">
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider pb-2 border-b border-slate-100">
                   Operational Staff Allocation Matrix
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                   {/* Tax Preparer */}
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-100 text-[#16A34A] flex items-center justify-center shrink-0">
+                  <div className="p-4 rounded-md border border-slate-200 bg-slate-50/60 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-md bg-white border border-slate-200 text-[#16A34A] flex items-center justify-center shrink-0">
                       <Calculator className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
@@ -371,8 +394,8 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                   </div>
 
                   {/* QA Reviewer */}
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                  <div className="p-4 rounded-md border border-slate-200 bg-slate-50/60 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-md bg-white border border-slate-200 text-purple-700 flex items-center justify-center shrink-0">
                       <ShieldCheck className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
@@ -387,8 +410,8 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                   </div>
 
                   {/* Documenter Agent */}
-                  <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                  <div className="p-4 rounded-md border border-slate-200 bg-slate-50/60 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-md bg-white border border-slate-200 text-blue-700 flex items-center justify-center shrink-0">
                       <User className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
@@ -411,22 +434,22 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                   <h4 className="text-sm font-bold text-slate-900">Taxpayer Uploaded Document Vault</h4>
                   <p className="text-xs text-slate-500">Verified wage statements, 1099s, and identification forms.</p>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                   {documents.length} File(s) in Vault
                 </span>
               </div>
 
               {documents.length === 0 ? (
-                <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-slate-400 space-y-2">
+                <div className="p-8 text-center bg-slate-50 rounded-md border border-slate-200 text-slate-400 space-y-2">
                   <FileText className="w-8 h-8 mx-auto text-slate-300" />
                   <p className="text-xs font-medium">No document attachments uploaded for this tax year.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {documents.map((doc: any) => (
-                    <div key={doc.id} className="p-4 rounded-xl border border-slate-200 bg-white hover:border-slate-300 shadow-xs flex items-center justify-between gap-3">
+                    <div key={doc.id} className="p-3.5 rounded-md border border-slate-200 bg-white hover:border-slate-300 shadow-2xs flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-lg bg-emerald-50 text-[#16A34A] border border-emerald-100 flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
                           <FileText className="w-4 h-4" />
                         </div>
                         <div className="min-w-0 truncate">
@@ -443,7 +466,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                             href={doc.fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors"
+                            className="p-1.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors"
                             title="View Document"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -462,46 +485,42 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                   <h4 className="text-sm font-bold text-slate-900">Form 1040 Calculation Summary</h4>
                   <p className="text-xs text-slate-500">Preliminary computation prepared by CPA and certified for Sales.</p>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                  draftSummary?.status === 'QA_APPROVED'
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                }`}>
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold border bg-slate-100 text-slate-700 border-slate-200">
                   {draftSummary?.status ? draftSummary.status.replace(/_/g, ' ') : 'Under Preparation'}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="p-3.5 rounded-md bg-slate-50/60 border border-slate-200">
                   <span className="text-[11px] text-slate-400 font-medium block">Line 1a: Total W-2 Wages</span>
                   <span className="text-base font-bold text-slate-900 mt-1 block">
                     ${Number(draftSummary?.w2Wages || draftSummary?.wages || 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="p-3.5 rounded-md bg-slate-50/60 border border-slate-200">
                   <span className="text-[11px] text-slate-400 font-medium block">Line 9: Total Gross Income</span>
                   <span className="text-base font-bold text-slate-900 mt-1 block">
                     ${Number(draftSummary?.grossIncome || draftSummary?.agi || 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="p-3.5 rounded-md bg-slate-50/60 border border-slate-200">
                   <span className="text-[11px] text-slate-400 font-medium block">Line 12: Standard Deduction</span>
                   <span className="text-base font-bold text-slate-900 mt-1 block">
                     ${Number(draftSummary?.standardDeduction || 29200).toLocaleString()}
                   </span>
                 </div>
-                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                <div className="p-3.5 rounded-md bg-emerald-50/60 border border-emerald-200">
                   <span className="text-[11px] text-emerald-700 font-bold block">Estimated Federal Refund</span>
-                  <span className="text-base font-extrabold text-[#16A34A] mt-1 block">
+                  <span className="text-base font-bold text-[#16A34A] mt-1 block">
                     +${Number(draftSummary?.estimatedFedRefund || draftSummary?.federalRefund || 0).toLocaleString()}
                   </span>
                 </div>
               </div>
 
               {draftSummary?.reviewerNotes && (
-                <div className="p-4 rounded-xl bg-purple-50/70 border border-purple-200 text-xs space-y-1">
-                  <span className="font-bold text-purple-900 block">QA Compliance Auditor Sign-off Remarks:</span>
-                  <p className="text-purple-800 leading-relaxed">{draftSummary.reviewerNotes}</p>
+                <div className="p-4 rounded-md bg-slate-50 border border-slate-200 text-xs space-y-1">
+                  <span className="font-bold text-slate-900 block">QA Compliance Auditor Sign-off Remarks:</span>
+                  <p className="text-slate-700 leading-relaxed">{draftSummary.reviewerNotes}</p>
                 </div>
               )}
             </div>
@@ -520,7 +539,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
         </div>
 
         {/* 4. Footer */}
-        <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
           <span className="text-xs text-slate-400 font-medium">
             Case ID: <span className="font-mono text-slate-700 font-semibold">{currentAppId}</span>
           </span>
@@ -530,7 +549,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
               variant="outline"
               size="sm"
               onClick={onClose}
-              className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
+              className="border-slate-300 text-slate-700 text-xs font-semibold cursor-pointer rounded-md hover:bg-slate-100"
             >
               Close
             </Button>
@@ -540,7 +559,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
                 onClose();
                 navigate(`/prep-review/preparer/workspace/${currentAppId}`);
               }}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer rounded-md"
             >
               <Calculator className="w-3.5 h-3.5" />
               <span>Launch Preparer Workspace</span>
@@ -548,6 +567,7 @@ export const PrepLeadDetailModal: React.FC<PrepLeadDetailModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

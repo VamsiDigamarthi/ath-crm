@@ -1,14 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
-import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
-import { 
-  Zap, 
-  UserCheck, 
-  Sparkles,
-  CheckCircle2
-} from 'lucide-react';
+import { Zap, UserCheck, Check } from 'lucide-react';
 import type { FilingStaffMember, FilingLeadItem } from '../../types/filing.types';
 
 export interface FilingLeadAssignmentModalProps {
@@ -30,7 +24,7 @@ export const FilingLeadAssignmentModal: React.FC<FilingLeadAssignmentModalProps>
   onConfirmRoundRobin,
   isLoading = false,
 }) => {
-  const [assignmentMode, setAssignmentMode] = useState<'DIRECT' | 'ROUND_ROBIN'>('DIRECT');
+  const [assignmentMode, setAssignmentMode] = useState<'ROUND_ROBIN' | 'DIRECT'>('ROUND_ROBIN');
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   const [searchAgent, setSearchAgent] = useState<string>('');
 
@@ -68,136 +62,121 @@ export const FilingLeadAssignmentModal: React.FC<FilingLeadAssignmentModalProps>
     <AppModal
       isOpen={isOpen}
       onClose={onClose}
-      className="max-w-2xl"
-      title={
-        <div>
-          <h3 className="text-base font-bold text-slate-900">
-            Distribute &amp; Assign Filing Returns
-          </h3>
-          <p className="text-xs text-slate-500 font-medium">
-            Assign {leadCount} selected {leadCount === 1 ? 'return' : 'returns'} to Filing Specialists (CPAs)
-          </p>
-        </div>
-      }
+      className="max-w-xl"
+      title="Assign returns"
+      description={`${leadCount} ${leadCount === 1 ? 'return' : 'returns'} selected`}
       footer={
-        <div className="flex items-center justify-between w-full">
-          <div className="text-xs text-slate-500 font-medium">
-            {assignmentMode === 'ROUND_ROBIN' ? (
-              <span className="flex items-center gap-1 text-emerald-700 font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-[#16A34A]" />
-                Auto-balanced across {specialists.length} Filing Specialists
-              </span>
-            ) : (
-              <span>Select a filing specialist to assign</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              disabled={isLoading}
-              className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleConfirm}
-              disabled={isLoading || (assignmentMode === 'DIRECT' && !selectedAgentId)}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold shadow-xs cursor-pointer disabled:bg-slate-300 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Assigning...' : assignmentMode === 'ROUND_ROBIN' ? 'Execute Round-Robin' : 'Assign Return(s)'}
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-2 w-full">
+          <Button variant="outline" size="md" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button
+            size="md"
+            onClick={handleConfirm}
+            disabled={isLoading || (assignmentMode === 'DIRECT' && !selectedAgentId)}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold"
+          >
+            {isLoading ? 'Assigning...' : 'Assign'}
+          </Button>
         </div>
       }
     >
-      <div className="space-y-4 py-1">
-        {/* Mode Selector Tabs */}
-        <AppTabs
-          tabs={[
-            {
-              id: 'DIRECT',
-              label: 'Direct Specialist Assignment',
-              icon: UserCheck,
-            },
-            {
-              id: 'ROUND_ROBIN',
-              label: '1-Click Auto Round-Robin',
-              icon: Zap,
-            },
-          ]}
-          activeTab={assignmentMode}
-          onChange={(mode) => setAssignmentMode(mode as any)}
-        />
+      <div className="space-y-4 font-sans">
+        {/* Mode switch */}
+        <div className="grid grid-cols-2 gap-1 p-1 rounded-lg bg-slate-100">
+          {(['ROUND_ROBIN', 'DIRECT'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setAssignmentMode(mode)}
+              className={`flex items-center justify-center gap-2 h-9 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                assignmentMode === mode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {mode === 'ROUND_ROBIN' ? <Zap className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+              {mode === 'ROUND_ROBIN' ? 'Auto-assign' : 'Pick an agent'}
+            </button>
+          ))}
+        </div>
 
-        {assignmentMode === 'ROUND_ROBIN' ? (
-          <div className="p-5 rounded-xl bg-emerald-50/60 border border-emerald-200 text-center space-y-2">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 text-[#16A34A] flex items-center justify-center mx-auto">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <h4 className="font-bold text-sm text-emerald-950">
-              Balanced Caseload Distribution
-            </h4>
-            <p className="text-xs text-emerald-800/80 max-w-md mx-auto leading-relaxed">
-              The algorithm will evenly allocate {leadCount} return(s) to active filing specialists with the lowest active caseload.
+        {/* Auto round-robin */}
+        {assignmentMode === 'ROUND_ROBIN' && (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Returns are split evenly across {specialists.length} filing{' '}
+              {specialists.length === 1 ? 'specialist' : 'specialists'} (~{Math.ceil(leadCount / (specialists.length || 1))} each).
+              Managers and team leads are excluded.
             </p>
+            <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+              {specialists.length === 0 ? (
+                <div className="p-6 text-center text-sm text-slate-400">No active filing specialists</div>
+              ) : (
+                specialists.map((member: any) => {
+                  const displayName = member.name || member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.email;
+                  return (
+                    <div key={member.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900 truncate">{displayName}</div>
+                        <div className="text-xs text-slate-500 truncate">
+                          {member.email}
+                          {member.mobile || member.phone ? ` · ${member.mobile || member.phone}` : ''}
+                          {' · Filing specialist'}
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-500 shrink-0">{member.activeCaseload || 0} active</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
-        ) : (
+        )}
+
+        {/* Direct selection */}
+        {assignmentMode === 'DIRECT' && (
           <div className="space-y-3">
             <AppSearchInput
               value={searchAgent}
               onChange={setSearchAgent}
-              placeholder="Search specialist by name or email..."
+              placeholder="Search specialist by name, email, or phone..."
+              debounceMs={200}
             />
 
-            <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 rounded-xl border border-slate-200">
+            <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
               {filteredSpecialists.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400">
-                  No specialists found matching your search.
-                </div>
+                <div className="p-6 text-center text-sm text-slate-400">No filing specialists match your search</div>
               ) : (
-                filteredSpecialists.map((rep) => {
-                  const isSelected = selectedAgentId === rep.id;
+                filteredSpecialists.map((member: any) => {
+                  const isSelected = selectedAgentId === member.id;
+                  const displayName = member.name || member.fullName || `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.email;
                   return (
                     <div
-                      key={rep.id}
-                      onClick={() => setSelectedAgentId(rep.id)}
-                      className={`p-3 flex items-center justify-between cursor-pointer transition-colors ${
-                        isSelected ? 'bg-emerald-50/80' : 'hover:bg-slate-50'
+                      key={member.id}
+                      onClick={() => setSelectedAgentId(member.id)}
+                      className={`flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-50/60'
+                          : 'hover:bg-slate-50'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-[#16A34A] font-bold text-xs flex items-center justify-center">
-                          {rep.name[0] || 'F'}
-                        </div>
-                        <div>
-                          <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                            <span>{rep.name}</span>
-                            {rep.acceptedCount > 0 && (
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">
-                                {rep.acceptedCount} Accepted
-                              </span>
-                            )}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                            isSelected ? 'border-[#16A34A] bg-[#16A34A]' : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-900 truncate">{displayName}</div>
+                          <div className="text-xs text-slate-500 truncate">
+                            {member.email}
+                            {member.mobile || member.phone ? ` · ${member.mobile || member.phone}` : ''}
+                            {' · Filing specialist'}
                           </div>
-                          <div className="text-[10px] text-slate-400">{rep.email}</div>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <span className="text-[11px] font-bold text-slate-700">
-                            {rep.activeCaseload} Active
-                          </span>
-                          <div className="text-[10px] text-slate-400">Caseload</div>
-                        </div>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          isSelected ? 'border-[#16A34A] bg-[#16A34A] text-white' : 'border-slate-300'
-                        }`}>
-                          {isSelected && <CheckCircle2 className="w-3 h-3" />}
-                        </div>
-                      </div>
+                      <span className="text-xs text-slate-500 shrink-0">{member.activeCaseload || 0} active</span>
                     </div>
                   );
                 })

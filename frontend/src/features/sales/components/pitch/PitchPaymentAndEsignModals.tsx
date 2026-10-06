@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   CreditCard, 
   Send, 
@@ -281,11 +282,20 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
   return (
     <>
       {/* 1. Payment Gateway & Virtual Terminal Modal */}
-      {isPaymentModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
+      {isPaymentModalOpen && createPortal(
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 font-sans animate-in fade-in duration-150"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onClosePaymentModal}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 bg-white rounded-md max-w-3xl w-full p-6 shadow-2xl border border-slate-300 space-y-5 max-h-[92vh] overflow-y-auto">
             {/* Header & Main Views */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center">
                   <CreditCard className="w-4 h-4" />
@@ -873,15 +883,25 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 2. Form 8879 Multi-Method E-Sign & Proof Authorization Modal */}
-      {isEsignModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      {isEsignModalOpen && createPortal(
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 font-sans animate-in fade-in duration-150"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onCloseEsignModal}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 bg-white rounded-md max-w-xl w-full p-6 shadow-2xl border border-slate-300 space-y-5">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                   <FileText className="w-4 h-4" />
@@ -1123,7 +1143,8 @@ export const PitchPaymentAndEsignModals: React.FC<PitchPaymentAndEsignModalsProp
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

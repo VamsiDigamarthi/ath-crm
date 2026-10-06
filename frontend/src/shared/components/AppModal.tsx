@@ -71,7 +71,7 @@ export function AppModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       aria-modal="true"
       role="dialog"
       aria-labelledby="app-modal-title"
@@ -94,7 +94,7 @@ export function AppModal({
         )}
       >
         {/* Fixed Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 shrink-0">
+        <div className="flex items-center justify-between gap-4 px-6 py-5 border-b border-slate-200 bg-white shrink-0">
           <div>
             <h2
               id="app-modal-title"
@@ -109,7 +109,7 @@ export function AppModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-md text-slate-500 hover:text-black hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-md text-slate-500 hover:text-black hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -117,19 +117,19 @@ export function AppModal({
         </div>
 
         {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-5">{children}</div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">{children}</div>
 
         {/* Footer area */}
         {hasFooterArea && (
-          <div className="shrink-0 border-t border-gray-100">
+          <div className="shrink-0 border-t border-slate-200 bg-slate-50">
             {footerError && (
-              <div className="flex items-center gap-2 px-5 py-3 bg-rose-50 border-b border-rose-100">
+              <div className="flex items-center gap-2 px-6 py-3 bg-rose-50 border-b border-rose-100">
                 <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
                 <span className="text-sm text-rose-600 leading-snug">{footerError}</span>
               </div>
             )}
             {footer && (
-              <div className="flex items-center justify-end gap-2 px-5 py-4 bg-gray-50">
+              <div className="flex items-center justify-end gap-2.5 px-6 py-4 bg-slate-50">
                 {footer}
               </div>
             )}

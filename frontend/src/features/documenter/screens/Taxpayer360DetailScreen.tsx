@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
-  ShieldCheck, 
   FileCheck2,
   CheckCircle2,
   RotateCcw,
@@ -646,62 +645,46 @@ export const Taxpayer360DetailScreen: React.FC = () => {
           onClose={() => setIsMoveToPrepModalOpen(false)}
           title={
             hasAssignedPreparer || isRevertedFromPrep
-              ? `Resume Tax Preparation: ${customer.fullName || `${customer.firstName} ${customer.lastName}`}`
-              : `Move to Tax Preparation: ${customer.fullName || `${customer.firstName} ${customer.lastName}`}`
+              ? `Resume Tax Preparation`
+              : `Move to Tax Preparation`
           }
-          width="520px"
+          description={
+            hasAssignedPreparer || isRevertedFromPrep
+              ? `Re-submitting ${customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY ${currentLead.taxYear}) directly to ${preparerDisplayName}.`
+              : `Transferring ${customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY ${currentLead.taxYear}) to the Tax Preparation Department.`
+          }
+          width="500px"
         >
           <div className="space-y-4 font-sans py-1">
-            {hasAssignedPreparer || isRevertedFromPrep ? (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
-                <div className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
-                  <FileCheck2 className="w-4 h-4 text-[#16A34A]" />
-                  <span>Re-submit Return to Assigned Preparer: {preparerDisplayName}</span>
-                </div>
-                <p className="leading-relaxed text-emerald-800">
-                  You are re-submitting <strong>{customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY {currentLead.taxYear})</strong> directly to <strong>{preparerDisplayName}</strong>. This return will immediately reactivate in their 1040 Drafting Workbench without needing Preparation Manager re-allocation.
-                </p>
-              </div>
-            ) : (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
-                <div className="font-bold text-sm text-emerald-950 flex items-center gap-1.5">
-                  <FileCheck2 className="w-4 h-4 text-[#16A34A]" />
-                  <span>Ready for Tax Preparation &amp; 1040 Drafting?</span>
-                </div>
-                <p className="leading-relaxed text-emerald-800">
-                  You are transferring <strong>{customer.fullName || `${customer.firstName} ${customer.lastName}`} (TY {currentLead.taxYear})</strong> to the <strong>Tax Preparation Department</strong>.
-                </p>
-              </div>
-            )}
-
             {/* Checklist items */}
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2.5">
-              <div className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
-                Intake Readiness Checklist:
+            <div className="p-3 rounded-md bg-slate-50 border border-slate-200 text-xs space-y-2">
+              <div className="font-semibold text-slate-800 text-xs">
+                Intake Readiness Checklist
               </div>
-              <div className="flex items-center justify-between text-slate-700">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Client Documents in Vault:</span>
-                <span className="font-bold text-[#16A34A]">{(lead?.documents || currentLead.documents || []).length} Document(s) Uploaded ✓</span>
+                <span className="font-semibold text-[#16A34A]">{(lead?.documents || currentLead.documents || []).length} Document(s) Uploaded</span>
               </div>
-              <div className="flex items-center justify-between text-slate-700">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Taxpayer Visa &amp; Residency:</span>
-                <span className="font-bold text-[#16A34A]">{customer.visaType || 'Verified'} ✓</span>
+                <span className="font-semibold text-[#16A34A]">{customer.visaType || 'Verified'}</span>
               </div>
-              <div className="flex items-center justify-between text-slate-700">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Organizer Verified Status:</span>
-                <span className="font-bold text-[#16A34A]">{(currentLead.taxDraftSummary as any)?.organizerVerifiedCount || 1} / 9 Modules Verified ✓</span>
+                <span className="font-semibold text-[#16A34A]">{(currentLead.taxDraftSummary as any)?.organizerVerifiedCount || 1} / 9 Modules Verified</span>
               </div>
             </div>
 
             {/* Handover remarks */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 {hasAssignedPreparer || isRevertedFromPrep
-                  ? `Hand-off note for ${preparerDisplayName} *`
-                  : `Hand-off note for the preparer *`}
+                  ? `Hand-off note for ${preparerDisplayName}`
+                  : `Hand-off note for the preparer`}{' '}
+                <span className="text-rose-500">*</span>
               </label>
               <textarea
-                rows={2}
+                rows={3}
                 placeholder={
                   hasAssignedPreparer || isRevertedFromPrep
                     ? 'e.g. Uploaded missing W-2 and confirmed spouse residency status with client...'
@@ -709,22 +692,9 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                 }
                 value={prepTransferNotes}
                 onChange={(e) => setPrepTransferNotes(e.target.value)}
-                className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] outline-none transition-all resize-none text-slate-800 placeholder-slate-400 bg-white"
+                className="w-full text-sm p-2.5 rounded-md border border-slate-300 focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] outline-none transition-colors resize-none text-slate-800 placeholder:text-slate-400 bg-white"
               />
             </div>
-
-            {/* Notification notice */}
-            {hasAssignedPreparer || isRevertedFromPrep ? (
-              <div className="p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200/80 text-[11px] text-emerald-900 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0" />
-                <span>Tax Preparer <strong>{preparerDisplayName}</strong> will be directly notified to resume drafting Form 1040.</span>
-              </div>
-            ) : (
-              <div className="p-2.5 rounded-lg bg-indigo-50/70 border border-indigo-200/80 text-[11px] text-indigo-900 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span>All active Preparation Managers will be notified instantly to allocate a Tax Preparer.</span>
-              </div>
-            )}
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
               <Button
@@ -741,7 +711,7 @@ export const Taxpayer360DetailScreen: React.FC = () => {
                 size="sm"
                 disabled={isMovingToPrep || !prepTransferNotes.trim()}
                 onClick={handleConfirmMoveToPrep}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold px-4 cursor-pointer shadow-2xs flex items-center gap-1.5"
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold px-4 cursor-pointer flex items-center gap-1.5"
               >
                 <FileCheck2 className={`w-3.5 h-3.5 ${isMovingToPrep ? 'animate-spin' : ''}`} />
                 <span>

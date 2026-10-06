@@ -2,7 +2,7 @@ import React from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { Button } from '@/shared/components/Button';
 import { AppTextarea } from '@/shared/components/AppTextarea';
-import { CheckCircle2, RotateCcw, ShieldCheck } from 'lucide-react';
+import { RotateCcw, ShieldCheck } from 'lucide-react';
 import type { WorkspaceTaxpayer } from '../../../hooks/useTaxPreparerWorkspace';
 
 interface ReviewerSignOffModalsProps {
@@ -54,23 +54,14 @@ export const ReviewerSignOffModals: React.FC<ReviewerSignOffModalsProps> = ({
         <AppModal
           isOpen={isApproveModalOpen}
           onClose={onCloseApproveModal}
-          title="Sign-Off & Approve Form 1040 (4-Eyes QA Passed)"
-          width="540px"
+          title="Approve Form 1040"
+          description={`Transfer ${taxpayerName}'s certified return to Sales Pitch Queue (${fedRefund > 0 ? `Refund: +$${fedRefund.toLocaleString()}` : `Due: -$${balanceDue.toLocaleString()}`}).`}
+          width="520px"
         >
-          <div className="space-y-4 font-sans text-xs">
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-2">
-              <div className="flex items-center gap-2 font-bold text-sm text-[#16A34A]">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Ready to Sign Off Form 1040 for {taxpayerName}</span>
-              </div>
-              <p className="text-[11px] text-emerald-800 leading-relaxed font-medium">
-                Upon sign-off, this return will be transferred directly to the <strong>Sales Pitch Queue</strong> with computed Federal Refund of <strong>${fedRefund > 0 ? `+${fedRefund.toLocaleString()}` : `-$${balanceDue.toLocaleString()}`}</strong>.
-              </p>
-            </div>
-
+          <div className="space-y-4 font-sans text-xs py-1">
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">
-                Auditor Compliance Sign-Off Statement:
+              <label className="block text-xs font-semibold text-slate-700">
+                Auditor Compliance Sign-Off Statement
               </label>
               <AppTextarea
                 value={auditorRemarks}
@@ -88,7 +79,7 @@ export const ReviewerSignOffModals: React.FC<ReviewerSignOffModalsProps> = ({
                 size="sm"
                 onClick={onCloseApproveModal}
                 disabled={isSubmitting}
-                className="cursor-pointer"
+                className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
               >
                 Cancel
               </Button>
@@ -96,7 +87,7 @@ export const ReviewerSignOffModals: React.FC<ReviewerSignOffModalsProps> = ({
                 size="sm"
                 onClick={onConfirmApprove}
                 disabled={isSubmitting}
-                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+                className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer px-4"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>{isSubmitting ? 'Signing Off...' : 'Approve & Transfer to Sales Pitch'}</span>
@@ -111,28 +102,19 @@ export const ReviewerSignOffModals: React.FC<ReviewerSignOffModalsProps> = ({
         <AppModal
           isOpen={isRevisionModalOpen}
           onClose={onCloseRevisionModal}
-          title="Flag Calculation Discrepancy & Request Revision"
-          width="540px"
+          title="Request Revision from Preparer"
+          description={`Send return for ${taxpayerName} back to ${preparerName} for corrections.`}
+          width="520px"
         >
-          <div className="space-y-4 font-sans text-xs">
-            <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-950 space-y-1.5">
-              <div className="flex items-center gap-2 font-bold text-sm text-rose-700">
-                <RotateCcw className="w-4 h-4" />
-                <span>Send Return Back to Tax Preparer ({preparerName})</span>
-              </div>
-              <p className="text-[11px] text-rose-800 font-medium">
-                The return will be moved to <strong>Correction Needed</strong> and flagged in {preparerName}'s queue for revision.
-              </p>
-            </div>
-
+          <div className="space-y-4 font-sans text-xs py-1">
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Discrepancy Category *
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Discrepancy Category <span className="text-rose-500">*</span>
               </label>
               <select
                 value={revisionReason}
                 onChange={(e) => setRevisionReason(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-bold text-slate-800 bg-white focus:outline-none"
+                className="w-full rounded-md border border-slate-300 p-2.5 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-rose-500 focus:border-rose-500 transition-colors"
               >
                 <option value="Discrepancy in Box 2 Federal Withholding calculation">
                   Discrepancy in Box 2 Federal Withholding calculation
@@ -153,15 +135,15 @@ export const ReviewerSignOffModals: React.FC<ReviewerSignOffModalsProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Specific Correction Instructions for Preparer *
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Specific Correction Instructions for Preparer <span className="text-rose-500">*</span>
               </label>
               <textarea
                 rows={3}
                 value={revisionNotes}
                 onChange={(e) => setRevisionNotes(e.target.value)}
                 placeholder="Explain the required correction clearly for the preparer..."
-                className="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 focus:border-rose-500 focus:outline-none placeholder:text-slate-400"
+                className="w-full text-sm p-2.5 rounded-md border border-slate-300 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none transition-colors resize-none text-slate-800 placeholder:text-slate-400 bg-white"
               />
             </div>
 
@@ -171,7 +153,7 @@ export const ReviewerSignOffModals: React.FC<ReviewerSignOffModalsProps> = ({
                 size="sm"
                 onClick={onCloseRevisionModal}
                 disabled={isSubmitting}
-                className="cursor-pointer"
+                className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
               >
                 Cancel
               </Button>
@@ -179,7 +161,7 @@ export const ReviewerSignOffModals: React.FC<ReviewerSignOffModalsProps> = ({
                 size="sm"
                 onClick={onConfirmRevision}
                 disabled={isSubmitting || !revisionNotes.trim()}
-                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 px-4"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>{isSubmitting ? 'Dispatching...' : 'Dispatch Revision to Preparer'}</span>

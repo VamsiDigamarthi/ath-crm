@@ -220,42 +220,16 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
     <AppModal
       isOpen={isOpen}
       onClose={() => !isSubmitting && onClose()}
-      title="Send Back & Revert Return File"
+      title="Send Back Return File"
+      description={`Transfer return for ${taxpayerName} (TY ${taxYear}) back to preceding department for clarification or corrections.`}
       size="xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-4 font-sans text-slate-800">
-        {/* 1. Header Information Banner */}
-        <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-50/80 to-orange-50/40 border border-amber-200/80 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
-              <RotateCcw className="w-4.5 h-4.5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 text-sm tracking-tight">{taxpayerName}</span>
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                  TY {taxYear} Form 1040
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-600 mt-0.5">
-                Transfer return back to preceding stage for tax calculation adjustment or additional paperwork.
-              </p>
-            </div>
-          </div>
-
-          <div className="text-right shrink-0 text-xs hidden sm:block">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Current Department</span>
-            <span className="font-bold text-slate-800 bg-white px-2.5 py-1 rounded-md border border-slate-200 inline-block mt-0.5">
-              {currentDepartment}
-            </span>
-          </div>
-        </div>
-
-        {/* 2. Target Department Selector */}
+      <form onSubmit={handleSubmit} className="space-y-4 font-sans text-slate-800 py-1">
+        {/* Target Department Selector */}
         {availableTargetDepartments.length > 1 ? (
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-              Send Back To Department: <span className="text-rose-500">*</span>
+            <label className="text-xs font-semibold text-slate-700 block">
+              Send Back To Department <span className="text-rose-500">*</span>
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {availableTargetDepartments.map((dept) => {
@@ -265,37 +239,37 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
                     key={dept.key}
                     type="button"
                     onClick={() => setTargetDepartment(dept.key)}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    className={`p-3 rounded-md border text-left transition-colors cursor-pointer flex flex-col justify-between ${
                       isSelected
-                        ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-500/20 shadow-xs'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                        ? 'border-slate-900 bg-slate-50'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-xs text-slate-900">{dept.label}</span>
-                      <div className={`w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-amber-600 text-white' : 'border border-slate-300 bg-white'
+                      <span className="font-semibold text-xs text-slate-900">{dept.label}</span>
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                        isSelected ? 'bg-slate-900 text-white' : 'border border-slate-300 bg-white'
                       }`}>
-                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                        {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
                       </div>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-1.5 leading-snug">{dept.description}</p>
                     {dept.key === 'SALES' && assignedSalesCloserName && (
-                      <div className="text-[10px] font-semibold text-blue-700 mt-1.5 pt-1 border-t border-slate-100 flex items-center gap-1">
+                      <div className="text-[10px] font-medium text-slate-600 mt-1.5 pt-1 border-t border-slate-100 flex items-center gap-1">
                         <span>Assigned Closer:</span>
-                        <span className="font-bold">{assignedSalesCloserName}</span>
+                        <span className="font-semibold text-slate-900">{assignedSalesCloserName}</span>
                       </div>
                     )}
                     {dept.key === 'PREPARATION' && assignedPreparerName && (
-                      <div className="text-[10px] font-semibold text-emerald-700 mt-1.5 pt-1 border-t border-slate-100 flex items-center gap-1">
+                      <div className="text-[10px] font-medium text-slate-600 mt-1.5 pt-1 border-t border-slate-100 flex items-center gap-1">
                         <span>Assigned Preparer:</span>
-                        <span className="font-bold">{assignedPreparerName}</span>
+                        <span className="font-semibold text-slate-900">{assignedPreparerName}</span>
                       </div>
                     )}
                     {dept.key === 'DOCUMENTER' && assignedDocumenterName && (
-                      <div className="text-[10px] font-semibold text-indigo-700 mt-1.5 pt-1 border-t border-slate-100 flex items-center gap-1">
+                      <div className="text-[10px] font-medium text-slate-600 mt-1.5 pt-1 border-t border-slate-100 flex items-center gap-1">
                         <span>Assigned Documenter:</span>
-                        <span className="font-bold">{assignedDocumenterName}</span>
+                        <span className="font-semibold text-slate-900">{assignedDocumenterName}</span>
                       </div>
                     )}
                   </button>
@@ -304,42 +278,42 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
             </div>
           </div>
         ) : (
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex items-center justify-between">
+          <div className="p-3 bg-slate-50 rounded-md border border-slate-200 text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-slate-500 font-medium">Destination Department:</span>
-              <span className="font-bold text-slate-900">
+              <span className="font-semibold text-slate-900">
                 {availableTargetDepartments[0]?.label || 'Documenter Department (Intake Queue)'}
               </span>
             </div>
             {targetDepartment === 'DOCUMENTER' && assignedDocumenterName ? (
-              <span className="text-[11px] text-indigo-600 font-semibold">
-                Assigned: {assignedDocumenterName}
+              <span className="text-[11px] text-slate-600 font-medium">
+                Assigned: <strong className="text-slate-900">{assignedDocumenterName}</strong>
               </span>
             ) : targetDepartment === 'PREPARATION' && assignedPreparerName ? (
-              <span className="text-[11px] text-emerald-700 font-semibold">
-                Assigned: {assignedPreparerName}
+              <span className="text-[11px] text-slate-600 font-medium">
+                Assigned: <strong className="text-slate-900">{assignedPreparerName}</strong>
               </span>
             ) : targetDepartment === 'SALES' && assignedSalesCloserName ? (
-              <span className="text-[11px] text-blue-700 font-semibold">
-                Assigned: {assignedSalesCloserName}
+              <span className="text-[11px] text-slate-600 font-medium">
+                Assigned: <strong className="text-slate-900">{assignedSalesCloserName}</strong>
               </span>
             ) : null}
           </div>
         )}
 
-        {/* 3. Main 2-Column Content Grid */}
+        {/* Main 2-Column Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-1">
           {/* Left Column (7 Cols): Reason Category & Revert Notes */}
           <div className="lg:col-span-7 space-y-3.5">
             {/* Reason Category */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Primary Reason for Revert: <span className="text-rose-500">*</span>
+              <label className="text-xs font-semibold text-slate-700 block">
+                Primary Reason for Revert <span className="text-rose-500">*</span>
               </label>
               <select
                 value={selectedReason}
                 onChange={(e) => setSelectedReason(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all cursor-pointer shadow-2xs"
+                className="w-full px-3 py-2 rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] transition-colors cursor-pointer"
               >
                 {reasonList.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -351,8 +325,8 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
 
             {/* Revert Instructions / Notes */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Instructions &amp; Feedback for Recipient Agent: <span className="text-rose-500">*</span>
+              <label className="text-xs font-semibold text-slate-700 block">
+                Instructions &amp; Feedback for Recipient Agent <span className="text-rose-500">*</span>
               </label>
               <textarea
                 rows={4}
@@ -366,22 +340,19 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
                     : 'e.g. Taxpayer reported Robinhood stock trades but uploaded 1099 is corrupted. Please call the client to re-upload Form 1099-B so we can finish drafting Part 1 Capital Gains.'
                 }
                 required
-                className="w-full p-3 text-xs rounded-xl border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all leading-relaxed shadow-2xs resize-none"
+                className="w-full p-2.5 text-sm rounded-md border border-slate-300 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] transition-colors leading-relaxed resize-none text-slate-800"
               />
-              <p className="text-[11px] text-slate-400">
-                Instructions are recorded in the immutable Audit Trail and sent as an in-app priority notification.
-              </p>
             </div>
           </div>
 
           {/* Right Column (5 Cols): Missing Documents Tag Selector */}
-          <div className="lg:col-span-5 space-y-2.5 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80 flex flex-col justify-between">
+          <div className="lg:col-span-5 space-y-2.5 bg-slate-50 p-3 rounded-md border border-slate-200 flex flex-col justify-between">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Missing Documents Checklist:
+                <label className="text-xs font-semibold text-slate-700">
+                  Missing Documents Checklist
                 </label>
-                <span className="text-[10px] font-semibold text-slate-400">
+                <span className="text-[10px] font-medium text-slate-400">
                   {selectedDocTags.length > 0 ? `${selectedDocTags.length} selected` : 'Optional'}
                 </span>
               </div>
@@ -395,10 +366,10 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
                       key={docTag}
                       type="button"
                       onClick={() => toggleDocTag(docTag)}
-                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1 ${
                         isSelected
-                          ? 'bg-amber-600 text-white shadow-2xs'
-                          : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                       }`}
                     >
                       <span>{docTag}</span>
@@ -415,8 +386,8 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
                   value={customDocInput}
                   onChange={(e) => setCustomDocInput(e.target.value)}
                   onKeyDown={handleAddCustomDoc}
-                  placeholder="Other form (e.g. Schedule C, 1099-K)..."
-                  className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                  placeholder="Other form (e.g. Schedule C)..."
+                  className="flex-1 px-2.5 py-1.5 text-xs rounded-md border border-slate-300 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A]"
                 />
                 <Button
                   type="button"
@@ -424,7 +395,7 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
                   size="sm"
                   onClick={handleAddCustomDoc}
                   disabled={!customDocInput.trim()}
-                  className="text-xs font-bold border-slate-200 cursor-pointer h-7 px-2"
+                  className="text-xs font-semibold border-slate-200 cursor-pointer h-7 px-2"
                 >
                   <Plus className="w-3 h-3" />
                   <span>Add</span>
@@ -434,14 +405,14 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
 
             {/* Selected Custom Tags Chips */}
             {selectedDocTags.length > 0 && (
-              <div className="p-2 bg-amber-50 rounded-lg border border-amber-200/80 flex flex-wrap gap-1 mt-1">
-                <span className="text-[10px] uppercase font-bold text-amber-800 self-center mr-1">
+              <div className="p-2 bg-white rounded-md border border-slate-200 flex flex-wrap gap-1 mt-1">
+                <span className="text-[10px] font-semibold text-slate-500 self-center mr-1">
                   Requested:
                 </span>
                 {selectedDocTags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-900 border border-amber-300"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-800 border border-slate-300"
                   >
                     <span>{tag}</span>
                     <button
@@ -458,30 +429,25 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
           </div>
         </div>
 
-        {/* 4. Sales Direct Document Upload to P-Team / Recipient (Only for Sales Revert) */}
+        {/* Sales Direct Document Upload to P-Team / Recipient (Only for Sales Revert) */}
         {currentDepartment === 'SALES' && (
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-50/70 to-indigo-50/40 border border-blue-200/80 space-y-2.5">
+          <div className="p-3 rounded-md bg-slate-50 border border-slate-200 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-2xs">
-                  <UploadCloud className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
-                    Upload Documents for {targetDepartment === 'PREPARATION' ? 'Tax Preparer (P-Team)' : 'Documenter'}
-                  </label>
-                  <p className="text-[11px] text-slate-500 font-medium">
-                    Attach additional W-2, 1099, receipts, or files provided by client during the sales call.
-                  </p>
-                </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-900 block">
+                  Upload Documents for {targetDepartment === 'PREPARATION' ? 'Tax Preparer' : 'Documenter'}
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  Attach additional W-2, 1099, receipts, or files provided by client during the sales call.
+                </p>
               </div>
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
-                Sales to {targetDepartment === 'PREPARATION' ? 'Preparer' : 'Documenter'}
+              <span className="text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                Optional
               </span>
             </div>
 
             {/* Dropzone / File Picker */}
-            <div className="relative border-2 border-dashed border-blue-300 hover:border-blue-500 bg-white/90 hover:bg-blue-50/40 rounded-xl p-3 text-center transition-all cursor-pointer">
+            <div className="relative border border-dashed border-slate-300 hover:border-slate-400 bg-white rounded-md p-3 text-center transition-colors cursor-pointer">
               <input
                 type="file"
                 multiple
@@ -495,26 +461,26 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
                 accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.xls,.csv,.txt"
               />
               <div className="flex items-center justify-center gap-2 text-slate-600">
-                <UploadCloud className="w-4 h-4 text-blue-600 shrink-0" />
-                <p className="text-xs font-semibold text-slate-800">
-                  <span className="text-blue-600 font-bold hover:underline">Click to browse files</span> or drag and drop here
+                <UploadCloud className="w-4 h-4 text-slate-400 shrink-0" />
+                <p className="text-xs text-slate-700">
+                  <span className="font-semibold text-slate-900 hover:underline">Click to browse files</span> or drag and drop here
                 </p>
-                <span className="text-[10px] text-slate-400 hidden sm:inline">(PDF, Images, Excel, Word up to 50MB)</span>
+                <span className="text-[10px] text-slate-400 hidden sm:inline">(PDF, Images, Excel up to 50MB)</span>
               </div>
             </div>
 
             {/* List of Uploaded Files */}
             {uploadedFiles.length > 0 && (
               <div className="space-y-1.5 pt-0.5">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
                   <span className="flex items-center gap-1">
-                    <Paperclip className="w-3 h-3 text-blue-600" />
-                    <span>Attached Client Documents ({uploadedFiles.length}):</span>
+                    <Paperclip className="w-3 h-3 text-slate-400" />
+                    <span>Attached Documents ({uploadedFiles.length}):</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setUploadedFiles([])}
-                    className="text-rose-600 hover:text-rose-800 text-[10px] font-semibold cursor-pointer"
+                    className="text-rose-600 hover:text-rose-800 text-[10px] font-medium cursor-pointer"
                   >
                     Clear All
                   </button>
@@ -523,15 +489,15 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
                   {uploadedFiles.map((file, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 shadow-2xs text-xs"
+                      className="flex items-center justify-between p-2 rounded-md bg-white border border-slate-200 text-xs"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                        <FileText className="w-4 h-4 text-slate-400 shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-900 truncate text-[11px]" title={file.name}>
+                          <p className="font-medium text-slate-900 truncate text-[11px]" title={file.name}>
                             {file.name}
                           </p>
-                          <p className="text-[9px] text-slate-400 font-medium">
+                          <p className="text-[9px] text-slate-400">
                             {(file.size / 1024).toFixed(1)} KB
                           </p>
                         </div>
@@ -552,8 +518,8 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
           </div>
         )}
 
-        {/* 5. Footer Actions */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+        {/* Footer Actions */}
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
           <Button
             type="button"
             variant="outline"
@@ -569,19 +535,19 @@ export const SendBackLeadModal: React.FC<SendBackLeadModalProps> = ({
             type="submit"
             size="sm"
             disabled={isSubmitting || !revertNotes.trim()}
-            className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer px-4 h-9"
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer px-4"
           >
             <RotateCcw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
             <span>
               {isSubmitting
-                ? 'Reverting Lead...'
+                ? 'Reverting...'
                 : targetDepartment === 'SALES'
                 ? 'Send Back to Sales Closer'
                 : targetDepartment === 'PREPARATION'
                 ? 'Send Back to Tax Preparer'
                 : targetDepartment === 'DOCUMENTER'
                 ? 'Send Back to Documenter'
-                : 'Send Back Lead'}
+                : 'Send Back'}
             </span>
           </Button>
         </div>

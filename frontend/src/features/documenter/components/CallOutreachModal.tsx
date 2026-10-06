@@ -573,34 +573,34 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
 
         {/* Callback Date, Time & Timezone Scheduler */}
         {isCallbackRequired && (
-          <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200 animate-in fade-in duration-150 space-y-3 shadow-2xs">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-              <CalendarClock className="w-4 h-4 text-amber-600" />
+          <div className="p-3 rounded-md bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+              <CalendarClock className="w-4 h-4 text-slate-600" />
               <span>Schedule Follow-Up Appointment *</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-bold text-amber-900 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Callback Date & Time *
                 </label>
                 <input
                   type="datetime-local"
                   value={callbackDate}
                   onChange={(e) => setCallbackDate(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium text-slate-800 shadow-2xs"
+                  className="w-full px-3 py-2 text-sm rounded-md border border-slate-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] text-slate-800"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-amber-900 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Client Preferred Timezone *
                 </label>
                 <select
                   value={callbackTimezone}
                   onChange={(e) => setCallbackTimezone(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium text-slate-800 shadow-2xs cursor-pointer"
+                  className="w-full px-3 py-2 text-sm rounded-md border border-slate-300 bg-white focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] text-slate-800 cursor-pointer"
                 >
                   {PREFERRED_TIMEZONES.map((tz) => (
                     <option key={tz} value={tz}>
@@ -616,11 +616,11 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
         {/* Call Summary Notes */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-bold text-slate-700 tracking-wide">
+            <label className="block text-xs font-semibold text-slate-700">
               Agent Call Notes & Summary
             </label>
             {previousLog?.callSummary && (
-              <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+              <span className="text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                 Pre-filled from last call
               </span>
             )}
@@ -630,7 +630,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
             value={callSummary}
             onChange={(e) => setCallSummary(e.target.value)}
             placeholder="E.g., Client confirmed filing TY2025 W2 & 1099-B with 1 dependent. Moving to intake..."
-            className="w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#16A34A] bg-white font-medium text-slate-800 placeholder:text-slate-400"
+            className="w-full p-2.5 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] bg-white text-slate-800 placeholder:text-slate-400 resize-none transition-colors"
           />
         </div>
       </div>
