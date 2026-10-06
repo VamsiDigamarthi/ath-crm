@@ -150,7 +150,21 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
   const handleEndCall = async () => {
     setIsCalling(false);
     if (newNoteText.trim()) {
+      // Saves the note and logs the call (disposition CALL_LOGGED) in one request
       await handleSaveNotes();
+    } else {
+      // No note typed: still record the call so it appears under Outreach Calls right away
+      try {
+        await salesService.saveCloserNotes(appId, {
+          notes: '',
+          disposition: 'CALL_LOGGED',
+          callDuration,
+        });
+        onNotesSaved?.();
+      } catch {
+        toast.error('Call ended, but it could not be logged');
+        return;
+      }
     }
     toast(`Call completed (${formatTime(callDuration)}). Call log saved! ⏱️`, {
       icon: '📞',

@@ -361,7 +361,11 @@ export const LeadAuditTrailSection: React.FC<LeadAuditTrailSectionProps> = ({
       events.push({
         id: `call-${c.id}`,
         type: 'CALL',
-        title: `Outreach Call (${c.disposition || 'Logged'})`,
+        title: `Outreach Call (${
+          c.disposition
+            ? c.disposition.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (ch) => ch.toUpperCase())
+            : 'Logged'
+        })`,
         description: c.callSummary ? `Notes: "${c.callSummary}"` : `Agent dialed taxpayer. Disposition recorded: ${c.disposition}`,
         disposition: c.disposition,
         actorName: c.agentName || c.agentEmail?.split('@')[0] || 'Calling Agent',

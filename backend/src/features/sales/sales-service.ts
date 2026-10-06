@@ -1737,6 +1737,35 @@ export class SalesService {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Sales Closer';
 
+    // A finished call is always logged, even when the closer typed no note, so it shows under Outreach Calls
+    if (!notes && payload.disposition === 'CALL_LOGGED' && userId) {
+      const seconds = Math.max(0, Math.round(Number(payload.callDuration) || 0));
+      const duration = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+      await prisma.callLog.create({
+        data: {
+          applicationId,
+          agentId: userId,
+          disposition: 'CALL_LOGGED',
+          callSummary: `Sales call by ${actorName} (${duration})`,
+        },
+      });
+      await prisma.auditLog
+        .create({
+          data: {
+            applicationId,
+            actorId: userId,
+            actorType: AuditActorType.AGENT,
+            actorName,
+            actorRole: user?.role || 'SALES_AGENT',
+            action: AuditActionType.DISPOSITION_LOG,
+            moduleKey: 'SALES',
+            details: { disposition: 'CALL_LOGGED', callDuration: seconds, remarks: `Sales call logged by ${actorName} (${duration})` },
+          },
+        })
+        .catch((err) => console.error('Failed to audit sales call:', err));
+      return { success: true, notes: '', application: app };
+    }
+
     const existingHistory: any[] = Array.isArray(currentDraft.closerNotesHistory)
       ? currentDraft.closerNotesHistory
       : [];

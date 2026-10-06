@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin, ChevronDown, ChevronUp, RotateCcw, UserCheck, CheckCircle2 } from 'lucide-react';
+// ShieldCheck, ChevronDown, ChevronUp, CheckCircle2 and useState are needed again if the QA card is restored
+import { ArrowLeft, Mail, Phone, MapPin, RotateCcw, UserCheck } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../common/SalesStageBadge';
@@ -30,13 +31,13 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
     ? '/sales/manager/queue'
     : '/sales/agent/queue';
 
-  const [isExpandedRemarks, setIsExpandedRemarks] = useState(false);
-
-  const rawRemarks = lead.qaAuditorRemarks || 'Form 1040 certified and approved for Sales pitch.';
-  const isLongRemarks = rawRemarks.length > 160;
-  const displayedRemarks = isLongRemarks && !isExpandedRemarks 
-    ? `${rawRemarks.slice(0, 160)}...` 
-    : rawRemarks;
+  // Used only by the QA Certified Calculation card below, which is hidden for now
+  // const [isExpandedRemarks, setIsExpandedRemarks] = useState(false);
+  // const rawRemarks = lead.qaAuditorRemarks || 'Form 1040 certified and approved for Sales pitch.';
+  // const isLongRemarks = rawRemarks.length > 160;
+  // const displayedRemarks = isLongRemarks && !isExpandedRemarks
+  //   ? `${rawRemarks.slice(0, 160)}...`
+  //   : rawRemarks;
 
   const isBusiness = lead.filingType === 'BUSINESS';
   const formLabel = isBusiness ? 'Form 1120' : 'Form 1040';
@@ -172,7 +173,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
         </div>
       </div>
 
-      {/* 2. Sleek QA Certified Calculation Summary Card (Clean, modern, uncluttered) */}
+      {/* 2. QA Certified Calculation Summary Card: hidden on the sales pitch screen for now
       <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -210,7 +211,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
           </div>
         </div>
 
-        {/* Auditor Remarks Strip */}
+        Auditor Remarks Strip
         <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs text-slate-600">
           <div className="flex-1 min-w-0 flex items-start gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
@@ -236,6 +237,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
           </span>
         </div>
       </div>
+      */}
     </div>
   );
 };
