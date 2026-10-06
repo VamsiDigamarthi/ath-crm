@@ -28,4 +28,8 @@ export const authService = {
   checkReferralCode: async (code: string): Promise<{ data?: { valid: boolean; referrerName: string } }> => {
     return apiClient.get(`/auth/referral-code/${encodeURIComponent(code)}`);
   },
+
+  switchActiveRole: async (orgRoleId: string) => {
+    return apiClient.post('/auth/switch-active-role', { orgRoleId });
+  },
 };

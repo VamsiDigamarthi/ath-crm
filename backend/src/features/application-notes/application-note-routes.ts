@@ -12,7 +12,6 @@ const router = Router();
 const NOTE_ROLES = [
   Role.ADMIN,
   Role.DOC_MANAGER,
-  Role.DOC_TEAM_LEAD,
   Role.DOC_AGENT,
   Role.PREP_MANAGER,
   Role.TAX_PREPARER,

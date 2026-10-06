@@ -1,0 +1,31 @@
+model OrgRole {
+  id                 String    @id @default(uuid())
+  name               String    @unique
+  description        String?
+  systemRole         Role
+  department         String    @default("CUSTOM")
+  sidebarPermissions String[]  @default([])
+  defaultRoute       String?
+  isSystemDefault    Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  userRoles          UserOrgRole[]
+
+  @@index([systemRole])
+  @@index([department])
+}
+
+model UserOrgRole {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgRoleId  String
+  orgRole    OrgRole  @relation(fields: [orgRoleId], references: [id], onDelete: Cascade)
+  isPrimary  Boolean  @default(false)
+  assignedAt DateTime @default(now())
+
+  @@unique([userId, orgRoleId])
+  @@index([userId])
+  @@index([orgRoleId])
+}

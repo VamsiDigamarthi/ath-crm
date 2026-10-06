@@ -23,9 +23,25 @@ export class PrepReviewService {
     const staff = await prisma.user.findMany({
       where: {
         isActive: true,
-        role: {
-          in: [Role.PREP_MANAGER, Role.TAX_REVIEWER, Role.TAX_PREPARER],
-        },
+        role: { not: Role.TAXPAYER_USER },
+        OR: [
+          {
+            role: {
+              in: [Role.TAX_PREPARER, Role.TAX_REVIEWER],
+            },
+          },
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  systemRole: {
+                    in: [Role.TAX_PREPARER, Role.TAX_REVIEWER],
+                  },
+                },
+              },
+            },
+          },
+        ],
       },
       select: {
         id: true,
@@ -35,6 +51,11 @@ export class PrepReviewService {
         lastName: true,
         role: true,
         isActive: true,
+        orgRoles: {
+          include: {
+            orgRole: true,
+          },
+        },
         assignedPrepApps: {
           select: {
             id: true,
@@ -109,11 +130,27 @@ export class PrepReviewService {
         ? `${member.firstName} ${member.lastName}`
         : member.firstName || member.lastName || (member.email ? member.email.split('@')[0] : 'Staff');
 
-      const roleLabel = isManager
-        ? 'Tax Prep Manager'
-        : isReviewer
-          ? 'Senior QA Reviewer'
-          : 'Tax Preparer';
+      // Extract all system roles (primary role + orgRoles)
+      const systemRoles = new Set<string>();
+      if (member.role) {
+        systemRoles.add(member.role);
+      }
+      if (member.orgRoles) {
+        member.orgRoles.forEach((ur: any) => {
+          if (ur.orgRole?.systemRole) {
+            systemRoles.add(ur.orgRole.systemRole);
+          }
+        });
+      }
+
+      const canPrepare = systemRoles.has(Role.TAX_PREPARER);
+      const canReview = systemRoles.has(Role.TAX_REVIEWER);
+
+      const orgRoleNames = member.orgRoles?.map((ur: any) => ur.orgRole.name) || [];
+
+      const roleLabel = isReviewer
+        ? 'Senior QA Reviewer'
+        : 'Tax Preparer';
 
       const userEmail = member.email || 'staff@taxcrm.com';
 
@@ -124,6 +161,10 @@ export class PrepReviewService {
         mobile: member.mobile || '+1 (555) 019-2000',
         role: member.role,
         roleLabel,
+        canPrepare,
+        canReview,
+        systemRoles: Array.from(systemRoles),
+        orgRoleNames,
         totalAssignedCount,
         totalAssignedPrep,
         totalAssignedReview,
@@ -138,7 +179,7 @@ export class PrepReviewService {
         accuracyRate: 100,
         isAvailable: member.isActive,
         activeByForm,
-        canSelfReview: selfReviewIds.has(member.id),
+        canSelfReview: true,
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userEmail}`,
       };
     });
@@ -507,23 +548,7 @@ export class PrepReviewService {
     if (!preparerId) {
       throw new Error('Preparer ID is required');
     }
-    const selfReviewAllowed = await PermissionService.hasPermission(preparerId, 'PREP_ALLOW_SELF_REVIEW');
-    if (reviewerId && preparerId === reviewerId && !selfReviewAllowed) {
-      throw new BadRequestError(
-        '4-Eyes rule: the same staff member cannot prepare and review the same return unless "Allow self-review" is enabled for them.'
-      );
-    }
-    if (!reviewerId && !selfReviewAllowed) {
-      const clash = await prisma.taxApplication.findFirst({
-        where: { id: { in: applicationIds }, assignedReviewAgentId: preparerId },
-        select: { id: true },
-      });
-      if (clash) {
-        throw new BadRequestError(
-          '4-Eyes rule: this person is already the QA reviewer on one of these returns. Choose a different preparer or enable "Allow self-review".'
-        );
-      }
-    }
+    // 4-Eyes constraint removed per requirements: the same staff member can be assigned as both Preparer and QA Reviewer.
 
     return await prisma.$transaction(async (tx) => {
       // 1. Fetch user details and target applications with fallback for manager

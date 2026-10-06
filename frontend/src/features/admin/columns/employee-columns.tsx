@@ -3,16 +3,18 @@ import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/compo
 import { Button } from '@/shared/components/Button';
 import { Edit3, Power } from 'lucide-react';
 import type { EmployeeItem } from '../types/employee.types';
-import { SYSTEM_ROLES, SYSTEM_DEPARTMENTS, SYSTEM_STATUSES } from '@/shared/constants/system-enums';
+import { SYSTEM_ROLES, SYSTEM_DEPARTMENTS, SYSTEM_STATUSES, type EnumOption } from '@/shared/constants/system-enums';
 
 interface ColumnActionsProps {
   onEdit: (employee: EmployeeItem) => void;
   onToggleStatus: (employee: EmployeeItem) => void;
+  roleOptions?: EnumOption[];
 }
 
 export const getEmployeeColumns = ({
   onEdit,
   onToggleStatus,
+  roleOptions = SYSTEM_ROLES,
 }: ColumnActionsProps): ColumnDef<EmployeeItem, any>[] => [
   {
     id: 'name',
@@ -45,16 +47,44 @@ export const getEmployeeColumns = ({
   {
     id: 'role',
     header: 'DESIGNATION',
-    accessorFn: (row) => `${row.roleLabel || ''} ${row.role || ''}`.trim(),
+    accessorFn: (row) => {
+      const names = (row.orgRoles || []).map((r) => r.name);
+      const systemRoles = (row.orgRoles || []).map((r) => r.systemRole).filter(Boolean);
+      const legacyRole = row.role ? [row.role] : [];
+      const legacyLabel = row.roleLabel ? [row.roleLabel] : [];
+      return Array.from(new Set([...names, ...systemRoles, ...legacyLabel, ...legacyRole]));
+    },
     meta: {
       filterType: 'enum',
-      filterOptions: SYSTEM_ROLES,
+      filterOptions: roleOptions,
     },
-    cell: ({ row }) => (
-      <span className="text-xs font-normal text-zinc-800">
-        {row.original.roleLabel || row.original.role}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const orgRoles = row.original.orgRoles || [];
+      if (orgRoles.length > 0) {
+        return (
+          <div className="flex flex-wrap items-center gap-1 max-w-xs">
+            {orgRoles.map((r) => (
+              <span
+                key={r.id}
+                className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${
+                  r.isPrimary
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                    : 'bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+                title={r.isPrimary ? 'Primary Active Role' : undefined}
+              >
+                {r.name}
+              </span>
+            ))}
+          </div>
+        );
+      }
+      return (
+        <span className="text-xs font-normal text-zinc-800">
+          {row.original.roleLabel || row.original.role}
+        </span>
+      );
+    },
   },
   {
     id: 'department',

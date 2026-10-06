@@ -12,6 +12,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { filingService } from '../services/filing-service';
+import { filterNavItemsByPermissions } from '@/shared/constants/sidebar-catalog';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
@@ -19,7 +20,7 @@ import toast from 'react-hot-toast';
 export const FilingLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, activeOrgRole, sidebarPermissions, logout } = useAuthStore();
 
   const handleLogout = async () => {
     try {
@@ -61,7 +62,7 @@ export const FilingLayout: React.FC = () => {
   const { getUnreadCount } = useNotificationStore();
   const unreadCount = getUnreadCount();
 
-  const navItems = isManager
+  const rawNavItems = isManager
     ? [
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/filing/manager' },
         { id: 'queue', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/filing/manager/queue' },
@@ -73,6 +74,9 @@ export const FilingLayout: React.FC = () => {
         { id: 'agent_queue', label: 'Transmission Queue', icon: Send, section: 'Active Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/filing/agent/queue' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Filing Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/filing/notifications' },
       ];
+
+  const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');
+  const navItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
 
   const currentPath = location.pathname;
   const getActiveId = () => {

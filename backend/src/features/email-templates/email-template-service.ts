@@ -37,16 +37,13 @@ export class EmailTemplateService {
     const rolesList = [
       { value: Role.ADMIN, label: "Super Admin", department: "Executive" },
       { value: Role.DOC_MANAGER, label: "Documenter Manager", department: "Documenter" },
-      { value: Role.DOC_TEAM_LEAD, label: "Documenter Team Lead", department: "Documenter" },
       { value: Role.DOC_AGENT, label: "Documenter Agent", department: "Documenter" },
       { value: Role.PREP_MANAGER, label: "Prep Operations Manager", department: "Tax Prep & Review" },
       { value: Role.TAX_PREPARER, label: "Tax Preparer", department: "Tax Prep & Review" },
       { value: Role.TAX_REVIEWER, label: "QA Compliance Reviewer", department: "Tax Prep & Review" },
       { value: Role.SALES_MANAGER, label: "Sales Operations Manager", department: "Sales" },
-      { value: Role.SALES_TEAM_LEAD, label: "Sales Team Lead", department: "Sales" },
       { value: Role.SALES_AGENT, label: "Sales Closer / Agent", department: "Sales" },
       { value: Role.FILE_OP_MANAGER, label: "Filing Operations Manager", department: "Filing Operations" },
-      { value: Role.FILE_OP_TEAM_LEAD, label: "Filing Team Lead", department: "Filing Operations" },
       { value: Role.FILE_OP_AGENT, label: "Filing Specialist", department: "Filing Operations" },
       { value: Role.TAXPAYER_USER, label: "Taxpayer / Client", department: "Customer Portal" },
     ];

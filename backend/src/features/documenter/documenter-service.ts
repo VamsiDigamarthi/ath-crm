@@ -331,8 +331,26 @@ export class DocumenterService {
       clientPaymentStatus = 'UNPAID';
     }
 
+    const appSummary = (app.taxDraftSummary as any) || {};
+    const isDirectSignup = Boolean(
+      appSummary.leadSource === 'SELF_SIGNUP' ||
+      appSummary.source === 'SELF_SIGNUP' ||
+      appSummary.isSelfRegistered === true ||
+      appSummary.signupMethod === 'ONLINE_PORTAL' ||
+      appSummary.signupMethod === 'PUBLIC_PORTAL' ||
+      appSummary.acquisitionSource === 'DIRECT_SIGNUP' ||
+      appSummary.channel === 'SELF_SERVICE_PORTAL' ||
+      appSummary.registrationChannel?.includes('SELF_SERVICE') ||
+      (app as any).isDirectSignup === true ||
+      (app as any).isSelfRegistered === true
+    );
+
     return {
       ...app,
+      isDirectSignup,
+      isSelfRegistered: isDirectSignup || appSummary.isSelfRegistered === true,
+      isReturnConfigured: isDirectSignup || appSummary.isReturnConfigured === true,
+      isRawProspect: false,
       clientPaymentStatus,
       callLogs: formattedCallLogs,
       stageHistories: formattedStageHistories,
@@ -975,8 +993,23 @@ export class DocumenterService {
         clientPaymentStatus = 'UNPAID';
       }
 
+      const summary = (primaryApp.taxDraftSummary as any) || {};
+      const isDirectSignup = Boolean(
+        summary.leadSource === 'SELF_SIGNUP' ||
+        summary.source === 'SELF_SIGNUP' ||
+        summary.isSelfRegistered === true ||
+        summary.signupMethod === 'ONLINE_PORTAL' ||
+        summary.signupMethod === 'PUBLIC_PORTAL' ||
+        summary.acquisitionSource === 'DIRECT_SIGNUP' ||
+        summary.channel === 'SELF_SERVICE_PORTAL' ||
+        summary.registrationChannel?.includes('SELF_SERVICE') ||
+        (primaryApp as any).isDirectSignup === true ||
+        (primaryApp as any).isSelfRegistered === true
+      );
+
       const isConfigured = Boolean(
-        (primaryApp.taxDraftSummary as any)?.isReturnConfigured === true ||
+        isDirectSignup ||
+        summary.isReturnConfigured === true ||
         primaryApp.currentStage === ApplicationStage.DOC_PREP ||
         primaryApp.currentStage === ApplicationStage.SALES_PITCH_QUEUE ||
         primaryApp.currentStage === ApplicationStage.SALES_PITCHING ||
@@ -989,6 +1022,8 @@ export class DocumenterService {
 
       groupedLeads.push({
         ...primaryApp,
+        isDirectSignup,
+        isSelfRegistered: isDirectSignup || summary.isSelfRegistered === true,
         isRawProspect: !isConfigured,
         isReturnConfigured: isConfigured,
         lastCallLog: primaryApp.callLogs?.[0] || null,
@@ -1002,7 +1037,7 @@ export class DocumenterService {
           assignedDocAgent: a.assignedDocAgent,
         })),
         previousDocAgent,
-        totalTaxYears: isConfigured ? visibleApplications.length : 0,
+        totalTaxYears: isConfigured ? Math.max(1, visibleApplications.length) : 0,
       });
     }
 
@@ -1048,15 +1083,42 @@ export class DocumenterService {
     const agents = await prisma.user.findMany({
       where: {
         isActive: true,
-        role: {
-          in: [Role.DOC_AGENT, Role.DOC_TEAM_LEAD, Role.DOC_MANAGER],
-        },
+        OR: [
+          {
+            role: {
+              in: [Role.DOC_AGENT, Role.SALES_AGENT],
+            },
+          },
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  systemRole: {
+                    in: [Role.DOC_AGENT, Role.SALES_AGENT],
+                  },
+                },
+              },
+            },
+          },
+        ],
       },
       select: {
         id: true,
+        firstName: true,
+        lastName: true,
         email: true,
         mobile: true,
         role: true,
+        orgRoles: {
+          select: {
+            orgRole: {
+              select: {
+                systemRole: true,
+                name: true,
+              },
+            },
+          },
+        },
         assignedDocApps: {
           select: {
             currentStage: true,
@@ -1082,31 +1144,47 @@ export class DocumenterService {
       ],
     });
 
-    return agents.map((agent) => {
+    return agents.map((agent: any) => {
       const activeLoad = agent.assignedDocApps.length;
       const prepCount = agent.assignedDocApps.filter(
-        (a) =>
+        (a: any) =>
           a.currentStage !== ApplicationStage.RAW_PROSPECT &&
           a.currentStage !== ApplicationStage.DOC_OUTREACH &&
           a.currentStage !== ApplicationStage.DROPPED_CANCELLED
       ).length;
 
       const dials = agent._count.callLogs;
-      const connected = agent.callLogs.filter((l) =>
+      const connected = agent.callLogs.filter((l: any) =>
         ['CONNECTED_INTERESTED', 'CONNECTED_CALLBACK', 'CONNECTED_NOT_INTERESTED', 'FALLBACK'].includes(l.disposition)
       ).length;
       const rate = dials > 0 ? `${((connected / dials) * 100).toFixed(1)}%` : '0.0%';
 
+      const systemRoles = new Set<string>();
+      if (agent.role) systemRoles.add(agent.role);
+      (agent.orgRoles || []).forEach((ur: any) => {
+        if (ur.orgRole?.systemRole) systemRoles.add(ur.orgRole.systemRole);
+      });
+
+      const effectiveRole = systemRoles.has(Role.DOC_AGENT)
+        ? Role.DOC_AGENT
+        : (systemRoles.has(Role.SALES_AGENT) ? Role.SALES_AGENT : (systemRoles.has(Role.ADMIN) ? Role.ADMIN : agent.role));
+
+      const fullName = `${agent.firstName || ''} ${agent.lastName || ''}`.trim();
       const email = agent.email || `agent-${agent.id.slice(0, 4)}@taxcrm.com`;
       const rawName = email.split('@')[0].replace('.', ' ');
-      const name = rawName.split(' ').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+      const fallbackName = rawName.split(' ').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+      const name = fullName || fallbackName || 'Calling Agent';
 
       return {
         id: agent.id,
         name,
+        fullName: name,
+        firstName: agent.firstName || '',
+        lastName: agent.lastName || '',
         email,
         mobile: agent.mobile || '',
-        role: agent.role,
+        role: effectiveRole,
+        systemRoles: Array.from(systemRoles),
         activeLoad,
         dials,
         connected,
@@ -1277,20 +1355,43 @@ export class DocumenterService {
 
     const targetAgent = await prisma.user.findUnique({
       where: { id: targetAgentId, isActive: true },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        orgRoles: {
+          select: {
+            orgRole: {
+              select: {
+                systemRole: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!targetAgent) {
       throw new Error('Target staff member not found or inactive');
     }
 
-    if (
-      targetAgent.role !== Role.DOC_AGENT &&
-      targetAgent.role !== Role.SALES_AGENT &&
-      targetAgent.role !== Role.DOC_TEAM_LEAD &&
-      targetAgent.role !== Role.DOC_MANAGER
-    ) {
-      throw new Error('Tax leads can only be assigned to active Documenter staff or Sales Closers.');
+    const targetSystemRoles = new Set<string>();
+    if (targetAgent.role) targetSystemRoles.add(targetAgent.role);
+    targetAgent.orgRoles?.forEach((ur: any) => {
+      if (ur.orgRole?.systemRole) targetSystemRoles.add(ur.orgRole.systemRole);
+    });
+
+    const isEligible =
+      targetSystemRoles.has(Role.DOC_AGENT) ||
+      targetSystemRoles.has(Role.SALES_AGENT) ||
+      targetSystemRoles.has(Role.DOC_MANAGER) ||
+      targetSystemRoles.has(Role.SALES_MANAGER) ||
+      targetSystemRoles.has(Role.ADMIN);
+
+    if (!isEligible) {
+      throw new Error('Tax leads can only be assigned to active Documenter staff, Sales Closers, or Administrators.');
     }
 
     const targetAgentName = targetAgent.firstName
@@ -1526,7 +1627,18 @@ export class DocumenterService {
     const activeAgents = await prisma.user.findMany({
       where: {
         isActive: true,
-        role: Role.DOC_AGENT,
+        OR: [
+          { role: { in: [Role.DOC_AGENT, Role.SALES_AGENT] } },
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  systemRole: { in: [Role.DOC_AGENT, Role.SALES_AGENT] },
+                },
+              },
+            },
+          },
+        ],
       },
       select: { id: true, email: true, role: true },
       orderBy: { createdAt: 'asc' },

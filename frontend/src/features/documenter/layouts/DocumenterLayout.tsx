@@ -15,6 +15,7 @@ import {
   Bell,
   Globe,
 } from 'lucide-react';
+import { filterNavItemsByPermissions } from '@/shared/constants/sidebar-catalog';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
@@ -22,7 +23,7 @@ import toast from 'react-hot-toast';
 export const DocumenterLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, activeOrgRole, sidebarPermissions, logout } = useAuthStore();
   const { getUnreadCount } = useNotificationStore();
   const unreadCount = getUnreadCount();
 
@@ -36,10 +37,10 @@ export const DocumenterLayout: React.FC = () => {
     }
   };
 
-  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'ADMIN';
+  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'ADMIN';
 
   // Role-specific Navigation Items
-  const navItems = isManager
+  const rawNavItems = isManager
     ? [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Management', path: '/documenter/manager' },
       { id: 'self_signups', label: 'Direct Sign-ups', icon: Globe, section: 'Operations', path: '/documenter/manager/self-signups' },
@@ -57,6 +58,9 @@ export const DocumenterLayout: React.FC = () => {
       // { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Intake Pipeline', path: '/documenter/agent/audit-logs' },
       { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Calling Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
     ];
+
+  const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');
+  const navItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
 
   const currentPath = location.pathname;
   const searchParams = new URLSearchParams(location.search);

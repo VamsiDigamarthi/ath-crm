@@ -301,6 +301,27 @@ export function UnifiedTable<TData extends Record<string, any>>({
         if (filterValue == null) return true;
         const cellValue = row.getValue(columnId);
 
+        // Extract normalized string representations of all values in cell
+        const cellStrings: string[] = [];
+        if (cellValue != null) {
+          if (Array.isArray(cellValue)) {
+            cellValue.forEach((item) => {
+              if (item != null) cellStrings.push(String(item).toLowerCase().trim());
+            });
+          } else {
+            cellStrings.push(String(cellValue).toLowerCase().trim());
+          }
+        }
+
+        const matchTarget = (target: string): boolean => {
+          if (!target) return true;
+          return cellStrings.some((c) => {
+            if (c === target) return true;
+            if (c.includes(target) || target.includes(c)) return true;
+            return false;
+          });
+        };
+
         if (Array.isArray(filterValue)) {
           if (filterValue.length === 0) return true;
           return filterValue.some((val) => {
@@ -309,16 +330,14 @@ export function UnifiedTable<TData extends Record<string, any>>({
               if (val === 'INACTIVE' || val === 'Inactive' || val === false || val === 'false') return cellValue === false;
             }
             if (cellValue == null) return val === '' || val === '(Empty)';
-            const strVal = String(cellValue).toLowerCase().trim();
-            const strFilter = String(val).toLowerCase().trim();
-            return strVal === strFilter || strVal.includes(strFilter);
+            return matchTarget(String(val).toLowerCase().trim());
           });
         }
 
         if (typeof filterValue === 'string') {
           if (!filterValue.trim()) return true;
           if (cellValue == null) return false;
-          return String(cellValue).toLowerCase().includes(filterValue.toLowerCase().trim());
+          return matchTarget(filterValue.toLowerCase().trim());
         }
 
         return true;

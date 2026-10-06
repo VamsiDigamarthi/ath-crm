@@ -1,19 +1,24 @@
 export type EmployeeRole =
   | 'ADMIN'
   | 'DOC_MANAGER'
-  | 'DOC_TEAM_LEAD'
   | 'DOC_AGENT'
   | 'PREP_MANAGER'
   | 'TAX_REVIEWER'
   | 'TAX_PREPARER'
   | 'SALES_MANAGER'
-  | 'SALES_TEAM_LEAD'
   | 'SALES_AGENT'
   | 'FILE_OP_MANAGER'
-  | 'FILE_OP_TEAM_LEAD'
   | 'FILE_OP_AGENT';
 
 export type DepartmentType = 'ALL' | 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
+
+export interface EmployeeOrgRoleSummary {
+  id: string;
+  name: string;
+  systemRole: string;
+  department?: string;
+  isPrimary?: boolean;
+}
 
 export interface EmployeeItem extends Record<string, unknown> {
   id: string;
@@ -34,6 +39,8 @@ export interface EmployeeItem extends Record<string, unknown> {
   assignedCasesCount: number;
   completedCasesCount: number;
   createdAt: string;
+  orgRoles?: EmployeeOrgRoleSummary[];
+  activeOrgRoleId?: string;
 }
 
 export interface EmployeeStats {
@@ -57,4 +64,6 @@ export interface AddEmployeeFormData {
   isActive: boolean;
   smtpEmail?: string;
   smtpAppPassword?: string;
+  orgRoleIds?: string[];
+  primaryOrgRoleId?: string;
 }

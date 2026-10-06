@@ -12,12 +12,9 @@ import {
   Sparkles, 
   Clock, 
   CheckCircle2, 
-  AlertCircle,
   FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-const FORM_ORDER = ['1040', '1040NR', '1040X', '1065', '1120', '1120S'];
 
 const TIME_OPTIONS = [
   { label: '09:00 AM (Morning)', value: '09:00 AM' },
@@ -45,10 +42,19 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
   staff,
   onAssignSuccess,
 }) => {
-  // Exclude Department Manager from operational preparation/review pool
-  const operationalStaff = useMemo(() => {
-    const list = staff.filter((s) => s.role !== 'PREP_MANAGER');
-    return list.length >= 2 ? list : staff;
+  // Separate staff strictly by role capability
+  const preparerStaff = useMemo(() => {
+    return staff.filter((s) => {
+      if (s.canPrepare !== undefined) return s.canPrepare;
+      return s.role === 'TAX_PREPARER' || s.systemRoles?.includes('TAX_PREPARER');
+    });
+  }, [staff]);
+
+  const reviewerStaff = useMemo(() => {
+    return staff.filter((s) => {
+      if (s.canReview !== undefined) return s.canReview;
+      return s.role === 'TAX_REVIEWER' || s.systemRoles?.includes('TAX_REVIEWER');
+    });
   }, [staff]);
 
   const [selectedPreparerId, setSelectedPreparerId] = useState<string>('');
@@ -62,30 +68,40 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
   const [prepNotes, setPrepNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-select initial pair (pick 2 different operational staff with lowest caseload)
+  // Auto-select initial pair based on roles & lowest caseload
   useEffect(() => {
-    if (isOpen && operationalStaff.length >= 2) {
-      const sorted = [...operationalStaff].sort((a, b) => (Number(a.activeCaseload) || 0) - (Number(b.activeCaseload) || 0));
-      setSelectedPreparerId(sorted[0].id);
-      setSelectedReviewerId(sorted[1].id);
+    if (isOpen) {
+      if (preparerStaff.length > 0 && !selectedPreparerId) {
+        const sortedPreps = [...preparerStaff].sort((a, b) => (Number(a.activeCaseload) || 0) - (Number(b.activeCaseload) || 0));
+        setSelectedPreparerId(sortedPreps[0].id);
+      }
+      if (reviewerStaff.length > 0 && !selectedReviewerId) {
+        const sortedRevs = [...reviewerStaff].sort((a, b) => (Number(a.activeCaseload) || 0) - (Number(b.activeCaseload) || 0));
+        const diffRev = sortedRevs.find((r) => r.id !== selectedPreparerId);
+        setSelectedReviewerId(diffRev ? diffRev.id : sortedRevs[0].id);
+      }
     }
-  }, [isOpen, operationalStaff]);
+  }, [isOpen, preparerStaff, reviewerStaff]);
 
   // Quick 1-Click Auto-Pair
   const handleAutoPair = () => {
-    if (operationalStaff.length < 2) {
-      toast.error('At least 2 staff members are required to form a pair');
+    if (preparerStaff.length === 0 || reviewerStaff.length === 0) {
+      toast.error('Both an eligible Tax Preparer and QA Reviewer are required');
       return;
     }
-    const sorted = [...operationalStaff].sort((a, b) => (Number(a.activeCaseload) || 0) - (Number(b.activeCaseload) || 0));
-    setSelectedPreparerId(sorted[0].id);
-    setSelectedReviewerId(sorted[1].id);
-    toast.success('Auto-paired least loaded Preparer & Reviewer! ⚡');
+    const sortedPreps = [...preparerStaff].sort((a, b) => (Number(a.activeCaseload) || 0) - (Number(b.activeCaseload) || 0));
+    const sortedRevs = [...reviewerStaff].sort((a, b) => (Number(a.activeCaseload) || 0) - (Number(b.activeCaseload) || 0));
+
+    const chosenPrep = sortedPreps[0];
+    const otherRev = sortedRevs.find((r) => r.id !== chosenPrep.id);
+    const chosenRev = otherRev || sortedRevs[0];
+
+    setSelectedPreparerId(chosenPrep.id);
+    setSelectedReviewerId(chosenRev.id);
+    toast.success('Auto-paired optimal Preparer & Reviewer! ⚡');
   };
 
-  const preparerCanSelfReview = Boolean(staff.find((s) => s.id === selectedPreparerId)?.canSelfReview);
-  const isSelfReview = Boolean(selectedPreparerId && selectedReviewerId && selectedPreparerId === selectedReviewerId);
-  const isFourEyesViolation = isSelfReview && !preparerCanSelfReview;
+  const isSelfAssignment = Boolean(selectedPreparerId && selectedReviewerId && selectedPreparerId === selectedReviewerId);
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,10 +111,6 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
     }
     if (!selectedReviewerId) {
       toast.error('Please select a staff member for QA Review');
-      return;
-    }
-    if (isFourEyesViolation) {
-      toast.error('4-Eyes Principle: The same staff member cannot prepare and review the same return.');
       return;
     }
 
@@ -169,69 +181,66 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
                 </div>
                 <span>1. Tax Preparer (1040 Drafting) *</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-medium">{operationalStaff.length} Staff Available</span>
+              <span className="text-[10px] text-slate-400 font-medium">{preparerStaff.length} Staff Available</span>
             </div>
 
             <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {operationalStaff.map((member) => {
-                const isSelected = selectedPreparerId === member.id;
-                const isAlsoReviewer = selectedReviewerId === member.id;
-                const load = Number(member.activeCaseload) || 0;
+              {preparerStaff.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400 font-medium">
+                  No personnel with Tax Preparer role available
+                </div>
+              ) : (
+                preparerStaff.map((member) => {
+                  const isSelected = selectedPreparerId === member.id;
+                  const isAlsoReviewer = selectedReviewerId === member.id;
+                  const load = Number(member.activeCaseload) || 0;
 
-                return (
-                  <div
-                    key={`prep-${member.id}`}
-                    onClick={() => setSelectedPreparerId(member.id)}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50/50 shadow-xs'
-                        : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/70'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {(member.name || member.email)[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                          <span>{member.name}</span>
-                          {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 inline" />}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-medium">
-                          {member.roleLabel} • <span className="font-bold text-slate-700">{load} active</span>
-                          {load > 0 && (
-                            <span className="block mt-1 space-x-1">
-                              {FORM_ORDER.filter((f) => member.activeByForm?.[f]).map((f) => (
-                                <span key={f} className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
-                                  {f}: {member.activeByForm?.[f]}
-                                </span>
-                              ))}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      {isAlsoReviewer ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
-                          Reviewer
-                        </span>
-                      ) : (
-                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md ${
-                          isSelected
-                            ? 'bg-blue-600 text-white shadow-2xs'
-                            : 'bg-slate-100 text-slate-600'
+                  return (
+                    <div
+                      key={`prep-${member.id}`}
+                      onClick={() => setSelectedPreparerId(member.id)}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50/50 shadow-xs'
+                          : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/70'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 ${
+                          isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
                         }`}>
-                          {isSelected ? 'Selected' : 'Assign'}
-                        </span>
-                      )}
+                          {(member.name || member.email)[0].toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                            <span className="truncate">{member.name}</span>
+                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 inline shrink-0" />}
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-medium truncate">
+                            <span>{member.email}</span> • <span className="font-bold text-slate-700">{load} active</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        {isSelected ? (
+                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-blue-600 text-white shadow-2xs">
+                            Selected
+                          </span>
+                        ) : isAlsoReviewer ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                            Reviewer
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-600">
+                            Assign
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -244,95 +253,85 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
                 </div>
                 <span>2. QA Reviewer (Compliance Audit) *</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-medium">{operationalStaff.length} Staff Available</span>
+              <span className="text-[10px] text-slate-400 font-medium">{reviewerStaff.length} Staff Available</span>
             </div>
 
             <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {operationalStaff.map((member) => {
-                const isSelected = selectedReviewerId === member.id;
-                const isPreparer = selectedPreparerId === member.id && !member.canSelfReview;
-                const load = Number(member.activeCaseload) || 0;
+              {reviewerStaff.length === 0 ? (
+                <div className="p-6 text-center text-xs text-slate-400 font-medium">
+                  No personnel with QA Reviewer role available
+                </div>
+              ) : (
+                reviewerStaff.map((member) => {
+                  const isSelected = selectedReviewerId === member.id;
+                  const isAlsoPreparer = selectedPreparerId === member.id;
+                  const load = Number(member.activeCaseload) || 0;
 
-                return (
-                  <div
-                    key={`rev-${member.id}`}
-                    onClick={() => {
-                      if (!isPreparer) {
-                        setSelectedReviewerId(member.id);
-                      }
-                    }}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                      isSelected
-                        ? 'border-purple-500 bg-purple-50/50 shadow-xs'
-                        : isPreparer
-                        ? 'border-slate-100 bg-slate-50/40 opacity-60 cursor-not-allowed'
-                        : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/70'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {(member.name || member.email)[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                          <span>{member.name}</span>
-                          {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 inline" />}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-medium">
-                          {member.roleLabel} • <span className="font-bold text-slate-700">{load} active</span>
-                          {load > 0 && (
-                            <span className="block mt-1 space-x-1">
-                              {FORM_ORDER.filter((f) => member.activeByForm?.[f]).map((f) => (
-                                <span key={f} className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
-                                  {f}: {member.activeByForm?.[f]}
-                                </span>
-                              ))}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      {isPreparer ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200" title="Cannot review own prepared file">
-                          Preparer (Disabled)
-                        </span>
-                      ) : (
-                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md ${
-                          isSelected
-                            ? 'bg-purple-600 text-white shadow-2xs'
-                            : 'bg-slate-100 text-slate-600'
+                  return (
+                    <div
+                      key={`rev-${member.id}`}
+                      onClick={() => setSelectedReviewerId(member.id)}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                        isSelected
+                          ? 'border-purple-500 bg-purple-50/50 shadow-xs'
+                          : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/70'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-xl text-xs font-bold flex items-center justify-center shrink-0 ${
+                          isSelected ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-700'
                         }`}>
-                          {isSelected ? 'Selected' : 'Assign'}
-                        </span>
-                      )}
+                          {(member.name || member.email)[0].toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                            <span className="truncate">{member.name}</span>
+                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 inline shrink-0" />}
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-medium truncate">
+                            <span>{member.email}</span> • <span className="font-bold text-slate-700">{load} active</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        {isSelected ? (
+                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-purple-600 text-white shadow-2xs">
+                            Selected
+                          </span>
+                        ) : isAlsoPreparer ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                            Preparer
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-600">
+                            Assign
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
 
-        {/* 4-Eyes Compliance Indicator */}
-        {isFourEyesViolation ? (
-          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span><strong>4-Eyes Principle:</strong> The same staff member cannot prepare and review the same return. Please select a different Reviewer.</span>
-          </div>
-        ) : selectedPreparerId && selectedReviewerId ? (
+        {/* Selected Pair Confirmation Indicator */}
+        {selectedPreparerId && selectedReviewerId ? (
           <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
               <span>
-                <strong>Pair Confirmed:</strong> {staff.find((s) => s.id === selectedPreparerId)?.name} (Drafts) &rarr; {staff.find((s) => s.id === selectedReviewerId)?.name} (QA Audit)
+                {isSelfAssignment ? (
+                  <><strong>Dual Role Assignment:</strong> {staff.find((s) => s.id === selectedPreparerId)?.name} (Tax Preparation &amp; QA Review)</>
+                ) : (
+                  <><strong>Pair Confirmed:</strong> {staff.find((s) => s.id === selectedPreparerId)?.name} (Drafts) &rarr; {staff.find((s) => s.id === selectedReviewerId)?.name} (QA Audit)</>
+                )}
               </span>
             </div>
             <span className="text-[10px] font-bold text-[#16A34A] bg-white px-2 py-0.5 rounded border border-emerald-200">
-              {isSelfReview ? 'Self-review allowed' : '4-Eyes Validated ✓'}
+              {isSelfAssignment ? 'Dual Role Selected ✓' : 'Pair Validated ✓'}
             </span>
           </div>
         ) : null}
@@ -441,7 +440,7 @@ export const PrepAssignLeadDrawer: React.FC<PrepAssignLeadDrawerProps> = ({
             type="submit"
             size="sm"
             loading={isSubmitting}
-            disabled={isFourEyesViolation || !selectedPreparerId || !selectedReviewerId || isSubmitting}
+            disabled={!selectedPreparerId || !selectedReviewerId || isSubmitting}
             className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold px-4 cursor-pointer shadow-2xs"
           >
             <CheckCircle2 className="w-3.5 h-3.5" />

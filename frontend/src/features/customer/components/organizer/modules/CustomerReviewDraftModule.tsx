@@ -48,13 +48,11 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
   const isSalesTeam = !isPrepOrReviewWorkspace && !isPrepOrReviewerRole && (
     user?.role === 'ADMIN' || 
     user?.role === 'SALES_MANAGER' || 
-    user?.role === 'SALES_TEAM_LEAD' || 
     user?.role === 'SALES_AGENT'
   );
   const isStaff = !isClient;
 
   const isDocumenter = user?.role === 'DOC_AGENT' || 
-    user?.role === 'DOC_TEAM_LEAD' || 
     user?.role === 'DOC_MANAGER' || 
     (typeof window !== 'undefined' && window.location.pathname.includes('/documenter/'));
 

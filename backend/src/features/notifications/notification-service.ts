@@ -49,7 +49,6 @@ export class NotificationService {
     const isManagementRole = [
       'ADMIN',
       'DOC_MANAGER',
-      'DOC_TEAM_LEAD',
       'PREP_MANAGER',
       'SALES_MANAGER',
       'FILE_OP_MANAGER',
@@ -114,7 +113,6 @@ export class NotificationService {
     const isManagementRole = [
       'ADMIN',
       'DOC_MANAGER',
-      'DOC_TEAM_LEAD',
       'PREP_MANAGER',
       'SALES_MANAGER',
       'FILE_OP_MANAGER',

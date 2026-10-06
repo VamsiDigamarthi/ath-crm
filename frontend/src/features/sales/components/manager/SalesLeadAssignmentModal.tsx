@@ -42,19 +42,23 @@ export const SalesLeadAssignmentModal: React.FC<SalesLeadAssignmentModalProps> =
   const singleLead = leadCount === 1 ? selectedLeads[0] : null;
   const complexityInfo = singleLead ? calculateReturnComplexity(singleLead) : null;
 
-  // Strictly Frontline Sales Closers (SALES_AGENT only - Managers and Team Leads excluded)
+  // Frontline Sales Closers (SALES_AGENT) based on orgRoles / systemRoles
   const closers = useMemo(() => {
-    return salesReps.filter((r) => r.role === 'SALES_AGENT' || !r.role);
+    return salesReps.filter((r: any) => {
+      const sysRoles: string[] = Array.isArray(r.systemRoles) ? r.systemRoles : [];
+      return r.role === 'SALES_AGENT' || sysRoles.includes('SALES_AGENT');
+    });
   }, [salesReps]);
 
   // Search filtered frontline closers
   const filteredClosers = useMemo(() => {
-    return closers.filter((rep) => {
-      const q = searchAgent.toLowerCase();
-      return (
-        rep.name.toLowerCase().includes(q) ||
-        rep.email.toLowerCase().includes(q)
-      );
+    const q = searchAgent.toLowerCase().trim();
+    if (!q) return closers;
+    return closers.filter((rep: any) => {
+      const name = (rep.name || rep.fullName || `${rep.firstName || ''} ${rep.lastName || ''}`).toLowerCase();
+      const email = (rep.email || '').toLowerCase();
+      const mobile = (rep.mobile || rep.phone || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || mobile.includes(q);
     });
   }, [closers, searchAgent]);
 

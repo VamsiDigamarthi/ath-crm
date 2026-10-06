@@ -17,13 +17,10 @@ router.post(
     Role.TAX_REVIEWER,
     Role.TAX_PREPARER,
     Role.SALES_MANAGER,
-    Role.SALES_TEAM_LEAD,
     Role.SALES_AGENT,
     Role.DOC_MANAGER,
-    Role.DOC_TEAM_LEAD,
     Role.DOC_AGENT,
     Role.FILE_OP_MANAGER,
-    Role.FILE_OP_TEAM_LEAD,
     Role.FILE_OP_AGENT
   ),
   uploadTaxDocument.array('files', 10),

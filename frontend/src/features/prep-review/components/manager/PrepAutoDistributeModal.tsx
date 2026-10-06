@@ -21,8 +21,16 @@ export const PrepAutoDistributeModal: React.FC<PrepAutoDistributeModalProps> = (
   onDistributeSuccess,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const activePreparers = staff.filter((s) => s.role === 'TAX_PREPARER' && s.isAvailable);
-  const activeReviewers = staff.filter((s) => s.role === 'TAX_REVIEWER' && s.isAvailable);
+  const activePreparers = staff.filter(
+    (s) =>
+      (s.canPrepare ?? (s.role === 'TAX_PREPARER' || s.systemRoles?.includes('TAX_PREPARER'))) &&
+      s.isAvailable
+  );
+  const activeReviewers = staff.filter(
+    (s) =>
+      (s.canReview ?? (s.role === 'TAX_REVIEWER' || s.systemRoles?.includes('TAX_REVIEWER'))) &&
+      s.isAvailable
+  );
 
   const handleAutoDistribute = () => {
     if (unassignedLeads.length === 0) {
@@ -80,7 +88,7 @@ export const PrepAutoDistributeModal: React.FC<PrepAutoDistributeModalProps> = (
               <span>QA Reviewers</span>
             </div>
             <div className="text-xl font-extrabold text-purple-900">{activeReviewers.length} Personnel</div>
-            <div className="text-[10px] text-purple-600">4-Eyes Compliance enforced</div>
+            <div className="text-[10px] text-purple-600">QA review capacity</div>
           </div>
         </div>
 

@@ -287,7 +287,7 @@ export const useMasterTaxpayers = () => {
           prepAgent: { id: 'a-2', name: 'Kavita Rao', role: 'TAX_PREPARER' },
           reviewAgent: { id: 'a-3', name: 'Sunita Mehra', role: 'TAX_REVIEWER' },
           salesAgent: { id: 'a-4', name: 'Vikram Singh', role: 'SALES_CLOSER' },
-          fileOp: { id: 'a-5', name: 'Priya Sharma', role: 'FILE_OP_TEAM_LEAD' },
+          fileOp: { id: 'a-5', name: 'Priya Sharma', role: 'FILE_OP_AGENT' },
         },
       });
     } finally {

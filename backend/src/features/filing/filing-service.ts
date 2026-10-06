@@ -567,17 +567,33 @@ export class FilingService {
   public static async getFilingStaff(): Promise<FilingStaffMember[]> {
     const staff = await prisma.user.findMany({
       where: {
-        role: {
-          in: [
-            Role.FILE_OP_AGENT,
-            Role.FILE_OP_MANAGER,
-            Role.FILE_OP_TEAM_LEAD,
-            Role.ADMIN,
-          ],
-        },
         isActive: true,
+        OR: [
+          {
+            role: {
+              in: [
+                Role.FILE_OP_AGENT,
+                Role.FILE_OP_MANAGER,
+              ],
+            },
+          },
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  systemRole: { in: [Role.FILE_OP_AGENT, Role.FILE_OP_MANAGER] },
+                },
+              },
+            },
+          },
+        ],
       },
       include: {
+        orgRoles: {
+          include: {
+            orgRole: true,
+          },
+        },
         assignedFileApps: {
           select: { id: true, currentStage: true, updatedAt: true },
         },
@@ -606,11 +622,26 @@ export class FilingService {
         ? `${Math.round((accepted / totalFinished) * 100)}%`
         : '0%';
 
+      const systemRoles = new Set<string>();
+      if (member.role) systemRoles.add(member.role);
+      (member.orgRoles || []).forEach((ur: any) => {
+        if (ur.orgRole?.systemRole) systemRoles.add(ur.orgRole.systemRole);
+      });
+
+      const effectiveRole = systemRoles.has(Role.FILE_OP_AGENT)
+        ? Role.FILE_OP_AGENT
+        : (systemRoles.has(Role.FILE_OP_MANAGER) ? Role.FILE_OP_MANAGER : member.role);
+
       return {
         id: member.id,
         name,
+        fullName: name,
+        firstName: member.firstName || '',
+        lastName: member.lastName || '',
         email: member.email || '-',
-        role: member.role,
+        mobile: member.mobile || '',
+        role: effectiveRole,
+        systemRoles: Array.from(systemRoles),
         activeCaseload: totalCaseload,
         openQueue,
         transmissionsCompletedToday: accepted + rejected,
@@ -649,7 +680,7 @@ export class FilingService {
 
     const activeFilingSpecialists = await prisma.user.count({
       where: {
-        role: { in: [Role.FILE_OP_AGENT, Role.FILE_OP_TEAM_LEAD, Role.FILE_OP_MANAGER] },
+        role: { in: [Role.FILE_OP_AGENT, Role.FILE_OP_MANAGER] },
         isActive: true,
       },
     });
@@ -989,8 +1020,19 @@ export class FilingService {
   public static async autoRoundRobin(managerUserId?: string) {
     const filingAgents = await prisma.user.findMany({
       where: {
-        role: { in: [Role.FILE_OP_AGENT, Role.FILE_OP_TEAM_LEAD, Role.FILE_OP_MANAGER] },
         isActive: true,
+        OR: [
+          { role: { in: [Role.FILE_OP_AGENT, Role.FILE_OP_MANAGER] } },
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  systemRole: { in: [Role.FILE_OP_AGENT, Role.FILE_OP_MANAGER] },
+                },
+              },
+            },
+          },
+        ],
       },
       select: { id: true, firstName: true, lastName: true, email: true },
     });

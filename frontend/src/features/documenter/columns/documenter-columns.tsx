@@ -21,7 +21,47 @@ export interface GetDocumenterColumnsProps {
   isAdmin?: boolean;
 }
 
+export const isDirectSignupLead = (item: DocumenterLeadItem): boolean => {
+  if (!item) return false;
+  if (item.isDirectSignup || item.isSelfRegistered) return true;
+  const summary = (item.taxDraftSummary as any) || {};
+  if (
+    summary.leadSource === 'SELF_SIGNUP' ||
+    summary.source === 'SELF_SIGNUP' ||
+    summary.isSelfRegistered === true ||
+    summary.signupMethod === 'ONLINE_PORTAL' ||
+    summary.signupMethod === 'PUBLIC_PORTAL' ||
+    summary.acquisitionSource === 'DIRECT_SIGNUP' ||
+    summary.channel === 'SELF_SERVICE_PORTAL' ||
+    summary.registrationChannel?.includes('SELF_SERVICE') ||
+    summary.isDirectSignup === true
+  ) {
+    return true;
+  }
+  const src = String(summary.leadSource || summary.source || summary.acquisitionSource || '').toUpperCase();
+  if (src.includes('SELF') || src.includes('DIRECT')) {
+    return true;
+  }
+  return false;
+};
+
+export const isTaxApplicationAssignment = (item: DocumenterLeadItem): boolean => {
+  if (isDirectSignupLead(item)) return true;
+  const summary = (item.taxDraftSummary as any) || {};
+  // Any real application with a configured tax year or return config (not a synthetic raw ingest)
+  if (
+    item.taxYear &&
+    !item.id?.startsWith('raw-') &&
+    summary.isRawIngested !== true &&
+    (item.isReturnConfigured === true || summary.isReturnConfigured === true || (item.allApplications && item.allApplications.length > 0))
+  ) {
+    return true;
+  }
+  return false;
+};
+
 export const isRawLead = (item: DocumenterLeadItem): boolean => {
+  if (isDirectSignupLead(item) || isTaxApplicationAssignment(item)) return false;
   if (item.isRawProspect === true) return true;
   if ((item as any).isReturnConfigured === false) return true;
   if ((item.taxDraftSummary as any)?.isReturnConfigured === false) return true;
@@ -37,10 +77,14 @@ export const isLeadInterested = (item: DocumenterLeadItem): boolean => {
 };
 
 export const canConfigureReturn = (item: DocumenterLeadItem): boolean => {
+  if (isDirectSignupLead(item) || isTaxApplicationAssignment(item)) return false;
   return isRawLead(item) && isLeadInterested(item);
 };
 
 export const canViewLead = (item: DocumenterLeadItem): boolean => {
+  // Direct signup leads are already tax application assignments and must directly show "View"
+  if (isDirectSignupLead(item) || isTaxApplicationAssignment(item)) return true;
+
   if (isRawLead(item)) return false;
   const advancedStages = [
     'DOC_PREP',
@@ -108,7 +152,20 @@ export const getDocumenterColumns = ({
       cell: ({ row }) => {
         const c = row.original.customer;
         const name = c?.fullName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || '—';
-        return <ClientNameCell name={name} />;
+        const isDirect = isDirectSignupLead(row.original);
+        return (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <ClientNameCell name={name} />
+            {isDirect && (
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                title="Direct Online Portal Signup"
+              >
+                Direct Signup
+              </span>
+            )}
+          </div>
+        );
       },
     },
     {

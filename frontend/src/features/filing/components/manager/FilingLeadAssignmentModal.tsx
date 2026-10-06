@@ -36,17 +36,22 @@ export const FilingLeadAssignmentModal: React.FC<FilingLeadAssignmentModalProps>
 
   const leadCount = selectedLeads.length;
 
+  // Filing Specialists (FILE_OP_AGENT) based on orgRoles / systemRoles
   const specialists = useMemo(() => {
-    return staffList.filter((s) => s.role === 'FILE_OP_AGENT' || !s.role);
+    return staffList.filter((s: any) => {
+      const sysRoles: string[] = Array.isArray(s.systemRoles) ? s.systemRoles : [];
+      return s.role === 'FILE_OP_AGENT' || sysRoles.includes('FILE_OP_AGENT');
+    });
   }, [staffList]);
 
   const filteredSpecialists = useMemo(() => {
-    return specialists.filter((member) => {
-      const q = searchAgent.toLowerCase();
-      return (
-        member.name.toLowerCase().includes(q) ||
-        member.email.toLowerCase().includes(q)
-      );
+    const q = searchAgent.toLowerCase().trim();
+    if (!q) return specialists;
+    return specialists.filter((member: any) => {
+      const name = (member.name || member.fullName || `${member.firstName || ''} ${member.lastName || ''}`).toLowerCase();
+      const email = (member.email || '').toLowerCase();
+      const mobile = (member.mobile || member.phone || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || mobile.includes(q);
     });
   }, [specialists, searchAgent]);
 

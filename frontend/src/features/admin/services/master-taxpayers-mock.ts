@@ -23,7 +23,7 @@ export const MOCK_MASTER_TAXPAYERS: MasterTaxpayerRecord[] = [
     assignedAgent: {
       id: 'agent-101',
       name: 'Priya Sharma (CPA Lead)',
-      role: 'FILE_OP_TEAM_LEAD',
+      role: 'FILE_OP_AGENT',
       email: 'priya.sharma@taxcrm.com',
       department: 'File Operator Hub',
     },
@@ -460,7 +460,7 @@ export const MOCK_MASTER_TAXPAYERS: MasterTaxpayerRecord[] = [
     assignedAgent: {
       id: 'agent-101',
       name: 'Priya Sharma (CPA Lead)',
-      role: 'FILE_OP_TEAM_LEAD',
+      role: 'FILE_OP_AGENT',
       email: 'priya.sharma@taxcrm.com',
       department: 'File Operator Hub',
     },
@@ -535,7 +535,7 @@ export const MOCK_MASTER_TAXPAYERS: MasterTaxpayerRecord[] = [
     assignedAgent: {
       id: 'agent-101',
       name: 'Priya Sharma (CPA Lead)',
-      role: 'FILE_OP_TEAM_LEAD',
+      role: 'FILE_OP_AGENT',
       email: 'priya.sharma@taxcrm.com',
       department: 'File Operator Hub',
     },
@@ -721,7 +721,7 @@ export const MOCK_MASTER_TAXPAYERS: MasterTaxpayerRecord[] = [
     assignedAgent: {
       id: 'agent-101',
       name: 'Priya Sharma (CPA Lead)',
-      role: 'FILE_OP_TEAM_LEAD',
+      role: 'FILE_OP_AGENT',
       email: 'priya.sharma@taxcrm.com',
       department: 'File Operator Hub',
     },

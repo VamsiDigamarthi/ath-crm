@@ -21,6 +21,7 @@ import {
   getTaxpayerYearDetails,
 } from "./admin-controller.js";
 import { validateRequest } from "../../middlewares/validate-request.js";
+import { OrgRoleController } from "./org-role-controller.js";
 import {
   registerAdminSchema,
   bulkImportLeadsSchema,
@@ -86,6 +87,13 @@ router.post(
   bulkOnboardEmployees
 );
 
+// Roles & Permissions Management (Dynamic Org Roles)
+router.get("/org-roles", requireAuth, authorize(Role.ADMIN), OrgRoleController.listRoles);
+router.post("/org-roles", requireAuth, authorize(Role.ADMIN), OrgRoleController.createRole);
+router.get("/org-roles/:id", requireAuth, authorize(Role.ADMIN), OrgRoleController.getRole);
+router.put("/org-roles/:id", requireAuth, authorize(Role.ADMIN), OrgRoleController.updateRole);
+router.delete("/org-roles/:id", requireAuth, authorize(Role.ADMIN), OrgRoleController.deleteRole);
+
 // Converted Clients & Taxpayer Directory
 router.get(
   "/customers",
@@ -121,21 +129,21 @@ router.get(
 router.get(
   "/returned-leads",
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.PREP_MANAGER, Role.SALES_MANAGER),
   getReturnedLeads
 );
 
 router.post(
   "/returned-leads/assign-bulk",
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.PREP_MANAGER, Role.SALES_MANAGER),
   assignReturnedLeadsBulk
 );
 
 router.post(
   "/returned-leads/assign-round-robin",
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.PREP_MANAGER, Role.SALES_MANAGER),
   autoRoundRobinReturnedLeads
 );
 
@@ -146,7 +154,6 @@ router.get(
   authorize(
     Role.ADMIN,
     Role.DOC_MANAGER,
-    Role.DOC_TEAM_LEAD,
     Role.PREP_MANAGER,
     Role.SALES_MANAGER,
     Role.FILE_OP_MANAGER
@@ -160,7 +167,6 @@ router.post(
   authorize(
     Role.ADMIN,
     Role.DOC_MANAGER,
-    Role.DOC_TEAM_LEAD,
     Role.PREP_MANAGER,
     Role.SALES_MANAGER,
     Role.FILE_OP_MANAGER
@@ -174,7 +180,6 @@ router.post(
   authorize(
     Role.ADMIN,
     Role.DOC_MANAGER,
-    Role.DOC_TEAM_LEAD,
     Role.PREP_MANAGER,
     Role.SALES_MANAGER,
     Role.FILE_OP_MANAGER
@@ -186,21 +191,21 @@ router.post(
 router.get(
   "/master-taxpayers",
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.PREP_MANAGER, Role.SALES_MANAGER),
   getMasterTaxpayers
 );
 
 router.get(
   "/master-taxpayers/:id",
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.PREP_MANAGER, Role.SALES_MANAGER),
   getTaxpayerYearDetails
 );
 
 router.get(
   "/master-taxpayers/:id/year/:taxYear",
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.PREP_MANAGER, Role.SALES_MANAGER),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.PREP_MANAGER, Role.SALES_MANAGER),
   getTaxpayerYearDetails
 );
 

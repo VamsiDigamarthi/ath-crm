@@ -2,13 +2,16 @@ import { prisma } from "../../config/db.js";
 import { Role, Prisma, ApplicationStage } from "@prisma/client";
 import { BadRequestError } from "../../errors/bad-request-error.js";
 import { NotFoundError } from "../../errors/not-found-error.js";
+import { OrgRoleService } from "./org-role-service.js";
 
 export interface CreateEmployeeInput {
   firstName: string;
   lastName: string;
   email: string;
   mobile: string;
-  role: Role;
+  role?: Role;
+  orgRoleIds?: string[];
+  primaryOrgRoleId?: string;
   isActive?: boolean;
   smtpEmail?: string | null;
   smtpAppPassword?: string | null;
@@ -20,6 +23,8 @@ export interface UpdateEmployeeInput {
   email?: string;
   mobile?: string;
   role?: Role;
+  orgRoleIds?: string[];
+  primaryOrgRoleId?: string;
   isActive?: boolean;
   smtpEmail?: string | null;
   smtpAppPassword?: string | null;
@@ -46,8 +51,6 @@ export class EmployeeService {
     switch (role) {
       case Role.DOC_MANAGER:
         return { department: 'DOC', departmentLabel: 'Documenter Dept', roleLabel: 'Department Manager' };
-      case Role.DOC_TEAM_LEAD:
-        return { department: 'DOC', departmentLabel: 'Documenter Dept', roleLabel: 'Team Leader' };
       case Role.DOC_AGENT:
         return { department: 'DOC', departmentLabel: 'Documenter Dept', roleLabel: 'Outreach / Prep Agent' };
       case Role.PREP_MANAGER:
@@ -58,14 +61,10 @@ export class EmployeeService {
         return { department: 'PREP_REVIEW', departmentLabel: 'Tax Prep & Review', roleLabel: 'Tax Preparer (Draftsman)' };
       case Role.SALES_MANAGER:
         return { department: 'SALES', departmentLabel: 'Sales Dept', roleLabel: 'Sales Operations Manager' };
-      case Role.SALES_TEAM_LEAD:
-        return { department: 'SALES', departmentLabel: 'Sales Dept', roleLabel: 'Sales Team Leader' };
       case Role.SALES_AGENT:
         return { department: 'SALES', departmentLabel: 'Sales Dept', roleLabel: 'Sales Pitch Agent' };
       case Role.FILE_OP_MANAGER:
         return { department: 'FILE_OP', departmentLabel: 'File Operator', roleLabel: 'CPA Operations Head' };
-      case Role.FILE_OP_TEAM_LEAD:
-        return { department: 'FILE_OP', departmentLabel: 'File Operator', roleLabel: 'Filing Team Leader' };
       case Role.FILE_OP_AGENT:
         return { department: 'FILE_OP', departmentLabel: 'File Operator', roleLabel: 'IRS E-Filer (CPA)' };
       case Role.ADMIN:
@@ -80,13 +79,13 @@ export class EmployeeService {
   public static getRolesByDepartment(dept: 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN'): Role[] {
     switch (dept) {
       case 'DOC':
-        return [Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.DOC_AGENT];
+        return [Role.DOC_MANAGER, Role.DOC_AGENT];
       case 'PREP_REVIEW':
         return [Role.PREP_MANAGER, Role.TAX_REVIEWER, Role.TAX_PREPARER];
       case 'SALES':
-        return [Role.SALES_MANAGER, Role.SALES_TEAM_LEAD, Role.SALES_AGENT];
+        return [Role.SALES_MANAGER, Role.SALES_AGENT];
       case 'FILE_OP':
-        return [Role.FILE_OP_MANAGER, Role.FILE_OP_TEAM_LEAD, Role.FILE_OP_AGENT];
+        return [Role.FILE_OP_MANAGER, Role.FILE_OP_AGENT];
       case 'ADMIN':
         return [Role.ADMIN];
     }
@@ -110,36 +109,84 @@ export class EmployeeService {
     const skip = (page - 1) * limit;
 
     // Filter staff members only (exclude client TAXPAYER_USER)
-    const where: Prisma.UserWhereInput = {
-      role: { not: Role.TAXPAYER_USER },
-    };
+    const andConditions: Prisma.UserWhereInput[] = [
+      { role: { not: Role.TAXPAYER_USER } },
+    ];
 
-    // Department Filter
+    // Department Filter: check both primary/legacy role and any assigned orgRoles
     if (department && department !== 'ALL') {
       const allowedRoles = this.getRolesByDepartment(department);
-      where.role = { in: allowedRoles };
+      andConditions.push({
+        OR: [
+          { role: { in: allowedRoles } },
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  OR: [
+                    { department: department },
+                    { systemRole: { in: allowedRoles } },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      });
     }
 
-    // Role Filter
-    if (role && role !== 'ALL' && Object.values(Role).includes(role as Role)) {
-      where.role = role as Role;
+    // Role Filter: check both primary/legacy role and any assigned orgRoles (by systemRole or name)
+    if (role && role !== 'ALL') {
+      const isSystemRole = Object.values(Role).includes(role as Role);
+      andConditions.push({
+        OR: [
+          ...(isSystemRole ? [{ role: role as Role }] : []),
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  OR: [
+                    ...(isSystemRole ? [{ systemRole: role as Role }] : []),
+                    { name: { equals: role, mode: 'insensitive' as const } },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      });
     }
 
     // Active Status Filter
     if (typeof isActive === 'boolean') {
-      where.isActive = isActive;
+      andConditions.push({ isActive });
     }
 
     // Search Filter
     if (search && search.trim()) {
       const q = search.trim();
-      where.OR = [
-        { firstName: { contains: q, mode: 'insensitive' } },
-        { lastName: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } },
-        { mobile: { contains: q, mode: 'insensitive' } },
-      ];
+      andConditions.push({
+        OR: [
+          { firstName: { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+          { mobile: { contains: q, mode: 'insensitive' } },
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  name: { contains: q, mode: 'insensitive' },
+                },
+              },
+            },
+          },
+        ],
+      });
     }
+
+    const where: Prisma.UserWhereInput = {
+      AND: andConditions,
+    };
 
     const [totalCount, users] = await Promise.all([
       prisma.user.count({ where }),
@@ -183,16 +230,35 @@ export class EmployeeService {
               currentStage: true,
             },
           },
+          orgRoles: {
+            include: {
+              orgRole: true,
+            },
+            orderBy: { isPrimary: "desc" },
+          },
         },
       }),
     ]);
 
-    // Calculate global department stats across all staff
+    // Calculate global department stats across all staff (including all assigned orgRoles)
     const allStaff = await prisma.user.findMany({
       where: {
         role: { not: Role.TAXPAYER_USER },
       },
-      select: { role: true, isActive: true },
+      select: {
+        role: true,
+        isActive: true,
+        orgRoles: {
+          select: {
+            orgRole: {
+              select: {
+                department: true,
+                systemRole: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     let documenters = 0;
@@ -203,12 +269,21 @@ export class EmployeeService {
     let activeCount = 0;
 
     allStaff.forEach((s) => {
+      const userDepts = new Set<string>();
       const meta = this.getDepartmentFromRole(s.role);
-      if (meta.department === 'DOC') documenters++;
-      if (meta.department === 'PREP_REVIEW') prepReview++;
-      if (meta.department === 'SALES') sales++;
-      if (meta.department === 'FILE_OP') fileOperators++;
-      if (meta.department === 'ADMIN') admins++;
+      userDepts.add(meta.department);
+
+      (s.orgRoles || []).forEach((ur) => {
+        if (ur.orgRole?.department) {
+          userDepts.add(ur.orgRole.department);
+        }
+      });
+
+      if (userDepts.has('DOC')) documenters++;
+      if (userDepts.has('PREP_REVIEW')) prepReview++;
+      if (userDepts.has('SALES')) sales++;
+      if (userDepts.has('FILE_OP')) fileOperators++;
+      if (userDepts.has('ADMIN')) admins++;
       if (s.isActive) activeCount++;
     });
 
@@ -291,6 +366,14 @@ export class EmployeeService {
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${firstName}${lastName}`,
         assignedCasesCount: assignedCases,
         completedCasesCount: completedCases,
+        orgRoles: (u.orgRoles || []).map((ur) => ({
+          id: ur.orgRole.id,
+          name: ur.orgRole.name,
+          systemRole: ur.orgRole.systemRole,
+          department: ur.orgRole.department,
+          isPrimary: ur.isPrimary,
+        })),
+        activeOrgRoleId: u.activeOrgRoleId,
         createdAt: u.createdAt.toLocaleDateString('en-US', {
           month: 'short',
           day: '2-digit',
@@ -334,18 +417,40 @@ export class EmployeeService {
       );
     }
 
+    // Auto-detect role from orgRole if role is not explicitly provided
+    let effectiveRole = role || Role.DOC_AGENT;
+    if (input.orgRoleIds && input.orgRoleIds.length > 0) {
+      const primaryId = input.primaryOrgRoleId || input.orgRoleIds[0];
+      const primaryRole = await prisma.orgRole.findUnique({ where: { id: primaryId } });
+      if (primaryRole) {
+        effectiveRole = primaryRole.systemRole;
+      }
+    }
+
     const user = await prisma.user.create({
       data: {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: normalizedEmail,
         mobile: normalizedMobile,
-        role,
+        role: effectiveRole,
         isActive,
         smtpEmail: smtpEmail?.trim() || null,
         smtpAppPassword: smtpAppPassword?.trim() || null,
       },
     });
+
+    if (input.orgRoleIds && input.orgRoleIds.length > 0) {
+      await OrgRoleService.setUserOrgRoles(user.id, input.orgRoleIds, input.primaryOrgRoleId);
+    } else {
+      // Auto-assign default org role matching system role
+      const defaultOrgRole = await prisma.orgRole.findFirst({
+        where: { systemRole: user.role },
+      });
+      if (defaultOrgRole) {
+        await OrgRoleService.setUserOrgRoles(user.id, [defaultOrgRole.id], defaultOrgRole.id);
+      }
+    }
 
     const meta = this.getDepartmentFromRole(user.role);
     return {
@@ -420,6 +525,10 @@ export class EmployeeService {
         ...(input.smtpAppPassword !== undefined && { smtpAppPassword: input.smtpAppPassword ? input.smtpAppPassword.trim() : null }),
       },
     });
+
+    if (input.orgRoleIds && input.orgRoleIds.length > 0) {
+      await OrgRoleService.setUserOrgRoles(id, input.orgRoleIds, input.primaryOrgRoleId);
+    }
 
     const meta = this.getDepartmentFromRole(updated.role);
     return {

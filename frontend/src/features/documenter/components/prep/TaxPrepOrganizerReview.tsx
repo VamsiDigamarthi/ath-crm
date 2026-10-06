@@ -61,7 +61,7 @@ export const TaxPrepOrganizerReview: React.FC<TaxPrepOrganizerReviewProps> = ({
   hideReviewDraftTab,
 }) => {
   const { user } = useAuthStore();
-  const isDocumenterRole = user?.role === 'DOC_AGENT' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'DOC_MANAGER';
+  const isDocumenterRole = user?.role === 'DOC_AGENT' || user?.role === 'DOC_MANAGER';
   const isDocumenterPath = typeof window !== 'undefined' && window.location.pathname.includes('/documenter/');
   const isDocumenter = isDocumenterRole || isDocumenterPath;
 

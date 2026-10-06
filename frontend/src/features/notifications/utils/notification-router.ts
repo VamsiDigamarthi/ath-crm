@@ -5,16 +5,16 @@ import type { AppNotification } from '../types/notification.types';
  */
 export function getNotificationListUrl(role?: string): string {
   if (role === 'ADMIN') return '/admin/notifications';
-  if (role === 'DOC_MANAGER' || role === 'DOC_TEAM_LEAD' || role === 'DOC_AGENT') {
+  if (role === 'DOC_MANAGER' || role === 'DOC_AGENT') {
     return '/documenter/notifications';
   }
   if (role === 'PREP_MANAGER' || role === 'TAX_REVIEWER' || role === 'TAX_PREPARER') {
     return '/prep-review/notifications';
   }
-  if (role === 'SALES_MANAGER' || role === 'SALES_TEAM_LEAD' || role === 'SALES_CLOSER' || role === 'SALES_AGENT') {
+  if (role === 'SALES_MANAGER' || role === 'SALES_CLOSER' || role === 'SALES_AGENT') {
     return '/sales/notifications';
   }
-  if (role === 'FILE_OP_MANAGER' || role === 'FILE_OP_TEAM_LEAD' || role === 'FILE_OP_AGENT') {
+  if (role === 'FILE_OP_MANAGER' || role === 'FILE_OP_AGENT') {
     return '/filing/notifications';
   }
   return '/customer/notifications';
@@ -28,16 +28,16 @@ export function isRouteAllowedForRole(url: string, role?: string): boolean {
   if (role === 'ADMIN') return true;
 
   if (url.startsWith('/documenter')) {
-    return role === 'DOC_MANAGER' || role === 'DOC_TEAM_LEAD' || role === 'DOC_AGENT';
+    return role === 'DOC_MANAGER' || role === 'DOC_AGENT';
   }
   if (url.startsWith('/prep-review') || url.startsWith('/prep/')) {
     return role === 'PREP_MANAGER' || role === 'TAX_REVIEWER' || role === 'TAX_PREPARER';
   }
   if (url.startsWith('/sales')) {
-    return role === 'SALES_MANAGER' || role === 'SALES_TEAM_LEAD' || role === 'SALES_CLOSER' || role === 'SALES_AGENT';
+    return role === 'SALES_MANAGER' || role === 'SALES_CLOSER' || role === 'SALES_AGENT';
   }
   if (url.startsWith('/filing')) {
-    return role === 'FILE_OP_MANAGER' || role === 'FILE_OP_TEAM_LEAD' || role === 'FILE_OP_AGENT';
+    return role === 'FILE_OP_MANAGER' || role === 'FILE_OP_AGENT';
   }
   if (url.startsWith('/customer')) {
     return role === 'TAXPAYER_USER' || role === 'CLIENT';
@@ -78,7 +78,7 @@ export function resolveNotificationClickUrl(notif: AppNotification, userRole?: s
   // 2. Department-based resolution by recipient's role:
 
   // --- DOCUMENTER ROLES ---
-  if (userRole === 'DOC_AGENT' || userRole === 'DOC_TEAM_LEAD') {
+  if (userRole === 'DOC_AGENT') {
     // If notification is about a single specific lead and appId is available
     if (appId && (title.includes('lead') || title.includes('outreach') || notif.category === 'DOCUMENTER')) {
       return `/documenter/agent/lead/${appId}`;
@@ -106,7 +106,7 @@ export function resolveNotificationClickUrl(notif: AppNotification, userRole?: s
   }
 
   // --- SALES ROLES ---
-  if (userRole === 'SALES_AGENT' || userRole === 'SALES_CLOSER' || userRole === 'SALES_TEAM_LEAD') {
+  if (userRole === 'SALES_AGENT' || userRole === 'SALES_CLOSER') {
     if (appId) return `/sales/agent/pitch/${appId}`;
     return '/sales/agent/queue';
   }
@@ -116,7 +116,7 @@ export function resolveNotificationClickUrl(notif: AppNotification, userRole?: s
   }
 
   // --- IRS FILING / MEF ROLES ---
-  if (userRole === 'FILE_OP_AGENT' || userRole === 'FILE_OP_TEAM_LEAD') {
+  if (userRole === 'FILE_OP_AGENT') {
     if (appId) return `/filing/workspace/${appId}`;
     return '/filing/agent/queue';
   }

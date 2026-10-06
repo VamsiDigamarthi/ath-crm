@@ -93,10 +93,14 @@ export interface PrepStaffMember {
   id: string;
   activeByForm?: Record<string, number>;
   canSelfReview?: boolean;
+  canPrepare?: boolean;
+  canReview?: boolean;
+  systemRoles?: string[];
+  orgRoleNames?: string[];
   name: string;
   email: string;
   mobile: string;
-  role: 'PREP_MANAGER' | 'TAX_REVIEWER' | 'TAX_PREPARER';
+  role: 'PREP_MANAGER' | 'TAX_REVIEWER' | 'TAX_PREPARER' | 'ADMIN' | string;
   roleLabel: string;
   totalAssignedCount?: number;
   totalAssignedPrep?: number;

@@ -14,6 +14,7 @@ import { AdminTaxpayerDetailScreen } from '@/features/admin/screens/AdminTaxpaye
 import { AdminCouponsScreen } from '@/features/coupons/screens/AdminCouponsScreen';
 import { AdminProductsScreen } from '@/features/products/screens/AdminProductsScreen';
 import { AdminPermissionsScreen } from '@/features/permissions/screens/AdminPermissionsScreen';
+import { OrgRolesManagementScreen } from '@/features/admin/screens/OrgRolesManagementScreen';
 import { AdminEmailTemplatesScreen } from '@/features/admin/screens/AdminEmailTemplatesScreen';
 import { AdminReturnedLeadsScreen } from '@/features/admin/screens/AdminReturnedLeadsScreen';
 import { AdminSelfSignupsScreen } from '@/features/admin/screens/AdminSelfSignupsScreen';
@@ -74,7 +75,7 @@ import { useAuthStore } from '@/features/auth/store/auth-store';
 
 const DocumenterIndexRedirect: React.FC = () => {
   const { user } = useAuthStore();
-  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'ADMIN';
+  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'ADMIN';
   return <Navigate to={isManager ? '/documenter/manager' : '/documenter/agent'} replace />;
 };
 
@@ -106,16 +107,16 @@ const NotificationRedirect: React.FC = () => {
   const role = user?.role;
 
   if (role === 'ADMIN') return <Navigate to="/admin/notifications" replace />;
-  if (role === 'DOC_MANAGER' || role === 'DOC_TEAM_LEAD' || role === 'DOC_AGENT') {
+  if (role === 'DOC_MANAGER' || role === 'DOC_AGENT') {
     return <Navigate to="/documenter/notifications" replace />;
   }
   if (role === 'PREP_MANAGER' || role === 'TAX_REVIEWER' || role === 'TAX_PREPARER') {
     return <Navigate to="/prep-review/notifications" replace />;
   }
-  if (role === 'SALES_MANAGER' || role === 'SALES_TEAM_LEAD' || role === 'SALES_CLOSER' || role === 'SALES_AGENT') {
+  if (role === 'SALES_MANAGER' || role === 'SALES_CLOSER' || role === 'SALES_AGENT') {
     return <Navigate to="/sales/notifications" replace />;
   }
-  if (role === 'FILE_OP_MANAGER' || role === 'FILE_OP_TEAM_LEAD' || role === 'FILE_OP_AGENT') {
+  if (role === 'FILE_OP_MANAGER' || role === 'FILE_OP_AGENT') {
     return <Navigate to="/filing/notifications" replace />;
   }
   return <Navigate to="/customer/notifications" replace />;
@@ -237,6 +238,14 @@ export const router = createBrowserRouter([
             element: <EmployeeManagementScreen />,
           },
           {
+            path: 'roles',
+            element: <OrgRolesManagementScreen />,
+          },
+          {
+            path: 'org-roles',
+            element: <Navigate to="/admin/roles" replace />,
+          },
+          {
             path: 'email-templates',
             element: <AdminEmailTemplatesScreen />,
           },
@@ -276,7 +285,6 @@ export const router = createBrowserRouter([
         allowedRoles={[
           'ADMIN',
           'DOC_MANAGER',
-          'DOC_TEAM_LEAD',
           'DOC_AGENT',
         ]}
       />
@@ -486,7 +494,6 @@ export const router = createBrowserRouter([
         allowedRoles={[
           'ADMIN',
           'SALES_MANAGER',
-          'SALES_TEAM_LEAD',
           'SALES_CLOSER',
           'SALES_AGENT',
         ]}
@@ -583,7 +590,6 @@ export const router = createBrowserRouter([
         allowedRoles={[
           'ADMIN',
           'FILE_OP_MANAGER',
-          'FILE_OP_TEAM_LEAD',
           'FILE_OP_AGENT',
         ]}
       />

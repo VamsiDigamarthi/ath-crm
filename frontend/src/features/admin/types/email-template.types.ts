@@ -1,16 +1,13 @@
 export type SystemRole =
   | 'ADMIN'
   | 'DOC_MANAGER'
-  | 'DOC_TEAM_LEAD'
   | 'DOC_AGENT'
   | 'PREP_MANAGER'
   | 'TAX_REVIEWER'
   | 'TAX_PREPARER'
   | 'SALES_MANAGER'
-  | 'SALES_TEAM_LEAD'
   | 'SALES_AGENT'
   | 'FILE_OP_MANAGER'
-  | 'FILE_OP_TEAM_LEAD'
   | 'FILE_OP_AGENT'
   | 'TAXPAYER_USER';
 

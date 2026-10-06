@@ -15,7 +15,7 @@ import type { DateFilterPreset } from '@/shared/utils/date-filters';
 export const useDocumenterWorkspace = (defaultTab?: DocumenterTab) => {
   const { user } = useAuthStore();
   const isAgent = user?.role === 'DOC_AGENT';
-  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'DOC_TEAM_LEAD' || user?.role === 'ADMIN';
+  const isManager = user?.role === 'DOC_MANAGER' || user?.role === 'ADMIN';
   const isAdmin = user?.role === 'ADMIN' || isManager;
 
   // 1. Filter & Pagination State

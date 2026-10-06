@@ -66,7 +66,7 @@ export const BulkEmployeeImportModal: React.FC<BulkEmployeeImportModalProps> = (
 
           let role: EmployeeRole = 'DOC_AGENT';
           const roleRaw = (cols[5] || '').toUpperCase();
-          if (roleRaw && ['PREP_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER', 'DOC_MANAGER', 'DOC_TEAM_LEAD', 'DOC_AGENT', 'SALES_MANAGER', 'SALES_TEAM_LEAD', 'SALES_AGENT', 'FILE_OP_MANAGER', 'FILE_OP_TEAM_LEAD', 'FILE_OP_AGENT', 'ADMIN'].includes(roleRaw)) {
+          if (roleRaw && ['PREP_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER', 'DOC_MANAGER', 'DOC_AGENT', 'SALES_MANAGER', 'SALES_AGENT', 'FILE_OP_MANAGER', 'FILE_OP_AGENT', 'ADMIN'].includes(roleRaw)) {
             role = roleRaw as EmployeeRole;
           } else if (dept === 'PREP_REVIEW') {
             role = 'TAX_PREPARER';

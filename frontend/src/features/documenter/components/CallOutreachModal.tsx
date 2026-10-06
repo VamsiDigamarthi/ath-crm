@@ -17,6 +17,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import type { DocumenterLeadItem, CallDisposition, DocumenterAgentItem } from '../types/documenter.types';
+import { isDirectSignupLead } from '../columns/documenter-columns';
 
 export interface CallOutreachModalProps {
   isOpen: boolean;
@@ -233,7 +234,8 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
 
   if (!lead) return null;
 
-  const isRaw = Boolean(lead.isRawProspect || lead.id?.startsWith('raw-') || lead.totalTaxYears === 0);
+  const isDirect = isDirectSignupLead(lead);
+  const isRaw = !isDirect && Boolean(lead.isRawProspect || lead.id?.startsWith('raw-') || lead.totalTaxYears === 0);
   const customer = lead.customer;
   const previousLog = lead.lastCallLog || (lead as any).callLogs?.[0];
 
@@ -289,11 +291,15 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
               <PhoneCall className="w-3 h-3 text-[#16A34A]" />
               Attempt #{attemptNumber}
             </span>
-            {isRaw && (
+            {isDirect ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                Direct Sign-up
+              </span>
+            ) : isRaw ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
                 Raw Prospect Intake
               </span>
-            )}
+            ) : null}
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
             Conduct phone call with {customer.firstName} {customer.lastName} and log outcome

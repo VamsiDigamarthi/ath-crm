@@ -254,18 +254,44 @@ export class SelfSignupsService {
           AND: [selfSignupCondition, { currentStage: ApplicationStage.FILING_SUCCESS }],
         },
       }),
-      // Active Documenter staff for assignment
+      // Active Documenter calling staff for assignment (must have DOC_AGENT or SALES_AGENT)
       prisma.user.findMany({
         where: {
-          role: { in: [Role.DOC_AGENT, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.SALES_AGENT] },
           isActive: true,
+          OR: [
+            { role: { in: [Role.DOC_AGENT, Role.SALES_AGENT] } },
+            {
+              orgRoles: {
+                some: {
+                  orgRole: {
+                    systemRole: { in: [Role.DOC_AGENT, Role.SALES_AGENT] },
+                  },
+                },
+              },
+            },
+          ],
         },
         select: {
           id: true,
           firstName: true,
           lastName: true,
           email: true,
+          mobile: true,
           role: true,
+          orgRoles: {
+            select: {
+              orgRole: {
+                select: {
+                  systemRole: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              assignedDocApps: true,
+            },
+          },
         },
         orderBy: { email: 'asc' },
       }),
@@ -310,6 +336,33 @@ export class SelfSignupsService {
       };
     });
 
+    const formattedAvailableDocAgents = availableDocAgents.map((u: any) => {
+      const systemRoles = new Set<string>();
+      if (u.role) systemRoles.add(u.role);
+      (u.orgRoles || []).forEach((ur: any) => {
+        if (ur.orgRole?.systemRole) systemRoles.add(ur.orgRole.systemRole);
+      });
+
+      const effectiveRole = systemRoles.has(Role.DOC_AGENT)
+        ? Role.DOC_AGENT
+        : (systemRoles.has(Role.SALES_AGENT) ? Role.SALES_AGENT : u.role);
+
+      const name = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email?.split('@')[0] || 'Calling Agent';
+
+      return {
+        id: u.id,
+        firstName: u.firstName || '',
+        lastName: u.lastName || '',
+        name,
+        fullName: name,
+        email: u.email || '',
+        mobile: u.mobile || '',
+        role: effectiveRole,
+        systemRoles: Array.from(systemRoles),
+        activeLoad: u._count?.assignedDocApps || 0,
+      };
+    });
+
     const totalPages = Math.ceil(totalItems / limit) || 1;
 
     return {
@@ -321,7 +374,7 @@ export class SelfSignupsService {
         inProgressCount,
         completedFilingsCount,
       },
-      availableDocAgents,
+      availableDocAgents: formattedAvailableDocAgents,
       pagination: {
         page,
         limit,
@@ -472,8 +525,19 @@ export class SelfSignupsService {
 
     const docAgents = await prisma.user.findMany({
       where: {
-        role: { in: [Role.DOC_AGENT, Role.DOC_TEAM_LEAD] },
         isActive: true,
+        OR: [
+          { role: { in: [Role.DOC_AGENT, Role.SALES_AGENT] } },
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  systemRole: { in: [Role.DOC_AGENT, Role.SALES_AGENT] },
+                },
+              },
+            },
+          },
+        ],
       },
       select: { id: true, firstName: true, lastName: true, email: true, role: true },
       orderBy: { createdAt: 'asc' },
