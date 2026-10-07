@@ -676,113 +676,62 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
       <AppModal
         isOpen={isConfirmOpen}
         onClose={() => !isSubmitting && setIsConfirmOpen(false)}
-        title="Submit Form 1040 for 4-Eyes QA Compliance Review"
-        width="620px"
+        title="Submit Form 1040 for QA Review"
+        description={`Transfer return for ${taxpayerName} (TY ${taxYear}) to QA Auditor (${reviewerName}).`}
+        width="560px"
       >
-        <div className="space-y-4">
-          {/* Header Summary Pill */}
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+        <div className="space-y-4 font-sans py-1">
+          {/* Header Summary Card */}
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between text-xs">
             <div>
-              <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
+              <div className="font-semibold text-slate-900 flex items-center gap-2">
                 <FileSpreadsheet className="w-4 h-4 text-[#16A34A]" />
                 <span>{taxpayerName}</span>
-                <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-semibold">TY {taxYear} Form 1040</span>
+                <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-semibold">TY {taxYear} Form 1040</span>
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 {taxpayerFilingStatus} • {taxpayerLocation}
               </p>
             </div>
             <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Designated QA Auditor</span>
-              <span className="text-xs font-bold text-purple-700">{reviewerName}</span>
+              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Designated QA Auditor</span>
+              <span className="text-xs font-semibold text-slate-900">{reviewerName}</span>
             </div>
           </div>
 
           {/* Services & pricing summary */}
           <ReturnItemsSummary applicationId={applicationId} />
 
-          {/* Auto-calculated key numbers (kept for reference)
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-center">
-              <div className="text-[10px] font-medium text-slate-500">Gross Income</div>
-              <div className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5">
-                ${calculations.totalGrossIncome.toLocaleString()}
-              </div>
-            </div>
-
-            <div className="p-2.5 bg-white rounded-lg border border-slate-200 text-center">
-              <div className="text-[10px] font-medium text-slate-500">Taxable Income</div>
-              <div className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5">
-                ${calculations.taxableIncome.toLocaleString()}
-              </div>
-            </div>
-
-            <div className={`p-2.5 rounded-lg border text-center ${
-              calculations.balanceDue > 0 
-                ? 'bg-rose-50 border-rose-200 text-rose-900' 
-                : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-            }`}>
-              <div className="text-[10px] font-medium opacity-80">Federal Result</div>
-              <div className="text-xs sm:text-sm font-bold mt-0.5">
-                {calculations.balanceDue > 0 
-                  ? `-$${calculations.balanceDue.toLocaleString()} Due`
-                  : `+$${calculations.federalRefund.toLocaleString()} Refund`}
-              </div>
-            </div>
-
-            <div className={`p-2.5 rounded-lg border text-center ${
-              calculations.stateBalanceDue > 0 
-                ? 'bg-rose-50 border-rose-200 text-rose-900' 
-                : 'bg-emerald-50 border-emerald-200 text-emerald-900'
-            }`}>
-              <div className="text-[10px] font-medium opacity-80">State Result</div>
-              <div className="text-xs sm:text-sm font-bold mt-0.5">
-                {calculations.stateBalanceDue > 0 
-                  ? `-$${calculations.stateBalanceDue.toLocaleString()} Due`
-                  : `+$${calculations.stateRefund.toLocaleString()} Refund`}
-              </div>
-            </div>
-          </div>
-          */}
-
           {/* Preparer Handover Notes */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Hand-off note for the QA reviewer *
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Hand-off note for the QA reviewer <span className="text-rose-500">*</span>
             </label>
             <textarea
               value={preparerNotes}
               onChange={(e) => setPreparerNotes(e.target.value)}
               placeholder="e.g., Verified Box 1 W-2 against payroll stub, applied standard deduction for Married Filing Jointly..."
               rows={3}
-              className="w-full text-xs p-2.5 rounded-lg border border-slate-200 focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] outline-none text-slate-800"
+              className="w-full text-sm p-2.5 rounded-md border border-slate-300 focus:border-[#16A34A] focus:ring-1 focus:ring-[#16A34A] outline-none transition-colors resize-none text-slate-800 placeholder:text-slate-400 bg-white"
             />
           </div>
 
-          {/* Audit Notice */}
-          <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-start gap-2.5 text-xs text-purple-900">
-            <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
-            <p className="leading-relaxed text-[11px]">
-              Upon confirmation, this return will be placed in <strong>{reviewerName}</strong>'s QA Audit Deck and an audit trail entry will be recorded in the system log.
-            </p>
-          </div>
-
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsConfirmOpen(false)}
               disabled={isSubmitting}
-              className="text-xs cursor-pointer"
+              className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
             >
-              Keep Drafting
+              Cancel
             </Button>
             <Button
               size="sm"
               onClick={handleSubmitForQA}
               disabled={isSubmitting || !preparerNotes.trim()}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold px-4 cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold px-4 cursor-pointer flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{isSubmitting ? 'Submitting...' : 'Confirm & Submit to QA Review'}</span>

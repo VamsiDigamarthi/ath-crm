@@ -73,11 +73,37 @@ export function ColumnHeaderMenu<TData, TValue>({
 
     return enumOptions.map((opt) => {
       let count = 0;
+      const targetLabel = opt.label.toLowerCase().trim();
+      const targetVal = opt.value.toLowerCase().trim();
+
       if (facetMap) {
         facetMap.forEach((c, val) => {
-          if (val === opt.value || val === opt.label) {
-            count += c;
-          } else if (typeof val === 'string' && (val.toLowerCase() === opt.label.toLowerCase() || val.toLowerCase() === opt.value.toLowerCase())) {
+          if (val == null) return;
+          if (Array.isArray(val)) {
+            const hasMatch = val.some((item) => {
+              if (item == null) return false;
+              const str = String(item).toLowerCase().trim();
+              return (
+                str === targetLabel ||
+                str === targetVal ||
+                str.includes(targetLabel) ||
+                str.includes(targetVal) ||
+                targetLabel.includes(str)
+              );
+            });
+            if (hasMatch) count += c;
+          } else if (typeof val === 'string') {
+            const str = val.toLowerCase().trim();
+            if (
+              str === targetLabel ||
+              str === targetVal ||
+              str.includes(targetLabel) ||
+              str.includes(targetVal) ||
+              targetLabel.includes(str)
+            ) {
+              count += c;
+            }
+          } else if (val === opt.value || val === opt.label) {
             count += c;
           }
         });

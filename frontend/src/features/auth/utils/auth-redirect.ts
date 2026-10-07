@@ -8,7 +8,6 @@ export function getRoleDefaultRoute(role?: string): string {
     // Documenter Department
     case 'DOC_MANAGER':
       return '/documenter/manager';
-    case 'DOC_TEAM_LEAD':
     case 'DOC_AGENT':
       return '/documenter/agent';
 
@@ -23,7 +22,6 @@ export function getRoleDefaultRoute(role?: string): string {
     // Sales Department
     case 'SALES_MANAGER':
       return '/sales/manager';
-    case 'SALES_TEAM_LEAD':
     case 'SALES_CLOSER':
     case 'SALES_AGENT':
       return '/sales/agent/queue';
@@ -31,7 +29,6 @@ export function getRoleDefaultRoute(role?: string): string {
     // Filing Department (IRS Modernized e-File MeF)
     case 'FILE_OP_MANAGER':
       return '/filing/manager';
-    case 'FILE_OP_TEAM_LEAD':
     case 'FILE_OP_AGENT':
       return '/filing/agent/queue';
 

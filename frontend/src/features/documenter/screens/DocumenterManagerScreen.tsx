@@ -125,11 +125,10 @@ export const DocumenterManagerScreen: React.FC = () => {
 
   // Mocked / Derived Agent Performance Data with realistic metrics
   const agentPerformanceData: AgentPerformanceRow[] = useMemo(() => {
-    const callingStaff = agents.filter((a) => a.role === 'DOC_AGENT' || a.role === 'DOC_TEAM_LEAD');
+    const callingStaff = agents.filter((a) => a.role === 'DOC_AGENT');
     
     return callingStaff.map((agent, index) => {
-      const isTL = agent.role === 'DOC_TEAM_LEAD';
-      const callsToday = isTL ? 4 : 8 + (index % 5) * 2;
+      const callsToday = 8 + (index % 5) * 2;
       const connected = Math.round(callsToday * 0.8);
       const conversions = Math.round(connected * 0.3);
       const teamLeadName = index < 4 ? 'Ananya I (Pod Alpha)' : 'Vikram S (Pod Beta)';
@@ -148,8 +147,8 @@ export const DocumenterManagerScreen: React.FC = () => {
         connectedCallsToday: connected,
         conversionsToday: conversions,
         avgDuration: `${3 + (index % 3)}m ${(index * 15) % 60}s`,
-        maxCapacity: isTL ? 6 : 10,
-        teamLeadName: isTL ? 'Self (Team Lead)' : teamLeadName,
+        maxCapacity: 10,
+        teamLeadName: teamLeadName,
       };
     });
   }, [agents]);

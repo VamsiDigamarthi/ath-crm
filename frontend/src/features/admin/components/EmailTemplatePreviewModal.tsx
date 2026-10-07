@@ -115,10 +115,10 @@ export const EmailTemplatePreviewModal: React.FC<EmailTemplatePreviewModalProps>
     >
       <div className="space-y-4 font-sans py-1">
         {/* Top Header Card */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+        <div className="bg-slate-50 border border-slate-200 rounded-md p-4 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-[#16A34A]">
+              <div className="w-8 h-8 rounded-md bg-emerald-100 flex items-center justify-center text-[#16A34A]">
                 <Mail className="w-4 h-4" />
               </div>
               <div>
@@ -130,7 +130,7 @@ export const EmailTemplatePreviewModal: React.FC<EmailTemplatePreviewModalProps>
             </div>
 
             <span
-              className={`px-2.5 py-0.5 rounded-full text-xs font-bold border inline-flex items-center gap-1 w-fit ${
+              className={`px-2.5 py-0.5 rounded-md text-xs font-semibold border inline-flex items-center gap-1 w-fit ${
                 template.isActive
                   ? 'bg-emerald-50 text-[#16A34A] border-emerald-200'
                   : 'bg-slate-100 text-slate-500 border-slate-200'
@@ -158,7 +158,7 @@ export const EmailTemplatePreviewModal: React.FC<EmailTemplatePreviewModalProps>
         </div>
 
         {/* Email Envelope Container */}
-        <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+        <div className="border border-slate-200 rounded-md overflow-hidden bg-white shadow-2xs">
           {/* Email Subject Header */}
           <div className="bg-slate-100/70 border-b border-slate-200 px-4 py-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">

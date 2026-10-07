@@ -217,29 +217,11 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
     <AppModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Request Missing Documents from Client"
-      width="720px"
+      title="Request Missing Documents"
+      description={`Notify ${customerName} to upload required tax documents.`}
+      width="680px"
     >
       <form onSubmit={handleSubmit} className="space-y-4 font-sans py-1 text-slate-800">
-        {/* Banner Header */}
-        <div className="p-3.5 rounded-xl bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 text-xs flex items-start gap-2.5">
-          <div className="p-2 rounded-lg bg-purple-100 text-purple-700 mt-0.5">
-            <Bell className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="font-bold text-purple-950 text-sm">
-              Notify {customerName} for Required Tax Documents
-            </div>
-            <div className="text-purple-700 text-[11px] mt-0.5">
-              Select documents across <strong>Individual</strong>, <strong>Business</strong>, <strong>FBAR</strong> &amp; <strong>Notices &amp; Audits</strong> categories.
-              {customerEmail && (
-                <span className="block mt-0.5 font-medium text-slate-600">
-                  Target Email: <strong>{customerEmail}</strong>
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* 4 Document Type Tabs */}
         <div className="space-y-2.5">
@@ -399,7 +381,7 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
 
         {/* Comment / Personalized Message Box */}
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+          <label className="text-xs font-semibold text-slate-800 flex items-center justify-between">
             <span>Special Instructions / Comment for Client (Optional)</span>
             <span className="text-[10px] text-slate-400 font-normal">Will be included in notification and email</span>
           </label>
@@ -408,34 +390,34 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
             value={customNotes}
             onChange={(e) => setCustomNotes(e.target.value)}
             placeholder="e.g. Please make sure your W-2 is the final copy from employer, and ensure all pages of the brokerage 1099-B are attached."
-            className="w-full text-xs border border-slate-300 rounded-xl p-3 focus:outline-none focus:ring-1.5 focus:ring-emerald-500 bg-white placeholder-slate-400 leading-relaxed"
+            className="w-full text-sm border border-slate-300 rounded-md p-2.5 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] bg-white placeholder:text-slate-400 resize-none transition-colors"
           />
         </div>
 
         {/* Delivery Options (In-App Notification & Email) */}
-        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-          <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+        <div className="p-3 rounded-md bg-slate-50 border border-slate-200 space-y-2">
+          <div className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-slate-500" />
             <span>Send Delivery Channels (Select one or both)</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             {/* 1. In-App Notification */}
             <label
-              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+              className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
                 sendInApp
-                  ? 'bg-purple-50/80 border-purple-300 text-purple-950 font-semibold shadow-2xs'
-                  : 'bg-white border-slate-200 text-slate-600'
+                  ? 'bg-white border-slate-800'
+                  : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
               }`}
             >
               <input
                 type="checkbox"
                 checked={sendInApp}
                 onChange={(e) => setSendInApp(e.target.checked)}
-                className="mt-0.5 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+                className="mt-0.5 rounded text-slate-900 focus:ring-slate-900 cursor-pointer"
               />
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold">
-                  <Bell className="w-3.5 h-3.5 text-purple-600" />
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
+                  <Bell className="w-3.5 h-3.5 text-slate-600" />
                   <span>Portal In-App Notification</span>
                 </div>
                 <div className="text-[11px] text-slate-500 font-normal leading-tight">
@@ -446,21 +428,21 @@ export const RequestMissingDocumentsModal: React.FC<RequestMissingDocumentsModal
 
             {/* 2. Email Dispatch */}
             <label
-              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+              className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
                 sendEmail
-                  ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950 font-semibold shadow-2xs'
-                  : 'bg-white border-slate-200 text-slate-600'
+                  ? 'bg-white border-slate-800'
+                  : 'bg-white border-slate-200 hover:border-slate-300 text-slate-600'
               }`}
             >
               <input
                 type="checkbox"
                 checked={sendEmail}
                 onChange={(e) => setSendEmail(e.target.checked)}
-                className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                className="mt-0.5 rounded text-slate-900 focus:ring-slate-900 cursor-pointer"
               />
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold">
-                  <Mail className="w-3.5 h-3.5 text-[#16A34A]" />
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
+                  <Mail className="w-3.5 h-3.5 text-slate-600" />
                   <span>Direct Client Email</span>
                 </div>
                 <div className="text-[11px] text-slate-500 font-normal leading-tight">

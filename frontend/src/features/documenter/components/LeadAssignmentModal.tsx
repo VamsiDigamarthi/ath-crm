@@ -44,10 +44,18 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
     return ids;
   }, [selectedLeads]);
 
-  // Filter for frontline Documenter Calling Agents (DOC_AGENT) and Sales Closers (SALES_AGENT)
-
+  // Frontline Calling Agents (DOC_AGENT) and Sales Closers (SALES_AGENT) based on orgRoles / systemRoles
   const callingAgents = useMemo(() => {
-    return agents.filter((a) => a.role === 'DOC_AGENT' || a.role === 'SALES_AGENT');
+    if (!agents || agents.length === 0) return [];
+    return agents.filter((a: any) => {
+      const sysRoles: string[] = Array.isArray(a.systemRoles) ? a.systemRoles : [];
+      return (
+        a.role === 'DOC_AGENT' ||
+        a.role === 'SALES_AGENT' ||
+        sysRoles.includes('DOC_AGENT') ||
+        sysRoles.includes('SALES_AGENT')
+      );
+    });
   }, [agents]);
 
   const selectedAgent = useMemo(() => {
@@ -58,11 +66,11 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
   const filteredAgents = useMemo(() => {
     const query = searchAgent.toLowerCase().trim();
     if (!query) return callingAgents;
-    return callingAgents.filter((a) => {
-      return (
-        a.email.toLowerCase().includes(query) ||
-        (a.mobile && a.mobile.includes(query))
-      );
+    return callingAgents.filter((a: any) => {
+      const name = (a.name || a.fullName || `${a.firstName || ''} ${a.lastName || ''}`).trim().toLowerCase();
+      const email = (a.email || '').toLowerCase();
+      const mobile = (a.mobile || a.phone || '').toLowerCase();
+      return name.includes(query) || email.includes(query) || mobile.includes(query);
     });
   }, [callingAgents, searchAgent]);
 
@@ -70,12 +78,17 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
     if (assignmentMode === 'ROUND_ROBIN') {
       onConfirmRoundRobin();
     } else {
-      if (!selectedAgentId || currentlyAssignedAgentIds.has(selectedAgentId)) return;
+      if (!selectedAgentId) return;
       onConfirmDirectAssign(selectedAgentId, { alsoAssignAsSales });
     }
   };
 
-  const roleLabel = (role: string) => (role === 'SALES_AGENT' ? 'Sales closer' : 'Calling agent');
+  const roleLabel = (agent: any) => {
+    const sysRoles: string[] = Array.isArray(agent?.systemRoles) ? agent.systemRoles : [];
+    if (sysRoles.includes('DOC_AGENT') || agent?.role === 'DOC_AGENT') return 'Calling agent';
+    if (sysRoles.includes('SALES_AGENT') || agent?.role === 'SALES_AGENT') return 'Sales closer';
+    return 'Calling agent';
+  };
   const previousAgent = selectedLeads.length === 1 ? selectedLeads[0].previousDocAgent : null;
   const previousAgentName = previousAgent
     ? previousAgent.name ||
@@ -156,15 +169,22 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
               {callingAgents.length === 0 ? (
                 <div className="p-6 text-center text-sm text-slate-400">No active calling agents</div>
               ) : (
-                callingAgents.map((agent) => (
-                  <div key={agent.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-slate-900 truncate">{agent.email}</div>
-                      <div className="text-xs text-slate-500">{roleLabel(agent.role)}</div>
+                callingAgents.map((agent: any) => {
+                  const displayName = agent.name || agent.fullName || `${agent.firstName || ''} ${agent.lastName || ''}`.trim() || agent.email;
+                  return (
+                    <div key={agent.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900 truncate">{displayName}</div>
+                        <div className="text-xs text-slate-500 truncate">
+                          {agent.email}
+                          {agent.mobile ? ` · ${agent.mobile}` : ''}
+                          {` · ${roleLabel(agent)}`}
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-500 shrink-0">{agent.activeLoad || 0} active</span>
                     </div>
-                    <span className="text-xs text-slate-500 shrink-0">{agent.activeLoad} active</span>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -176,7 +196,7 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
             <AppSearchInput
               value={searchAgent}
               onChange={setSearchAgent}
-              placeholder="Search agent by email or phone..."
+              placeholder="Search agent by name, email, or phone..."
               debounceMs={200}
             />
 
@@ -184,42 +204,41 @@ export const LeadAssignmentModal: React.FC<LeadAssignmentModalProps> = ({
               {filteredAgents.length === 0 ? (
                 <div className="p-6 text-center text-sm text-slate-400">No agents match your search</div>
               ) : (
-                filteredAgents.map((agent) => {
+                filteredAgents.map((agent: any) => {
                   const isCurrentlyAssigned = currentlyAssignedAgentIds.has(agent.id);
                   const isSelected = selectedAgentId === agent.id;
+                  const displayName = agent.name || agent.fullName || `${agent.firstName || ''} ${agent.lastName || ''}`.trim() || agent.email;
                   return (
                     <div
                       key={agent.id}
                       onClick={() => {
-                        if (isCurrentlyAssigned) return;
                         setSelectedAgentId(agent.id);
                       }}
-                      className={`flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors ${
-                        isCurrentlyAssigned
-                          ? 'opacity-50 cursor-not-allowed'
-                          : isSelected
-                          ? 'bg-emerald-50/60 cursor-pointer'
-                          : 'hover:bg-slate-50 cursor-pointer'
+                      className={`flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-50/60'
+                          : 'hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span
                           className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                            isSelected && !isCurrentlyAssigned ? 'border-[#16A34A] bg-[#16A34A]' : 'border-slate-300 bg-white'
+                            isSelected ? 'border-[#16A34A] bg-[#16A34A]' : 'border-slate-300 bg-white'
                           }`}
                         >
-                          {isSelected && !isCurrentlyAssigned && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+                          {isSelected && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
                         </span>
                         <div className="min-w-0">
-                          <div className="text-sm font-medium text-slate-900 truncate">{agent.email}</div>
-                          <div className="text-xs text-slate-500">
-                            {roleLabel(agent.role)}
+                          <div className="text-sm font-semibold text-slate-900 truncate">{displayName}</div>
+                          <div className="text-xs text-slate-500 truncate">
+                            {agent.email}
                             {agent.mobile ? ` · ${agent.mobile}` : ''}
+                            {` · ${roleLabel(agent)}`}
                             {isCurrentlyAssigned ? ' · Current owner' : ''}
                           </div>
                         </div>
                       </div>
-                      <span className="text-xs text-slate-500 shrink-0">{agent.activeLoad} active</span>
+                      <span className="text-xs text-slate-500 shrink-0">{agent.activeLoad || 0} active</span>
                     </div>
                   );
                 })

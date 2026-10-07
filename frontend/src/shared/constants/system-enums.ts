@@ -4,19 +4,16 @@ export interface EnumOption {
 }
 
 export const SYSTEM_ROLES: EnumOption[] = [
-  { label: 'Admin', value: 'ADMIN' },
-  { label: 'Documenter Manager', value: 'DOC_MANAGER' },
-  { label: 'Documenter Team Lead', value: 'DOC_TEAM_LEAD' },
   { label: 'Documenter Agent', value: 'DOC_AGENT' },
-  { label: 'Tax Prep Manager', value: 'PREP_MANAGER' },
-  { label: 'Tax Reviewer (QA Lead)', value: 'TAX_REVIEWER' },
-  { label: 'Tax Preparer (Draftsman)', value: 'TAX_PREPARER' },
-  { label: 'Sales Operations Manager', value: 'SALES_MANAGER' },
-  { label: 'Sales Team Leader', value: 'SALES_TEAM_LEAD' },
-  { label: 'Sales Pitch Agent', value: 'SALES_AGENT' },
-  { label: 'CPA Operations Head', value: 'FILE_OP_MANAGER' },
-  { label: 'Filing Team Leader', value: 'FILE_OP_TEAM_LEAD' },
-  { label: 'IRS E-Filer (CPA)', value: 'FILE_OP_AGENT' },
+  { label: 'Documenter Manager', value: 'DOC_MANAGER' },
+  { label: 'Tax Preparation Manager', value: 'PREP_MANAGER' },
+  { label: 'Tax Preparer', value: 'TAX_PREPARER' },
+  { label: 'Tax Reviewer (QA)', value: 'TAX_REVIEWER' },
+  { label: 'Sales Manager', value: 'SALES_MANAGER' },
+  { label: 'Sales Closer Agent', value: 'SALES_AGENT' },
+  { label: 'Filing Operations Manager', value: 'FILE_OP_MANAGER' },
+  { label: 'Filing Specialist (CPA)', value: 'FILE_OP_AGENT' },
+  { label: 'System Administrator', value: 'ADMIN' },
 ];
 
 export const SYSTEM_DEPARTMENTS: EnumOption[] = [

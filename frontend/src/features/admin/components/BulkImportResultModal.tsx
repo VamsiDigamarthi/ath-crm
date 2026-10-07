@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle2, 
@@ -123,21 +124,32 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
     document.body.removeChild(link);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 font-sans">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+  return createPortal(
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 font-sans animate-in fade-in duration-200"
+      aria-modal="true"
+      role="dialog"
+    >
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <div className="relative z-10 bg-white rounded-md border border-slate-300 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* 1. Modal Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between bg-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#16A34A] flex items-center justify-center font-bold shadow-2xs">
+            <div className="w-9 h-9 rounded-md bg-slate-100 text-[#16A34A] border border-slate-200 flex items-center justify-center font-bold">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
                   Bulk Lead Ingestion Summary Report
                 </h3>
-                <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-200/80 text-slate-800 font-mono">
+                <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-800 font-mono border border-slate-200">
                   TY {taxYear}
                 </span>
               </div>
@@ -150,68 +162,64 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+            className="p-1.5 rounded-md text-slate-500 hover:text-black hover:bg-slate-100 transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* 2. Top Summary KPI Cards */}
         <div className="p-6 pb-4 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white shrink-0">
           {/* Successfully Ingested */}
-          <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between">
+          <div className="p-4 rounded-md bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 Ingested to Outreach
               </span>
-              <div className="text-2xl font-black text-emerald-900 mt-0.5">
+              <div className="text-2xl font-bold text-[#16A34A] mt-0.5">
                 {validProcessed}
               </div>
-              <span className="text-[11px] text-emerald-700 font-medium">
+              <span className="text-[11px] text-slate-500 font-medium">
                 {newProfilesCreated} new profiles created
               </span>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-md bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
 
           {/* Existing Customer & Duplicates Blocked */}
-          <div className={`p-4 rounded-xl border flex items-center justify-between ${
-            hasSkipped
-              ? 'bg-amber-50/70 border-amber-200 text-amber-950'
-              : 'bg-slate-50 border-slate-200 text-slate-700'
-          }`}>
+          <div className="p-4 rounded-md bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Duplicates &amp; Existing Blocked
               </span>
-              <div className="text-2xl font-black mt-0.5 text-amber-950">
+              <div className="text-2xl font-bold mt-0.5 text-slate-900">
                 {duplicatesSkipped}
               </div>
-              <span className="text-[11px] text-amber-800 font-medium">
+              <span className="text-[11px] text-slate-500 font-medium">
                 {hasSkipped ? 'Customer accounts protected' : '0 duplicates'}
               </span>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-md bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
               <ShieldAlert className="w-5 h-5" />
             </div>
           </div>
 
           {/* Total Processed */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+          <div className="p-4 rounded-md bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
             <div>
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 Total Rows Processed
               </span>
-              <div className="text-2xl font-black text-slate-900 mt-0.5">
+              <div className="text-2xl font-bold text-slate-900 mt-0.5">
                 {totalReceived}
               </div>
               <span className="text-[11px] text-slate-500 font-medium">
                 Target Tax Year {taxYear}
               </span>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-slate-200/80 text-slate-700 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-md bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center">
               <Users className="w-5 h-5" />
             </div>
           </div>
@@ -230,14 +238,14 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search blocked leads by name, email, phone..."
-                    className="w-full pl-8.5 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all"
+                    className="w-full pl-8.5 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900 transition-all"
                   />
                 </div>
 
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#16A34A] cursor-pointer"
+                  className="text-xs bg-white border border-slate-300 rounded-md px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
                 >
                   <option value="ALL">All Rejection Reasons ({skippedLeads.length})</option>
                   <option value="EXISTING_CONVERTED_CUSTOMER">Already Converted Client</option>
@@ -251,7 +259,7 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={handleExportSkippedCSV}
-                className="text-xs font-bold border-slate-200 flex items-center gap-1.5 shrink-0"
+                className="text-xs font-semibold border-slate-300 text-slate-700 rounded-md flex items-center gap-1.5 shrink-0"
               >
                 <Download className="w-3.5 h-3.5 text-slate-600" />
                 <span>Export Skipped Report (.csv)</span>
@@ -259,17 +267,17 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
             </div>
 
             {/* Scrollable Skipped Leads Table */}
-            <div className="flex-1 overflow-y-auto border border-amber-200/80 rounded-xl bg-amber-50/20 divide-y divide-amber-100">
+            <div className="flex-1 overflow-y-auto border border-slate-200 rounded-md bg-slate-50/50 divide-y divide-slate-200">
               {filteredSkippedLeads.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-500">
                   No skipped leads match your search query.
                 </div>
               ) : (
                 filteredSkippedLeads.map((item, idx) => (
-                  <div key={idx} className="p-3.5 hover:bg-amber-50/60 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div key={idx} className="p-3.5 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="space-y-1 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-slate-200 text-slate-700">
+                        <span className="text-[10px] font-semibold font-mono px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-700">
                           Row #{item.rowNumber}
                         </span>
                         <span className="text-xs font-bold text-slate-900">
@@ -284,7 +292,7 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
                         {item.ssnTin && <span className="font-mono">🔒 SSN: {item.ssnTin}</span>}
                       </div>
 
-                      <p className="text-xs text-amber-950 font-semibold bg-white/90 p-2 rounded-lg border border-amber-200 mt-1">
+                      <p className="text-xs text-amber-950 font-medium bg-amber-50/80 p-2 rounded-md border border-amber-200 mt-1">
                         ⚠️ {item.reason}
                       </p>
                     </div>
@@ -295,20 +303,20 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
           </div>
         ) : (
           <div className="px-6 py-8 text-center bg-emerald-50/40 border-y border-emerald-100">
-            <div className="w-12 h-12 rounded-full bg-emerald-100 text-[#16A34A] flex items-center justify-center mx-auto mb-2">
-              <CheckCircle2 className="w-6 h-6" />
+            <div className="w-10 h-10 rounded-md bg-emerald-100 text-[#16A34A] flex items-center justify-center mx-auto mb-2">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-bold text-emerald-950">
+            <h4 className="text-sm font-bold text-slate-900">
               100% Clean Ingestion Batch!
             </h4>
-            <p className="text-xs text-emerald-800 mt-1 max-w-md mx-auto">
+            <p className="text-xs text-slate-600 mt-1 max-w-md mx-auto">
               All {validProcessed} prospect records were net-new and successfully assigned to the Documenter Department Unassigned Pool.
             </p>
           </div>
         )}
 
         {/* 4. Footer Actions */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <Button
             variant="outline"
             size="sm"
@@ -316,7 +324,7 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
               onClose();
               navigate('/admin/customers');
             }}
-            className="border-slate-200 text-xs font-bold w-full sm:w-auto"
+            className="border-slate-300 text-slate-700 text-xs font-semibold rounded-md w-full sm:w-auto"
           >
             <Users className="w-3.5 h-3.5 mr-1.5" />
             <span>Open Converted Clients Directory</span>
@@ -327,14 +335,14 @@ export const BulkImportResultModal: React.FC<BulkImportResultModalProps> = ({
               variant="outline"
               size="sm"
               onClick={onClose}
-              className="text-xs font-bold border-slate-200 w-full sm:w-auto"
+              className="text-xs font-semibold border-slate-300 text-slate-700 rounded-md w-full sm:w-auto"
             >
               <span>Close Report</span>
             </Button>
-
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

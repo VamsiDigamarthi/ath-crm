@@ -19,7 +19,6 @@ export type NoteContext = (typeof NOTE_CONTEXTS)[number];
 const roleToTeam = (role?: string): string => {
   switch (role) {
     case Role.DOC_AGENT:
-    case Role.DOC_TEAM_LEAD:
     case Role.DOC_MANAGER:
       return "DOCUMENTER";
     case Role.TAX_PREPARER:

@@ -85,22 +85,22 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
       title="Configure Tax Year & Filing Return"
       size="lg"
     >
-      <form onSubmit={handleSubmit} className="space-y-5 font-sans">
+      <form onSubmit={handleSubmit} className="space-y-4 font-sans py-1">
         {/* Customer Header Preview Card */}
-        <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50/80 to-teal-50/60 border border-emerald-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="p-3 rounded-md bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#16A34A] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+              <div className="w-8 h-8 rounded-md bg-slate-900 text-white flex items-center justify-center font-semibold text-xs">
                 {customer.firstName?.[0] || 'T'}
               </div>
               <div>
-                <h4 className="font-bold text-sm text-slate-900">
+                <h4 className="font-semibold text-sm text-slate-900">
                   {customer.fullName || `${customer.firstName} ${customer.lastName}`}
                 </h4>
                 <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium mt-0.5">
                   {customer.visaType && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      <Globe className="w-2.5 h-2.5 text-indigo-500" />
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white text-slate-700 border border-slate-200">
+                      <Globe className="w-2.5 h-2.5 text-slate-500" />
                       {customer.visaType}
                     </span>
                   )}
@@ -128,8 +128,8 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Tax Year */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+            <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-slate-500" />
               <span>Tax Filing Year <span className="text-rose-600">*</span></span>
             </label>
             <select
@@ -140,10 +140,10 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
                   setValidationErrors((prev) => (prev ? { ...prev, taxYear: undefined } : null));
                 }
               }}
-              className={`w-full px-3.5 py-2 rounded-xl border bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 shadow-2xs cursor-pointer transition-all ${
+              className={`w-full px-3 py-2 rounded-md border bg-white text-sm font-medium text-slate-900 focus:outline-none focus:ring-1 cursor-pointer transition-colors ${
                 validationErrors?.taxYear
-                  ? 'border-rose-500 focus:ring-rose-400 bg-rose-50/40 text-rose-900 ring-1 ring-rose-500'
-                  : 'border-slate-200 focus:ring-emerald-500/20 focus:border-emerald-500'
+                  ? 'border-rose-500 focus:ring-rose-500'
+                  : 'border-slate-300 focus:ring-[#16A34A] focus:border-[#16A34A]'
               }`}
             >
               <option value="">-- Select Tax Year --</option>
@@ -154,7 +154,7 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
               ))}
             </select>
             {validationErrors?.taxYear ? (
-              <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1 animate-in fade-in duration-150">
+              <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1">
                 <span>⚠️</span> {validationErrors.taxYear}
               </p>
             ) : (
@@ -164,8 +164,8 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
 
           {/* Filing Type */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-blue-600" />
+            <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-slate-500" />
               <span>Filing Type <span className="text-rose-600">*</span></span>
             </label>
             <select
@@ -176,10 +176,10 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
                   setValidationErrors((prev) => (prev ? { ...prev, filingType: undefined } : null));
                 }
               }}
-              className={`w-full px-3.5 py-2 rounded-xl border bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 shadow-2xs cursor-pointer transition-all ${
+              className={`w-full px-3 py-2 rounded-md border bg-white text-sm font-medium text-slate-900 focus:outline-none focus:ring-1 cursor-pointer transition-colors ${
                 validationErrors?.filingType
-                  ? 'border-rose-500 focus:ring-rose-400 bg-rose-50/40 text-rose-900 ring-1 ring-rose-500'
-                  : 'border-slate-200 focus:ring-emerald-500/20 focus:border-emerald-500'
+                  ? 'border-rose-500 focus:ring-rose-500'
+                  : 'border-slate-300 focus:ring-[#16A34A] focus:border-[#16A34A]'
               }`}
             >
               <option value="">-- Select Return Type --</option>
@@ -187,7 +187,7 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
               <option value="BUSINESS">Business</option>
             </select>
             {validationErrors?.filingType ? (
-              <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1 animate-in fade-in duration-150">
+              <p className="text-[11px] font-semibold text-rose-600 flex items-center gap-1">
                 <span>⚠️</span> {validationErrors.filingType}
               </p>
             ) : (
@@ -198,7 +198,7 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
 
         {/* Remarks / Notes */}
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+          <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
             <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
             <span>Initial Intake Notes (Optional)</span>
           </label>
@@ -207,19 +207,19 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             placeholder="e.g. Ingested lead requested 2025 W-2 and stock sales review..."
-            className="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-2xs resize-none"
+            className="w-full p-2.5 rounded-md border border-slate-300 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#16A34A] focus:border-[#16A34A] resize-none transition-colors"
           />
         </div>
 
         {/* Modal Actions */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={onClose}
             disabled={isLoading}
-            className="border-slate-200 text-slate-600 text-xs font-semibold"
+            className="border-slate-200 text-slate-700 text-xs font-semibold"
           >
             Cancel
           </Button>
@@ -227,7 +227,7 @@ export const StartFilingModal: React.FC<StartFilingModalProps> = ({
             type="submit"
             size="sm"
             disabled={isLoading}
-            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs"
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 px-4"
           >
             <FilePlus2 className="w-4 h-4" />
             <span>{isLoading ? 'Creating Filing...' : `Create TY ${taxYear} Filing`}</span>

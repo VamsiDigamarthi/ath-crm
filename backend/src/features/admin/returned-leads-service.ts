@@ -194,14 +194,36 @@ export class ReturnedLeadsService {
       }),
       prisma.user.count({
         where: {
-          role: { in: [Role.DOC_AGENT, Role.SALES_AGENT] },
           isActive: true,
+          OR: [
+            { role: { in: [Role.DOC_AGENT, Role.SALES_AGENT] } },
+            {
+              orgRoles: {
+                some: {
+                  orgRole: {
+                    systemRole: { in: [Role.DOC_AGENT, Role.SALES_AGENT] },
+                  },
+                },
+              },
+            },
+          ],
         },
       }),
       prisma.user.findMany({
         where: {
-          role: { in: [Role.DOC_AGENT, Role.SALES_AGENT] },
           isActive: true,
+          OR: [
+            { role: { in: [Role.DOC_AGENT, Role.SALES_AGENT] } },
+            {
+              orgRoles: {
+                some: {
+                  orgRole: {
+                    systemRole: { in: [Role.DOC_AGENT, Role.SALES_AGENT] },
+                  },
+                },
+              },
+            },
+          ],
         },
         select: {
           id: true,
@@ -210,6 +232,15 @@ export class ReturnedLeadsService {
           firstName: true,
           lastName: true,
           role: true,
+          orgRoles: {
+            select: {
+              orgRole: {
+                select: {
+                  systemRole: true,
+                },
+              },
+            },
+          },
           _count: {
             select: {
               assignedDocApps: {
@@ -249,20 +280,33 @@ export class ReturnedLeadsService {
       }),
     ]);
 
-    const formattedAgents = activeAgents.map((a) => {
-      const activeLoad = a.role === Role.SALES_AGENT
+    const formattedAgents = activeAgents.map((a: any) => {
+      const systemRoles = new Set<string>();
+      if (a.role) systemRoles.add(a.role);
+      (a.orgRoles || []).forEach((ur: any) => {
+        if (ur.orgRole?.systemRole) systemRoles.add(ur.orgRole.systemRole);
+      });
+
+      const effectiveRole = systemRoles.has(Role.DOC_AGENT)
+        ? Role.DOC_AGENT
+        : (systemRoles.has(Role.SALES_AGENT) ? Role.SALES_AGENT : a.role);
+
+      const activeLoad = effectiveRole === Role.SALES_AGENT
         ? (a._count?.assignedSalesApps || 0)
         : (a._count?.assignedDocApps || 0);
 
-      const defaultRoleTitle = a.role === Role.SALES_AGENT ? 'Sales Closer' : 'Calling Agent';
+      const defaultRoleTitle = effectiveRole === Role.SALES_AGENT ? 'Sales Closer' : 'Calling Agent';
+      const fullName = a.firstName ? `${a.firstName} ${a.lastName || ''}`.trim() : (a.email?.split('@')[0] || defaultRoleTitle);
 
       return {
         id: a.id,
         email: a.email || '',
         mobile: a.mobile || '',
-        fullName: a.firstName ? `${a.firstName} ${a.lastName || ''}`.trim() : (a.email?.split('@')[0] || defaultRoleTitle),
-        role: a.role,
-        department: a.role === Role.SALES_AGENT ? 'SALES' : 'DOCUMENTER',
+        name: fullName,
+        fullName,
+        role: effectiveRole,
+        systemRoles: Array.from(systemRoles),
+        department: effectiveRole === Role.SALES_AGENT ? 'SALES' : 'DOCUMENTER',
         activeLoad,
       };
     });
@@ -422,15 +466,43 @@ export class ReturnedLeadsService {
 
     const targetUser = await prisma.user.findUnique({
       where: { id: targetAgentId },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        orgRoles: {
+          select: {
+            orgRole: {
+              select: { systemRole: true },
+            },
+          },
+        },
+      },
     });
 
     if (!targetUser) {
       throw new BadRequestError('Target agent not found');
     }
 
+    const targetSystemRoles = new Set<string>();
+    if (targetUser.role) targetSystemRoles.add(targetUser.role);
+    targetUser.orgRoles?.forEach((ur: any) => {
+      if (ur.orgRole?.systemRole) targetSystemRoles.add(ur.orgRole.systemRole);
+    });
+
+    // Determine if returned leads belong to Sales Department
+    const sampleApp = await prisma.taxApplication.findFirst({
+      where: { id: { in: applicationIds } },
+      select: { currentStage: true, taxDraftSummary: true },
+    });
+    const isSalesReturn =
+      (sampleApp?.taxDraftSummary as any)?.returnedDepartment === 'SALES' ||
+      ['SALES_PITCH_QUEUE', 'SALES_PITCHING', 'SALES_PAYMENT_PENDING', 'SALES_ESIGN_PENDING'].includes(sampleApp?.currentStage as string);
+
     let result: any;
-    if (targetUser.role === Role.SALES_AGENT) {
+    if (isSalesReturn && targetSystemRoles.has(Role.SALES_AGENT)) {
       const { SalesService } = await import('../sales/sales-service.js');
       result = await SalesService.assignLead(applicationIds, targetAgentId, adminUserId);
     } else {
@@ -512,7 +584,21 @@ export class ReturnedLeadsService {
     if (salesAppIds.length > 0) {
       const { SalesService } = await import('../sales/sales-service.js');
       const salesClosers = await prisma.user.findMany({
-        where: { role: Role.SALES_AGENT, isActive: true },
+        where: {
+          isActive: true,
+          OR: [
+            { role: Role.SALES_AGENT },
+            {
+              orgRoles: {
+                some: {
+                  orgRole: {
+                    systemRole: Role.SALES_AGENT,
+                  },
+                },
+              },
+            },
+          ],
+        },
         orderBy: { createdAt: 'asc' },
       });
 

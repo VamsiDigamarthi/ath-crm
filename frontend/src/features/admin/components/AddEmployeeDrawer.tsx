@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { AppDrawer } from '@/shared/components/AppDrawer';
 import { AppInput } from '@/shared/components/AppInput';
-import { AppSelect } from '@/shared/components/AppSelect';
 import { Button } from '@/shared/components/Button';
-import { UserCheck, ShieldCheck, Mail, Info } from 'lucide-react';
+import {
+  UserCheck,
+  ShieldCheck,
+  Mail,
+  CheckSquare,
+  Square,
+  Star,
+} from 'lucide-react';
 import type { EmployeeItem, EmployeeRole, AddEmployeeFormData } from '../types/employee.types';
+import { orgRoleService, type OrgRoleDto } from '../services/org-role-service';
 
 interface AddEmployeeDrawerProps {
   isOpen: boolean;
@@ -23,12 +30,32 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
-  const [department, setDepartment] = useState<'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN'>('DOC');
-  const [role, setRole] = useState<EmployeeRole>('DOC_AGENT');
   const [isActive, setIsActive] = useState<boolean>(true);
   const [smtpEmail, setSmtpEmail] = useState('');
   const [smtpAppPassword, setSmtpAppPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Multi-Role State
+  const [availableOrgRoles, setAvailableOrgRoles] = useState<OrgRoleDto[]>([]);
+  const [selectedOrgRoleIds, setSelectedOrgRoleIds] = useState<string[]>([]);
+  const [primaryOrgRoleId, setPrimaryOrgRoleId] = useState<string>('');
+
+  useEffect(() => {
+    if (isOpen) {
+      orgRoleService
+        .listRoles()
+        .then((roles) => {
+          setAvailableOrgRoles(roles);
+          // If creating new and no role selected yet, default to first doc agent role
+          if (!employee && roles.length > 0) {
+            const defaultRole = roles.find((r) => r.systemRole === 'DOC_AGENT') || roles[0];
+            setSelectedOrgRoleIds([defaultRole.id]);
+            setPrimaryOrgRoleId(defaultRole.id);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [isOpen, employee]);
 
   // Reset or Populate form fields on open
   useEffect(() => {
@@ -37,18 +64,26 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
       setLastName(employee.lastName || '');
       setEmail(employee.email || '');
       setMobile(employee.mobile || '');
-      setDepartment(employee.department || 'DOC');
-      setRole(employee.role || 'DOC_AGENT');
       setIsActive(employee.isActive ?? true);
       setSmtpEmail(employee.smtpEmail || '');
       setSmtpAppPassword(employee.smtpAppPassword || '');
+
+      if (employee.orgRoles && employee.orgRoles.length > 0) {
+        setSelectedOrgRoleIds(employee.orgRoles.map((r) => r.id));
+        const primary =
+          employee.orgRoles.find((r) => r.isPrimary)?.id ||
+          employee.activeOrgRoleId ||
+          employee.orgRoles[0].id;
+        setPrimaryOrgRoleId(primary);
+      } else {
+        setSelectedOrgRoleIds([]);
+        setPrimaryOrgRoleId('');
+      }
     } else {
       setFirstName('');
       setLastName('');
       setEmail('');
       setMobile('');
-      setDepartment('DOC');
-      setRole('DOC_AGENT');
       setIsActive(true);
       setSmtpEmail('');
       setSmtpAppPassword('');
@@ -56,49 +91,37 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
     setErrors({});
   }, [employee, isOpen]);
 
-  // Dynamic role options based on department
-  const getRoleOptions = () => {
-    switch (department) {
-      case 'DOC':
-        return [
-          { label: 'Documenter Manager (Department Lead)', value: 'DOC_MANAGER' },
-          { label: 'Documenter Team Leader (Supervises Agents)', value: 'DOC_TEAM_LEAD' },
-          { label: 'Documenter Agent (Outreach & Intake)', value: 'DOC_AGENT' },
-        ];
-      case 'PREP_REVIEW':
-        return [
-          { label: 'Tax Prep Manager (Department Lead)', value: 'PREP_MANAGER' },
-          { label: 'Tax Reviewer / QA Lead (Quality Assurance & Sign-off)', value: 'TAX_REVIEWER' },
-          { label: 'Tax Preparer (1040/W-2 Computation & Drafts)', value: 'TAX_PREPARER' },
-        ];
-      case 'SALES':
-        return [
-          { label: 'Sales Manager (Quota & Deals Lead)', value: 'SALES_MANAGER' },
-          { label: 'Sales Team Leader (Pipeline Supervisor)', value: 'SALES_TEAM_LEAD' },
-          { label: 'Sales Agent (Quotation & Pitching)', value: 'SALES_AGENT' },
-        ];
-      case 'FILE_OP':
-        return [
-          { label: 'File Operator Manager (CPA Lead)', value: 'FILE_OP_MANAGER' },
-          { label: 'File Operator Team Leader (Filing Supervisor)', value: 'FILE_OP_TEAM_LEAD' },
-          { label: 'File Operator / CPA Agent (E-Filing Specialist)', value: 'FILE_OP_AGENT' },
-        ];
-      case 'ADMIN':
-      default:
-        return [
-          { label: 'System Administrator (Full Global Access)', value: 'ADMIN' },
-        ];
+  const toggleOrgRole = (roleId: string) => {
+    setSelectedOrgRoleIds((prev) => {
+      const exists = prev.includes(roleId);
+      const next = exists ? prev.filter((id) => id !== roleId) : [...prev, roleId];
+      if (!exists && prev.length === 0) {
+        setPrimaryOrgRoleId(roleId);
+      } else if (exists && primaryOrgRoleId === roleId) {
+        setPrimaryOrgRoleId(next[0] || '');
+      }
+      return next;
+    });
+    if (errors.roles) {
+      setErrors((prev) => ({ ...prev, roles: '' }));
     }
   };
 
-  const handleDepartmentChange = (newDept: string) => {
-    const dept = newDept as 'DOC' | 'PREP_REVIEW' | 'SALES' | 'FILE_OP' | 'ADMIN';
-    setDepartment(dept);
-    if (dept === 'DOC') setRole('DOC_AGENT');
-    else if (dept === 'PREP_REVIEW') setRole('TAX_PREPARER');
-    else if (dept === 'SALES') setRole('SALES_AGENT');
-    else if (dept === 'FILE_OP') setRole('FILE_OP_AGENT');
-    else setRole('ADMIN');
+  const getDepartmentColor = (dept?: string) => {
+    switch (dept) {
+      case 'ADMIN':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'DOC':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'PREP_REVIEW':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'SALES':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'FILE_OP':
+        return 'bg-teal-50 text-teal-700 border-teal-200';
+      default:
+        return 'bg-slate-100 text-slate-700 border-slate-200';
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -113,7 +136,9 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
     if (!mobile.trim() || mobile.replace(/\D/g, '').length < 7) {
       newErrors.mobile = 'Valid contact number is required';
     }
-
+    if (selectedOrgRoleIds.length === 0) {
+      newErrors.roles = 'Please select at least one role for this staff member';
+    }
     if (smtpEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(smtpEmail.trim())) {
       newErrors.smtpEmail = 'Valid SMTP email format required';
     }
@@ -123,16 +148,23 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
       return;
     }
 
+    const effectivePrimaryId = primaryOrgRoleId || selectedOrgRoleIds[0];
+    const primaryRoleObj = availableOrgRoles.find((r) => r.id === effectivePrimaryId);
+    const systemRole = (primaryRoleObj?.systemRole || 'DOC_AGENT') as EmployeeRole;
+    const dept = (primaryRoleObj?.department || 'DOC') as any;
+
     onSave({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim().toLowerCase(),
       mobile: mobile.trim(),
-      department,
-      role,
+      department: dept,
+      role: systemRole,
       isActive,
       smtpEmail: smtpEmail.trim() || undefined,
       smtpAppPassword: smtpAppPassword.trim() || undefined,
+      orgRoleIds: selectedOrgRoleIds,
+      primaryOrgRoleId: effectivePrimaryId,
     });
   };
 
@@ -140,6 +172,7 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
     <AppDrawer
       isOpen={isOpen}
       onClose={onClose}
+      className="sm:max-w-[620px] md:max-w-[680px]"
       title={
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-200">
@@ -151,8 +184,8 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
             </h3>
             <p className="text-xs text-slate-500 font-normal">
               {employee
-                ? `Updating details for ${employee.fullName}`
-                : 'Provision role-based credentials for team member'}
+                ? `Updating details and roles for ${employee.fullName}`
+                : 'Provision role-based credentials and multiple roles for team member'}
             </p>
           </div>
         </div>
@@ -173,7 +206,7 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
             variant="primary"
             size="md"
             onClick={handleSubmit}
-            className="px-6 shadow-sm"
+            className="px-6 shadow-sm bg-[#16A34A] hover:bg-[#15803D]"
           >
             {employee ? 'Save Changes' : 'Create Staff Member'}
           </Button>
@@ -181,7 +214,7 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5 py-2">
-        {/* Basic Information Header */}
+        {/* Personal Details Header */}
         <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
           Personal &amp; Contact Details
         </div>
@@ -237,34 +270,97 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
           />
         </div>
 
-        {/* Department & Role Section */}
-        <div className="pt-2 border-t border-slate-200/80 space-y-4">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Department &amp; Permission Level
+        {/* Multi-Role Assignment Section */}
+        <div className="pt-2 border-t border-slate-200/80 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-[#16A34A]" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Assigned Roles (Multi-Role Support) *
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-[#16A34A] border border-emerald-200">
+                  {selectedOrgRoleIds.length} assigned
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Select one or multiple roles. The user can switch between these roles in the top-right profile section.
+              </p>
+            </div>
           </div>
 
-          <div>
-            <AppSelect
-              label="Assign Department *"
-              value={department}
-              onChange={handleDepartmentChange}
-              options={[
-                { label: 'Documenter Dept (Outreach & Intake)', value: 'DOC' },
-                { label: 'Tax Prep & Review Dept (Computation & QA)', value: 'PREP_REVIEW' },
-                { label: 'Sales Dept (Quotations & Negotiation)', value: 'SALES' },
-                { label: 'File Operator Dept (CPA E-Filing)', value: 'FILE_OP' },
-                { label: 'System Administration (Admin)', value: 'ADMIN' },
-              ]}
-            />
-          </div>
+          {errors.roles && (
+            <p className="text-xs font-semibold text-rose-600 animate-in fade-in">{errors.roles}</p>
+          )}
 
-          <div>
-            <AppSelect
-              label="Department Role Level *"
-              value={role}
-              onChange={(val) => setRole(val as EmployeeRole)}
-              options={getRoleOptions()}
-            />
+          {/* Role Checkbox Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+            {availableOrgRoles.map((r) => {
+              const isSelected = selectedOrgRoleIds.includes(r.id);
+              const isPrimary = primaryOrgRoleId === r.id;
+
+              return (
+                <div
+                  key={r.id}
+                  className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2 ${
+                    isSelected
+                      ? 'bg-emerald-50/40 border-emerald-300 shadow-2xs'
+                      : 'bg-white border-slate-200/90 hover:bg-slate-50'
+                  }`}
+                >
+                  <div
+                    onClick={() => toggleOrgRole(r.id)}
+                    className="flex items-start gap-2.5 cursor-pointer select-none"
+                  >
+                    <div className="mt-0.5 shrink-0 text-emerald-600">
+                      {isSelected ? (
+                        <CheckSquare className="w-4 h-4 text-[#16A34A]" />
+                      ) : (
+                        <Square className="w-4 h-4 text-slate-300" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-slate-900 leading-tight">
+                          {r.name}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${getDepartmentColor(
+                            r.department
+                          )}`}
+                        >
+                          {r.department}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                        {r.systemRole} · {r.sidebarPermissions?.length || 0} items
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Primary Role Indicator */}
+                  {isSelected && (
+                    <div className="pt-1.5 border-t border-emerald-200/50 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPrimaryOrgRoleId(r.id);
+                        }}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 transition-colors cursor-pointer ${
+                          isPrimary
+                            ? 'bg-[#16A34A] text-white shadow-2xs'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-emerald-50'
+                        }`}
+                      >
+                        <Star className={`w-3 h-3 ${isPrimary ? 'fill-white text-white' : 'text-slate-400'}`} />
+                        <span>{isPrimary ? 'Primary Default' : 'Set as Primary'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -280,76 +376,43 @@ export const AddEmployeeDrawer: React.FC<AddEmployeeDrawerProps> = ({
                 <p className="text-[11px] text-slate-500">Enable this staff member to send emails directly within the platform</p>
               </div>
             </div>
+            <span className="text-[10px] uppercase font-bold text-slate-400">Optional</span>
           </div>
 
-          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3.5">
-            <div>
-              <AppInput
-                label="SMTP Email Address"
-                placeholder="e.g. user@gmail.com or staff@taxcrm.com"
-                type="email"
-                value={smtpEmail}
-                onChange={(e) => {
-                  setSmtpEmail(e.target.value);
-                  if (errors.smtpEmail) setErrors((prev) => ({ ...prev, smtpEmail: '' }));
-                }}
-                error={errors.smtpEmail}
-              />
-              <p className="text-[11px] text-slate-400 mt-1">Email account used to dispatch outbound client emails</p>
-            </div>
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+            <AppInput
+              label="Sender Email Address"
+              placeholder="e.g. arjun.varma@taxcrm.com"
+              type="email"
+              value={smtpEmail}
+              onChange={(e) => setSmtpEmail(e.target.value)}
+              error={errors.smtpEmail}
+            />
 
-            <div>
-              <AppInput
-                label="SMTP App Password"
-                placeholder="e.g. 16-character App Password (xxxx xxxx xxxx xxxx)"
-                type="password"
-                value={smtpAppPassword}
-                onChange={(e) => {
-                  setSmtpAppPassword(e.target.value);
-                  if (errors.smtpAppPassword) setErrors((prev) => ({ ...prev, smtpAppPassword: '' }));
-                }}
-                error={errors.smtpAppPassword}
-              />
-              <p className="text-[11px] text-slate-400 mt-1">Generated App Password from Google / Outlook / Mail Provider</p>
-            </div>
-
-            <div className="flex items-start gap-2 text-[11px] text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200/70">
-              <Info className="w-3.5 h-3.5 text-[#16A34A] shrink-0 mt-0.5" />
-              <span>
-                These credentials allow the system to dispatch transactional emails, review notices, and tax communications directly via this user's email account.
-              </span>
-            </div>
+            <AppInput
+              label="App Password (16-character SMTP Secret)"
+              placeholder="•••• •••• •••• ••••"
+              type="password"
+              value={smtpAppPassword}
+              onChange={(e) => setSmtpAppPassword(e.target.value)}
+            />
           </div>
         </div>
 
-        {/* Active Status Switch */}
-        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-slate-800">
-              Active Operational Status
-            </div>
-            <div className="text-[11px] text-slate-500 mt-0.5">
-              Allow this staff member to access department queues
-            </div>
-          </div>
-
-          <label className="relative inline-flex items-center cursor-pointer">
+        {/* Account Status Toggle */}
+        <div className="pt-2 border-t border-slate-200/80">
+          <label className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100/60 transition-colors">
             <input
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="sr-only peer"
+              className="w-4 h-4 rounded text-[#16A34A] focus:ring-[#16A34A] border-slate-300"
             />
-            <div className="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#16A34A]"></div>
+            <div>
+              <div className="text-xs font-bold text-slate-800">Account Active</div>
+              <div className="text-[11px] text-slate-500">Allow this staff member to log in and receive assignments</div>
+            </div>
           </label>
-        </div>
-
-        {/* Security / Role Notice */}
-        <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200 text-emerald-900 text-xs flex items-start gap-2.5">
-          <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
-          <div className="leading-relaxed">
-            <span className="font-bold">Access Governance:</span> Inactive staff accounts cannot access queues or receive new lead assignments.
-          </div>
         </div>
       </form>
     </AppDrawer>

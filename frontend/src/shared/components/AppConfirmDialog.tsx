@@ -102,7 +102,7 @@ export function AppConfirmDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       aria-modal="true"
       role="alertdialog"
       aria-labelledby="confirm-dialog-title"

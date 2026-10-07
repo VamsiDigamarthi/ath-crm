@@ -63,6 +63,88 @@ export const requestOtp = async (req: Request, res: Response) => {
   return SuccessHandler.handle(res, "OTP sent successfully");
 };
 
+import { OrgRoleService } from "../admin/org-role-service.js";
+
+const userSelectFields = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  mobile: true,
+  role: true,
+  activeOrgRoleId: true,
+  isActive: true,
+  smtpEmail: true,
+  orgRoles: {
+    include: {
+      orgRole: true,
+    },
+    orderBy: { isPrimary: "desc" as const },
+  },
+  customerProfile: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      visaType: true,
+      isConvertedCustomer: true,
+      applications: {
+        select: {
+          id: true,
+          taxYear: true,
+          filingType: true,
+          currentStage: true,
+        },
+        orderBy: { taxYear: "desc" as const },
+      },
+    },
+  },
+};
+
+async function formatAuthUser(userRecord: any) {
+  if (!userRecord) return null;
+
+  // If user has no orgRoles yet and is a staff member, backfill default org role
+  if ((!userRecord.orgRoles || userRecord.orgRoles.length === 0) && userRecord.role !== Role.TAXPAYER_USER) {
+    try {
+      await OrgRoleService.seedDefaultOrgRoles();
+      const refreshed = await prisma.user.findUnique({
+        where: { id: userRecord.id },
+        select: userSelectFields,
+      });
+      if (refreshed) {
+        userRecord = refreshed;
+      }
+    } catch {
+      // continue with existing record if seed errors
+    }
+  }
+
+  const assignedOrgRoles = (userRecord.orgRoles || []).map((ur: any) => ({
+    id: ur.orgRole.id,
+    name: ur.orgRole.name,
+    description: ur.orgRole.description,
+    systemRole: ur.orgRole.systemRole,
+    department: ur.orgRole.department,
+    sidebarPermissions: ur.orgRole.sidebarPermissions || [],
+    defaultRoute: ur.orgRole.defaultRoute,
+    isPrimary: ur.isPrimary,
+  }));
+
+  const activeOrgRole =
+    assignedOrgRoles.find((r: any) => r.id === userRecord.activeOrgRoleId) ||
+    assignedOrgRoles[0] ||
+    null;
+
+  return {
+    ...userRecord,
+    assignedOrgRoles,
+    activeOrgRole,
+    sidebarPermissions: activeOrgRole?.sidebarPermissions || [],
+  };
+}
+
 export const verifyOtp = async (req: Request, res: Response) => {
   const { email, mobile, otp } = req.body;
 
@@ -103,38 +185,12 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
   const authUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      mobile: true,
-      role: true,
-      isActive: true,
-      smtpEmail: true,
-      customerProfile: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          visaType: true,
-          isConvertedCustomer: true,
-          applications: {
-            select: {
-              id: true,
-              taxYear: true,
-              filingType: true,
-              currentStage: true,
-            },
-            orderBy: { taxYear: "desc" },
-          },
-        },
-      },
-    },
+    select: userSelectFields,
   });
 
-  return SuccessHandler.handle(res, "Login successful", authUser || {
+  const formatted = await formatAuthUser(authUser);
+
+  return SuccessHandler.handle(res, "Login successful", formatted || {
     id: user.id,
     email: user.email,
     mobile: user.mobile,
@@ -162,39 +218,13 @@ export const getCurrentUser = async (req: Request, res: Response) => {
 
   const authUser = await prisma.user.findUnique({
     where: { id: req.currentUser.id },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      mobile: true,
-      role: true,
-      isActive: true,
-      smtpEmail: true,
-      customerProfile: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          visaType: true,
-          isConvertedCustomer: true,
-          applications: {
-            select: {
-              id: true,
-              taxYear: true,
-              filingType: true,
-              currentStage: true,
-            },
-            orderBy: { taxYear: "desc" },
-          },
-        },
-      },
-    },
+    select: userSelectFields,
   });
 
+  const formatted = await formatAuthUser(authUser);
+
   return SuccessHandler.handle(res, "Current user fetched", {
-    user: authUser || req.currentUser,
+    user: formatted,
   });
 };
 
@@ -287,7 +317,7 @@ export const registerTaxpayer = async (req: Request, res: Response) => {
   try {
     const adminManagers = await prisma.user.findMany({
       where: {
-        role: { in: [Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD] },
+        role: { in: [Role.ADMIN, Role.DOC_MANAGER] },
         isActive: true,
       },
       select: { id: true, role: true },

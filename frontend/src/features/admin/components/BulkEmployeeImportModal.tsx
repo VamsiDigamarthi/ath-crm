@@ -66,7 +66,7 @@ export const BulkEmployeeImportModal: React.FC<BulkEmployeeImportModalProps> = (
 
           let role: EmployeeRole = 'DOC_AGENT';
           const roleRaw = (cols[5] || '').toUpperCase();
-          if (roleRaw && ['PREP_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER', 'DOC_MANAGER', 'DOC_TEAM_LEAD', 'DOC_AGENT', 'SALES_MANAGER', 'SALES_TEAM_LEAD', 'SALES_AGENT', 'FILE_OP_MANAGER', 'FILE_OP_TEAM_LEAD', 'FILE_OP_AGENT', 'ADMIN'].includes(roleRaw)) {
+          if (roleRaw && ['PREP_MANAGER', 'TAX_REVIEWER', 'TAX_PREPARER', 'DOC_MANAGER', 'DOC_AGENT', 'SALES_MANAGER', 'SALES_AGENT', 'FILE_OP_MANAGER', 'FILE_OP_AGENT', 'ADMIN'].includes(roleRaw)) {
             role = roleRaw as EmployeeRole;
           } else if (dept === 'PREP_REVIEW') {
             role = 'TAX_PREPARER';
@@ -209,9 +209,9 @@ export const BulkEmployeeImportModal: React.FC<BulkEmployeeImportModalProps> = (
         {parsedEmployees.length === 0 ? (
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-8 text-center bg-slate-50/60 hover:bg-emerald-50/40 transition-colors cursor-pointer"
+            className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-md p-8 text-center bg-slate-50/60 hover:bg-emerald-50/40 transition-colors cursor-pointer"
           >
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-[#16A34A] flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-md bg-emerald-100 text-[#16A34A] flex items-center justify-center mx-auto mb-3">
               <UploadCloud className="w-6 h-6" />
             </div>
             <h4 className="font-bold text-sm text-slate-800">
@@ -223,7 +223,7 @@ export const BulkEmployeeImportModal: React.FC<BulkEmployeeImportModalProps> = (
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
+            <div className="flex items-center justify-between p-3.5 rounded-md bg-emerald-50 border border-emerald-200">
               <div className="flex items-center gap-2.5 text-xs text-emerald-900">
                 <FileSpreadsheet className="w-4 h-4 text-[#16A34A]" />
                 <span className="font-bold">{fileName}</span>
@@ -244,7 +244,7 @@ export const BulkEmployeeImportModal: React.FC<BulkEmployeeImportModalProps> = (
             </div>
 
             {/* Quick Preview List */}
-            <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
+            <div className="max-h-56 overflow-y-auto border border-slate-200 rounded-md divide-y divide-slate-100">
               {parsedEmployees.map((emp, i) => (
                 <div key={i} className="p-3 text-xs flex items-center justify-between hover:bg-slate-50">
                   <div className="flex items-center gap-2.5">

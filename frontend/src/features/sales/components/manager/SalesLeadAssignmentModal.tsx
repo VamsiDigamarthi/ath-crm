@@ -1,18 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { AppModal } from '@/shared/components/AppModal';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
-import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
-import { 
-  Zap, 
-  UserCheck, 
-  Sparkles,
-  Headphones,
-  CheckCircle2,
-  Award
-} from 'lucide-react';
-import { ReturnComplexityBadge } from '../common/ReturnComplexityBadge';
-import { calculateReturnComplexity } from '../../utils/complexity-evaluator';
+import { Zap, UserCheck, Check } from 'lucide-react';
 import type { SalesRepItem, SalesLeadItem } from '../../types/sales.types';
 
 export interface SalesLeadAssignmentModalProps {
@@ -34,27 +24,29 @@ export const SalesLeadAssignmentModal: React.FC<SalesLeadAssignmentModalProps> =
   onConfirmRoundRobin,
   isLoading = false,
 }) => {
-  const [assignmentMode, setAssignmentMode] = useState<'DIRECT' | 'ROUND_ROBIN'>('DIRECT');
+  const [assignmentMode, setAssignmentMode] = useState<'ROUND_ROBIN' | 'DIRECT'>('ROUND_ROBIN');
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   const [searchAgent, setSearchAgent] = useState<string>('');
 
   const leadCount = selectedLeads.length;
-  const singleLead = leadCount === 1 ? selectedLeads[0] : null;
-  const complexityInfo = singleLead ? calculateReturnComplexity(singleLead) : null;
 
-  // Strictly Frontline Sales Closers (SALES_AGENT only - Managers and Team Leads excluded)
+  // Frontline Sales Closers (SALES_AGENT) based on orgRoles / systemRoles
   const closers = useMemo(() => {
-    return salesReps.filter((r) => r.role === 'SALES_AGENT' || !r.role);
+    return salesReps.filter((r: any) => {
+      const sysRoles: string[] = Array.isArray(r.systemRoles) ? r.systemRoles : [];
+      return r.role === 'SALES_AGENT' || sysRoles.includes('SALES_AGENT');
+    });
   }, [salesReps]);
 
   // Search filtered frontline closers
   const filteredClosers = useMemo(() => {
-    return closers.filter((rep) => {
-      const q = searchAgent.toLowerCase();
-      return (
-        rep.name.toLowerCase().includes(q) ||
-        rep.email.toLowerCase().includes(q)
-      );
+    const q = searchAgent.toLowerCase().trim();
+    if (!q) return closers;
+    return closers.filter((rep: any) => {
+      const name = (rep.name || rep.fullName || `${rep.firstName || ''} ${rep.lastName || ''}`).toLowerCase();
+      const email = (rep.email || '').toLowerCase();
+      const mobile = (rep.mobile || rep.phone || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || mobile.includes(q);
     });
   }, [closers, searchAgent]);
 
@@ -71,173 +63,68 @@ export const SalesLeadAssignmentModal: React.FC<SalesLeadAssignmentModalProps> =
     <AppModal
       isOpen={isOpen}
       onClose={onClose}
-      className="max-w-2xl"
-      title={
-        <div>
-          <h3 className="text-base font-bold text-slate-900">
-            Distribute &amp; Assign Sales Leads
-          </h3>
-          <p className="text-xs text-slate-500 font-medium">
-            Assign {leadCount} selected {leadCount === 1 ? 'lead' : 'leads'} to Frontline Sales Closers
-          </p>
-        </div>
-      }
+      className="max-w-xl"
+      title="Assign leads"
+      description={`${leadCount} ${leadCount === 1 ? 'lead' : 'leads'} selected`}
       footer={
-        <div className="flex items-center justify-between w-full">
-          <div className="text-xs text-slate-500 font-medium">
-            {assignmentMode === 'ROUND_ROBIN' ? (
-              <span className="flex items-center gap-1 text-emerald-700 font-bold">
-                <Sparkles className="w-3.5 h-3.5 text-[#16A34A]" />
-                Auto-balanced across {closers.length} Frontline Sales Closers
-              </span>
-            ) : (
-              <span>Select a sales closer to assign</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              disabled={isLoading}
-              className="border-slate-200 text-slate-700 text-xs font-semibold cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleConfirm}
-              disabled={isLoading || (assignmentMode === 'DIRECT' && !selectedAgentId)}
-              className="bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs px-4 shadow-sm cursor-pointer"
-            >
-              {isLoading ? 'Assigning...' : 'Confirm Assignment'}
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-2 w-full">
+          <Button variant="outline" size="md" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button
+            size="md"
+            onClick={handleConfirm}
+            disabled={isLoading || (assignmentMode === 'DIRECT' && !selectedAgentId)}
+            className="bg-[#16A34A] hover:bg-[#15803D] text-white font-semibold"
+          >
+            {isLoading ? 'Assigning...' : 'Assign'}
+          </Button>
         </div>
       }
     >
       <div className="space-y-4 font-sans">
-        {/* Return Complexity Guideline Banner */}
-        {complexityInfo && (
-          <div className="p-3.5 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100/70 space-y-2">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-700">Taxpayer Return Complexity:</span>
-                <ReturnComplexityBadge complexityInfo={complexityInfo} size="md" />
-              </div>
-              <span className="text-[11px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
-                <Award className="w-3 h-3 text-emerald-600" />
-                <span>Guideline: {complexityInfo.recommendation}</span>
-              </span>
-            </div>
+        {/* Mode switch */}
+        <div className="grid grid-cols-2 gap-1 p-1 rounded-lg bg-slate-100">
+          {(['ROUND_ROBIN', 'DIRECT'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setAssignmentMode(mode)}
+              className={`flex items-center justify-center gap-2 h-9 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                assignmentMode === mode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {mode === 'ROUND_ROBIN' ? <Zap className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+              {mode === 'ROUND_ROBIN' ? 'Auto-assign' : 'Pick an agent'}
+            </button>
+          ))}
+        </div>
 
-            {complexityInfo.factors.length > 0 && (
-              <div className="text-[11px] text-slate-600 flex items-center gap-1.5 flex-wrap pt-0.5">
-                <span className="font-bold text-slate-500 text-[10px] uppercase">Detected Factors:</span>
-                {complexityInfo.factors.map((factor, idx) => (
-                  <span key={idx} className="bg-white text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-[10px] font-semibold">
-                    {factor}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Mode Selector Tabs */}
-        <AppTabs
-          tabs={[
-            {
-              id: 'DIRECT',
-              label: `Direct Closer Selection (${closers.length})`,
-              icon: UserCheck,
-            },
-            {
-              id: 'ROUND_ROBIN',
-              label: 'Auto Round-Robin (Closers Pool)',
-              icon: Zap,
-            },
-          ]}
-          activeTab={assignmentMode}
-          onChange={(mode) => setAssignmentMode(mode as any)}
-        />
-
-        {/* Mode 1: Direct Closer Selection (Strictly Frontline Sales Agents) */}
-        {assignmentMode === 'DIRECT' && (
+        {/* Auto round-robin */}
+        {assignmentMode === 'ROUND_ROBIN' && (
           <div className="space-y-3">
-            {/* Search Input */}
-            <AppSearchInput
-              value={searchAgent}
-              onChange={setSearchAgent}
-              placeholder="Search closer by name or email..."
-              debounceMs={200}
-            />
-
-            {/* Subtitle / Counter */}
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">
-                Available Sales Closers ({filteredClosers.length})
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium">
-                Managers &amp; Team Leads excluded
-              </span>
-            </div>
-
-            {/* Staff List */}
-            <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
-              {filteredClosers.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400">
-                  No sales closers match your search
-                </div>
+            <p className="text-sm text-slate-600">
+              Leads are split evenly across {closers.length} sales{' '}
+              {closers.length === 1 ? 'closer' : 'closers'} (~{Math.ceil(leadCount / (closers.length || 1))} each).
+              Managers and team leads are excluded.
+            </p>
+            <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+              {closers.length === 0 ? (
+                <div className="p-6 text-center text-sm text-slate-400">No active sales closers</div>
               ) : (
-                filteredClosers.map((rep) => {
-                  const isSelected = selectedAgentId === rep.id;
-                  const initial = (rep.name?.[0] || rep.email?.[0] || 'C').toUpperCase();
-
+                closers.map((rep: any) => {
+                  const displayName = rep.name || rep.fullName || `${rep.firstName || ''} ${rep.lastName || ''}`.trim() || rep.email;
                   return (
-                    <div
-                      key={rep.id}
-                      onClick={() => setSelectedAgentId(rep.id)}
-                      className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-emerald-50/70 border-emerald-500 ring-2 ring-emerald-500/20'
-                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs ${
-                          isSelected
-                            ? 'bg-[#16A34A] text-white'
-                            : 'bg-gradient-to-br from-purple-100 to-purple-200 border border-purple-300 text-purple-800'
-                        }`}>
-                          {initial}
-                        </div>
-                        <div>
-                          <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
-                            <span>{rep.name}</span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-                              Sales Closer
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-slate-500 font-medium">{rep.email}</div>
+                    <div key={rep.id} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900 truncate">{displayName}</div>
+                        <div className="text-xs text-slate-500 truncate">
+                          {rep.email}
+                          {rep.mobile || rep.phone ? ` · ${rep.mobile || rep.phone}` : ''}
+                          {' · Sales closer'}
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className="text-xs font-bold text-slate-800">{rep.activeLeads || 0} active</div>
-                          <div className="text-[10px] text-slate-400 font-medium">{rep.dealsClosedToday || 0} closed</div>
-                        </div>
-                        <div
-                          className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                            isSelected
-                              ? 'bg-[#16A34A] border-[#16A34A] text-white'
-                              : 'border-slate-300 bg-white'
-                          }`}
-                        >
-                          {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
-                        </div>
-                      </div>
+                      <span className="text-xs text-slate-500 shrink-0">{rep.activeLeads || 0} active</span>
                     </div>
                   );
                 })
@@ -246,54 +133,55 @@ export const SalesLeadAssignmentModal: React.FC<SalesLeadAssignmentModalProps> =
           </div>
         )}
 
-        {/* Mode 2: Auto Round-Robin Preview (Strictly Frontline Sales Closers) */}
-        {assignmentMode === 'ROUND_ROBIN' && (
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-950 leading-relaxed">
-              <div className="font-bold flex items-center gap-1.5 mb-1 text-emerald-900">
-                <Sparkles className="w-4 h-4 text-[#16A34A]" />
-                Fair Workload Balancing for Frontline Closers
-              </div>
-              The system will sequentially distribute <strong>{leadCount} leads</strong> equally across all <strong>{closers.length} active Sales Closers</strong> (~{Math.ceil(leadCount / (closers.length || 1))} leads each). Managers and Team Leads are excluded from calling queues.
-            </div>
+        {/* Direct selection */}
+        {assignmentMode === 'DIRECT' && (
+          <div className="space-y-3">
+            <AppSearchInput
+              value={searchAgent}
+              onChange={setSearchAgent}
+              placeholder="Search closer by name, email, or phone..."
+              debounceMs={200}
+            />
 
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-bold text-slate-700 tracking-wide flex items-center gap-1.5">
-                <Headphones className="w-3.5 h-3.5 text-[#16A34A]" />
-                Active Closers in Round-Robin Pool ({closers.length})
-              </div>
-              <span className="text-[11px] text-slate-400 font-medium">Managers &amp; Team Leads excluded</span>
-            </div>
-
-            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-              {closers.map((rep) => (
-                <div
-                  key={rep.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 border border-emerald-200 text-[#16A34A] font-bold text-xs flex items-center justify-center">
-                      {(rep.name?.[0] || rep.email?.[0] || 'C').toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="font-bold text-xs text-slate-900">
-                        {rep.name}
+            <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+              {filteredClosers.length === 0 ? (
+                <div className="p-6 text-center text-sm text-slate-400">No sales closers match your search</div>
+              ) : (
+                filteredClosers.map((rep: any) => {
+                  const isSelected = selectedAgentId === rep.id;
+                  const displayName = rep.name || rep.fullName || `${rep.firstName || ''} ${rep.lastName || ''}`.trim() || rep.email;
+                  return (
+                    <div
+                      key={rep.id}
+                      onClick={() => setSelectedAgentId(rep.id)}
+                      className={`flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-50/60'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                            isSelected ? 'border-[#16A34A] bg-[#16A34A]' : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-slate-900 truncate">{displayName}</div>
+                          <div className="text-xs text-slate-500 truncate">
+                            {rep.email}
+                            {rep.mobile || rep.phone ? ` · ${rep.mobile || rep.phone}` : ''}
+                            {' · Sales closer'}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-medium">
-                        {rep.email}
-                      </div>
+                      <span className="text-xs text-slate-500 shrink-0">{rep.activeLeads || 0} active</span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-[#16A34A] border border-emerald-200">
-                      Sales Closer
-                    </span>
-                    <span className="text-[11px] font-semibold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
-                      {rep.activeLeads || 0} active
-                    </span>
-                  </div>
-                </div>
-              ))}
+                  );
+                })
+              )}
             </div>
           </div>
         )}

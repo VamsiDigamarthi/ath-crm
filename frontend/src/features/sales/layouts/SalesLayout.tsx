@@ -13,6 +13,7 @@ import {
   Sparkles,
   Tag,
 } from 'lucide-react';
+import { filterNavItemsByPermissions } from '@/shared/constants/sidebar-catalog';
 import { salesService } from '../services/sales-service';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -21,7 +22,7 @@ import toast from 'react-hot-toast';
 export const SalesLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, activeOrgRole, sidebarPermissions, logout } = useAuthStore();
 
   const handleLogout = async () => {
     try {
@@ -70,7 +71,7 @@ export const SalesLayout: React.FC = () => {
   const unreadCount = getUnreadCount();
 
   // Role-specific Navigation Items (Matching PrepReview and Documenter standard)
-  const navItems = isManager
+  const rawNavItems = isManager
     ? [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Management', path: '/sales/manager' },
       { id: 'pipeline', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/manager/queue' },
@@ -84,6 +85,9 @@ export const SalesLayout: React.FC = () => {
       { id: 'pitch_queue', label: 'My Leads', icon: PhoneCall, section: 'Active Operations', badge: queueBadgeCount !== null ? String(queueBadgeCount) : undefined, path: '/sales/agent/queue' },
       { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Closer Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
     ];
+
+  const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');
+  const navItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
 
   const currentPath = location.pathname;
   const getActiveId = () => {

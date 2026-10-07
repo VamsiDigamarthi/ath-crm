@@ -6,6 +6,7 @@ import { UserPlus, Users, DollarSign, FileCheck, ShieldCheck, Calculator } from 
 import type { EmployeeItem, DepartmentType } from '../types/employee.types';
 import { getEmployeeColumns } from '../columns/employee-columns';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
+import { SYSTEM_ROLES, type EnumOption } from '@/shared/constants/system-enums';
 
 interface EmployeeTableProps {
   employees: EmployeeItem[];
@@ -45,13 +46,38 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   onPerPageChange,
   isLoading = false,
 }) => {
+  const roleOptions = useMemo(() => {
+    const map = new Map<string, EnumOption>();
+    SYSTEM_ROLES.forEach((r) => map.set(r.label.toLowerCase(), r));
+
+    employees.forEach((emp) => {
+      (emp.orgRoles || []).forEach((r) => {
+        if (r.name && !map.has(r.name.toLowerCase())) {
+          map.set(r.name.toLowerCase(), {
+            label: r.name,
+            value: r.systemRole || r.name,
+          });
+        }
+      });
+      if (emp.roleLabel && !map.has(emp.roleLabel.toLowerCase())) {
+        map.set(emp.roleLabel.toLowerCase(), {
+          label: emp.roleLabel,
+          value: emp.role || emp.roleLabel,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [employees]);
+
   const columns = useMemo(
     () =>
       getEmployeeColumns({
         onEdit: onEditEmployee,
         onToggleStatus,
+        roleOptions,
       }),
-    [onEditEmployee, onToggleStatus]
+    [onEditEmployee, onToggleStatus, roleOptions]
   );
 
   const departmentTabs = useMemo(() => [

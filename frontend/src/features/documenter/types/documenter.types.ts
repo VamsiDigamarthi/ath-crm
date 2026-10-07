@@ -140,6 +140,9 @@ export interface DocumenterLeadItem extends Record<string, unknown> {
   } | null;
   isDualDocSalesRole?: boolean;
   isRawProspect?: boolean;
+  isDirectSignup?: boolean;
+  isSelfRegistered?: boolean;
+  isReturnConfigured?: boolean;
   lastCallLog?: {
     disposition: string;
     callSummary?: string | null;

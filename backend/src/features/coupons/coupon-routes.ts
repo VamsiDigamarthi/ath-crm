@@ -25,9 +25,7 @@ const router = Router();
 const MANAGER_ROLES = [
   Role.ADMIN,
   Role.SALES_MANAGER,
-  Role.SALES_TEAM_LEAD,
   Role.DOC_MANAGER,
-  Role.DOC_TEAM_LEAD,
   Role.PREP_MANAGER,
   Role.FILE_OP_MANAGER,
 ];

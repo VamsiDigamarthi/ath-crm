@@ -22,6 +22,7 @@ import {
   Package,
   ShieldCheck,
 } from 'lucide-react';
+import { filterNavItemsByPermissions } from '@/shared/constants/sidebar-catalog';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
@@ -29,7 +30,7 @@ import toast from 'react-hot-toast';
 export const AdminLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
+  const { user, activeOrgRole, sidebarPermissions, logout } = useAuthStore();
 
   const handleLogout = async () => {
     try {
@@ -54,6 +55,7 @@ export const AdminLayout: React.FC = () => {
     { id: 'products', label: 'Products & Services', icon: Package, section: 'Management', path: '/admin/products' },
     { id: 'customers', label: 'Files', icon: FolderKanban, section: 'Management', path: '/admin/customers' },
     { id: 'employees', label: 'Team & Staff', icon: UserPlus, section: 'Management', path: '/admin/employees' },
+    { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck, section: 'Management', path: '/admin/roles' },
     { id: 'email-templates', label: 'Email Templates', icon: Mail, section: 'Management', path: '/admin/email-templates' },
     { id: 'documenter', label: 'Documenter Dept', icon: Users, section: 'Operations', path: '/admin/documenter' },
     { id: 'prep-review', label: 'Prep & Review Dept', icon: Calculator, section: 'Operations', path: '/admin/prep-review' },
@@ -64,9 +66,13 @@ export const AdminLayout: React.FC = () => {
     { id: 'settings', label: 'System Settings', icon: Settings, section: 'Admin', path: '/admin/settings' },
   ];
 
+  const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');
+  const visibleNavItems = filterNavItemsByPermissions(navItems, sidebarPermissions, isRootAdmin);
+
   // Determine active item from URL pathname
   const currentPath = location.pathname;
   const getActiveId = () => {
+    if (currentPath.includes('/admin/roles') || currentPath.includes('/admin/org-roles')) return 'roles';
     if (currentPath.includes('/admin/notifications')) return 'notifications';
     if (currentPath.includes('/admin/coupons') || currentPath.includes('/admin/coupon') || currentPath.includes('/admin/discount-coupons')) return 'coupons';
     if (currentPath.includes('/admin/products')) return 'products';
@@ -89,11 +95,7 @@ export const AdminLayout: React.FC = () => {
   const activeId = getActiveId();
 
   const handleItemClick = (id: string) => {
-    if (id === 'coupons') {
-      navigate('/admin/coupons');
-      return;
-    }
-    const item = navItems.find((n) => n.id === id);
+    const item = visibleNavItems.find((n) => n.id === id);
     if (item?.path) {
       navigate(item.path);
     }
@@ -115,7 +117,7 @@ export const AdminLayout: React.FC = () => {
             </div>
           ),
         }}
-        items={navItems}
+        items={visibleNavItems}
         activeId={activeId}
         onItemClick={handleItemClick}
         showLogoutOnly={true}

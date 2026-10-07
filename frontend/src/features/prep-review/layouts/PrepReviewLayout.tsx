@@ -12,13 +12,14 @@ import {
   Bell,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
+import { filterNavItemsByPermissions } from '@/shared/constants/sidebar-catalog';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
 export const PrepReviewLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, activeOrgRole, sidebarPermissions, logout } = useAuthStore();
   const { getUnreadCount } = useNotificationStore();
   const unreadCount = getUnreadCount();
 
@@ -35,7 +36,7 @@ export const PrepReviewLayout: React.FC = () => {
   const isManager = user?.role === 'PREP_MANAGER' || user?.role === 'ADMIN';
 
   // Role-specific Navigation Items (Matching Documenter standard)
-  const navItems = isManager
+  const rawNavItems = isManager
     ? [
         { id: 'dashboard', label: 'Operations Dashboard', icon: LayoutDashboard, section: 'Management', path: '/prep-review/manager' },
         { id: 'caseload', label: 'Department Queue', icon: LayoutGrid, section: 'Operations', path: '/prep-review/manager/queue' },
@@ -48,6 +49,9 @@ export const PrepReviewLayout: React.FC = () => {
         { id: 'reviewer', label: 'QA Audit Deck', icon: ShieldCheck, section: 'Active Operations', path: '/prep-review/reviewer' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Specialist Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/prep-review/notifications' },
       ];
+
+  const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');
+  const navItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
 
   const currentPath = location.pathname;
   const getActiveId = () => {

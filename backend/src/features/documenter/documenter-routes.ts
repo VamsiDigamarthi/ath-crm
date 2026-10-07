@@ -39,23 +39,19 @@ const router = Router();
 const DOCUMENTER_ROLES = [
   Role.ADMIN,
   Role.DOC_MANAGER,
-  Role.DOC_TEAM_LEAD,
   Role.DOC_AGENT,
   Role.PREP_MANAGER,
   Role.TAX_REVIEWER,
   Role.TAX_PREPARER,
   Role.SALES_MANAGER,
-  Role.SALES_TEAM_LEAD,
   Role.SALES_AGENT,
   Role.FILE_OP_MANAGER,
-  Role.FILE_OP_TEAM_LEAD,
   Role.FILE_OP_AGENT,
 ];
 
 const MANAGER_ASSIGN_ROLES = [
   Role.ADMIN,
   Role.DOC_MANAGER,
-  Role.DOC_TEAM_LEAD,
   Role.PREP_MANAGER,
   Role.SALES_MANAGER,
   Role.FILE_OP_MANAGER,
@@ -104,7 +100,7 @@ router.post(
 router.patch(
   '/leads/:id/tax-year',
   requireAuth,
-  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_TEAM_LEAD, Role.DOC_AGENT),
+  authorize(Role.ADMIN, Role.DOC_MANAGER, Role.DOC_AGENT),
   validateRequest(changeTaxYearSchema),
   changeTaxYear
 );

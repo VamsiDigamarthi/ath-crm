@@ -480,12 +480,26 @@ export class SalesService {
   public static async getSalesStaff() {
     const staff = await prisma.user.findMany({
       where: {
-        role: {
-          in: [Role.SALES_MANAGER, Role.SALES_TEAM_LEAD, Role.SALES_AGENT],
-        },
         isActive: true,
+        OR: [
+          { role: { in: [Role.SALES_MANAGER, Role.SALES_AGENT] } },
+          {
+            orgRoles: {
+              some: {
+                orgRole: {
+                  systemRole: { in: [Role.SALES_MANAGER, Role.SALES_AGENT] },
+                },
+              },
+            },
+          },
+        ],
       },
       include: {
+        orgRoles: {
+          include: {
+            orgRole: true,
+          },
+        },
         assignedSalesApps: {
           select: { id: true, currentStage: true, updatedAt: true },
         },
@@ -512,11 +526,26 @@ export class SalesService {
       const totalAssigned = activeLeads + closedApps;
       const conversionPct = totalAssigned > 0 ? `${Math.round((closedApps / totalAssigned) * 100)}%` : '0%';
 
+      const systemRoles = new Set<string>();
+      if (member.role) systemRoles.add(member.role);
+      (member.orgRoles || []).forEach((ur: any) => {
+        if (ur.orgRole?.systemRole) systemRoles.add(ur.orgRole.systemRole);
+      });
+
+      const effectiveRole = systemRoles.has(Role.SALES_AGENT)
+        ? Role.SALES_AGENT
+        : (systemRoles.has(Role.SALES_MANAGER) ? Role.SALES_MANAGER : member.role);
+
       return {
         id: member.id,
         name,
+        fullName: name,
+        firstName: member.firstName || '',
+        lastName: member.lastName || '',
         email: member.email || '-',
-        role: member.role,
+        mobile: member.mobile || '',
+        role: effectiveRole,
+        systemRoles: Array.from(systemRoles),
         activeLeads: totalAssigned,
         openLeads: activeLeads,
         pitchesCompletedToday: Math.max(totalAssigned, 1),
@@ -593,7 +622,7 @@ export class SalesService {
     if (!managerUser) {
       managerUser = await prisma.user.findFirst({
         where: {
-          role: { in: [Role.SALES_MANAGER, Role.ADMIN, Role.SALES_TEAM_LEAD] },
+          role: { in: [Role.SALES_MANAGER, Role.ADMIN] },
           isActive: true,
         },
         select: { id: true, firstName: true, lastName: true, email: true, role: true },
@@ -776,7 +805,7 @@ export class SalesService {
     if (!managerUser) {
       managerUser = await prisma.user.findFirst({
         where: {
-          role: { in: [Role.SALES_MANAGER, Role.ADMIN, Role.SALES_TEAM_LEAD] },
+          role: { in: [Role.SALES_MANAGER, Role.ADMIN] },
           isActive: true,
         },
         select: { id: true, firstName: true, lastName: true, email: true, role: true },
@@ -799,8 +828,19 @@ export class SalesService {
       }),
       prisma.user.findMany({
         where: {
-          role: Role.SALES_AGENT,
           isActive: true,
+          OR: [
+            { role: Role.SALES_AGENT },
+            {
+              orgRoles: {
+                some: {
+                  orgRole: {
+                    systemRole: Role.SALES_AGENT,
+                  },
+                },
+              },
+            },
+          ],
         },
       }),
     ]);
