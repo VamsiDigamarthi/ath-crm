@@ -4,7 +4,6 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
 import { PriorityEditMenu } from '@/shared/components/PriorityEditMenu';
 import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { SalesStageBadge } from '../common/SalesStageBadge';
@@ -19,6 +18,7 @@ interface SalesAgentQueueTableProps {
   isLoading?: boolean;
   onRefresh?: () => void;
   onUpdatePriority?: (applicationId: string, priority: string) => void;
+  emptyText?: string;
 }
 
 export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
@@ -26,6 +26,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
   isLoading = false,
   onRefresh,
   onUpdatePriority,
+  emptyText,
 }) => {
   const navigate = useNavigate();
   const [selectedLeadForReturn, setSelectedLeadForReturn] = useState<SalesLeadItem | null>(null);
@@ -290,6 +291,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
         searchPlaceholder="Search taxpayer, email, state, status..."
         onExportExcel={handleExportExcel}
         onRowClick={(item) => navigate(`/sales/agent/client/${item.taxpayerId || item.id || item.applicationId}`)}
+        emptyText={emptyText || "No leads found in this queue."}
       />
 
       {/* Return to Admin Modal */}

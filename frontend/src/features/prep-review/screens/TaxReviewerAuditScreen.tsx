@@ -108,7 +108,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-1.5 text-sm text-slate-500">
-            <span>QA Audit Queue</span>
+            <span>Assigned Returns</span>
             <span className="text-slate-300">/</span>
             <span className="text-slate-900 font-medium">Taxpayer Profile</span>
           </div>

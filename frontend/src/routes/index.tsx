@@ -90,7 +90,7 @@ const PrepReviewIndexRedirect: React.FC = () => {
 const SalesIndexRedirect: React.FC = () => {
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
-  return <Navigate to={isManager ? '/sales/manager/queue' : '/sales/agent/queue'} replace />;
+  return <Navigate to={isManager ? '/sales/manager/queue' : '/sales/agent'} replace />;
 };
 
 const FilingIndexRedirect: React.FC = () => {
@@ -429,7 +429,23 @@ export const router = createBrowserRouter([
           // Tax Preparer Routes
           {
             path: 'preparer',
-            element: <TaxPreparerQueueScreen />,
+            element: <TaxPreparerQueueScreen initialTab="WORKING" />,
+          },
+          {
+            path: 'preparer/working',
+            element: <TaxPreparerQueueScreen initialTab="WORKING" />,
+          },
+          {
+            path: 'preparer/pending',
+            element: <TaxPreparerQueueScreen initialTab="PENDING" />,
+          },
+          {
+            path: 'preparer/under-review',
+            element: <TaxPreparerQueueScreen initialTab="UNDER_REVIEW" />,
+          },
+          {
+            path: 'preparer/completed',
+            element: <TaxPreparerQueueScreen initialTab="COMPLETED" />,
           },
           {
             path: 'preparer/queue',
@@ -446,7 +462,23 @@ export const router = createBrowserRouter([
           // QA Compliance Reviewer Routes
           {
             path: 'reviewer',
-            element: <TaxReviewerQueueScreen />,
+            element: <TaxReviewerQueueScreen initialTab="ALL" />,
+          },
+          {
+            path: 'reviewer/assigned',
+            element: <TaxReviewerQueueScreen initialTab="ALL" />,
+          },
+          {
+            path: 'reviewer/pending',
+            element: <TaxReviewerQueueScreen initialTab="PENDING" />,
+          },
+          {
+            path: 'reviewer/revisions',
+            element: <TaxReviewerQueueScreen initialTab="REVISIONS" />,
+          },
+          {
+            path: 'reviewer/approved',
+            element: <TaxReviewerQueueScreen initialTab="APPROVED" />,
           },
           {
             path: 'reviewer/queue',
@@ -556,7 +588,27 @@ export const router = createBrowserRouter([
           },
           {
             path: 'agent/queue',
-            element: <SalesAgentQueueScreen />,
+            element: <SalesAgentQueueScreen initialTab="ALL" />,
+          },
+          {
+            path: 'agent/prospects',
+            element: <SalesAgentQueueScreen initialTab="ALL" />,
+          },
+          {
+            path: 'agent/pending',
+            element: <SalesAgentQueueScreen initialTab="PENDING" />,
+          },
+          {
+            path: 'agent/callbacks',
+            element: <SalesAgentQueueScreen initialTab="CALLBACKS" />,
+          },
+          {
+            path: 'agent/follow-ups',
+            element: <SalesAgentQueueScreen initialTab="FOLLOW_UPS" />,
+          },
+          {
+            path: 'agent/converted',
+            element: <SalesAgentQueueScreen initialTab="CONVERTED" />,
           },
           {
             path: 'agent/pitch/:id',
@@ -623,11 +675,31 @@ export const router = createBrowserRouter([
           },
           {
             path: 'agent/queue',
-            element: <FilingSpecialistQueueScreen />,
+            element: <FilingSpecialistQueueScreen initialTab="READY" />,
+          },
+          {
+            path: 'agent/ready',
+            element: <FilingSpecialistQueueScreen initialTab="READY" />,
+          },
+          {
+            path: 'agent/pending',
+            element: <FilingSpecialistQueueScreen initialTab="PENDING" />,
+          },
+          {
+            path: 'agent/on-hold',
+            element: <FilingSpecialistQueueScreen initialTab="ON_HOLD" />,
+          },
+          {
+            path: 'agent/rejected',
+            element: <FilingSpecialistQueueScreen initialTab="REJECTED" />,
+          },
+          {
+            path: 'agent/filed',
+            element: <FilingSpecialistQueueScreen initialTab="FILED" />,
           },
           {
             path: 'queue',
-            element: <FilingSpecialistQueueScreen />,
+            element: <FilingSpecialistQueueScreen initialTab="READY" />,
           },
           {
             path: 'workspace/:id',

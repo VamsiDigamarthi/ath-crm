@@ -13,6 +13,10 @@ interface PreparerFilterBarProps {
   onPriorityChange?: (priority: string) => void;
   counts: {
     all: number;
+    working?: number;
+    pending?: number;
+    underReview?: number;
+    completed?: number;
     drafting: number;
     qaSubmitted: number;
     qaApproved?: number;
@@ -34,12 +38,12 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
     <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
       <AppTabs
         tabs={[
+          { id: 'WORKING', label: 'Return Preparation', count: counts.working ?? counts.drafting ?? 0 },
+          { id: 'PENDING', label: 'Pending Returns', count: counts.pending ?? 0 },
+          { id: 'UNDER_REVIEW', label: 'Under Review', count: counts.underReview ?? counts.qaSubmitted ?? 0 },
+          { id: 'COMPLETED', label: 'Completed Returns', count: counts.completed ?? counts.qaApproved ?? 0 },
+          { id: 'REVISIONS', label: 'Revisions', count: counts.revisions || 0 },
           { id: 'ALL', label: 'All', count: counts.all || 0 },
-          { id: 'DRAFTING', label: 'Drafting', count: counts.drafting || 0 },
-          { id: 'QA_SUBMITTED', label: 'Sent to QA', count: counts.qaSubmitted || 0 },
-          { id: 'QA_APPROVED', label: 'QA approved', count: counts.qaApproved || 0 },
-          { id: 'REVISIONS', label: 'Revisions needed', count: counts.revisions || 0 },
-          { id: 'REVERTED', label: 'Reverted to docs', count: counts.reverted || 0 },
         ]}
         activeTab={activeTab}
         onChange={(tab) => onTabChange(tab as PreparerQueueTab)}

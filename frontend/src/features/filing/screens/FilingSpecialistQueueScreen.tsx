@@ -1,55 +1,47 @@
-import React, { useMemo, useState } from 'react';
-import { 
-  Send, 
-  RefreshCw, 
-  CheckCircle2, 
-  Clock, 
-  ListFilter, 
-  RotateCcw 
-} from 'lucide-react';
+import React, { useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
-import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
 import { getFilingColumns } from '../columns/filing-columns';
-import { useFilingQueue } from '../hooks/useFilingQueue';
+import { useFilingQueue, type FilingSpecialistTab } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
 
-export type FilingTabType = 'ALL' | 'FILING_QUEUE' | 'FILING_IN_PROGRESS' | 'FILING_SUCCESS' | 'REVERTED';
+export interface FilingSpecialistQueueScreenProps {
+  initialTab?: FilingSpecialistTab;
+}
 
-export const FilingSpecialistQueueScreen: React.FC = () => {
+export const FilingSpecialistQueueScreen: React.FC<FilingSpecialistQueueScreenProps> = ({ initialTab }) => {
+  const location = useLocation();
+
+  // Deduce tab from current path
+  const routeTab = useMemo<FilingSpecialistTab>(() => {
+    const path = location.pathname;
+    if (path.includes('/filing/agent/pending')) return 'PENDING';
+    if (path.includes('/filing/agent/on-hold')) return 'ON_HOLD';
+    if (path.includes('/filing/agent/rejected')) return 'REJECTED';
+    if (path.includes('/filing/agent/filed')) return 'FILED';
+    if (initialTab) return initialTab;
+    return 'READY';
+  }, [location.pathname, initialTab]);
+
   const {
     isLoading,
-    leads,
-    stageFilter,
-    setStageFilter,
+    counts,
+    categorizedLeads,
+    activeTab,
+    setActiveTab,
     fetchQueue,
     handleOpenWorkspace,
-  } = useFilingQueue(true);
+  } = useFilingQueue(true, routeTab);
 
-  const [paymentFilter] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
-  const [liabilityFilter] = useState<'ALL' | 'REFUND' | 'TAX_DUE'>('ALL');
-  const [visaFilter] = useState<string>('ALL');
-
-  const counts = useMemo(() => {
-    const ready = leads.filter((l) => l.currentStage === 'FILING_QUEUE').length;
-    const inProg = leads.filter((l) => l.currentStage === 'FILING_IN_PROGRESS').length;
-    const accepted = leads.filter((l) => l.currentStage === 'FILING_SUCCESS').length;
-    const failed = leads.filter((l) => l.currentStage === 'FILING_FAILED').length;
-    const reverted = leads.filter((l) =>
-      ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'SALES_PITCH_QUEUE', 'SALES_PITCHING'].includes(l.currentStage)
-    ).length;
-
-    return {
-      ready,
-      inProg,
-      accepted,
-      failed,
-      reverted,
-      all: leads.length,
-    };
-  }, [leads]);
+  useEffect(() => {
+    if (routeTab !== activeTab) {
+      setActiveTab(routeTab);
+    }
+  }, [routeTab, activeTab, setActiveTab]);
 
   const columns = useMemo(
     () =>
@@ -60,35 +52,41 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
     [handleOpenWorkspace]
   );
 
-  const tabs = [
-    { id: 'FILING_QUEUE' as FilingTabType, label: 'Ready for Transmission', count: counts.ready, icon: Send },
-    { id: 'FILING_IN_PROGRESS' as FilingTabType, label: 'In Transmission', count: counts.inProg, icon: Clock },
-    { id: 'FILING_SUCCESS' as FilingTabType, label: 'Accepted by IRS', count: counts.accepted, icon: CheckCircle2 },
-    { id: 'REVERTED' as FilingTabType, label: 'Reverted / In Revision', count: counts.reverted, icon: RotateCcw },
-    { id: 'ALL' as FilingTabType, label: 'All My Returns', count: counts.all, icon: ListFilter },
-  ];
-
-  const filteredLeads = useMemo(() => {
-    return leads.filter((item) => {
-      if (stageFilter === 'FILING_QUEUE' && item.currentStage !== 'FILING_QUEUE') return false;
-      if (stageFilter === 'FILING_IN_PROGRESS' && item.currentStage !== 'FILING_IN_PROGRESS') return false;
-      if (stageFilter === 'FILING_SUCCESS' && item.currentStage !== 'FILING_SUCCESS') return false;
-      if (
-        stageFilter === 'REVERTED' &&
-        !['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'SALES_PITCH_QUEUE', 'SALES_PITCHING'].includes(item.currentStage)
-      )
-        return false;
-
-      if (paymentFilter === 'PAID' && item.paymentStatus !== 'PAID') return false;
-      if (paymentFilter === 'UNPAID' && item.paymentStatus === 'PAID') return false;
-      const balVal = item.balanceDue || item.federalBalanceDue || 0;
-      if (liabilityFilter === 'REFUND' && item.federalRefund <= 0) return false;
-      if (liabilityFilter === 'TAX_DUE' && balVal <= 0) return false;
-      if (visaFilter !== 'ALL' && item.visaType !== visaFilter) return false;
-
-      return true;
-    });
-  }, [leads, stageFilter, paymentFilter, liabilityFilter, visaFilter]);
+  const viewConfig = useMemo(() => {
+    switch (activeTab) {
+      case 'PENDING':
+        return {
+          title: 'Filing Pending',
+          subtitle: 'Returns currently validating schemas or transmitting across the IRS Modernized e-File (MeF) Gateway awaiting IRS electronic acknowledgment (ACK).',
+          emptyText: 'No returns currently pending gateway transmission or awaiting IRS acknowledgments.',
+        };
+      case 'ON_HOLD':
+        return {
+          title: 'Filing on Hold',
+          subtitle: 'Returns temporarily paused or reverted to Preparers, Documenters, or Sales due to schema errors, bank discrepancies, or missing disclosures.',
+          emptyText: 'No returns currently on hold or reverted for corrections.',
+        };
+      case 'REJECTED':
+        return {
+          title: 'Rejected Returns',
+          subtitle: 'Returns rejected by the IRS or State electronic gateway with reject error codes. Inspect diagnostics, rectify schemas, and prepare for re-transmission.',
+          emptyText: 'Clean record! No electronic return rejections logged.',
+        };
+      case 'FILED':
+        return {
+          title: 'Filed Returns',
+          subtitle: 'Returns successfully accepted by the IRS and State agencies with verified electronic postmarks and official Acceptance Certificate IDs.',
+          emptyText: 'No completed filings recorded yet for this session.',
+        };
+      case 'READY':
+      default:
+        return {
+          title: 'Ready for Filing',
+          subtitle: 'Verified and paid Form 1040 returns approved by QA, e-signed by taxpayers, and queued for IRS MeF batch transmission.',
+          emptyText: 'All your assigned returns have been transmitted, or no returns are currently awaiting transmission.',
+        };
+    }
+  }, [activeTab]);
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -96,14 +94,14 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
-            My CPA Filing Queue & Transmissions
+            {viewConfig.title}
           </h2>
-          <p className="text-xs sm:text-sm text-zinc-500 mt-1 font-normal">
-            Transmit Form 1040 XML packages to IRS Modernized e-File (MeF), monitor acknowledgments, and handle CPA audit reviews.
+          <p className="text-xs sm:text-sm text-zinc-500 mt-1 font-normal max-w-3xl">
+            {viewConfig.subtitle}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Button
             variant="outline"
             size="sm"
@@ -120,30 +118,23 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
       {/* 2. Live Transmission KPI Cards */}
       <FilingManagerMetrics
         readyCount={counts.ready}
-        inProgressCount={counts.inProg}
-        acceptedCount={counts.accepted}
-        failedCount={counts.failed}
+        inProgressCount={counts.pending}
+        acceptedCount={counts.filed}
+        failedCount={counts.rejected}
         totalCount={counts.all}
       />
 
-      {/* 3. Navigation Tabs */}
-      <AppTabs
-        tabs={tabs}
-        activeTab={stageFilter}
-        onChange={(id) => setStageFilter(id as any)}
-      />
-
-      {/* 4. Unified Table */}
+      {/* 3. Unified Table for the Selected Queue */}
       <UnifiedTable<FilingLeadItem>
-        title="IRS MODERNIZED E-FILE PIPELINE"
-        subtitle="Review compliance status, inspect IRS XML schema packages, and transmit Form 1040 returns to the IRS MeF Gateway."
-        data={filteredLeads}
+        title={viewConfig.title.toUpperCase()}
+        subtitle={viewConfig.subtitle}
+        data={categorizedLeads}
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer, state, stage, payment..."
         onExportExcel={() => {
           exportTableToExcel(
-            filteredLeads,
+            categorizedLeads,
             [
               { header: 'Taxpayer Name', key: 'taxpayerName' },
               { header: 'Email', key: 'taxpayerEmail' },
@@ -154,15 +145,11 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
               { header: 'E-Sign', key: 'esignStatus' },
               { header: 'Stage', key: 'currentStage' },
             ],
-            'filing_specialist_queue'
+            `filing_${activeTab.toLowerCase()}_returns`
           );
         }}
         onRowClick={(item) => handleOpenWorkspace(item.id)}
-        emptyText={
-          stageFilter === 'FILING_QUEUE'
-            ? 'All your assigned returns have been transmitted, or no returns are awaiting transmission.'
-            : 'No returns found matching the selected filter criteria.'
-        }
+        emptyText={viewConfig.emptyText}
       />
     </div>
   );

@@ -1,35 +1,78 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ShieldCheck, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { useTaxReviewerQueue } from '../hooks/useTaxReviewerQueue';
-// import { ReviewerStatsCards } from '../components/reviewer/ReviewerStatsCards';
-import { ReviewerFilterBar } from '../components/reviewer/ReviewerFilterBar';
+import { useTaxReviewerQueue, type ReviewerQueueTab } from '../hooks/useTaxReviewerQueue';
 import { ReviewerQueueTable } from '../components/reviewer/ReviewerQueueTable';
 
-export const TaxReviewerQueueScreen: React.FC = () => {
+export interface TaxReviewerQueueScreenProps {
+  initialTab?: ReviewerQueueTab;
+}
+
+export const TaxReviewerQueueScreen: React.FC<TaxReviewerQueueScreenProps> = ({ initialTab }) => {
+  const location = useLocation();
+
+  const routeTab = useMemo<ReviewerQueueTab>(() => {
+    if (initialTab) return initialTab;
+    const path = location.pathname;
+    if (path.includes('/prep-review/reviewer/pending')) return 'PENDING';
+    if (path.includes('/prep-review/reviewer/revisions')) return 'REVISIONS';
+    if (path.includes('/prep-review/reviewer/approved')) return 'APPROVED';
+    return 'ALL';
+  }, [initialTab, location.pathname]);
+
   const {
     filteredReturns,
     clientRows,
-    // stats,
     counts,
     isLoading,
     activeTab,
-    setActiveTab,
     searchQuery,
     setSearchQuery,
     refreshData,
     handleStartPriorityAudit,
     handleOpenAudit,
-  } = useTaxReviewerQueue();
+  } = useTaxReviewerQueue(routeTab);
+
+  const getHeaderInfo = () => {
+    switch (activeTab) {
+      case 'PENDING':
+        return {
+          title: 'Pending Returns',
+          subtitle: `${counts.pending || 0} returns in processing awaiting QA compliance audit`,
+          emptyText: 'No pending returns currently in processing awaiting QA audit.',
+        };
+      case 'REVISIONS':
+        return {
+          title: 'Revision Required',
+          subtitle: `${counts.revisions || 0} returns sent back to preparers for correction`,
+          emptyText: 'No returns currently requiring revisions from preparers.',
+        };
+      case 'APPROVED':
+        return {
+          title: 'Approved Returns',
+          subtitle: `${counts.signedOff || 0} returns with passed and approved QA compliance audits`,
+          emptyText: 'No approved returns found in this period.',
+        };
+      default:
+        return {
+          title: 'Assigned Returns',
+          subtitle: `${counts.all || 0} total returns assigned (${counts.pending || 0} in processing · ${counts.revisions || 0} revisions · ${counts.signedOff || 0} approved)`,
+          emptyText: 'No assigned returns in this queue. Great job!',
+        };
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
 
   return (
     <div className="w-full space-y-6 pb-12 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">QA Audit Queue</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{headerInfo.title}</h2>
           <p className="text-sm text-slate-500 mt-1">
-            {counts.all || 0} in review · {counts.pending || 0} pending audit · {counts.revisions || 0} revisions sent
+            {headerInfo.subtitle}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -48,24 +91,14 @@ export const TaxReviewerQueueScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary KPI cards (hidden for now)
-      <ReviewerStatsCards stats={stats} />
-      */}
-
-      {/* 3. Search & Tab Filter Bar */}
-      <ReviewerFilterBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        counts={counts}
-      />
-
-      {/* 4. Queue Table Card (100% Real API Data) */}
+      {/* Queue Table Card (100% Real API Data) */}
       <ReviewerQueueTable
         returns={clientRows}
         isLoading={isLoading}
         onOpenAudit={handleOpenAudit}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        emptyText={headerInfo.emptyText}
       />
     </div>
   );

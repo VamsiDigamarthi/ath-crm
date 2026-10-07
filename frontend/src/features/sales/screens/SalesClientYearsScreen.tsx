@@ -247,7 +247,7 @@ export const SalesClientYearsScreen: React.FC = () => {
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-1.5 text-sm text-slate-500">
-          <span>{isManager ? 'Sales Caseload' : 'Closer Queue'}</span>
+          <span>{isManager ? 'Sales Caseload' : 'My Prospects'}</span>
           <span className="text-slate-300">/</span>
           <span className="text-slate-900 font-medium">Tax Filings</span>
         </div>
