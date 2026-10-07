@@ -6,6 +6,15 @@ import { NotAllowedError } from "../../errors/not-allowed-error.js";
 import { PermissionService } from "../permissions/permission-service.js";
 
 const EDIT_PRICE_PERMISSION = "PREP_EDIT_ITEM_PRICE";
+
+// Sales negotiate fees, so they can always set a return's unit price; prep staff need the admin permission.
+// Only the item on this return changes, never the catalog price.
+const SALES_PRICE_ROLES: string[] = [Role.SALES_AGENT, Role.SALES_TEAM_LEAD, Role.SALES_MANAGER];
+
+const canEditItemPrice = async (user: CurrentUserLike) =>
+  user.role === Role.ADMIN ||
+  SALES_PRICE_ROLES.includes(user.role) ||
+  (await PermissionService.hasPermission(user.id, EDIT_PRICE_PERMISSION));
 const TAX_RATES: Record<string, number> = { NO_TAX: 0, VAT_10: 0.1 };
 const LOCKED_STAGE_PREFIXES = ["FILING", "DROPPED"];
 
@@ -69,7 +78,7 @@ export class ReturnItemService {
     const tax = items.reduce((s, i) => s + toCents(i.tax), 0);
 
     const canEditPrice = user
-      ? user.role === Role.ADMIN || (await PermissionService.hasPermission(user.id, EDIT_PRICE_PERMISSION))
+      ? (await canEditItemPrice(user))
       : false;
 
     return {
@@ -122,7 +131,7 @@ export class ReturnItemService {
     if (!item) throw new NotFoundError("Item not found on this return");
 
     if (changes.unitPrice !== undefined && toCents(changes.unitPrice) !== toCents(item.unitPrice)) {
-      const allowed = user.role === Role.ADMIN || (await PermissionService.hasPermission(user.id, EDIT_PRICE_PERMISSION));
+      const allowed = (await canEditItemPrice(user));
       if (!allowed) throw new NotAllowedError();
     }
 

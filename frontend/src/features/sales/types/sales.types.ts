@@ -1,5 +1,8 @@
 export type SalesFilingType = 'INDIVIDUAL' | 'BUSINESS' | 'EXPAT_FBAR';
 
+/** Relationship based on the previous tax year (computed by the backend) */
+export type ClientType = 'PAID' | 'UNPAID' | 'NEW_COLD_CALLING' | 'NEW_REFERRAL';
+
 export type SalesLeadStage = 
   | 'SALES_PITCH_QUEUE'     // Freshly approved by QA, awaiting pitch
   | 'SALES_PITCHING'        // Agent actively calling/pitching client
@@ -90,12 +93,14 @@ export interface SalesLeadItem extends Record<string, unknown> {
   complexity: 'STANDARD' | 'INVESTMENTS_1099B' | 'FOREIGN_FBAR' | 'SCHEDULE_C';
   currentStage: SalesLeadStage;
   clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
+  clientType?: ClientType;
   totalTaxYears?: number;
   allApplications?: Array<{
     id: string;
     taxYear: number;
     filingType?: string;
     currentStage: string;
+    clientType?: ClientType;
     assignedSalesAgentId?: string | null;
     assignedSalesAgent?: { id: string; firstName?: string; lastName?: string; email?: string } | null;
   }>;
@@ -201,6 +206,9 @@ export interface SalesLeadItem extends Record<string, unknown> {
   paidAt?: string;
   transactionRef?: string;
   esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED';
+  /** How many times Form 8879 was emailed to the client, and when last */
+  form8879SendCount?: number;
+  form8879LastSentAt?: string | null;
   esignCompletedAt?: string;
 
   // Negotiation & Closer Outreach Status

@@ -1,6 +1,48 @@
 import { prisma } from "../../config/db.js";
 import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType, CouponStatus, Prisma } from "@prisma/client";
 import { StorageService } from "../../utils/storage-service.js";
+import { ApplicationNoteService } from "../application-notes/application-note-service.js";
+import { EmailService } from "../../utils/email-service.js";
+import { NotFoundError } from "../../errors/not-found-error.js";
+import { BadRequestError } from "../../errors/bad-request-error.js";
+
+export type ClientType = 'PAID' | 'UNPAID' | 'NEW_COLD_CALLING' | 'NEW_REFERRAL';
+
+const isAppPaid = (a: any) =>
+  a.currentStage === ApplicationStage.FILING_SUCCESS ||
+  a.currentStage === ApplicationStage.FILING_QUEUE ||
+  a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
+  a.quotes?.some((q: any) => q.status === 'PAID') ||
+  a.taxDraftSummary?.paymentStatus === 'PAID' ||
+  Number(a.taxDraftSummary?.paidAmount) > 0;
+
+/**
+ * Client type for one tax year, based on the year before it:
+ * - PAID: previous year was filed & paid with us
+ * - UNPAID: previous year exists with us but was never paid
+ * - NEW_REFERRAL / NEW_COLD_CALLING: no previous year with us; split by how they came in
+ */
+export const computeClientType = (
+  taxYear: number,
+  filingType: string | null | undefined,
+  allCustomerApps: any[],
+  customer: any
+): ClientType => {
+  const previousYearApps = allCustomerApps.filter((a) => a.taxYear === taxYear - 1);
+  const previous =
+    previousYearApps.find((a) => (a.filingType || 'INDIVIDUAL') === (filingType || 'INDIVIDUAL')) || previousYearApps[0];
+
+  if (previous) return isAppPaid(previous) ? 'PAID' : 'UNPAID';
+
+  const isReferral = Boolean(
+    customer?.referredByCustomerId ||
+      allCustomerApps.some((a) => {
+        const source = String(a.taxDraftSummary?.leadSource || a.taxDraftSummary?.source || '').toUpperCase();
+        return source === 'REFERRAL';
+      })
+  );
+  return isReferral ? 'NEW_REFERRAL' : 'NEW_COLD_CALLING';
+};
 
 export class SalesService {
   /**
@@ -302,8 +344,12 @@ export class SalesService {
 
       // E-Sign Status
       let esignStatus: 'NOT_SENT' | 'SENT' | 'VIEWED' | 'SIGNED' = 'NOT_SENT';
-      if (app.currentStage === ApplicationStage.FILING_QUEUE || app.currentStage === ApplicationStage.FILING_IN_PROGRESS || app.currentStage === ApplicationStage.FILING_SUCCESS) {
+      if (draft.esignStatus === 'SIGNED') {
         esignStatus = 'SIGNED';
+      } else if (app.currentStage === ApplicationStage.FILING_QUEUE || app.currentStage === ApplicationStage.FILING_IN_PROGRESS || app.currentStage === ApplicationStage.FILING_SUCCESS) {
+        esignStatus = 'SIGNED';
+      } else if (draft.esignStatus === 'SENT') {
+        esignStatus = 'SENT';
       } else if (latestQuote?.status === 'SIGNED' || latestQuote?.status === 'PAID') {
         esignStatus = 'SIGNED';
       } else if (latestQuote?.status === 'SENT') {
@@ -334,11 +380,13 @@ export class SalesService {
         complexity: SalesService.computeReturnComplexity(app),
         currentStage,
         clientPaymentStatus,
+        clientType: computeClientType(app.taxYear, app.filingType, allCustomerApps, customer),
         allApplications: visibleApplications.map((a: any) => ({
           id: a.id,
           taxYear: a.taxYear,
           filingType: a.filingType,
           currentStage: a.currentStage,
+          clientType: computeClientType(a.taxYear, a.filingType, allCustomerApps, customer),
           assignedSalesAgentId: a.assignedSalesAgentId,
           assignedSalesAgent: a.assignedSalesAgent,
         })),
@@ -405,6 +453,8 @@ export class SalesService {
         remainingBalance,
         paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
         esignStatus,
+        form8879SendCount: Array.isArray(draft.form8879SendHistory) ? draft.form8879SendHistory.length : 0,
+        form8879LastSentAt: draft.form8879SendHistory?.[0]?.sentAt || null,
         createdAt: app.createdAt.toISOString(),
         updatedAt: app.updatedAt.toISOString(),
       });
@@ -1211,6 +1261,8 @@ export class SalesService {
       remainingBalance,
       paymentHistory: Array.isArray(draft.paymentHistory) ? draft.paymentHistory : [],
       esignStatus,
+      form8879SendCount: Array.isArray(draft.form8879SendHistory) ? draft.form8879SendHistory.length : 0,
+      form8879LastSentAt: draft.form8879SendHistory?.[0]?.sentAt || null,
       closerCallNotes: draft.closerCallNotes || draft.notes || '',
       closerNotesHistory: Array.isArray(draft.closerNotesHistory) ? draft.closerNotesHistory : [],
       paidAt: draft.paidAt || (latestQuote?.status === 'PAID' ? latestQuote.createdAt.toISOString() : null),
@@ -1446,6 +1498,16 @@ export class SalesService {
         taxDraftSummary: updatedDraftSummary,
       },
     });
+
+    if (effectiveActorId) {
+      await ApplicationNoteService.recordHandoff({
+        applicationId,
+        authorId: effectiveActorId,
+        targetTeam: 'FILING',
+        message: notes,
+        context: 'SENT_TO_FILING',
+      });
+    }
 
     // 1. Stage History Trail
     if (effectiveActorId) {
@@ -1714,6 +1776,35 @@ export class SalesService {
     const notes = (payload.notes || '').trim();
     const user = await prisma.user.findUnique({ where: { id: userId } });
     const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Sales Closer';
+
+    // A finished call is always logged, even when the closer typed no note, so it shows under Outreach Calls
+    if (!notes && payload.disposition === 'CALL_LOGGED' && userId) {
+      const seconds = Math.max(0, Math.round(Number(payload.callDuration) || 0));
+      const duration = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+      await prisma.callLog.create({
+        data: {
+          applicationId,
+          agentId: userId,
+          disposition: 'CALL_LOGGED',
+          callSummary: `Sales call by ${actorName} (${duration})`,
+        },
+      });
+      await prisma.auditLog
+        .create({
+          data: {
+            applicationId,
+            actorId: userId,
+            actorType: AuditActorType.AGENT,
+            actorName,
+            actorRole: user?.role || 'SALES_AGENT',
+            action: AuditActionType.DISPOSITION_LOG,
+            moduleKey: 'SALES',
+            details: { disposition: 'CALL_LOGGED', callDuration: seconds, remarks: `Sales call logged by ${actorName} (${duration})` },
+          },
+        })
+        .catch((err) => console.error('Failed to audit sales call:', err));
+      return { success: true, notes: '', application: app };
+    }
 
     const existingHistory: any[] = Array.isArray(currentDraft.closerNotesHistory)
       ? currentDraft.closerNotesHistory
@@ -2189,6 +2280,144 @@ export class SalesService {
     }
 
     return { success: true, document: doc, application: updatedApp };
+  }
+
+  /**
+   * Email the Form 8879 signing link to the client (first send or a re-share).
+   * Marks the return SENT (never SIGNED); signing happens in the client portal or via upload / phone PIN.
+   * With emailedByStaff, the email already went out through the staff template mailer, so this only records it.
+   */
+  public static async sendForm8879(
+    applicationId: string,
+    payload: {
+      primaryEmail?: string;
+      secondaryEmail?: string;
+      sendToPrimary?: boolean;
+      sendToSecondary?: boolean;
+      emailedByStaff?: boolean;
+    },
+    userId: string
+  ) {
+    const app = await prisma.taxApplication.findUnique({
+      where: { id: applicationId },
+      include: { customer: true },
+    });
+    if (!app) throw new NotFoundError('Application not found');
+
+    const currentDraft: any = app.taxDraftSummary || {};
+    if (currentDraft.esignStatus === 'SIGNED') {
+      throw new BadRequestError('Form 8879 is already signed for this return.');
+    }
+
+    const clientName = app.customer
+      ? `${app.customer.firstName || ''} ${app.customer.lastName || ''}`.trim() || app.customer.email || 'Client'
+      : 'Client';
+
+    // Same recipient rules as the payment link: primary and/or secondary email
+    const primaryEmail = (payload.primaryEmail || app.customer?.email || '').trim();
+    const secondaryEmail = (payload.secondaryEmail || '').trim();
+    const recipients: string[] = [];
+    if (payload.sendToPrimary !== false && primaryEmail) recipients.push(primaryEmail);
+    if (secondaryEmail && payload.sendToSecondary !== false && !recipients.includes(secondaryEmail)) {
+      recipients.push(secondaryEmail);
+    }
+    if (recipients.length === 0) {
+      throw new BadRequestError('Select at least one email address to send Form 8879 to.');
+    }
+
+    const sender = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+    const senderName = sender ? `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || sender.email : 'Sales Team';
+
+    const portalPath = `/customer/organizer?taxYear=${app.taxYear}&tab=m_review_draft`;
+    const portalUrl = `${process.env.APP_URL || 'http://localhost:5173'}${portalPath}`;
+    const subject = `Action needed: sign your Form 8879 for tax year ${app.taxYear}`;
+    const text =
+      `Dear ${clientName},\n\n` +
+      `Your tax return for ${app.taxYear} is ready. Please review and sign IRS Form 8879 (e-file authorization) so we can file it.\n\n` +
+      `Open your portal to sign: ${portalUrl}\n\n` +
+      `If you have any questions, reply to this email or contact ${senderName}.\n\nThank you,\nATH Tax Services`;
+    const html = `
+      <p>Dear ${clientName},</p>
+      <p>Your tax return for <strong>${app.taxYear}</strong> is ready. Please review and sign <strong>IRS Form 8879</strong> (e-file authorization) so we can file it.</p>
+      <p><a href="${portalUrl}" style="background-color:#16a34a;color:#fff;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;font-size:14px;">Review &amp; sign Form 8879</a></p>
+      <p style="color:#64748b;font-size:13px;">If you have any questions, reply to this email or contact ${senderName}.</p>
+      <p>Thank you,<br/>ATH Tax Services</p>`;
+
+    for (const to of payload.emailedByStaff ? [] : recipients) {
+      const info = await EmailService.sendEmail({ to, subject, text, html });
+      if (sender) {
+        await prisma.sentEmail
+          .create({
+            data: {
+              applicationId,
+              senderUserId: sender.id,
+              recipientEmail: to,
+              subject,
+              body: text,
+              status: info ? 'SENT' : 'FAILED',
+              sentAt: info ? new Date() : null,
+            },
+          })
+          .catch((err) => console.error('Failed to record Form 8879 email:', err));
+      }
+    }
+
+    const sentAt = new Date().toISOString();
+    const history = Array.isArray(currentDraft.form8879SendHistory) ? currentDraft.form8879SendHistory : [];
+    const form8879SendHistory = [{ sentAt, recipients, sentBy: { id: sender?.id || null, name: senderName } }, ...history];
+    const isResend = history.length > 0;
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        taxDraftSummary: {
+          ...currentDraft,
+          esignStatus: 'SENT',
+          form8879SendHistory,
+          secondaryEmail: secondaryEmail || currentDraft.secondaryEmail || null,
+        },
+      },
+    });
+
+    // In-portal reminder for the client
+    if (app.customer?.userId) {
+      await prisma.notification
+        .create({
+          data: {
+            recipientUserId: app.customer.userId,
+            applicationId,
+            category: NotificationCategory.SALES,
+            priority: NotificationPriority.HIGH,
+            title: `Please sign Form 8879 (TY ${app.taxYear})`,
+            message: 'Your return is ready. Review and sign Form 8879 so we can e-file it.',
+            actionUrl: portalPath,
+            actionLabel: 'Sign Form 8879',
+            relatedLeadName: clientName,
+          },
+        })
+        .catch((err) => console.error('Failed to notify client about Form 8879:', err));
+    }
+
+    await prisma.auditLog
+      .create({
+        data: {
+          applicationId,
+          actorId: sender?.id || null,
+          actorType: AuditActorType.AGENT,
+          actorName: senderName,
+          actorRole: sender?.role || 'SALES_AGENT',
+          action: AuditActionType.TAX_DRAFT_SAVE,
+          moduleKey: 'SALES_FORM_8879',
+          details: {
+            actionDescription: `Form 8879 ${isResend ? `re-shared (send #${form8879SendHistory.length})` : 'sent'} to ${recipients.join(', ')}`,
+            recipients,
+            sendCount: form8879SendHistory.length,
+          },
+        },
+      })
+      .catch((err) => console.error('Failed to audit Form 8879 send:', err));
+
+    return { esignStatus: 'SENT', recipients, sentAt, sendCount: form8879SendHistory.length };
   }
 
   /**

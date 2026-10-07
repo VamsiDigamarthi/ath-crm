@@ -4,6 +4,7 @@ import { useCustomerDashboard } from '../hooks/useCustomerDashboard';
 import { CustomerStatsCards } from '../components/CustomerStatsCards';
 import { CustomerFilingsTable } from '../components/CustomerFilingsTable';
 import { type CustomerFilingItem } from '../services/customer-api';
+import { AppCopyButton } from '@/shared/components/AppCopyButton';
 
 export const CustomerDashboardScreen: React.FC = () => {
   const { selectedTaxYear, isConvertedCustomer: contextConverted } = useOutletContext<{
@@ -18,6 +19,7 @@ export const CustomerDashboardScreen: React.FC = () => {
 
   const isConverted = dashboardData?.taxpayer?.isConvertedCustomer ?? contextConverted ?? false;
   const taxpayerName = dashboardData?.taxpayer?.name || 'Taxpayer';
+  const referralCode = dashboardData?.taxpayer?.referralCode || null;
   const assignedAgentName = dashboardData?.assignedTeam?.docAgent?.name || 'Assigned Specialist';
 
   const fedRefund = dashboardData?.refund?.fedRefund ?? 0;
@@ -92,13 +94,25 @@ export const CustomerDashboardScreen: React.FC = () => {
   return (
     <div className="space-y-6 pb-8 font-sans animate-in fade-in duration-150">
       {/* 1. Clean Top Header */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
-          Tax Filing Overview
-        </h2>
-        <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
-          Welcome back, {taxpayerName}. Track your active tax filings, refund calculations, and IRS submission progress.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
+            Tax Filing Overview
+          </h2>
+          <p className="text-xs sm:text-sm text-black/80 mt-1 font-medium">
+            Welcome back, {taxpayerName}. Track your active tax filings, refund calculations, and IRS submission progress.
+          </p>
+        </div>
+
+        {referralCode && (
+          <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-lg pl-4 pr-2 py-2 shrink-0 self-start sm:self-auto">
+            <div className="leading-tight">
+              <p className="text-[11px] text-slate-500">Your coupon code</p>
+              <p className="text-sm font-semibold text-slate-900 tracking-wider font-mono">{referralCode}</p>
+            </div>
+            <AppCopyButton text={referralCode} tooltip="Copy code" />
+          </div>
+        )}
       </div>
 
       {/* 2. Top 4 Clean Stat Cards */}

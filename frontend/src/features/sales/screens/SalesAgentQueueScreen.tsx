@@ -13,6 +13,7 @@ export const SalesAgentQueueScreen: React.FC = () => {
     clientRows,
     stats,
     handleRefresh,
+    handleUpdatePriority,
     handleOpenNextPriority,
   } = useSalesAgentQueue();
 
@@ -57,7 +58,12 @@ export const SalesAgentQueueScreen: React.FC = () => {
       <SalesAgentStatsCards stats={stats} />
 
       {/* 3. My Active Queue Table (Grouped by Client) */}
-      <SalesAgentQueueTable leads={clientRows} isLoading={isLoading} onRefresh={handleRefresh} />
+      <SalesAgentQueueTable
+        leads={clientRows}
+        isLoading={isLoading}
+        onRefresh={handleRefresh}
+        onUpdatePriority={handleUpdatePriority}
+      />
     </div>
   );
 };

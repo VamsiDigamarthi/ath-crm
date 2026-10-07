@@ -139,6 +139,8 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
       ? (lead as any).paymentHistory
       : [],
     esignStatus: (taxDraft.esignStatus as any) || 'NOT_SENT',
+    form8879SendCount: Array.isArray(taxDraft.form8879SendHistory) ? taxDraft.form8879SendHistory.length : 0,
+    form8879LastSentAt: taxDraft.form8879SendHistory?.[0]?.sentAt || null,
     closerCallNotes: taxDraft.closerCallNotes || (lead as any).closerCallNotes || '',
     notes: (lead as any).notes || '',
     auditLogs: (lead as any).auditLogs || [],
@@ -381,6 +383,8 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
             remainingBalance={salesLeadAdapter.remainingBalance}
             paymentHistory={salesLeadAdapter.paymentHistory}
             esignStatus={salesLeadAdapter.esignStatus || 'NOT_SENT'}
+            form8879SendCount={salesLeadAdapter.form8879SendCount}
+            form8879LastSentAt={salesLeadAdapter.form8879LastSentAt}
             isLocked={isLocked}
             lockReason={lockReason}
           />
@@ -411,6 +415,7 @@ export const DualRoleSalesPitchTab: React.FC<DualRoleSalesPitchTabProps> = ({
         onCloseEsignModal={() => setIsEsignModalOpen(false)}
         onEsignSuccess={handleEsignSuccess}
         onPaymentLinkSent={onRefresh}
+        onForm8879Sent={onRefresh}
       />
 
       {/* 4. Dispatch to Filing Confirmation Dialog */}

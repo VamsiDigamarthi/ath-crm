@@ -53,6 +53,8 @@ model User {
   authoredNotes     ApplicationNote[] @relation("AuthoredApplicationNotes")
   activeOrgRoleId   String?
   orgRoles          UserOrgRole[]
+  editAccessRequests EditAccessRequest[] @relation("RequestedEditAccess")
+  reviewedEditAccess EditAccessRequest[] @relation("ReviewedEditAccess")
 
   @@index([email])
   @@index([mobile])

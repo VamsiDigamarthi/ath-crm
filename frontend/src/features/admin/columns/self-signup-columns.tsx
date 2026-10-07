@@ -100,17 +100,25 @@ export const createSelfSignupColumns = (
       disableMenu: true,
       disableFilter: true,
     },
-    cell: ({ row }) => (
-      <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-        <Button
-          size="sm"
-          onClick={() => onAssign(row.original)}
-          className="h-7 px-2 text-[11px] font-medium bg-[#16A34A] hover:bg-[#15803D] text-white shadow-2xs cursor-pointer"
-        >
-          <UserCheck className="w-3 h-3 mr-1" />
-          <span>Assign</span>
-        </Button>
-      </div>
-    ),
+    cell: ({ row }) => {
+      const isAssigned = Boolean(row.original.assignedDocAgent);
+      return (
+        <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+          <Button
+            size="sm"
+            variant={isAssigned ? 'outline' : undefined}
+            onClick={() => onAssign(row.original)}
+            className={
+              isAssigned
+                ? 'h-7 px-2 text-[11px] font-normal border-slate-200 bg-white text-slate-700 hover:bg-slate-50 cursor-pointer'
+                : 'h-7 px-2 text-[11px] font-medium bg-[#16A34A] hover:bg-[#15803D] text-white shadow-2xs cursor-pointer'
+            }
+          >
+            <UserCheck className={`w-3 h-3 mr-1 ${isAssigned ? 'text-slate-500' : ''}`} />
+            <span>{isAssigned ? 'Reassign' : 'Assign'}</span>
+          </Button>
+        </div>
+      );
+    },
   },
 ];

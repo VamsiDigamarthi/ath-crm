@@ -2,6 +2,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/shared/components/Button';
 import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { SalesStageBadge } from '../components/common/SalesStageBadge';
+import { ClientTypeBadge, CLIENT_TYPE_FILTER_OPTIONS } from '../components/common/ClientTypeBadge';
 import { PhoneCall, UserCheck } from 'lucide-react';
 import type { SalesLeadItem } from '../types/sales.types';
 import { SYSTEM_PAYMENT_STATUSES } from '@/shared/constants/system-enums';
@@ -122,6 +123,13 @@ export function getSalesColumns({
           </span>
         );
       },
+    },
+    {
+      id: 'clientType',
+      header: 'CLIENT TYPE',
+      accessorKey: 'clientType',
+      meta: { filterType: 'enum', filterOptions: CLIENT_TYPE_FILTER_OPTIONS },
+      cell: ({ row }) => <ClientTypeBadge type={row.original.clientType} />,
     },
     {
       id: 'payment',

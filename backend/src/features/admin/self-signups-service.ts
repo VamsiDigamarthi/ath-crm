@@ -10,6 +10,8 @@ export interface SelfSignupsQueryOptions {
   taxYear?: number;
   stage?: string;
   priority?: string;
+  // NEW = not yet given to a documenter, ASSIGNED = already has one
+  assignment?: 'NEW' | 'ASSIGNED';
 }
 
 export class SelfSignupsService {
@@ -97,7 +99,16 @@ export class SelfSignupsService {
       });
     }
 
-    const where: any = { AND: andConditions };
+    const baseWhere: any = { AND: andConditions };
+    const newWhere: any = { AND: [...andConditions, { assignedDocAgentId: null }] };
+    const assignedWhere: any = { AND: [...andConditions, { assignedDocAgentId: { not: null } }] };
+    const where: any =
+      options.assignment === 'NEW' ? newWhere : options.assignment === 'ASSIGNED' ? assignedWhere : baseWhere;
+
+    const [newCount, assignedCount] = await Promise.all([
+      prisma.taxApplication.count({ where: newWhere }),
+      prisma.taxApplication.count({ where: assignedWhere }),
+    ]);
 
     const [
       totalItems,
@@ -374,6 +385,7 @@ export class SelfSignupsService {
         inProgressCount,
         completedFilingsCount,
       },
+      assignmentCounts: { new: newCount, assigned: assignedCount },
       availableDocAgents: formattedAvailableDocAgents,
       pagination: {
         page,

@@ -58,6 +58,16 @@ export function useSalesAgentQueue() {
     toast.success('Live pitch queue refreshed');
   };
 
+  const handleUpdatePriority = useCallback(async (applicationId: string, priority: string) => {
+    try {
+      await salesService.updatePriority(applicationId, priority);
+      toast.success('Priority updated');
+      fetchAgentLeads();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to update priority');
+    }
+  }, [fetchAgentLeads]);
+
   // Helper stage checks
   const isReturnReverted = (lead: SalesLeadItem) => {
     const draftStatus = (lead.taxDraftSummary as any)?.status;
@@ -208,6 +218,7 @@ export function useSalesAgentQueue() {
     priorityFilter,
     setPriorityFilter,
     handleRefresh,
+    handleUpdatePriority,
     handleOpenPitch,
     handleOpenNextPriority,
   };

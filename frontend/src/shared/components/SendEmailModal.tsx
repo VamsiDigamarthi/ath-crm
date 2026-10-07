@@ -22,7 +22,11 @@ export interface SendEmailModalProps {
   fedRefund?: number | string;
   stateRefund?: number | string;
   totalRefund?: number | string;
-  onSuccess?: () => void;
+  onSuccess?: (info: { recipientEmail: string }) => void;
+  /** Overrides the default "Send Email to Taxpayer" heading */
+  title?: string;
+  /** Value for the {{portal_link}} template variable */
+  portalLink?: string;
 }
 
 export const SendEmailModal: React.FC<SendEmailModalProps> = ({
@@ -38,6 +42,8 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
   stateRefund = '0',
   totalRefund = '0',
   onSuccess,
+  title = 'Send Email to Taxpayer',
+  portalLink = 'https://taxcrm.com/customer/organizer',
 }) => {
   const { user } = useAuthStore();
 
@@ -104,10 +110,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
       .replace(/\{\{total_refund\}\}/g, `$${totalRefund}`)
       .replace(/\{\{filing_status\}\}/g, filingStatus || 'Active')
       .replace(/\{\{company_name\}\}/g, 'TaxCRM')
-      .replace(
-        /\{\{portal_link\}\}/g,
-        'https://taxcrm.com/customer/organizer'
-      );
+      .replace(/\{\{portal_link\}\}/g, portalLink);
   };
 
   // Handle template selection
@@ -167,7 +170,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
       });
 
       toast.success('Email dispatched successfully and logged to audit trail! 🚀');
-      onSuccess?.();
+      onSuccess?.({ recipientEmail: recipientEmail.trim().toLowerCase() });
       onClose();
     } catch (err: any) {
       console.error('Failed to send email:', err);
@@ -206,7 +209,7 @@ export const SendEmailModal: React.FC<SendEmailModalProps> = ({
           </div>
           <div>
             <span className="text-base font-bold text-slate-900 block leading-tight">
-              Send Email to Taxpayer
+              {title}
             </span>
             <span className="text-[11px] font-normal text-slate-500 block">
               Dispatches directly to client via configured Gmail SMTP and logs to audit trail.

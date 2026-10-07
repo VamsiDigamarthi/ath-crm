@@ -239,10 +239,31 @@ export const salesService = {
   },
 
   /**
+   * Email the Form 8879 signing link to the client (first send or a re-share)
+   */
+  async sendForm8879(id: string, payload: {
+    primaryEmail?: string;
+    secondaryEmail?: string;
+    sendToPrimary?: boolean;
+    sendToSecondary?: boolean;
+    emailedByStaff?: boolean;
+  }) {
+    return apiClient.post(`/sales/leads/${id}/send-form-8879`, payload);
+  },
+
+  /**
    * Return a lead back to Admin / Unassigned Pool (when client does not convert or rejects fee)
    */
   async returnLeadToAdmin(id: string, reason?: string) {
     const res: any = await apiClient.post(`/sales/leads/${id}/return-to-admin`, { reason });
+    return res?.data || res;
+  },
+
+  /**
+   * Sales Closer sets the tax application priority
+   */
+  async updatePriority(id: string, priority: string) {
+    const res: any = await apiClient.patch(`/sales/leads/${id}/priority`, { priority });
     return res?.data || res;
   },
 

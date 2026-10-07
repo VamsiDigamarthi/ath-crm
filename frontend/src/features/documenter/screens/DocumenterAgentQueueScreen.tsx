@@ -25,6 +25,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     handleStartFiling,
     handleCloseModals,
     handleSaveCallDisposition,
+    handleUpdatePriority,
   } = useDocumenterWorkspace('OUTREACH');
 
   const columns = useMemo(
@@ -33,11 +34,12 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
         onOpenStartFilingModal: handleOpenStartFilingModal,
+        onUpdatePriority: handleUpdatePriority,
         hideAssignedStaff: true,
         isManagerView: false,
         isAdmin: false,
       }),
-    [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal]
+    [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal, handleUpdatePriority]
   );
 
   const handleExport = () => {

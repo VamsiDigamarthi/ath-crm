@@ -21,6 +21,9 @@ export const useSelfSignups = () => {
     completedFilingsCount: 0,
   });
 
+  const [assignmentTab, setAssignmentTab] = useState<'NEW' | 'ASSIGNED'>('NEW');
+  const [assignmentCounts, setAssignmentCounts] = useState({ new: 0, assigned: 0 });
+
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
 
@@ -55,10 +58,12 @@ export const useSelfSignups = () => {
         taxYear: taxYearFilter,
         stage: stageFilter !== 'ALL' ? stageFilter : undefined,
         priority: priorityFilter !== 'ALL' ? priorityFilter : undefined,
+        assignment: assignmentTab,
       });
 
       if (res) {
         setLeads(res.leads || []);
+        setAssignmentCounts(res.assignmentCounts || { new: 0, assigned: 0 });
         setStats(
           res.stats || {
             totalSelfSignups: 0,
@@ -77,7 +82,13 @@ export const useSelfSignups = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, searchQuery, visaFilter, taxYearFilter, stageFilter, priorityFilter]);
+  }, [page, limit, searchQuery, visaFilter, taxYearFilter, stageFilter, priorityFilter, assignmentTab]);
+
+  const handleAssignmentTabChange = (tab: 'NEW' | 'ASSIGNED') => {
+    setAssignmentTab(tab);
+    setSelectedRows([]);
+    setPage(1);
+  };
 
   useEffect(() => {
     fetchSelfSignups();
@@ -225,5 +236,8 @@ export const useSelfSignups = () => {
     handleDirectAssign,
     handleAutoRoundRobin,
     refreshData: fetchSelfSignups,
+    assignmentTab,
+    assignmentCounts,
+    handleAssignmentTabChange,
   };
 };

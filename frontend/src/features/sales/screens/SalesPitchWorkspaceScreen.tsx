@@ -3,7 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { RotateCcw, Calendar } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
-import { PitchNegotiationBar } from '../components/pitch/PitchNegotiationBar';
+// import { PitchNegotiationBar } from '../components/pitch/PitchNegotiationBar';
+import { ReturnItemsPanel } from '@/features/prep-review/components/workspace/ReturnItemsPanel';
 import { PitchFeeCalculator } from '../components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
@@ -12,6 +13,9 @@ import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAudi
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
 import { SalesReturnToAdminModal } from '../components/common/SalesReturnToAdminModal';
+import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
+import { useMyEditAccess } from '@/features/edit-access/hooks/useMyEditAccess';
+import { RequestEditAccessButton } from '@/features/edit-access/components/RequestEditAccessButton';
 import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesFeeBreakdown } from '../types/sales.types';
 import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
@@ -24,6 +28,9 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   const location = useLocation();
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
+  // Sales staff see tax data read-only; editing needs a time-boxed grant from an admin
+  const isSalesStaff = user?.role !== 'ADMIN';
+  const editAccess = useMyEditAccess(id, isSalesStaff);
   const backQueuePath = isManager ? '/sales/manager/queue' : '/sales/agent/queue';
 
   const queryParams = new URLSearchParams(location.search);
@@ -117,6 +124,15 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
   );
 
   const isLocked = !isQaApproved || isRevertedToPrecedingDept;
+
+  // Same "sent back" test the header uses for its "Sent to Preparer / Documenter" label
+  const isSentBackFromSales =
+    ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'QA_REVISION_REQUESTED'].includes(lead.currentStage as string) ||
+    taxDraft.status === 'REVISION_REQUESTED' ||
+    taxDraft.status === 'REVERTED_TO_DOCUMENTER';
+  // Once the return has left sales (sent back or dispatched), sales can neither edit nor ask to
+  const isWithSales = !isSentBackFromSales && !isDispatchedToFiling;
+  const canEditTaxData = !isSalesStaff || (editAccess.hasAccess && isWithSales);
   const lockReason = !isQaApproved
     ? 'Payment collection & Form 8879 authorization are locked until Senior QA Reviewer certifies 4-Eyes Sign-Off on Form 1040.'
     : isRevertedToPrecedingDept
@@ -299,6 +315,31 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         lead={lead}
         onOpenSendBack={() => setIsSendBackOpen(true)}
         onOpenReturnToAdmin={() => setIsReturnToAdminOpen(true)}
+        extraActions={
+          isSalesStaff ? (
+            <RequestEditAccessButton
+              hasAccess={editAccess.hasAccess}
+              accessUntil={editAccess.accessUntil}
+              isPending={editAccess.isPending}
+              isModalOpen={editAccess.isModalOpen}
+              onOpen={editAccess.openModal}
+              onClose={editAccess.closeModal}
+              reason={editAccess.reason}
+              onReasonChange={editAccess.setReason}
+              reasonError={editAccess.reasonError}
+              isSubmitting={editAccess.isSubmitting}
+              onSubmit={editAccess.submitRequest}
+              disabledReason={
+                isWithSales
+                  ? undefined
+                  : isDispatchedToFiling
+                  ? 'This return is with IRS Filing, so it can no longer be edited from sales'
+                  : 'This return was sent back, so it can no longer be edited from sales'
+              }
+              modalSubtitle="Tax data is read-only for sales. An admin can unlock this return for you for a limited time."
+            />
+          ) : undefined
+        }
       />
 
       {/* 1.0 Staff 5-Department Workflow Stage Stepper */}
@@ -356,10 +397,12 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         customerName={lead.taxpayerName}
         taxDraftSummary={lead.taxDraftSummary}
         taxYear={lead.taxYear}
-        allowEdit={!isLocked}
-        readOnly={isLocked}
+        allowEdit={canEditTaxData}
+        readOnly={!canEditTaxData}
         filingType={(lead as any).filingType as string | undefined}
-        hideHeader={true}
+        // Show the Save Draft / Save & Next bar only while sales is allowed to edit
+        hideHeader={!canEditTaxData}
+        onOrganizerSaved={fetchLeadDetail}
         requestedTabId={requestedTabId}
         extraTabs={[
           {
@@ -367,6 +410,8 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
             label: 'Fee Quotation & Pricing',
             content: (
               <div className="space-y-6">
+                {/* Replaced by the preparer's Services & pricing items, which sales can now edit */}
+                {/*
                 <PitchNegotiationBar
                   lead={lead}
                   onUpdateSuccess={async (updated) => {
@@ -377,6 +422,8 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
                     }
                   }}
                 />
+                */}
+                <ReturnItemsPanel applicationId={appId} readOnly={!isWithSales} />
 
                 {isReverted && lastRevert && (
                   <div className="bg-amber-50/70 border border-amber-300/80 rounded-xl p-3.5 sm:p-4 text-amber-950 shadow-2xs">
@@ -408,6 +455,8 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
                   remainingBalance={lead.remainingBalance}
                   paymentHistory={lead.paymentHistory}
                   esignStatus={lead.esignStatus}
+                  form8879SendCount={lead.form8879SendCount}
+                  form8879LastSentAt={lead.form8879LastSentAt}
                   applicationId={lead.id || lead.applicationId}
                   customerId={lead.taxpayerId || (lead as any).customerId}
                   isLocked={isLocked}
@@ -449,6 +498,11 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
               </div>
             ),
           },
+          {
+            id: 'NOTES',
+            label: 'Notes',
+            content: <ApplicationNotesPanel applicationId={appId} />,
+          },
         ]}
       />
 
@@ -462,6 +516,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
         onCloseEsignModal={() => setIsEsignModalOpen(false)}
         onEsignSuccess={handleEsignSuccess}
         onPaymentLinkSent={fetchLeadDetail}
+        onForm8879Sent={fetchLeadDetail}
       />
 
       {/* 5. Dispatch to Filing Confirmation Dialog */}

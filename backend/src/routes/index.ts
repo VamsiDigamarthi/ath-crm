@@ -14,6 +14,7 @@ import { productRouter } from "../features/products/product-routes.js";
 import { permissionRouter } from "../features/permissions/permission-routes.js";
 import { returnItemRouter } from "../features/return-items/return-item-routes.js";
 import { applicationNoteRouter } from "../features/application-notes/application-note-routes.js";
+import { editAccessRouter } from "../features/edit-access/edit-access-routes.js";
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.use("/customer", customerRouter);
 router.use("/filing", filingRouter);
 router.use("/notifications", notificationRouter);
 router.use("/workflow", workflowRouter);
+router.use("/edit-access", editAccessRouter);
 
 export { router as rootRouter };
 

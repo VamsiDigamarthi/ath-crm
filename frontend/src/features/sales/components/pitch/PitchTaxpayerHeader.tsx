@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, Mail, Phone, MapPin, ChevronDown, ChevronUp, RotateCcw, UserCheck, CheckCircle2 } from 'lucide-react';
+// ShieldCheck, ChevronDown, ChevronUp, CheckCircle2 and useState are needed again if the QA card is restored
+import { ArrowLeft, Mail, Phone, MapPin, RotateCcw, UserCheck } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { Button } from '@/shared/components/Button';
 import { SalesStageBadge } from '../common/SalesStageBadge';
@@ -13,9 +14,10 @@ interface PitchTaxpayerHeaderProps {
   lead: SalesLeadItem;
   onOpenSendBack?: () => void;
   onOpenReturnToAdmin?: () => void;
+  extraActions?: React.ReactNode;
 }
 
-export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, onOpenSendBack, onOpenReturnToAdmin }) => {
+export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, onOpenSendBack, onOpenReturnToAdmin, extraActions }) => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
@@ -29,13 +31,13 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
     ? '/sales/manager/queue'
     : '/sales/agent/queue';
 
-  const [isExpandedRemarks, setIsExpandedRemarks] = useState(false);
-
-  const rawRemarks = lead.qaAuditorRemarks || 'Form 1040 certified and approved for Sales pitch.';
-  const isLongRemarks = rawRemarks.length > 160;
-  const displayedRemarks = isLongRemarks && !isExpandedRemarks 
-    ? `${rawRemarks.slice(0, 160)}...` 
-    : rawRemarks;
+  // Used only by the QA Certified Calculation card below, which is hidden for now
+  // const [isExpandedRemarks, setIsExpandedRemarks] = useState(false);
+  // const rawRemarks = lead.qaAuditorRemarks || 'Form 1040 certified and approved for Sales pitch.';
+  // const isLongRemarks = rawRemarks.length > 160;
+  // const displayedRemarks = isLongRemarks && !isExpandedRemarks
+  //   ? `${rawRemarks.slice(0, 160)}...`
+  //   : rawRemarks;
 
   const isBusiness = lead.filingType === 'BUSINESS';
   const formLabel = isBusiness ? 'Form 1120' : 'Form 1040';
@@ -43,8 +45,8 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
   return (
     <div className="space-y-4">
       {/* 1. Navigation & Taxpayer Profile Card */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <button
             type="button"
             onClick={() => navigate(backPath)}
@@ -55,7 +57,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
           </button>
 
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight break-words min-w-0">
               {lead.taxpayerName}
             </h2>
             <ClientPaymentStatusChip lead={lead} scope="return" size="sm" />
@@ -85,8 +87,8 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
           </div>
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium mt-1.5">
-            <span className="flex items-center gap-1">
-              <Mail className="w-3.5 h-3.5 text-slate-400" />
+            <span className="flex items-center gap-1 min-w-0 break-all">
+              <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               {lead.taxpayerEmail}
             </span>
             <span className="flex items-center gap-1">
@@ -100,7 +102,9 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+        <div className="flex items-center gap-2 flex-wrap 2xl:justify-end 2xl:shrink-0 pt-3 border-t border-slate-100 2xl:pt-0 2xl:border-t-0">
+          {extraActions}
+
           {/* Return to Admin Pool Button */}
           {onOpenReturnToAdmin && (
             <Button
@@ -157,7 +161,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
           })()}
 
           {/* Assigned Closer Badge */}
-          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+          <div className="h-8 flex items-center gap-2 bg-slate-50 px-3 rounded-lg border border-slate-200">
             <UserCheck className="w-3.5 h-3.5 text-slate-500" />
             <div className="text-xs">
               <span className="text-slate-400 mr-1">Closer:</span>
@@ -169,7 +173,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
         </div>
       </div>
 
-      {/* 2. Sleek QA Certified Calculation Summary Card (Clean, modern, uncluttered) */}
+      {/* 2. QA Certified Calculation Summary Card: hidden on the sales pitch screen for now
       <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -207,7 +211,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
           </div>
         </div>
 
-        {/* Auditor Remarks Strip */}
+        Auditor Remarks Strip
         <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs text-slate-600">
           <div className="flex-1 min-w-0 flex items-start gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
@@ -233,6 +237,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
           </span>
         </div>
       </div>
+      */}
     </div>
   );
 };

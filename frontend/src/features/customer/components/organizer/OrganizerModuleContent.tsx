@@ -13,6 +13,9 @@ import { BusinessIncome } from './business/BusinessIncome';
 import { BusinessExpenses } from './business/BusinessExpenses';
 import { CustomerReviewDraftModule } from './modules/CustomerReviewDraftModule';
 
+// A disabled fieldset locks every input, select and button inside a module in one place
+const READ_ONLY_FIELDSET = 'min-w-0 m-0 p-0 border-0';
+
 interface OrganizerModuleContentProps {
   selectedModId: string;
   selectedTaxYear: number;
@@ -67,6 +70,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
   if (isAccordion) {
     return (
       <div className={className || "w-full space-y-4 font-sans"}>
+        <fieldset disabled={readOnly} className={READ_ONLY_FIELDSET}>
         {/* Individual Accordion 1 */}
         {selectedModId === 'm1' && (
           <Module1Demographics
@@ -117,6 +121,8 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
           />
         )}
 
+        </fieldset>
+
         {/* Navigation & Action Footer Card */}
         {!hideFooter && <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs flex items-center justify-between gap-3">
           <Button
@@ -160,6 +166,7 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
   return (
     <div className={className || "lg:col-span-8 bg-white p-5 sm:p-7 rounded-md border border-slate-300 shadow-xs flex flex-col justify-between space-y-6 font-sans"}>
       <div className="space-y-6">
+        <fieldset disabled={readOnly} className={READ_ONLY_FIELDSET}>
         {selectedModId === 'm3' && (
           <Module3Presence
             data={organizerData?.m3_presence || ({} as any)}
@@ -204,6 +211,9 @@ export const OrganizerModuleContent: React.FC<OrganizerModuleContentProps> = ({
           />
         )}
 
+        </fieldset>
+
+        {/* Vault and review draft handle readOnly themselves */}
         {selectedModId === 'm_vault' && (
           <CustomerDocumentVault
             selectedTaxYear={selectedTaxYear}
