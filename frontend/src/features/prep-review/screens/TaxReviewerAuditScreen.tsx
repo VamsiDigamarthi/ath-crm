@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { reviewerOriginPath } from '../utils/preparer-origin';
 import { ShieldCheck, Sparkles, ArrowLeft, RotateCcw } from 'lucide-react';
 import { AppModal } from '@/shared/components/AppModal';
 import { useTaxReviewerAudit } from '../hooks/useTaxReviewerAudit';
@@ -23,6 +24,7 @@ import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/St
 
 export const TaxReviewerAuditScreen: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
   const { user: currentUser } = useAuthStore();
   const {
@@ -101,7 +103,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/prep-review/reviewer')}
+            onClick={() => navigate(reviewerOriginPath(location.search))}
             className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
             title="Back to queue"
           >
@@ -307,7 +309,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
         assignedPreparer={assignedPreparer}
         currentStage={currentStage}
         taxDraftSummary={taxDraftSummary}
-        onBack={() => navigate('/prep-review/reviewer')}
+        onBack={() => navigate(reviewerOriginPath(location.search))}
         onOpenApproveModal={() => setIsApproveModalOpen(true)}
         onOpenRevisionModal={() => setIsRevisionModalOpen(true)}
         allChecksPassed={allChecksPassed}
@@ -330,7 +332,7 @@ export const TaxReviewerAuditScreen: React.FC = () => {
                     type="button"
                     onClick={() => {
                       if (appItem.id !== applicationId) {
-                        navigate(`/prep-review/reviewer/audit/${appItem.id}`);
+                        navigate(`/prep-review/reviewer/audit/${appItem.id}${location.search}`);
                       }
                     }}
                     className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${

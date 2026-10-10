@@ -1,6 +1,8 @@
 import apiClient from '@/lib/api-client';
 
 export interface SelfSignupLeadItem extends Record<string, unknown> {
+  /** New / Paid / Unpaid chip under the name (from earlier tax years) */
+  clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
   id: string;
   customerId: string;
   taxYear: number;

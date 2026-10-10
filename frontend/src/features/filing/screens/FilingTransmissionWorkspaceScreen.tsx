@@ -18,7 +18,7 @@ import { FilingComplianceGate } from '../components/workspace/FilingComplianceGa
 import { FilingTaxpayerInspectionCard } from '../components/workspace/FilingTaxpayerInspectionCard';
 import { MeFXMLViewer } from '../components/workspace/MeFXMLViewer';
 import { FilingTransmissionStatusCard } from '../components/workspace/FilingTransmissionStatusCard';
-import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
+import { TaxApplicationNotesAndAuditTab } from '@/shared/components/workflow/TaxApplicationNotesAndAuditTab';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
@@ -330,12 +330,13 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
         />
       )}
 
-      {/* 6. Comprehensive Lead Audit Trail & Lifecycle Activity Stream (Matching Reviewer & Sales Screen) */}
-      <LeadAuditTrailSection
-        leadId={lead.id}
+      {/* 6. Notes & Audit for this return only (same shared tab as Documenter, Prep, Review and Sales) */}
+      <TaxApplicationNotesAndAuditTab
+        applicationId={lead.id}
         taxpayerName={lead.taxpayerName}
         taxpayerEmail={lead.taxpayerEmail || (lead as any).taxpayerProfile?.email}
         currentStage={lead.currentStage}
+        taxYear={lead.taxYear}
         stageHistories={(lead.stageHistories as any) || []}
         callLogs={(lead.callLogs as any) || []}
         auditLogs={(lead.auditLogs as any) || []}

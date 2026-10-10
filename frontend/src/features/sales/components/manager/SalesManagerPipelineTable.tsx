@@ -36,7 +36,7 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
         header: 'NAME',
         accessorFn: (row) => row.taxpayerName || '—',
         cell: ({ row }) => (
-          <ClientNameCell name={row.original.taxpayerName} />
+          <ClientNameCell name={row.original.taxpayerName} status={row.original.clientPaymentStatus} />
         ),
       },
       {

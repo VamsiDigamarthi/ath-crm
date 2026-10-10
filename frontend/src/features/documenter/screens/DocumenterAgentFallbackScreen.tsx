@@ -50,6 +50,7 @@ export const DocumenterAgentFallbackScreen: React.FC = () => {
         { header: 'Priority', key: 'priority' },
         { header: 'Stage', key: 'stage', format: (r) => r.currentStage },
         { header: 'Last Call Status', key: 'callStatus', format: (r) => r.lastCallLog?.disposition || 'No calls' },
+        { header: 'Comment', key: 'comment', format: (r) => r.lastCallLog?.callSummary || '' },
       ],
       'documenter_fallback_pool'
     );

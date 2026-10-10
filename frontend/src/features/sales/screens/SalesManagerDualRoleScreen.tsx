@@ -189,6 +189,7 @@ export const SalesManagerDualRoleScreen: React.FC = () => {
               Dual
             </span>
           }
+          status={(row.original as any).clientPaymentStatus}
         />
       ),
     },

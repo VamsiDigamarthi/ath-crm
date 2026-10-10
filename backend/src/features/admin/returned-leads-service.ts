@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db.js';
+import { computeClientHistoryStatus } from "../../utils/client-history.js";
 import { ApplicationStage, Role, AuditActorType, AuditActionType } from '@prisma/client';
 import { BadRequestError } from '../../errors/bad-request-error.js';
 import { DocumenterService } from '../documenter/documenter-service.js';
@@ -128,7 +129,14 @@ export class ReturnedLeadsService {
         take: limit,
         orderBy: { updatedAt: 'desc' },
         include: {
-          customer: true,
+          customer: {
+            include: {
+              // Earlier years drive the New / Paid / Unpaid chip
+              applications: {
+                select: { taxYear: true, currentStage: true, taxDraftSummary: true, quotes: { select: { status: true } } },
+              },
+            },
+          },
           assignedDocAgent: {
             select: {
               id: true,
@@ -367,6 +375,11 @@ export class ReturnedLeadsService {
       return {
         id: app.id,
         customerId: app.customerId,
+        clientPaymentStatus: computeClientHistoryStatus(
+          app.taxYear,
+          (app.customer as any)?.applications || [],
+          app.customer?.isConvertedCustomer
+        ),
         taxYear: app.taxYear,
         filingType: app.filingType,
         currentStage: app.currentStage,

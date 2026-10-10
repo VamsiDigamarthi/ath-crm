@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { StartFilingModal } from '../components/StartFilingModal';
@@ -9,7 +8,6 @@ import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 
 export const DocumenterAgentQueueScreen: React.FC = () => {
-  const navigate = useNavigate();
   const {
     leads,
     agents,
@@ -38,6 +36,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         hideAssignedStaff: true,
         isManagerView: false,
         isAdmin: false,
+        viewOnlyWhenInterested: true,
       }),
     [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal, handleUpdatePriority]
   );
@@ -52,6 +51,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         { header: 'Priority', key: 'priority' },
         { header: 'Stage', key: 'stage', format: (r) => r.currentStage },
         { header: 'Last Call Status', key: 'callStatus', format: (r) => r.lastCallLog?.disposition || 'No calls' },
+        { header: 'Comment', key: 'comment', format: (r) => r.lastCallLog?.callSummary || '' },
       ],
       'documenter_agent_queue'
     );
@@ -67,7 +67,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         isLoading={isLoading}
         searchPlaceholder="Search leads by name, email, phone..."
         onExportExcel={handleExport}
-        onRowClick={(item) => navigate(`/documenter/agent/documents/${item.id}?from=queue`, { state: { from: 'agent_queue' } })}
+        // No row click here: a lead opens only through the "View" button (shown for interested calls)
         emptyText="No assigned leads in your outreach queue."
       />
 

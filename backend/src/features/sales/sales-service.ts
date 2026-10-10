@@ -1,4 +1,5 @@
 import { prisma } from "../../config/db.js";
+import { computeClientHistoryStatus } from "../../utils/client-history.js";
 import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType, CouponStatus, Prisma } from "@prisma/client";
 import { StorageService } from "../../utils/storage-service.js";
 import { ApplicationNoteService } from "../application-notes/application-note-service.js";
@@ -235,26 +236,7 @@ export class SalesService {
         visibleApplications = allCustomerApps.filter((a: any) => a.assignedSalesAgentId === currentUserId);
       }
 
-      const isPaidClient = Boolean(
-        customer?.isConvertedCustomer ||
-        allCustomerApps.some((a: any) =>
-          a.currentStage === ApplicationStage.FILING_SUCCESS ||
-          a.currentStage === ApplicationStage.FILING_QUEUE ||
-          a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
-          a.quotes?.some((q: any) => q.status === 'PAID') ||
-          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-          (a as any).taxDraftSummary?.paidAmount > 0
-        )
-      );
-
-      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-      if (isPaidClient) {
-        clientPaymentStatus = 'PAID';
-      } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-        clientPaymentStatus = 'NEW';
-      } else {
-        clientPaymentStatus = 'UNPAID';
-      }
+      const clientPaymentStatus = computeClientHistoryStatus(app.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
       const fullName = customer
         ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'
@@ -1051,23 +1033,7 @@ export class SalesService {
     }
 
     const customer = app.customer;
-    const isPaidClient = Boolean(
-      customer?.isConvertedCustomer ||
-      allCustomerApps.some((a: any) =>
-        a.currentStage === ApplicationStage.FILING_SUCCESS ||
-        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-        (a as any).taxDraftSummary?.paidAmount > 0
-      )
-    );
-
-    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-    if (isPaidClient) {
-      clientPaymentStatus = 'PAID';
-    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-      clientPaymentStatus = 'NEW';
-    } else {
-      clientPaymentStatus = 'UNPAID';
-    }
+    const clientPaymentStatus = computeClientHistoryStatus(app.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
     const fullName = customer
       ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'

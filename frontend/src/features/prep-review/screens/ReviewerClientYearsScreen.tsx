@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { reviewerOriginPath } from '../utils/preparer-origin';
 import type { ColumnDef } from '@tanstack/react-table';
 import toast from 'react-hot-toast';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
@@ -88,11 +89,12 @@ const useReviewerClientYears = (taxpayerId?: string) => {
 export const ReviewerClientYearsScreen: React.FC = () => {
   const { taxpayerId } = useParams<{ taxpayerId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { years, client, isLoading } = useReviewerClientYears(taxpayerId);
 
   const openYear = useCallback(
-    (lead: PrepReviewLead) => navigate(`/prep-review/reviewer/audit/${lead.id || lead.applicationId}`),
-    [navigate]
+    (lead: PrepReviewLead) => navigate(`/prep-review/reviewer/audit/${lead.id || lead.applicationId}${location.search}`),
+    [navigate, location.search]
   );
 
   const columns = useMemo<ColumnDef<PrepReviewLead, unknown>[]>(
@@ -164,7 +166,7 @@ export const ReviewerClientYearsScreen: React.FC = () => {
     <div className="space-y-6 pb-12 font-sans">
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate('/prep-review/reviewer')}
+          onClick={() => navigate(reviewerOriginPath(location.search))}
           className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
           title="Back to queue"
         >

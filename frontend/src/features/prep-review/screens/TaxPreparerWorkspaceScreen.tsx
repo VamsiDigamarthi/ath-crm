@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { preparerOriginPath } from '../utils/preparer-origin';
 import { ArrowLeft, Save, Send, ShieldCheck, RotateCcw, FileSpreadsheet, Sparkles, Bell, Paperclip, Download, FileText } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
@@ -23,6 +24,7 @@ import { TaxApplicationNotesAndAuditTab } from '@/shared/components/workflow/Tax
 
 export const TaxPreparerWorkspaceScreen: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSendBackOpen, setIsSendBackOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isOrganizerModalOpen, setIsOrganizerModalOpen] = useState(false);
@@ -138,7 +140,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
               if (window.history.length > 1) {
                 navigate(-1);
               } else {
-                navigate('/prep-review/preparer');
+                navigate(preparerOriginPath(location.search));
               }
             }}
             className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
@@ -365,7 +367,7 @@ export const TaxPreparerWorkspaceScreen: React.FC = () => {
                   key={appItem.id}
                   type="button"
                   onClick={() => {
-                    if (appItem.id !== applicationId) navigate(`/prep-review/preparer/workspace/${appItem.id}`);
+                    if (appItem.id !== applicationId) navigate(`/prep-review/preparer/workspace/${appItem.id}${location.search}`);
                   }}
                   className={`px-3 py-1 rounded-full text-xs border transition-colors cursor-pointer ${
                     isSelected

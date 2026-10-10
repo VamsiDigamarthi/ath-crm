@@ -427,13 +427,26 @@ export const router = createBrowserRouter([
             element: <TaxSpecialistDashboardScreen />,
           },
           // Tax Preparer Routes
+          // Preparer sidebar pages (key resets tabs/search when switching pages)
           {
             path: 'preparer',
-            element: <TaxPreparerQueueScreen />,
+            element: <TaxPreparerQueueScreen key="preparation" view="PREPARATION" />,
           },
           {
             path: 'preparer/queue',
-            element: <TaxPreparerQueueScreen />,
+            element: <TaxPreparerQueueScreen key="preparation" view="PREPARATION" />,
+          },
+          {
+            path: 'preparer/pending',
+            element: <TaxPreparerQueueScreen key="pending" view="PENDING" />,
+          },
+          {
+            path: 'preparer/under-review',
+            element: <TaxPreparerQueueScreen key="under-review" view="UNDER_REVIEW" />,
+          },
+          {
+            path: 'preparer/completed',
+            element: <TaxPreparerQueueScreen key="completed" view="COMPLETED" />,
           },
           {
             path: 'preparer/workspace/:id',
@@ -446,11 +459,23 @@ export const router = createBrowserRouter([
           // QA Compliance Reviewer Routes
           {
             path: 'reviewer',
-            element: <TaxReviewerQueueScreen />,
+            element: <TaxReviewerQueueScreen key="assigned" view="ASSIGNED" />,
           },
           {
             path: 'reviewer/queue',
-            element: <TaxReviewerQueueScreen />,
+            element: <TaxReviewerQueueScreen key="assigned" view="ASSIGNED" />,
+          },
+          {
+            path: 'reviewer/pending',
+            element: <TaxReviewerQueueScreen key="reviewer-pending" view="PENDING" />,
+          },
+          {
+            path: 'reviewer/revisions',
+            element: <TaxReviewerQueueScreen key="revisions" view="REVISIONS" />,
+          },
+          {
+            path: 'reviewer/approved',
+            element: <TaxReviewerQueueScreen key="approved" view="APPROVED" />,
           },
           {
             path: 'reviewer/audit/:id',

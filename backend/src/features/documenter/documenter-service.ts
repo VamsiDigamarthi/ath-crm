@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db.js';
+import { computeClientHistoryStatus, isApplicationPaid } from "../../utils/client-history.js";
 import {
   ApplicationStage,
   Role,
@@ -310,26 +311,7 @@ export class DocumenterService {
       };
     });
 
-    const isPaidClient = Boolean(
-      app.customer?.isConvertedCustomer ||
-      allCustomerApps.some((a: any) =>
-        a.currentStage === ApplicationStage.FILING_SUCCESS ||
-        a.currentStage === ApplicationStage.FILING_QUEUE ||
-        a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
-        a.quotes?.some((q: any) => q.status === 'PAID') ||
-        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-        (a as any).taxDraftSummary?.paidAmount > 0
-      )
-    );
-
-    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-    if (isPaidClient) {
-      clientPaymentStatus = 'PAID';
-    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-      clientPaymentStatus = 'NEW';
-    } else {
-      clientPaymentStatus = 'UNPAID';
-    }
+    const clientPaymentStatus = computeClientHistoryStatus(app.taxYear, allCustomerApps, app.customer?.isConvertedCustomer);
 
     const appSummary = (app.taxDraftSummary as any) || {};
     const isDirectSignup = Boolean(
@@ -972,26 +954,9 @@ export class DocumenterService {
         visibleApplications = allCustomerApps.filter((a: any) => a.assignedDocAgentId === currentUserId);
       }
 
-      const isPaidClient = Boolean(
-        customer?.isConvertedCustomer ||
-        allCustomerApps.some((a: any) =>
-          a.currentStage === ApplicationStage.FILING_SUCCESS ||
-          a.currentStage === ApplicationStage.FILING_QUEUE ||
-          a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
-          a.quotes?.some((q: any) => q.status === 'PAID') ||
-          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-          (a as any).taxDraftSummary?.paidAmount > 0
-        )
-      );
-
-      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-      if (isPaidClient) {
-        clientPaymentStatus = 'PAID';
-      } else if (allCustomerApps.length <= 1 && (primaryApp.currentStage === ApplicationStage.RAW_PROSPECT || primaryApp.currentStage === ApplicationStage.DOC_OUTREACH)) {
-        clientPaymentStatus = 'NEW';
-      } else {
-        clientPaymentStatus = 'UNPAID';
-      }
+      const clientPaymentStatus = computeClientHistoryStatus(primaryApp.taxYear, allCustomerApps, customer?.isConvertedCustomer);
+      // Any paid/filed return (any year) still marks the lead as configured below
+      const isPaidClient = Boolean(customer?.isConvertedCustomer || allCustomerApps.some(isApplicationPaid));
 
       const summary = (primaryApp.taxDraftSummary as any) || {};
       const isDirectSignup = Boolean(
@@ -1793,7 +1758,9 @@ export class DocumenterService {
           } else if (disposition === 'CONNECTED_NOT_INTERESTED' || disposition === 'CLIENT_NOT_QUALIFIED') {
             initialStage = ApplicationStage.DROPPED_CANCELLED;
           } else if (disposition === 'INVALID_DISCONNECTED') {
-            initialStage = ApplicationStage.CORRECTION_NEEDED;
+            // Bad phone number: stays with the documenter to fix the contact.
+            // CORRECTION_NEEDED is reserved for returns already in tax prep.
+            initialStage = ApplicationStage.DOC_OUTREACH;
           } else if (disposition === 'FALLBACK') {
             initialStage = ApplicationStage.DOC_OUTREACH;
           }
@@ -1907,10 +1874,12 @@ export class DocumenterService {
             ? `Client not qualified: ${subDisposition}. Stage marked as DROPPED_CANCELLED.`
             : `Client not qualified. Stage marked as DROPPED_CANCELLED.`;
         } else if (disposition === 'INVALID_DISCONNECTED') {
-          targetStage = ApplicationStage.CORRECTION_NEEDED;
+          // Bad phone number: keep the lead in outreach so the documenter can fix the contact.
+          // CORRECTION_NEEDED is reserved for returns already in tax prep (it shows in Completed Files).
+          targetStage = ApplicationStage.DOC_OUTREACH;
           auditRemark = subDisposition
-            ? `Invalid/unreachable contact (${subDisposition}). Stage marked as CORRECTION_NEEDED.`
-            : `Invalid/disconnected contact number. Stage marked as CORRECTION_NEEDED.`;
+            ? `Invalid/unreachable contact (${subDisposition}). Kept in outreach for contact correction.`
+            : `Invalid/disconnected contact number. Kept in outreach for contact correction.`;
         } else if (disposition === 'NO_ANSWER_VOICEMAIL') {
           targetStage = ApplicationStage.DOC_OUTREACH;
           auditRemark = subDisposition

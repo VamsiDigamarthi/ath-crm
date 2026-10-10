@@ -69,6 +69,8 @@ export interface LifecycleTimelineEvent {
 }
 
 export interface MasterTaxpayerRecord {
+  /** New / Paid / Unpaid chip under the name (from earlier tax years) */
+  clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
   id: string;
   customerId?: string;
   leadId?: string;

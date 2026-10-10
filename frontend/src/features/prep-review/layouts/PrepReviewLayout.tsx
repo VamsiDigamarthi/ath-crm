@@ -10,9 +10,15 @@ import {
   LayoutGrid,
   ShieldCheck,
   Bell,
+  Clock,
+  Hourglass,
+  FileCheck2,
+  RotateCcw,
+  BadgeCheck,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { filterNavItemsByPermissions } from '@/shared/constants/sidebar-catalog';
+import { getPreparerOrigin, PREPARER_PAGES, getReviewerOrigin, REVIEWER_PAGES } from '../utils/preparer-origin';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import toast from 'react-hot-toast';
 
@@ -51,7 +57,27 @@ export const PrepReviewLayout: React.FC = () => {
       ];
 
   const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');
-  const navItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
+  const permittedItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
+
+  // The preparer workbench permission unlocks all four preparer pages
+  const navItems = permittedItems.flatMap((item) =>
+    item.id === 'preparer'
+      ? [
+          { ...item, label: 'Return Preparation' },
+          { id: 'preparer_pending', label: 'Pending Returns', icon: Clock, section: item.section, path: '/prep-review/preparer/pending' },
+          { id: 'preparer_review', label: 'Under Review', icon: Hourglass, section: item.section, path: '/prep-review/preparer/under-review' },
+          { id: 'preparer_completed', label: 'Completed Returns', icon: FileCheck2, section: item.section, path: '/prep-review/preparer/completed' },
+        ]
+      : item.id === 'reviewer'
+      ? [
+          // The QA Audit Deck permission unlocks all four reviewer pages
+          { ...item, label: 'Assigned Returns' },
+          { id: 'reviewer_pending', label: 'Pending Returns', icon: Clock, section: item.section, path: '/prep-review/reviewer/pending' },
+          { id: 'reviewer_revisions', label: 'Revision Required', icon: RotateCcw, section: item.section, path: '/prep-review/reviewer/revisions' },
+          { id: 'reviewer_approved', label: 'Approved Returns', icon: BadgeCheck, section: item.section, path: '/prep-review/reviewer/approved' },
+        ]
+      : [item]
+  );
 
   const currentPath = location.pathname;
   const getActiveId = () => {
@@ -60,6 +86,21 @@ export const PrepReviewLayout: React.FC = () => {
     if (currentPath.includes('/prep-review/manager/queue')) return 'caseload';
     if (currentPath.includes('/prep-review/manager')) return 'dashboard';
     if (currentPath.includes('/prep-review/dashboard')) return 'specialist_hub';
+    // Client / workspace screens highlight the page they were opened from
+    if (currentPath.includes('/prep-review/preparer/client/') || currentPath.includes('/prep-review/preparer/workspace/')) {
+      const origin = getPreparerOrigin(location.search);
+      if (origin) return PREPARER_PAGES[origin].navId;
+    }
+    if (currentPath.includes('/prep-review/reviewer/client/') || currentPath.includes('/prep-review/reviewer/audit/') || currentPath.includes('/prep-review/reviewer/workspace/')) {
+      const origin = getReviewerOrigin(location.search);
+      if (origin) return REVIEWER_PAGES[origin].navId;
+    }
+    if (currentPath.includes('/prep-review/reviewer/pending')) return 'reviewer_pending';
+    if (currentPath.includes('/prep-review/reviewer/revisions')) return 'reviewer_revisions';
+    if (currentPath.includes('/prep-review/reviewer/approved')) return 'reviewer_approved';
+    if (currentPath.includes('/prep-review/preparer/pending')) return 'preparer_pending';
+    if (currentPath.includes('/prep-review/preparer/under-review')) return 'preparer_review';
+    if (currentPath.includes('/prep-review/preparer/completed')) return 'preparer_completed';
     if (currentPath.includes('/prep-review/preparer')) return 'preparer';
     if (currentPath.includes('/prep-review/reviewer')) return 'reviewer';
     return isManager ? 'dashboard' : 'specialist_hub';

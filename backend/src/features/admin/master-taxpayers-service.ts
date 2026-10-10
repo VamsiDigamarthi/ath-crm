@@ -1,4 +1,5 @@
 import { prisma } from "../../config/db.js";
+import { computeClientHistoryStatus } from "../../utils/client-history.js";
 import { ApplicationStage } from "@prisma/client";
 
 export interface MasterTaxpayersQueryOptions {
@@ -341,6 +342,7 @@ export class MasterTaxpayersService {
       return {
         id: `TX-${c.id.slice(0, 8)}`,
         customerId: c.id,
+        clientPaymentStatus: computeClientHistoryStatus(latestApp?.taxYear ?? 0, c.applications || [], c.isConvertedCustomer),
         leadId: latestApp?.id,
         firstName: c.firstName,
         lastName: c.lastName,

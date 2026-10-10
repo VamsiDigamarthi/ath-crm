@@ -3,6 +3,8 @@ import { adminService } from '../services/admin-service';
 import toast from 'react-hot-toast';
 
 export interface ReturnedLeadItem extends Record<string, unknown> {
+  /** New / Paid / Unpaid chip under the name (from earlier tax years) */
+  clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
   id: string;
   customerId: string;
   taxYear: number;

@@ -1,5 +1,6 @@
 import { prisma } from '../../config/db.js';
 import { irsConfig } from '../../config/irs-config.js';
+import { computeClientHistoryStatus } from '../../utils/client-history.js';
 import { 
   ApplicationStage, 
   Role, 
@@ -23,28 +24,8 @@ export class FilingService {
     const customer = app.customer || {};
     const allCustomerApps = (customer as any)?.applications || [];
 
-    const isPaidClient = Boolean(
-      customer?.isConvertedCustomer ||
-      allCustomerApps.some((a: any) =>
-        a.currentStage === ApplicationStage.FILING_SUCCESS ||
-        a.currentStage === ApplicationStage.FILING_QUEUE ||
-        a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
-        a.quotes?.some((q: any) => q.status === 'PAID') ||
-        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-        (a as any).taxDraftSummary?.paidAmount > 0
-      )
-    );
-
-    let effectivePaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = clientPaymentStatus || 'UNPAID';
-    if (!clientPaymentStatus) {
-      if (isPaidClient) {
-        effectivePaymentStatus = 'PAID';
-      } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-        effectivePaymentStatus = 'NEW';
-      } else {
-        effectivePaymentStatus = 'UNPAID';
-      }
-    }
+    const effectivePaymentStatus: 'PAID' | 'NEW' | 'UNPAID' =
+      clientPaymentStatus || computeClientHistoryStatus(app.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
     const firstName = customer.firstName || 'Taxpayer';
     const lastName = customer.lastName || 'Client';
@@ -418,23 +399,7 @@ export class FilingService {
         visibleApplications = allCustomerApps.filter((a: any) => a.assignedFileOpId === currentUserId);
       }
 
-      const isPaidClient = Boolean(
-        customer?.isConvertedCustomer ||
-        allCustomerApps.some((a: any) =>
-          a.currentStage === ApplicationStage.FILING_SUCCESS ||
-          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-          (a as any).taxDraftSummary?.paidAmount > 0
-        )
-      );
-
-      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-      if (isPaidClient) {
-        clientPaymentStatus = 'PAID';
-      } else if (allCustomerApps.length <= 1 && (primaryApp.currentStage === ApplicationStage.RAW_PROSPECT || primaryApp.currentStage === ApplicationStage.DOC_OUTREACH)) {
-        clientPaymentStatus = 'NEW';
-      } else {
-        clientPaymentStatus = 'UNPAID';
-      }
+      const clientPaymentStatus = computeClientHistoryStatus(primaryApp.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
       groupedLeads.push(this.mapDbAppToFilingLead(primaryApp, visibleApplications, clientPaymentStatus));
     }
@@ -529,23 +494,7 @@ export class FilingService {
     }
 
     const customer = app.customer;
-    const isPaidClient = Boolean(
-      customer?.isConvertedCustomer ||
-      allCustomerApps.some((a: any) =>
-        a.currentStage === ApplicationStage.FILING_SUCCESS ||
-        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-        (a as any).taxDraftSummary?.paidAmount > 0
-      )
-    );
-
-    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-    if (isPaidClient) {
-      clientPaymentStatus = 'PAID';
-    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-      clientPaymentStatus = 'NEW';
-    } else {
-      clientPaymentStatus = 'UNPAID';
-    }
+    const clientPaymentStatus = computeClientHistoryStatus(app.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
     const item = this.mapDbAppToFilingLead(app, availableApplications, clientPaymentStatus);
     item.availableApplications = availableApplications.map((a: any) => ({

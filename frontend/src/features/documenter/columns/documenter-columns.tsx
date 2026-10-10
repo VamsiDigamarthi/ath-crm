@@ -11,6 +11,7 @@ import {
   FilePlus2,
 } from 'lucide-react';
 import type { DocumenterLeadItem } from '../types/documenter.types';
+import { ClientHistoryTag } from '@/shared/components/table';
 import { SYSTEM_PRIORITIES, SYSTEM_STAGES } from '@/shared/constants/system-enums';
 
 export interface GetDocumenterColumnsProps {
@@ -21,6 +22,8 @@ export interface GetDocumenterColumnsProps {
   hideAssignedStaff?: boolean;
   isManagerView?: boolean;
   isAdmin?: boolean;
+  /** My Leads: show "View" only when the last call was Connected – interested */
+  viewOnlyWhenInterested?: boolean;
 }
 
 export const isDirectSignupLead = (item: DocumenterLeadItem): boolean => {
@@ -144,6 +147,7 @@ export const getDocumenterColumns = ({
   hideAssignedStaff = false,
   isManagerView = false,
   isAdmin: isAdminProp = false,
+  viewOnlyWhenInterested = false,
 }: GetDocumenterColumnsProps): ColumnDef<DocumenterLeadItem, any>[] => {
   const isAdmin = isManagerView || isAdminProp;
 
@@ -157,16 +161,19 @@ export const getDocumenterColumns = ({
         const name = c?.fullName || `${c?.firstName || ''} ${c?.lastName || ''}`.trim() || '—';
         const isDirect = isDirectSignupLead(row.original);
         return (
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <ClientNameCell name={name} />
-            {isDirect && (
-              <span
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
-                title="Direct Online Portal Signup"
-              >
-                Direct Signup
-              </span>
-            )}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <ClientNameCell name={name} />
+              {isDirect && (
+                <span
+                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  title="Direct Online Portal Signup"
+                >
+                  Direct Signup
+                </span>
+              )}
+            </div>
+            <ClientHistoryTag status={row.original.clientPaymentStatus} />
           </div>
         );
       },
@@ -206,17 +213,33 @@ export const getDocumenterColumns = ({
       cell: ({ row }) => renderStageBadge(row.original.currentStage),
     },
     {
+      // Shows the agent's note from the most recent call (was the call outcome)
       id: 'lastCall',
-      header: 'Last call',
-      accessorFn: (row) => row.lastCallLog?.disposition || 'NO_CALLS',
+      header: 'Comment',
+      accessorFn: (row) => row.lastCallLog?.callSummary || '',
       cell: ({ row }) => {
         const log = row.original.lastCallLog || (row.original as any).callLogs?.[0];
         if (!log) {
-          return <span className="text-xs text-slate-400 font-normal">No calls</span>;
+          return <span className="text-xs text-slate-400 font-normal">No calls yet</span>;
+        }
+        const outcome =
+          log.disposition === 'FALLBACK'
+            ? 'Follow-up'
+            : log.disposition.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (ch: string) => ch.toUpperCase());
+        const comment = log.callSummary?.trim();
+        if (!comment) {
+          return (
+            <span className="text-xs text-slate-400 font-normal" title={`Last call: ${outcome}`}>
+              No comment
+            </span>
+          );
         }
         return (
-          <span className="text-xs font-normal text-slate-700">
-            {log.disposition === 'FALLBACK' ? 'Follow-up' : log.disposition.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (ch: string) => ch.toUpperCase())}
+          <span
+            className="block max-w-[260px] text-xs font-normal text-slate-700 line-clamp-2 break-words"
+            title={`${comment}\n\nLast call: ${outcome}`}
+          >
+            {comment}
           </span>
         );
       },
@@ -255,7 +278,7 @@ export const getDocumenterColumns = ({
     },
     cell: ({ row }) => {
       const item = row.original;
-      const canView = canViewLead(item);
+      const canView = viewOnlyWhenInterested ? isLeadInterested(item) : canViewLead(item);
       const canConfig = canConfigureReturn(item);
 
       return (

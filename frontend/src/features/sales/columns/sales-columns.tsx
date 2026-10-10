@@ -35,6 +35,7 @@ export function getSalesColumns({
                 </span>
               ) : undefined
             }
+            status={item.clientPaymentStatus}
           />
         );
       },

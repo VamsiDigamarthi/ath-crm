@@ -4,10 +4,23 @@ import { useAuthStore } from '@/features/auth/store/auth-store';
 import { prepReviewService } from '../services/prep-review-service';
 import type { PrepReviewLead } from '../types/prep-review.types';
 import toast from 'react-hot-toast';
+import { VIEW_TO_ORIGIN } from '../utils/preparer-origin';
 
 export type PreparerQueueTab = 'ALL' | 'DRAFTING' | 'QA_SUBMITTED' | 'QA_APPROVED' | 'REVISIONS' | 'REVERTED';
 
-export function useTaxPreparerQueue() {
+/**
+ * Preparer sidebar pages. Each return lands in exactly one page:
+ * - PENDING: assigned, preparer has not saved any work yet
+ * - PREPARATION: work in hand (in progress, revisions requested by QA, reverted to documenter) shown as tabs
+ * - UNDER_REVIEW: submitted to QA, waiting for the reviewer
+ * - COMPLETED: QA approved and moved on (sales / filing)
+ * - ALL: legacy workbench view with every return and all tabs
+ */
+export type PreparerQueueView = 'ALL' | 'PREPARATION' | 'PENDING' | 'UNDER_REVIEW' | 'COMPLETED';
+
+type PreparerBucket = 'PENDING' | 'IN_PROGRESS' | 'REVISIONS' | 'REVERTED' | 'UNDER_REVIEW' | 'COMPLETED';
+
+export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
@@ -139,9 +152,47 @@ export function useTaxPreparerQueue() {
     };
   }, [allLeads.length, counts]);
 
+  // One bucket per return; a saved workspace draft marks the preparer as started
+  const bucketOf = (lead: PrepReviewLead): PreparerBucket => {
+    if (isReturnReverted(lead)) return 'REVERTED';
+    if (isReturnRevision(lead)) return 'REVISIONS';
+    if (isReturnApproved(lead)) return 'COMPLETED';
+    if (isReturnSubmittedToQA(lead)) return 'UNDER_REVIEW';
+    return lead.taxDraftSummary?.status === 'DRAFT_SAVED' ? 'IN_PROGRESS' : 'PENDING';
+  };
+
+  const VIEW_BUCKETS: Record<PreparerQueueView, PreparerBucket[] | null> = {
+    ALL: null,
+    PREPARATION: ['IN_PROGRESS', 'REVISIONS', 'REVERTED'],
+    PENDING: ['PENDING'],
+    UNDER_REVIEW: ['UNDER_REVIEW'],
+    COMPLETED: ['COMPLETED'],
+  };
+
+  // Returns that belong to the current sidebar page
+  const viewLeads = useMemo(() => {
+    const buckets = VIEW_BUCKETS[view];
+    return buckets ? allLeads.filter((l) => buckets.includes(bucketOf(l))) : allLeads;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allLeads, view]);
+
+  // Tab counts for the Return Preparation page
+  const preparationCounts = useMemo(() => {
+    const c = { all: 0, inProgress: 0, revisions: 0, reverted: 0 };
+    viewLeads.forEach((l) => {
+      const b = bucketOf(l);
+      c.all++;
+      if (b === 'IN_PROGRESS') c.inProgress++;
+      if (b === 'REVISIONS') c.revisions++;
+      if (b === 'REVERTED') c.reverted++;
+    });
+    return c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewLeads]);
+
   // Filtered Leads
   const filteredReturns = useMemo(() => {
-    return allLeads.filter((item) => {
+    return viewLeads.filter((item) => {
       const reverted = isReturnReverted(item);
       const approved = !reverted && isReturnApproved(item);
       const revision = !reverted && isReturnRevision(item);
@@ -167,7 +218,7 @@ export function useTaxPreparerQueue() {
       }
       return true;
     });
-  }, [allLeads, activeTab, complexityFilter, priorityFilter, searchQuery]);
+  }, [viewLeads, activeTab, complexityFilter, priorityFilter, searchQuery]);
 
   const clientRows = useMemo(() => {
     const seen = new Set<string>();
@@ -179,13 +230,16 @@ export function useTaxPreparerQueue() {
     });
   }, [filteredReturns]);
 
+  // ?from= keeps the right sidebar item highlighted on the client / workspace screens
+  const fromQuery = `?from=${VIEW_TO_ORIGIN[view]}`;
+
   const handleOpenClient = (lead: PrepReviewLead) => {
-    navigate(`/prep-review/preparer/client/${lead.taxpayerId || lead.id}`);
+    navigate(`/prep-review/preparer/client/${lead.taxpayerId || lead.id}${fromQuery}`);
   };
 
   const handleOpenNextReturn = () => {
     if (filteredReturns.length > 0) {
-      navigate(`/prep-review/preparer/workspace/${filteredReturns[0].id || filteredReturns[0].applicationId}`);
+      navigate(`/prep-review/preparer/workspace/${filteredReturns[0].id || filteredReturns[0].applicationId}${fromQuery}`);
     } else {
       toast('No active tax returns in queue', { icon: 'ℹ️' });
     }
@@ -195,6 +249,7 @@ export function useTaxPreparerQueue() {
     isLoading,
     allLeads,
     counts,
+    preparationCounts,
     stats,
     filteredReturns,
     clientRows,

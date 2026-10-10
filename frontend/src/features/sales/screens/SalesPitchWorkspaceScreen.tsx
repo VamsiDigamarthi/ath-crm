@@ -9,11 +9,10 @@ import { PitchFeeCalculator } from '../components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
 import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
-import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
 import { SalesReturnToAdminModal } from '../components/common/SalesReturnToAdminModal';
-import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
+import { TaxApplicationNotesAndAuditTab } from '@/shared/components/workflow/TaxApplicationNotesAndAuditTab';
 import { useMyEditAccess } from '@/features/edit-access/hooks/useMyEditAccess';
 import { RequestEditAccessButton } from '@/features/edit-access/components/RequestEditAccessButton';
 import { salesService } from '../services/sales-service';
@@ -485,23 +484,25 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
                     setIsDispatchConfirmOpen(true);
                   }}
                 />
-
-                <LeadAuditTrailSection
-                  leadId={lead.id || lead.applicationId}
-                  taxpayerName={lead.taxpayerName}
-                  taxpayerEmail={lead.taxpayerEmail}
-                  currentStage={lead.currentStage}
-                  stageHistories={(lead.stageHistories as any) || []}
-                  callLogs={(lead.callLogs as any) || []}
-                  auditLogs={(lead.auditLogs as any) || []}
-                />
+                {/* Audit trail moved to the shared "Notes & Audit" tab */}
               </div>
             ),
           },
           {
             id: 'NOTES',
-            label: 'Notes',
-            content: <ApplicationNotesPanel applicationId={appId} />,
+            label: 'Notes & Audit',
+            content: (
+              <TaxApplicationNotesAndAuditTab
+                applicationId={appId}
+                taxpayerName={lead.taxpayerName}
+                taxpayerEmail={lead.taxpayerEmail}
+                currentStage={lead.currentStage}
+                taxYear={lead.taxYear}
+                stageHistories={(lead.stageHistories as any) || []}
+                callLogs={(lead.callLogs as any) || []}
+                auditLogs={(lead.auditLogs as any) || []}
+              />
+            ),
           },
         ]}
       />
