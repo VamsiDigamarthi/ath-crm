@@ -31,7 +31,7 @@ export const FilingManagerQueueScreen: React.FC = () => {
     activeLeadForAssign,
     staffList,
     fetchQueue,
-    handleOpenWorkspace,
+    handleOpenClient,
     handleOpenAssignModal,
     handleCloseAssignModal,
     handleDirectAssign,
@@ -58,12 +58,12 @@ export const FilingManagerQueueScreen: React.FC = () => {
   const columns = useMemo(
     () =>
       getFilingColumns({
-        onOpenWorkspace: (lead) => handleOpenWorkspace(lead.id),
+        onOpenWorkspace: (lead) => handleOpenClient(lead),
         onOpenAssignModal: handleOpenAssignModal,
         isSpecialist: false,
         isAdmin: true,
       }),
-    [handleOpenWorkspace, handleOpenAssignModal]
+    [handleOpenClient, handleOpenAssignModal]
   );
 
   const tabs = [
@@ -155,6 +155,7 @@ export const FilingManagerQueueScreen: React.FC = () => {
         data={leads}
         columns={columns}
         enableSelection={true}
+        onRowClick={(item) => handleOpenClient(item)}
         selectedRows={selectedRows}
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}

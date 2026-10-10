@@ -1,4 +1,5 @@
 import { prisma } from "../../config/db.js";
+import { syncProfileFromLogin } from "../../utils/customer-contact-sync.js";
 import { Role, Prisma, ApplicationStage } from "@prisma/client";
 import { BadRequestError } from "../../errors/bad-request-error.js";
 import { NotFoundError } from "../../errors/not-found-error.js";
@@ -525,6 +526,14 @@ export class EmployeeService {
         ...(input.smtpAppPassword !== undefined && { smtpAppPassword: input.smtpAppPassword ? input.smtpAppPassword.trim() : null }),
       },
     });
+
+    // If this login belongs to a customer, keep their profile email / phone identical
+    if (input.email !== undefined || input.mobile !== undefined) {
+      await syncProfileFromLogin(updated.id, {
+        email: input.email !== undefined ? updated.email : undefined,
+        mobile: input.mobile !== undefined ? updated.mobile : undefined,
+      });
+    }
 
     if (input.orgRoleIds && input.orgRoleIds.length > 0) {
       await OrgRoleService.setUserOrgRoles(id, input.orgRoleIds, input.primaryOrgRoleId);

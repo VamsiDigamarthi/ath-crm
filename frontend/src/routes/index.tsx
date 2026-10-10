@@ -61,6 +61,7 @@ import { FilingManagerQueueScreen } from '@/features/filing/screens/FilingManage
 import { FilingStaffScorecardsScreen } from '@/features/filing/screens/FilingStaffScorecardsScreen';
 import { FilingSpecialistDashboardScreen } from '@/features/filing/screens/FilingSpecialistDashboardScreen';
 import { FilingSpecialistQueueScreen } from '@/features/filing/screens/FilingSpecialistQueueScreen';
+import { FilingClientYearsScreen } from '@/features/filing/screens/FilingClientYearsScreen';
 import { FilingTransmissionWorkspaceScreen } from '@/features/filing/screens/FilingTransmissionWorkspaceScreen';
 import { AdminSettingsScreen } from '@/features/admin/screens/AdminSettingsScreen';
 import { CustomerLayout } from '@/features/customer/layouts/CustomerLayout';
@@ -665,7 +666,24 @@ export const router = createBrowserRouter([
           },
           {
             path: 'agent/queue',
-            element: <FilingSpecialistQueueScreen />,
+            element: <FilingSpecialistQueueScreen key="ready" view="READY" />,
+          },
+          // Filing sidebar pages (key resets tabs when switching pages)
+          {
+            path: 'agent/pending',
+            element: <FilingSpecialistQueueScreen key="pending" view="PENDING" />,
+          },
+          {
+            path: 'agent/on-hold',
+            element: <FilingSpecialistQueueScreen key="on-hold" view="ON_HOLD" />,
+          },
+          {
+            path: 'agent/returned',
+            element: <FilingSpecialistQueueScreen key="returned" view="RETURNED" />,
+          },
+          {
+            path: 'agent/filed',
+            element: <FilingSpecialistQueueScreen key="filed" view="FILED" />,
           },
           {
             path: 'queue',
@@ -674,6 +692,15 @@ export const router = createBrowserRouter([
           {
             path: 'workspace/:id',
             element: <FilingTransmissionWorkspaceScreen />,
+          },
+          // Client tax years (customer → years → View opens the workspace)
+          {
+            path: 'manager/client/:customerId',
+            element: <FilingClientYearsScreen />,
+          },
+          {
+            path: 'agent/client/:customerId',
+            element: <FilingClientYearsScreen />,
           },
           {
             path: 'notifications',

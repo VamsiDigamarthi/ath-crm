@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db.js';
+import { syncLoginFromProfile } from "../../utils/customer-contact-sync.js";
 import { ApplicationStage, ApplicationPriority, AuditActorType, AuditActionType, Role, NotificationCategory, NotificationPriority } from '@prisma/client';
 import { NotFoundError } from '../../errors/not-found-error.js';
 import { BadRequestError } from '../../errors/bad-request-error.js';
@@ -1195,6 +1196,8 @@ export class CustomerService {
     }
 
     if (Object.keys(profileUpdateData).length > 0) {
+      // Keep the login account's email / phone identical to the profile
+      await syncLoginFromProfile(profile.id, { email: profileUpdateData.email, phone: profileUpdateData.phone });
       await prisma.customerProfile.update({
         where: { id: profile.id },
         data: profileUpdateData,

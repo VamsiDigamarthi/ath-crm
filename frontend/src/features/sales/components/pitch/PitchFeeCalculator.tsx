@@ -43,6 +43,8 @@ interface PitchFeeCalculatorProps {
   onOpenPaymentHistoryModal?: () => void;
   form8879SendCount?: number;
   form8879LastSentAt?: string | null;
+  /** Extra action on the dark fee card, e.g. Raise Invoice */
+  invoiceSlot?: React.ReactNode;
 }
 
 export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
@@ -62,6 +64,7 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
   onOpenPaymentHistoryModal,
   form8879SendCount = 0,
   form8879LastSentAt,
+  invoiceSlot,
 }) => {
   const [couponCode, setCouponCode] = useState('');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
@@ -739,6 +742,8 @@ export const PitchFeeCalculator: React.FC<PitchFeeCalculatorProps> = ({
           )}
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {invoiceSlot}
+
             {paymentStatus !== 'PAID' ? (
               <Button
                 size="sm"

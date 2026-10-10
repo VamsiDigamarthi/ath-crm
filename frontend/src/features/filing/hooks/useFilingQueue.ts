@@ -68,8 +68,15 @@ export function useFilingQueue(filterAssignedOnly = false) {
     fetchStaff();
   }, [fetchQueue, fetchStaff]);
 
-  const handleOpenWorkspace = (leadId: string) => {
-    navigate(`/filing/workspace/${leadId}`);
+  // from = sidebar page (e.g. "on-hold") so the workspace keeps it highlighted
+  const handleOpenWorkspace = (leadId: string, from?: string) => {
+    navigate(`/filing/workspace/${leadId}${from ? `?from=${from}` : ''}`);
+  };
+
+  // Customer first: open the client's tax years; View there opens the workspace
+  const handleOpenClient = (lead: FilingLeadItem, from?: string) => {
+    const base = filterAssignedOnly ? '/filing/agent/client' : '/filing/manager/client';
+    navigate(`${base}/${lead.customerId}${from ? `?from=${from}` : ''}`);
   };
 
   const handleOpenAssignModal = (lead?: FilingLeadItem) => {
@@ -145,6 +152,7 @@ export function useFilingQueue(filterAssignedOnly = false) {
     staffList,
     fetchQueue,
     handleOpenWorkspace,
+    handleOpenClient,
     handleOpenAssignModal,
     handleCloseAssignModal,
     handleDirectAssign,

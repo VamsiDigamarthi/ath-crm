@@ -1,6 +1,8 @@
 import { prisma } from '../../config/db.js';
 import { irsConfig } from '../../config/irs-config.js';
 import { computeClientHistoryStatus } from '../../utils/client-history.js';
+import { NotFoundError } from '../../errors/not-found-error.js';
+import { BadRequestError } from '../../errors/bad-request-error.js';
 import { 
   ApplicationStage, 
   Role, 
@@ -135,6 +137,8 @@ export class FilingService {
       totalRefundOrDue,
       paymentStatus: draft.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID',
       clientPaymentStatus: effectivePaymentStatus,
+      // Filing on hold is a flag only; it never changes the stage
+      filingHold: draft.filingHold || null,
       allApplications: visibleApplications ? visibleApplications.map((a: any) => ({
         id: a.id,
         taxYear: a.taxYear,
@@ -723,6 +727,118 @@ export class FilingService {
   /**
    * Transmit Return via IRS MeF Gateway
    */
+  /**
+   * Put a return on hold (or release it). Stored on taxDraftSummary.filingHold only;
+   * the stage is untouched, and transmitToIRS refuses while the hold is on.
+   */
+  public static async setFilingHold(applicationId: string, userId: string, onHold: boolean, reason?: string) {
+    const app = await prisma.taxApplication.findUnique({ where: { id: applicationId } });
+    if (!app) throw new NotFoundError('Application not found');
+    if (onHold && app.currentStage === ApplicationStage.FILING_SUCCESS) {
+      throw new BadRequestError('This return is already filed and accepted, so it cannot be put on hold.');
+    }
+
+    const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Filing Specialist' : 'Filing Specialist';
+    const draft: any = app.taxDraftSummary || {};
+
+    const filingHold = onHold
+      ? { onHold: true, reason: reason?.trim() || null, byName: actorName, byUserId: user?.id || null, at: new Date().toISOString() }
+      : null;
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: { taxDraftSummary: { ...draft, filingHold } },
+    });
+
+    await prisma.auditLog
+      .create({
+        data: {
+          applicationId,
+          actorId: user?.id || null,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'FILE_OP_AGENT',
+          action: AuditActionType.TAX_DRAFT_SAVE,
+          moduleKey: 'FILING_HOLD',
+          details: {
+            actionDescription: onHold ? `Filing put on hold${reason ? `: ${reason}` : ''}` : 'Filing hold released',
+            reason: reason || null,
+          },
+        },
+      })
+      .catch((err) => console.error('Failed to audit filing hold:', err));
+
+    return { onHold, filingHold };
+  }
+
+  /**
+   * Record an IRS rejection after transmission. Moves the return to FILING_FAILED
+   * (Returned Status → Rejected returns) and marks the transmission REJECTED,
+   * so the specialist can fix it and transmit again (reprocessing).
+   */
+  public static async markIrsRejected(applicationId: string, userId: string, reason: string) {
+    const app = await prisma.taxApplication.findUnique({ where: { id: applicationId } });
+    if (!app) throw new NotFoundError('Application not found');
+    if (app.currentStage !== ApplicationStage.FILING_IN_PROGRESS && app.currentStage !== ApplicationStage.FILING_SUCCESS) {
+      throw new BadRequestError('Only a transmitted return can be marked as rejected by the IRS.');
+    }
+
+    const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Filing Specialist' : 'Filing Specialist';
+    const draft: any = app.taxDraftSummary || {};
+    const rejectedAt = new Date().toISOString();
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        currentStage: ApplicationStage.FILING_FAILED,
+        taxDraftSummary: {
+          ...draft,
+          transmissionInfo: {
+            ...(draft.transmissionInfo || {}),
+            status: 'REJECTED',
+            irsAckCode: 'REJECTED',
+            acceptanceCertificateId: null,
+            rejectedAt,
+          },
+          irsRejection: { reason: reason.trim(), byName: actorName, at: rejectedAt },
+        },
+      },
+    });
+
+    if (user) {
+      await prisma.stageHistory
+        .create({
+          data: {
+            applicationId,
+            fromStage: app.currentStage,
+            toStage: ApplicationStage.FILING_FAILED,
+            movedByUserId: user.id,
+            remarks: `IRS rejected the return: ${reason.trim()}`,
+          },
+        })
+        .catch((err) => console.error('Failed to record IRS rejection stage:', err));
+    }
+
+    await prisma.auditLog
+      .create({
+        data: {
+          applicationId,
+          actorId: user?.id || null,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'FILE_OP_AGENT',
+          action: AuditActionType.TAX_DRAFT_SAVE,
+          moduleKey: 'FILING_IRS_REJECTED',
+          details: { actionDescription: `Marked as rejected by the IRS: ${reason.trim()}`, reason: reason.trim() },
+        },
+      })
+      .catch((err) => console.error('Failed to audit IRS rejection:', err));
+
+    return { currentStage: ApplicationStage.FILING_FAILED, rejectedAt };
+  }
+
   public static async transmitToIRS(
     applicationId: string,
     options: {
@@ -742,6 +858,10 @@ export class FilingService {
     }
 
     const currentDraft: any = app.taxDraftSummary || {};
+
+    if (currentDraft.filingHold?.onHold) {
+      throw new Error('This return is on hold. Release the hold before transmitting to the IRS.');
+    }
 
     // Gate verification: Require service fee payment and Form 8879 e-sign
     if (currentDraft.paymentStatus !== 'PAID') {
@@ -769,6 +889,8 @@ export class FilingService {
     const updatedDraft = {
       ...currentDraft,
       transmissionInfo: updatedTransmission,
+      // A successful (re)transmission clears any earlier IRS rejection
+      irsRejection: null,
       transmittedAt: timestamp,
       acceptedAt: timestamp,
       acceptanceCertificateId: certificateId,

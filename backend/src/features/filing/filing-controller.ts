@@ -64,6 +64,26 @@ export class FilingController {
     }
   }
 
+  public static async setHold(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const result = await FilingService.setFilingHold(id, req.currentUser?.id || '', Boolean(req.body?.onHold), req.body?.reason);
+      res.json(result);
+    } catch (err: any) {
+      res.status(err.statusCode || 400).json({ message: err.message || 'Failed to update filing hold' });
+    }
+  }
+
+  public static async markRejected(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const result = await FilingService.markIrsRejected(id, req.currentUser?.id || '', String(req.body?.reason || ''));
+      res.json(result);
+    } catch (err: any) {
+      res.status(err.statusCode || 400).json({ message: err.message || 'Failed to mark return as rejected' });
+    }
+  }
+
   public static async transmit(req: Request, res: Response) {
     try {
       const id = String(req.params.id);

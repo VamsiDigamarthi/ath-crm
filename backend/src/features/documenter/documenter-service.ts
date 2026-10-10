@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db.js';
+import { syncLoginFromProfile } from "../../utils/customer-contact-sync.js";
 import { computeClientHistoryStatus, isApplicationPaid } from "../../utils/client-history.js";
 import {
   ApplicationStage,
@@ -2623,6 +2624,8 @@ export class DocumenterService {
     }
 
     if (Object.keys(profileUpdateData).length > 0) {
+      // Keep the login account's email / phone identical to the profile
+      await syncLoginFromProfile(app.customerId, { email: profileUpdateData.email, phone: profileUpdateData.phone });
       await prisma.customerProfile.update({
         where: { id: app.customerId },
         data: profileUpdateData,

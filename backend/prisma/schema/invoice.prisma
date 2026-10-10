@@ -1,0 +1,23 @@
+// Invoice raised by sales from a return's Services & Pricing items.
+// Items are a snapshot, so later price edits never change an invoice already sent.
+// Paid / unpaid is derived from the return's payment status; re-raising voids the previous one.
+model Invoice {
+  id            String          @id @default(uuid())
+  invoiceNumber String          @unique
+  applicationId String
+  application   TaxApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  customerId    String
+  customer      CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items         Json
+  subtotal      Decimal         @db.Decimal(10, 2)
+  tax           Decimal         @db.Decimal(10, 2)
+  total         Decimal         @db.Decimal(10, 2)
+  issuedById    String?
+  issuedBy      User?           @relation("IssuedInvoices", fields: [issuedById], references: [id], onDelete: SetNull)
+  emailedTo     String?
+  voidedAt      DateTime?
+  createdAt     DateTime        @default(now())
+
+  @@index([applicationId])
+  @@index([customerId])
+}

@@ -1,5 +1,10 @@
 import { Router } from 'express';
 import { FilingController } from './filing-controller.js';
+import { requireAuth } from '../../middlewares/require-auth.js';
+import { authorize } from '../../middlewares/authorize.js';
+import { validateRequest } from '../../middlewares/validate-request.js';
+import { Role } from '../../types/index.js';
+import { filingHoldSchema, irsRejectSchema } from './filing-validator.js';
 
 const router = Router();
 
@@ -14,6 +19,20 @@ router.get('/manager-stats', FilingController.getManagerStats);
 // MeF XML & Transmission Engine
 router.get('/leads/:id/mef-xml', FilingController.getMeFXML);
 router.post('/leads/:id/transmit', FilingController.transmit);
+router.post(
+  '/leads/:id/irs-reject',
+  requireAuth,
+  authorize(Role.ADMIN, Role.FILE_OP_MANAGER, Role.FILE_OP_AGENT),
+  validateRequest(irsRejectSchema),
+  FilingController.markRejected
+);
+router.post(
+  '/leads/:id/hold',
+  requireAuth,
+  authorize(Role.ADMIN, Role.FILE_OP_MANAGER, Role.FILE_OP_AGENT),
+  validateRequest(filingHoldSchema),
+  FilingController.setHold
+);
 
 // Rebalancing & Assignment
 router.post('/assign', FilingController.assign);

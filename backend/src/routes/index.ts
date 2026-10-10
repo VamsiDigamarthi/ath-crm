@@ -15,6 +15,7 @@ import { permissionRouter } from "../features/permissions/permission-routes.js";
 import { returnItemRouter } from "../features/return-items/return-item-routes.js";
 import { applicationNoteRouter } from "../features/application-notes/application-note-routes.js";
 import { editAccessRouter } from "../features/edit-access/edit-access-routes.js";
+import { invoiceRouter } from "../features/invoices/invoice-routes.js";
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.use("/filing", filingRouter);
 router.use("/notifications", notificationRouter);
 router.use("/workflow", workflowRouter);
 router.use("/edit-access", editAccessRouter);
+router.use("/invoices", invoiceRouter);
 
 export { router as rootRouter };
 

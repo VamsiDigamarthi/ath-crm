@@ -66,6 +66,8 @@ export interface FilingLeadItem extends Record<string, unknown> {
   totalRefundOrDue: number;
   paymentStatus: 'PAID' | 'UNPAID';
   clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
+  /** Filing on hold (flag only, stage unchanged) */
+  filingHold?: { onHold: boolean; reason?: string | null; byName?: string; at?: string } | null;
   totalTaxYears?: number;
   allApplications?: Array<{
     id: string;

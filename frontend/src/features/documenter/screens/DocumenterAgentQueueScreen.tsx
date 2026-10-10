@@ -6,6 +6,8 @@ import { getDocumenterColumns } from '../columns/documenter-columns';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { DocumenterLeadItem } from '../types/documenter.types';
+import { AppTabs } from '@/shared/components/AppTabs';
+import { useMyLeadsTabs, type MyLeadsTab } from '../hooks/useMyLeadsTabs';
 
 export const DocumenterAgentQueueScreen: React.FC = () => {
   const {
@@ -26,6 +28,9 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     handleUpdatePriority,
   } = useDocumenterWorkspace('OUTREACH');
 
+  // Quick tabs: All · Not connected · Interested · Invalid number
+  const { activeTab, setActiveTab, tabs, visibleLeads } = useMyLeadsTabs(leads);
+
   const columns = useMemo(
     () =>
       getDocumenterColumns({
@@ -43,7 +48,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
 
   const handleExport = () => {
     exportTableToExcel(
-      leads,
+      visibleLeads,
       [
         { header: 'Taxpayer', key: 'fullName', format: (r) => r.customer?.fullName || `${r.customer?.firstName || ''} ${r.customer?.lastName || ''}` },
         { header: 'Email', key: 'email', format: (r) => r.customer?.email || '—' },
@@ -59,10 +64,12 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+      <AppTabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as MyLeadsTab)} size="sm" />
+
       <UnifiedTable<DocumenterLeadItem>
         title="DOCUMENTER OUTREACH & CALLING QUEUE"
         subtitle="Active pipeline of prospective taxpayers assigned to you for intake outreach and qualification."
-        data={leads}
+        data={visibleLeads}
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Search leads by name, email, phone..."

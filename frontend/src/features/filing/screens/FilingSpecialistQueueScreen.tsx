@@ -15,18 +15,33 @@ import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics
 import { getFilingColumns } from '../columns/filing-columns';
 import { useFilingQueue } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
+import { useFilingViews, type FilingView, type ReturnedTab } from '../hooks/useFilingViews';
+
+// Title and subtitle for each filing sidebar page
+const VIEW_COPY: Record<Exclude<FilingView, 'ALL'>, { title: string; subtitle: string }> = {
+  READY: { title: 'Ready for Filing', subtitle: 'Paid and signed, waiting to be transmitted to the IRS' },
+  PENDING: { title: 'Filing Pending', subtitle: 'Transmitted, waiting for the IRS answer' },
+  ON_HOLD: { title: 'Filing on Hold', subtitle: 'Paused by the filing team; release the hold to transmit' },
+  RETURNED: { title: 'Returned Status', subtitle: 'Sent back to another team, or rejected by the IRS' },
+  FILED: { title: 'Filed Returns', subtitle: 'Accepted by the IRS' },
+};
 
 export type FilingTabType = 'ALL' | 'FILING_QUEUE' | 'FILING_IN_PROGRESS' | 'FILING_SUCCESS' | 'REVERTED';
 
-export const FilingSpecialistQueueScreen: React.FC = () => {
+export const FilingSpecialistQueueScreen: React.FC<{ view?: FilingView }> = ({ view = 'ALL' }) => {
   const {
     isLoading,
     leads,
     stageFilter,
     setStageFilter,
     fetchQueue,
-    handleOpenWorkspace,
+    handleOpenClient,
   } = useFilingQueue(true);
+
+  const { pageLeads, returnedTab, setReturnedTab, returnedTabs } = useFilingViews(leads, view);
+  const copy = view === 'ALL' ? null : VIEW_COPY[view];
+  const VIEW_FROM: Record<FilingView, string | undefined> = { ALL: undefined, READY: undefined, PENDING: 'pending', ON_HOLD: 'on-hold', RETURNED: 'returned', FILED: 'filed' };
+  const fromKey = VIEW_FROM[view];
 
   const [paymentFilter] = useState<'ALL' | 'PAID' | 'UNPAID'>('ALL');
   const [liabilityFilter] = useState<'ALL' | 'REFUND' | 'TAX_DUE'>('ALL');
@@ -54,10 +69,10 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
   const columns = useMemo(
     () =>
       getFilingColumns({
-        onOpenWorkspace: (lead) => handleOpenWorkspace(lead.id),
+        onOpenWorkspace: (lead) => handleOpenClient(lead, fromKey),
         isSpecialist: true,
       }),
-    [handleOpenWorkspace]
+    [handleOpenClient, fromKey]
   );
 
   const tabs = [
@@ -96,10 +111,12 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
-            My CPA Filing Queue & Transmissions
+            {copy ? copy.title : 'My CPA Filing Queue & Transmissions'}
           </h2>
           <p className="text-xs sm:text-sm text-zinc-500 mt-1 font-normal">
-            Transmit Form 1040 XML packages to IRS Modernized e-File (MeF), monitor acknowledgments, and handle CPA audit reviews.
+            {copy
+              ? `${pageLeads.length} returns · ${copy.subtitle}`
+              : 'Transmit Form 1040 XML packages to IRS Modernized e-File (MeF), monitor acknowledgments, and handle CPA audit reviews.'}
           </p>
         </div>
 
@@ -117,7 +134,8 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Live Transmission KPI Cards */}
+      {/* 2. Live Transmission KPI Cards (legacy queue only) */}
+      {view === 'ALL' && (
       <FilingManagerMetrics
         readyCount={counts.ready}
         inProgressCount={counts.inProg}
@@ -125,25 +143,27 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
         failedCount={counts.failed}
         totalCount={counts.all}
       />
+      )}
 
       {/* 3. Navigation Tabs */}
-      <AppTabs
-        tabs={tabs}
-        activeTab={stageFilter}
-        onChange={(id) => setStageFilter(id as any)}
-      />
+      {view === 'ALL' && (
+        <AppTabs tabs={tabs} activeTab={stageFilter} onChange={(id) => setStageFilter(id as any)} />
+      )}
+      {view === 'RETURNED' && (
+        <AppTabs tabs={returnedTabs} activeTab={returnedTab} onChange={(id) => setReturnedTab(id as ReturnedTab)} size="sm" />
+      )}
 
       {/* 4. Unified Table */}
       <UnifiedTable<FilingLeadItem>
         title="IRS MODERNIZED E-FILE PIPELINE"
         subtitle="Review compliance status, inspect IRS XML schema packages, and transmit Form 1040 returns to the IRS MeF Gateway."
-        data={filteredLeads}
+        data={view === 'ALL' ? filteredLeads : pageLeads}
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer, state, stage, payment..."
         onExportExcel={() => {
           exportTableToExcel(
-            filteredLeads,
+            view === 'ALL' ? filteredLeads : pageLeads,
             [
               { header: 'Taxpayer Name', key: 'taxpayerName' },
               { header: 'Email', key: 'taxpayerEmail' },
@@ -157,7 +177,7 @@ export const FilingSpecialistQueueScreen: React.FC = () => {
             'filing_specialist_queue'
           );
         }}
-        onRowClick={(item) => handleOpenWorkspace(item.id)}
+        onRowClick={(item) => handleOpenClient(item, fromKey)}
         emptyText={
           stageFilter === 'FILING_QUEUE'
             ? 'All your assigned returns have been transmitted, or no returns are awaiting transmission.'

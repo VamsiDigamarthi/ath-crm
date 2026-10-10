@@ -10,6 +10,10 @@ import {
   LayoutGrid,
   Users,
   Bell,
+  Clock,
+  PauseCircle,
+  RotateCcw,
+  BadgeCheck,
 } from 'lucide-react';
 import { filingService } from '../services/filing-service';
 import { filterNavItemsByPermissions } from '@/shared/constants/sidebar-catalog';
@@ -50,7 +54,9 @@ export const FilingLayout: React.FC = () => {
             if (!l.assignedFilingAgent) return false;
             return l.assignedFilingAgent.id === myId || l.assignedFilingAgent.email?.toLowerCase().trim() === myEmail;
           });
-          setQueueBadgeCount(myLeads.length);
+          // Badge sits on "Ready for Filing": count only my returns that can be transmitted now
+          const readyNow = myLeads.filter((l) => l.currentStage === 'FILING_QUEUE' && !l.filingHold?.onHold);
+          setQueueBadgeCount(readyNow.length);
         }
       } catch {
         // ignore
@@ -76,15 +82,39 @@ export const FilingLayout: React.FC = () => {
       ];
 
   const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');
-  const navItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
+  const permittedItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
+
+  // The Transmission Queue permission unlocks all five filing pages
+  const navItems = permittedItems.flatMap((item) =>
+    item.id === 'agent_queue'
+      ? [
+          { ...item, label: 'Ready for Filing' },
+          { id: 'filing_pending', label: 'Filing Pending', icon: Clock, section: item.section, path: '/filing/agent/pending' },
+          { id: 'filing_on_hold', label: 'Filing on Hold', icon: PauseCircle, section: item.section, path: '/filing/agent/on-hold' },
+          { id: 'filing_returned', label: 'Returned Status', icon: RotateCcw, section: item.section, path: '/filing/agent/returned' },
+          { id: 'filing_filed', label: 'Filed Returns', icon: BadgeCheck, section: item.section, path: '/filing/agent/filed' },
+        ]
+      : [item]
+  );
 
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/filing/notifications')) return 'notifications';
     if (currentPath.includes('/filing/manager/staff')) return 'team';
-    if (currentPath.includes('/filing/manager/queue')) return 'queue';
+    if (currentPath.includes('/filing/manager/queue') || currentPath.includes('/filing/manager/client')) return 'queue';
     if (currentPath.includes('/filing/manager')) return 'dashboard';
-    if (currentPath.includes('/filing/agent/queue') || currentPath.includes('/filing/workspace')) return 'agent_queue';
+    if (currentPath.includes('/filing/agent/pending')) return 'filing_pending';
+    if (currentPath.includes('/filing/agent/on-hold')) return 'filing_on_hold';
+    if (currentPath.includes('/filing/agent/returned')) return 'filing_returned';
+    if (currentPath.includes('/filing/agent/filed')) return 'filing_filed';
+    // Workspace keeps the page it was opened from (?from=)
+    if (currentPath.includes('/filing/workspace') || currentPath.includes('/filing/agent/client')) {
+      if (isManager) return 'queue';
+      const from = new URLSearchParams(location.search).get('from');
+      const byFrom: Record<string, string> = { pending: 'filing_pending', 'on-hold': 'filing_on_hold', returned: 'filing_returned', filed: 'filing_filed' };
+      return (from && byFrom[from]) || 'agent_queue';
+    }
+    if (currentPath.includes('/filing/agent/queue')) return 'agent_queue';
     if (currentPath.includes('/filing/agent')) return 'agent_hub';
     return isManager ? 'dashboard' : 'agent_queue';
   };

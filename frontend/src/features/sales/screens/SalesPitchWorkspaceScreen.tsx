@@ -5,6 +5,7 @@ import { useAuthStore } from '@/features/auth/store/auth-store';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
 // import { PitchNegotiationBar } from '../components/pitch/PitchNegotiationBar';
 import { ReturnItemsPanel } from '@/features/prep-review/components/workspace/ReturnItemsPanel';
+import { RaiseInvoiceControl } from '@/features/invoices/components/RaiseInvoiceControl';
 import { PitchFeeCalculator } from '../components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
@@ -457,6 +458,16 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
                   form8879SendCount={lead.form8879SendCount}
                   form8879LastSentAt={lead.form8879LastSentAt}
                   applicationId={lead.id || lead.applicationId}
+                  invoiceSlot={
+                    <RaiseInvoiceControl
+                      applicationId={lead.id || lead.applicationId}
+                      customerName={lead.taxpayerName}
+                      customerEmail={lead.taxpayerEmail}
+                      taxYear={lead.taxYear}
+                      disabled={isLocked}
+                      disabledReason={lockReason || 'Invoices can be raised once the return is with sales'}
+                    />
+                  }
                   customerId={lead.taxpayerId || (lead as any).customerId}
                   isLocked={isLocked}
                   lockReason={lockReason}

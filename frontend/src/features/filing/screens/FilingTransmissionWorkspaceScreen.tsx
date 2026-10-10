@@ -3,15 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   RefreshCw,
-  FileText,
-  Code2,
-  Layers,
   RotateCcw,
-  Mail,
-  Calendar
+  Mail
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { AppTabs } from '@/shared/components/AppTabs';
 import { ClientPaymentStatusChip } from '@/shared/components/ClientPaymentStatusChip';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { FilingComplianceGate } from '../components/workspace/FilingComplianceGate';
@@ -20,15 +15,15 @@ import { MeFXMLViewer } from '../components/workspace/MeFXMLViewer';
 import { FilingTransmissionStatusCard } from '../components/workspace/FilingTransmissionStatusCard';
 import { TaxApplicationNotesAndAuditTab } from '@/shared/components/workflow/TaxApplicationNotesAndAuditTab';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
+import { FilingHoldControl } from '../components/FilingHoldControl';
+import { IrsRejectControl } from '../components/IrsRejectControl';
 import { SendEmailModal } from '@/shared/components/SendEmailModal';
 import { StaffTaxApplicationStageStepper } from '@/shared/components/workflow/StaffTaxApplicationStageStepper';
 import { useFilingWorkspace } from '../hooks/useFilingWorkspace';
-
-export type WorkspaceViewMode = 'AUDIT_FILE' | 'XML_SCHEMA' | 'FULL_INSPECTION';
+import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
 
 export const FilingTransmissionWorkspaceScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<WorkspaceViewMode>('FULL_INSPECTION');
   const [isSendBackOpen, setIsSendBackOpen] = useState<boolean>(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
 
@@ -128,28 +123,17 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
-          {/* Inspection View Mode Selector */}
-          <AppTabs
-            tabs={[
-              {
-                id: 'FULL_INSPECTION',
-                label: 'Full Inspection',
-                icon: Layers,
-              },
-              {
-                id: 'AUDIT_FILE',
-                label: 'Taxpayer 1040 File',
-                icon: FileText,
-              },
-              {
-                id: 'XML_SCHEMA',
-                label: 'IRS XML Schema',
-                icon: Code2,
-              },
-            ]}
-            activeTab={viewMode}
-            onChange={(mode) => setViewMode(mode as WorkspaceViewMode)}
-            className="border-b-0"
+          {/* After transmission: record an IRS rejection (moves it to Rejected returns) */}
+          {(lead.currentStage === 'FILING_IN_PROGRESS' || lead.currentStage === 'FILING_SUCCESS') && (
+            <IrsRejectControl applicationId={lead.id} onChanged={fetchWorkspaceData} />
+          )}
+
+          {/* Filing on hold (flag only) */}
+          <FilingHoldControl
+            applicationId={lead.id}
+            isOnHold={Boolean(lead.filingHold?.onHold)}
+            disabled={isAccepted}
+            onChanged={fetchWorkspaceData}
           />
 
           {/* Email Client Button */}
@@ -209,45 +193,6 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
         assignedFileOp={lead.assignedFileOp || lead.assignedFilingAgent}
       />
 
-      {/* 1.05 Multi-Year Return Switcher Tabs */}
-      {lead.availableApplications && lead.availableApplications.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-slate-100/90 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-slate-600">
-              <Calendar className="w-4 h-4 text-emerald-600" />
-              <span>Tax Year Filings:</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {lead.availableApplications.map((appItem: any) => {
-                const isSelected = appItem.id === (lead.id || lead.applicationId);
-                return (
-                  <button
-                    key={appItem.id}
-                    type="button"
-                    onClick={() => {
-                      if (appItem.id !== (lead.id || lead.applicationId)) {
-                        navigate(`/filing/workspace/${appItem.id}`);
-                      }
-                    }}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-2xs ${
-                      isSelected
-                        ? 'bg-slate-900 text-white ring-2 ring-slate-900/10 shadow-sm'
-                        : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <span>TY {appItem.taxYear}</span>
-                    <span className="text-[10px] font-medium opacity-80">
-                      ({appItem.filingType || 'INDIVIDUAL'})
-                    </span>
-                    <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-slate-300'}`} />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 1.1 Revert from Filing Alert Banner */}
       {isReverted && lastRevert && (
         <div className="bg-amber-50/70 border border-amber-300/80 rounded-xl p-3.5 sm:p-4 text-amber-950 shadow-2xs animate-in fade-in duration-200">
@@ -304,42 +249,97 @@ export const FilingTransmissionWorkspaceScreen: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Compliance Gate (Payment + Form 8879 PIN + Audit Certification) */}
-      <FilingComplianceGate lead={lead} />
-
-      {/* 3. Official Transmission Control & Live Status Card */}
-      <FilingTransmissionStatusCard
-        lead={lead}
-        onTransmit={handleTransmit}
-        isTransmitting={isTransmitting}
-      />
-
-      {/* 4. Taxpayer Profile, 1040 Figures, Bank Direct Deposit & Verified Documents Card */}
-      {(viewMode === 'FULL_INSPECTION' || viewMode === 'AUDIT_FILE') && (
-        <FilingTaxpayerInspectionCard lead={lead} />
+      {/* IRS rejection: what to fix before transmitting again */}
+      {lead.currentStage === 'FILING_FAILED' && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="font-semibold">Rejected by the IRS — fix and resubmit</p>
+            {lead.taxDraftSummary?.irsRejection?.reason && (
+              <p className="mt-1 text-rose-800">“{lead.taxDraftSummary.irsRejection.reason}”</p>
+            )}
+            {lead.taxDraftSummary?.irsRejection?.at && (
+              <p className="mt-1 text-xs text-rose-700/80">
+                Marked by {lead.taxDraftSummary.irsRejection.byName || 'Filing'} ·{' '}
+                {new Date(lead.taxDraftSummary.irsRejection.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              </p>
+            )}
+          </div>
+          {/* Reprocess: transmit the corrected return again */}
+          <Button
+            size="sm"
+            onClick={handleTransmit}
+            disabled={isTransmitting || Boolean(lead.filingHold?.onHold)}
+            title={lead.filingHold?.onHold ? 'Release the hold before resubmitting' : 'Transmit this return to the IRS again'}
+            className="bg-rose-600 hover:bg-rose-700 text-white font-semibold flex items-center gap-1.5 shrink-0 cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isTransmitting ? 'animate-spin' : ''}`} />
+            {isTransmitting ? 'Resubmitting...' : 'Resubmit to IRS'}
+          </Button>
+        </div>
       )}
 
-      {/* 5. Generated IRS MeF XML Schema Inspector */}
-      {(viewMode === 'FULL_INSPECTION' || viewMode === 'XML_SCHEMA') && xmlData && (
-        <MeFXMLViewer
-          xmlContent={xmlData.xml}
-          submissionId={xmlData.submissionId}
-          efin={xmlData.efin}
-          etin={xmlData.etin}
-          taxYear={lead.taxYear}
-        />
-      )}
-
-      {/* 6. Notes & Audit for this return only (same shared tab as Documenter, Prep, Review and Sales) */}
-      <TaxApplicationNotesAndAuditTab
-        applicationId={lead.id}
-        taxpayerName={lead.taxpayerName}
-        taxpayerEmail={lead.taxpayerEmail || (lead as any).taxpayerProfile?.email}
-        currentStage={lead.currentStage}
+      {/* 2. Same layout as the other roles: tax tabs (read-only for filing) first,
+             then the filing tabs, and Notes & Audit last */}
+      <TaxPrepOrganizerReview
+        leadId={lead.id}
+        customerName={lead.taxpayerName}
+        taxDraftSummary={lead.taxDraftSummary}
         taxYear={lead.taxYear}
-        stageHistories={(lead.stageHistories as any) || []}
-        callLogs={(lead.callLogs as any) || []}
-        auditLogs={(lead.auditLogs as any) || []}
+        filingType={lead.filingType}
+        allowEdit={false}
+        readOnly
+        hideHeader
+        extraTabs={[
+          {
+            id: 'TRANSMISSION',
+            label: 'IRS Transmission',
+            content: (
+              <div className="space-y-6">
+                {/* Compliance gate (payment + Form 8879 PIN) and the transmit control */}
+                <FilingComplianceGate lead={lead} />
+                <FilingTransmissionStatusCard lead={lead} onTransmit={handleTransmit} isTransmitting={isTransmitting} />
+              </div>
+            ),
+          },
+          {
+            id: 'TAXPAYER_FILE',
+            label: 'Taxpayer 1040 File',
+            content: <FilingTaxpayerInspectionCard lead={lead} />,
+          },
+          {
+            id: 'XML_SCHEMA',
+            label: 'IRS XML Schema',
+            content: xmlData ? (
+              <MeFXMLViewer
+                xmlContent={xmlData.xml}
+                submissionId={xmlData.submissionId}
+                efin={xmlData.efin}
+                etin={xmlData.etin}
+                taxYear={lead.taxYear}
+              />
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-xl p-8 text-sm text-slate-400 text-center">
+                IRS XML is not available for this return yet.
+              </div>
+            ),
+          },
+          {
+            id: 'NOTES',
+            label: 'Notes & Audit',
+            content: (
+              <TaxApplicationNotesAndAuditTab
+                applicationId={lead.id}
+                taxpayerName={lead.taxpayerName}
+                taxpayerEmail={lead.taxpayerEmail || (lead as any).taxpayerProfile?.email}
+                currentStage={lead.currentStage}
+                taxYear={lead.taxYear}
+                stageHistories={(lead.stageHistories as any) || []}
+                callLogs={(lead.callLogs as any) || []}
+                auditLogs={(lead.auditLogs as any) || []}
+              />
+            ),
+          },
+        ]}
       />
 
       {/* 7. Send Back / Workflow Revert Modal (Filing Specialist -> Sales, Prep, or Documenter) */}
