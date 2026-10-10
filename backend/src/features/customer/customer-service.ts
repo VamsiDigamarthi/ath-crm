@@ -1563,6 +1563,10 @@ export class CustomerService {
       ...currentDraft,
       clientReviewStatus: 'CLIENT_APPROVED',
       clientApprovedAt: new Date().toISOString(),
+      // The draft the client accepted is the final estimation
+      finalEstimation: currentDraft.drakeTaxFile
+        ? { ...currentDraft.drakeTaxFile, draftVersion: currentDraft.draftVersion || 1, approvedAt: new Date().toISOString() }
+        : currentDraft.finalEstimation || null,
       clientApprovalNotes: notes || '',
       updatedAt: new Date().toISOString(),
     };
@@ -1777,6 +1781,15 @@ export class CustomerService {
       ? currentDraft.deliverableDocuments
       : [];
 
+    // Who uploaded the signed copy: the client, or staff on the client's behalf
+    const uploader = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, email: true, role: true },
+    });
+    const uploaderName = uploader
+      ? `${uploader.firstName || ''} ${uploader.lastName || ''}`.trim() || uploader.email
+      : 'Client';
+
     const updatedDeliverables = deliverables.map((d) => {
       if (d.id === docId) {
         return {
@@ -1788,6 +1801,9 @@ export class CustomerService {
             filePath: storageResult.filePath,
             fileSize: storageResult.fileSize || file.size,
             uploadedAt: new Date().toISOString(),
+            uploadedByName: uploaderName,
+            uploadedByRole: uploader?.role || 'TAXPAYER_USER',
+            uploadedByClient: !uploader || uploader.role === Role.TAXPAYER_USER,
           },
         };
       }

@@ -12,6 +12,7 @@ import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndE
 import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
+import { SALES_SEND_BACK_TARGETS } from '../constants/sales-send-back';
 import { SalesReturnToAdminModal } from '../components/common/SalesReturnToAdminModal';
 import { TaxApplicationNotesAndAuditTab } from '@/shared/components/workflow/TaxApplicationNotesAndAuditTab';
 import { useMyEditAccess } from '@/features/edit-access/hooks/useMyEditAccess';
@@ -561,20 +562,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
           (lead as any).assignedDocAgent?.name ||
           (lead as any).assignedDocAgentName
         }
-        availableTargetDepartments={[
-          {
-            key: 'PREPARATION',
-            label: 'Tax Preparation Department (CPA / Preparer)',
-            badge: 'CORRECTION_NEEDED',
-            description: 'Send back to assigned Tax Preparer to recalculate Form 1040 deductions, tax credits, or filing status as requested by client.',
-          },
-          {
-            key: 'DOCUMENTER',
-            label: 'Documenter Department (Intake & Verification)',
-            badge: 'DOC_OUTREACH',
-            description: 'Send back to Documenter agent to collect missing paperwork, additional W-2/1099s, or clarify client intake.',
-          },
-        ]}
+        availableTargetDepartments={SALES_SEND_BACK_TARGETS}
         defaultTargetDepartment="PREPARATION"
         onRevertSuccess={() => {
           navigate(backQueuePath);

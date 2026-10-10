@@ -5,6 +5,7 @@ import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useCustomerOrganizer } from '../hooks/useCustomerOrganizer';
 import { OrganizerModuleSidebar } from './organizer/OrganizerModuleSidebar';
 import { OrganizerModuleContent } from './organizer/OrganizerModuleContent';
+import { customerApi } from '../services/customer-api';
 
 export const CustomerOrganizerWizard: React.FC = () => {
   const { selectedTaxYear: contextTaxYear, customerProfile } = useOutletContext<{ 
@@ -26,6 +27,25 @@ export const CustomerOrganizerWizard: React.FC = () => {
   });
   const filingType = (urlType || matchedApp?.filingType || 'INDIVIDUAL').toUpperCase();
   const isBusiness = filingType === 'BUSINESS';
+  // E-Sign & Tax Returns tab: only once sales has sent the draft to the client.
+  // Read live from the server (the login profile is loaded once and goes stale).
+  const [reviewStatus, setReviewStatus] = React.useState<string>(
+    (matchedApp?.taxDraftSummary as any)?.clientReviewStatus || 'NOT_SENT'
+  );
+  React.useEffect(() => {
+    if (!activeTaxYear) return;
+    let cancelled = false;
+    customerApi
+      .getDraftReview(activeTaxYear, matchedApp?.id)
+      .then((res) => {
+        if (!cancelled) setReviewStatus(res?.data?.clientReviewStatus || 'NOT_SENT');
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTaxYear, matchedApp?.id]);
+  const isDraftShared = reviewStatus !== 'NOT_SENT';
 
   // All Business Logic, Field Mutation and PostgreSQL Sync handled by Hook
   const {
@@ -45,7 +65,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
     handleNext,
     handlePrev,
     moduleIds,
-  } = useCustomerOrganizer(activeTaxYear, filingType, matchedApp?.id);
+  } = useCustomerOrganizer(activeTaxYear, filingType, matchedApp?.id, isDraftShared);
 
   // Deep-link to specific tab (e.g. ?tab=m_vault or ?module=b2_businessIncome)
   const tabParam = searchParams.get('tab') || searchParams.get('module');
@@ -132,6 +152,7 @@ export const CustomerOrganizerWizard: React.FC = () => {
         completedCount={completedCount}
         organizerData={organizerData}
         filingType={filingType}
+        hiddenModuleIds={isDraftShared ? [] : ['m_review_draft']}
       />
 
       {/* 3. Full-Width Interactive Workspace Canvas */}

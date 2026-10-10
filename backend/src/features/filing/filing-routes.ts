@@ -5,6 +5,7 @@ import { authorize } from '../../middlewares/authorize.js';
 import { validateRequest } from '../../middlewares/validate-request.js';
 import { Role } from '../../types/index.js';
 import { filingHoldSchema, irsRejectSchema } from './filing-validator.js';
+import { uploadTaxDocument } from '../../middlewares/file-upload-middleware.js';
 
 const router = Router();
 
@@ -32,6 +33,15 @@ router.post(
   authorize(Role.ADMIN, Role.FILE_OP_MANAGER, Role.FILE_OP_AGENT),
   validateRequest(filingHoldSchema),
   FilingController.setHold
+);
+
+// Filed return copy (after IRS acceptance), shown to the client
+router.post(
+  '/leads/:id/filed-copy',
+  requireAuth,
+  authorize(Role.ADMIN, Role.FILE_OP_MANAGER, Role.FILE_OP_AGENT),
+  uploadTaxDocument.single('file'),
+  FilingController.uploadFiledCopy
 );
 
 // Rebalancing & Assignment

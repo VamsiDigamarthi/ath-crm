@@ -100,7 +100,7 @@ export const TaxPreparerDashboardScreen: React.FC = () => {
       {/* 1. Header & Launch Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-xl font-bold text-slate-900 tracking-tight">
             My 1040 Tax Preparation Operations Hub
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
@@ -121,17 +121,17 @@ export const TaxPreparerDashboardScreen: React.FC = () => {
       </div>
 
       {/* 2. Top 4 KPI Scorecard Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Active 1040 Drafts */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Active 1040 Caseload</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+            <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
               <Calculator className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <div className="text-xl font-bold text-slate-900 tracking-tight">
               {stats.activeDrafts}
             </div>
             <div className="text-xs text-blue-600 font-medium mt-1">
@@ -141,15 +141,15 @@ export const TaxPreparerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Card 2: Submitted for QA Review */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">In QA Audit Review</span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
+            <div className="w-7 h-7 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <div className="text-xl font-bold text-slate-900 tracking-tight">
               {stats.submittedToQA}
             </div>
             <div className="text-xs text-purple-600 font-medium mt-1">
@@ -159,15 +159,15 @@ export const TaxPreparerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Card 3: Discrepancies & Fixes */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-rose-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs hover:border-rose-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Corrections Requested</span>
-            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
+            <div className="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
               <RotateCcw className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <div className="text-xl font-bold text-slate-900 tracking-tight">
               {stats.correctionsCount}
             </div>
             <div className="text-xs text-emerald-600 font-medium mt-1">
@@ -177,15 +177,15 @@ export const TaxPreparerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Card 4: First-Time Pass Rate */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">First-Time Pass Rate</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
+            <div className="w-7 h-7 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <div className="text-xl font-bold text-slate-900 tracking-tight">
               {stats.firstTimeAccuracy}%
             </div>
             <div className="text-xs text-[#16A34A] font-medium mt-1">
@@ -324,7 +324,7 @@ export const TaxPreparerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Priority Item Card */}
-        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-blue-100 border border-blue-200 text-blue-800 font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs">
               {priorityReturn.taxpayerName[0]}

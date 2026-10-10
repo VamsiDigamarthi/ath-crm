@@ -24,6 +24,8 @@ export interface PrepReviewLead {
   stateOfResidence: string;
   complexity?: ReturnComplexity;
   currentStage: string;
+  /** When the return was last assigned to the preparer (null for old data) */
+  prepAssignedAt?: string | null;
   prepStage?: PrepReviewStage;
   priority?: string;
   clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';

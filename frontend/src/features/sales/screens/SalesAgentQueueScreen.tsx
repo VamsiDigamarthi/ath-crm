@@ -1,7 +1,7 @@
 import React from 'react';
 import { PhoneCall, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { SalesAgentStatsCards } from '../components/agent/SalesAgentStatsCards';
+// import { SalesAgentStatsCards } from '../components/agent/SalesAgentStatsCards';
 import { SalesAgentQueueTable } from '../components/agent/SalesAgentQueueTable';
 import { useSalesAgentQueue, type SalesAgentView } from '../hooks/useSalesAgentQueue';
 
@@ -19,7 +19,7 @@ export const SalesAgentQueueScreen: React.FC<{ view?: SalesAgentView }> = ({ vie
     isRefreshing,
     allLeads,
     clientRows,
-    stats,
+    // stats, (top cards hidden)
     handleRefresh,
     handleUpdatePriority,
     handleOpenNextPriority,
@@ -67,8 +67,10 @@ export const SalesAgentQueueScreen: React.FC<{ view?: SalesAgentView }> = ({ vie
         </div>
       </div>
 
-      {/* 2. Top KPI Cards (My Prospects only) */}
+      {/* Stat cards hidden on table pages (client: keep tables compact) */}
+      {/*
       {view === 'MY' && <SalesAgentStatsCards stats={stats} />}
+      */}
 
       {/* 3. My Active Queue Table (Grouped by Client) */}
       <SalesAgentQueueTable

@@ -6,19 +6,21 @@ import type { PrepReviewLead } from '../types/prep-review.types';
 import toast from 'react-hot-toast';
 import { VIEW_TO_ORIGIN } from '../utils/preparer-origin';
 
-export type PreparerQueueTab = 'ALL' | 'DRAFTING' | 'QA_SUBMITTED' | 'QA_APPROVED' | 'REVISIONS' | 'REVERTED';
+export type PreparerQueueTab = 'ALL' | 'ASSIGNED' | 'DRAFTING' | 'QA_SUBMITTED' | 'QA_APPROVED' | 'REVISIONS' | 'REVERTED';
 
 /**
  * Preparer sidebar pages. Each return lands in exactly one page:
- * - PENDING: assigned, preparer has not saved any work yet
- * - PREPARATION: work in hand (in progress, revisions requested by QA, reverted to documenter) shown as tabs
+ * - PENDING: assigned more than 1 day ago and preparer has not saved any work yet
+ * - PREPARATION: work in hand (assigned < 1 day, in progress, revisions requested by QA, reverted to documenter) shown as tabs
  * - UNDER_REVIEW: submitted to QA, waiting for the reviewer
  * - COMPLETED: QA approved and moved on (sales / filing)
  * - ALL: legacy workbench view with every return and all tabs
  */
 export type PreparerQueueView = 'ALL' | 'PREPARATION' | 'PENDING' | 'UNDER_REVIEW' | 'COMPLETED';
 
-type PreparerBucket = 'PENDING' | 'IN_PROGRESS' | 'REVISIONS' | 'REVERTED' | 'UNDER_REVIEW' | 'COMPLETED';
+type PreparerBucket = 'ASSIGNED' | 'PENDING' | 'IN_PROGRESS' | 'REVISIONS' | 'REVERTED' | 'UNDER_REVIEW' | 'COMPLETED';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
   const navigate = useNavigate();
@@ -158,12 +160,15 @@ export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
     if (isReturnRevision(lead)) return 'REVISIONS';
     if (isReturnApproved(lead)) return 'COMPLETED';
     if (isReturnSubmittedToQA(lead)) return 'UNDER_REVIEW';
-    return lead.taxDraftSummary?.status === 'DRAFT_SAVED' ? 'IN_PROGRESS' : 'PENDING';
+    if (lead.taxDraftSummary?.status === 'DRAFT_SAVED') return 'IN_PROGRESS';
+    // Not started: stays in "Assigned leads" for 1 day, then moves to Pending Returns
+    const assignedAt = lead.prepAssignedAt ? new Date(lead.prepAssignedAt).getTime() : 0;
+    return assignedAt && Date.now() - assignedAt < DAY_MS ? 'ASSIGNED' : 'PENDING';
   };
 
   const VIEW_BUCKETS: Record<PreparerQueueView, PreparerBucket[] | null> = {
     ALL: null,
-    PREPARATION: ['IN_PROGRESS', 'REVISIONS', 'REVERTED'],
+    PREPARATION: ['ASSIGNED', 'IN_PROGRESS', 'REVISIONS', 'REVERTED'],
     PENDING: ['PENDING'],
     UNDER_REVIEW: ['UNDER_REVIEW'],
     COMPLETED: ['COMPLETED'],
@@ -178,10 +183,11 @@ export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
 
   // Tab counts for the Return Preparation page
   const preparationCounts = useMemo(() => {
-    const c = { all: 0, inProgress: 0, revisions: 0, reverted: 0 };
+    const c = { all: 0, assigned: 0, inProgress: 0, revisions: 0, reverted: 0 };
     viewLeads.forEach((l) => {
       const b = bucketOf(l);
       c.all++;
+      if (b === 'ASSIGNED') c.assigned++;
       if (b === 'IN_PROGRESS') c.inProgress++;
       if (b === 'REVISIONS') c.revisions++;
       if (b === 'REVERTED') c.reverted++;
@@ -200,7 +206,9 @@ export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
       const drafting = !reverted && !approved && !revision && !submitted;
 
       if (activeTab === 'REVERTED' && !reverted) return false;
-      if (activeTab === 'DRAFTING' && !drafting) return false;
+      if (activeTab === 'ASSIGNED' && bucketOf(item) !== 'ASSIGNED') return false;
+      // Return Preparation page: "In preparation" = draft saved (new ones sit under Assigned leads)
+      if (activeTab === 'DRAFTING' && (!drafting || (view === 'PREPARATION' && bucketOf(item) !== 'IN_PROGRESS'))) return false;
       if (activeTab === 'QA_SUBMITTED' && !submitted) return false;
       if (activeTab === 'QA_APPROVED' && !approved) return false;
       if (activeTab === 'REVISIONS' && !revision) return false;
@@ -218,7 +226,8 @@ export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
       }
       return true;
     });
-  }, [viewLeads, activeTab, complexityFilter, priorityFilter, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewLeads, activeTab, complexityFilter, priorityFilter, searchQuery, view]);
 
   const clientRows = useMemo(() => {
     const seen = new Set<string>();

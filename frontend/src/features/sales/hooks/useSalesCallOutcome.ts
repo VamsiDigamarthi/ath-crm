@@ -2,25 +2,31 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { salesService } from '../services/sales-service';
 import type { SalesCallDisposition } from '../types/sales.types';
+import { SALES_OUTCOMES_WITH_DATE } from '../constants/sales-call-outcomes';
 
 /**
  * State for the "Log call result" popup. Saving only writes a call log entry;
  * the return's stage is never changed by a sales call result.
+ * Pass applicationId to open() when one hook serves many rows (queue table).
  */
 export const useSalesCallOutcome = (applicationId: string | undefined, onSaved?: () => void) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [targetId, setTargetId] = useState<string | undefined>(applicationId);
   const [outcome, setOutcome] = useState<SalesCallDisposition | ''>('');
   const [callbackDate, setCallbackDate] = useState<Date | null>(null);
   const [callbackTime, setCallbackTime] = useState('10:00');
+  const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
   const [callDuration, setCallDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const open = (opts?: { duration?: number; note?: string }) => {
+  const open = (opts?: { duration?: number; note?: string; applicationId?: string }) => {
+    setTargetId(opts?.applicationId || applicationId);
     setOutcome('');
     setCallbackDate(null);
     setCallbackTime('10:00');
+    setReason('');
     setNote(opts?.note || '');
     setCallDuration(opts?.duration || 0);
     setError(null);
@@ -30,32 +36,46 @@ export const useSalesCallOutcome = (applicationId: string | undefined, onSaved?:
   const close = () => setIsOpen(false);
 
   const save = async () => {
-    if (!applicationId) return;
+    if (!targetId) return;
     if (!outcome) {
       setError('Choose a call result');
       return;
     }
 
     let callbackScheduledAt: string | null = null;
-    if (outcome === 'SALES_CALLBACK') {
+    if (SALES_OUTCOMES_WITH_DATE.includes(outcome)) {
+      const what = outcome === 'SALES_CALLBACK' ? 'callback' : 'follow-up';
       if (!callbackDate) {
-        setError('Pick the callback date');
+        setError(`Pick the ${what} date`);
         return;
       }
       const [h, m] = (callbackTime || '10:00').split(':').map(Number);
       const at = new Date(callbackDate);
       at.setHours(h || 0, m || 0, 0, 0);
       if (at.getTime() <= Date.now()) {
-        setError('Callback time must be in the future');
+        setError(`The ${what} time must be in the future`);
         return;
       }
       callbackScheduledAt = at.toISOString();
     }
 
+    let finalNote = note.trim();
+    if (outcome === 'SALES_NOT_INTERESTED') {
+      if (!reason) {
+        setError('Pick why the client is not interested');
+        return;
+      }
+      if (reason === 'Other' && !finalNote) {
+        setError('Write a comment for "Other"');
+        return;
+      }
+      finalNote = `Not interested – ${reason}${finalNote ? `: ${finalNote}` : ''}`;
+    }
+
     setIsSaving(true);
     try {
-      await salesService.saveCloserNotes(applicationId, {
-        notes: note.trim(),
+      await salesService.saveCloserNotes(targetId, {
+        notes: finalNote,
         disposition: outcome,
         callDuration,
         callbackScheduledAt,
@@ -87,6 +107,11 @@ export const useSalesCallOutcome = (applicationId: string | undefined, onSaved?:
     callbackTime,
     setCallbackTime: (t: string) => {
       setCallbackTime(t);
+      setError(null);
+    },
+    reason,
+    setReason: (r: string) => {
+      setReason(r);
       setError(null);
     },
     note,

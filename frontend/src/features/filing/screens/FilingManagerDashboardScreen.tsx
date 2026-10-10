@@ -39,7 +39,7 @@ export const FilingManagerDashboardScreen: React.FC = () => {
               <span>Manager Supervision</span>
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-xl font-bold text-slate-900 tracking-tight">
             IRS Transmission &amp; MeF Command Center
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
@@ -78,17 +78,17 @@ export const FilingManagerDashboardScreen: React.FC = () => {
       </div>
 
       {/* 2. Top KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Ready for Transmission */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Ready for MeF E-File</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Send className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 tracking-tight">
+            <div className="text-xl font-black text-slate-900 tracking-tight">
               {stats?.readyForTransmission || 0}
             </div>
             <div className="text-[11px] text-blue-600 font-semibold mt-1">
@@ -101,12 +101,12 @@ export const FilingManagerDashboardScreen: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">IRS Accepted ({stats?.periodSuffix || 'This Month'})</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 tracking-tight">
+            <div className="text-xl font-black text-slate-900 tracking-tight">
               {stats?.acceptedCount || 0}
             </div>
             <div className="text-[11px] text-[#16A34A] font-semibold mt-1 flex items-center gap-1">
@@ -120,7 +120,7 @@ export const FilingManagerDashboardScreen: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">IRS E-File Gateway</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
               <Radio className="w-4 h-4" />
             </div>
           </div>
@@ -139,12 +139,12 @@ export const FilingManagerDashboardScreen: React.FC = () => {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">IRS Acceptance Rate</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 tracking-tight">
+            <div className="text-xl font-black text-slate-900 tracking-tight">
               {stats?.acceptanceRate || '100%'}
             </div>
             <div className="text-[11px] text-[#16A34A] font-semibold mt-1">
@@ -168,7 +168,7 @@ export const FilingManagerDashboardScreen: React.FC = () => {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {stageFunnel.map((stg) => (
             <div
               key={stg.name}
@@ -183,7 +183,7 @@ export const FilingManagerDashboardScreen: React.FC = () => {
                   {stg.pct}%
                 </span>
               </div>
-              <div className="text-2xl font-black text-slate-900">{stg.count}</div>
+              <div className="text-xl font-black text-slate-900">{stg.count}</div>
               <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"

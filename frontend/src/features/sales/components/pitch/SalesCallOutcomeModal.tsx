@@ -3,8 +3,13 @@ import { AppModal } from '@/shared/components/AppModal';
 import { AppTextarea } from '@/shared/components/AppTextarea';
 import { AppDatePicker } from '@/shared/components/AppDatePicker';
 import { Button } from '@/shared/components/Button';
+import { AppSelect } from '@/shared/components/AppSelect';
 import type { SalesCallDisposition } from '../../types/sales.types';
-import { SALES_CALL_OUTCOME_OPTIONS } from '../../constants/sales-call-outcomes';
+import {
+  SALES_CALL_OUTCOME_OPTIONS,
+  SALES_OUTCOMES_WITH_DATE,
+  SALES_NOT_INTERESTED_REASONS,
+} from '../../constants/sales-call-outcomes';
 
 interface SalesCallOutcomeModalProps {
   isOpen: boolean;
@@ -16,6 +21,8 @@ interface SalesCallOutcomeModalProps {
   onCallbackDateChange: (date: Date | null) => void;
   callbackTime: string;
   onCallbackTimeChange: (time: string) => void;
+  reason: string;
+  onReasonChange: (reason: string) => void;
   note: string;
   onNoteChange: (note: string) => void;
   error: string | null;
@@ -39,6 +46,8 @@ export const SalesCallOutcomeModal: React.FC<SalesCallOutcomeModalProps> = ({
   onCallbackDateChange,
   callbackTime,
   onCallbackTimeChange,
+  reason,
+  onReasonChange,
   note,
   onNoteChange,
   error,
@@ -92,10 +101,10 @@ export const SalesCallOutcomeModal: React.FC<SalesCallOutcomeModalProps> = ({
         ))}
       </div>
 
-      {outcome === 'SALES_CALLBACK' && (
+      {outcome && SALES_OUTCOMES_WITH_DATE.includes(outcome) && (
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-3">
           <AppDatePicker
-            label="Callback date"
+            label={outcome === 'SALES_CALLBACK' ? 'Callback date' : 'Follow-up date'}
             value={callbackDate}
             onChange={onCallbackDateChange}
             minDate={startOfToday()}
@@ -114,8 +123,18 @@ export const SalesCallOutcomeModal: React.FC<SalesCallOutcomeModalProps> = ({
         </div>
       )}
 
+      {outcome === 'SALES_NOT_INTERESTED' && (
+        <AppSelect
+          label="Reason"
+          value={reason}
+          onChange={onReasonChange}
+          placeholder="Why is the client not interested?"
+          options={SALES_NOT_INTERESTED_REASONS.map((r) => ({ label: r, value: r }))}
+        />
+      )}
+
       <AppTextarea
-        label="Note (optional)"
+        label={outcome === 'SALES_NOT_INTERESTED' && reason === 'Other' ? 'Comment' : 'Note (optional)'}
         value={note}
         onChange={onNoteChange}
         rows={3}

@@ -1761,10 +1761,13 @@ export class SalesService {
   ) {
     const isSalesOutcome = (SALES_CALL_OUTCOMES as readonly string[]).includes(payload.disposition || '');
     let callbackScheduledAt: Date | null = null;
-    if (payload.disposition === 'SALES_CALLBACK') {
+    // Callback and follow-up both need the date the client should be called again
+    if (payload.disposition === 'SALES_CALLBACK' || payload.disposition === 'SALES_FOLLOW_UP') {
       callbackScheduledAt = payload.callbackScheduledAt ? new Date(payload.callbackScheduledAt) : null;
       if (!callbackScheduledAt || isNaN(callbackScheduledAt.getTime())) {
-        throw new BadRequestError('Pick a date and time for the callback.');
+        throw new BadRequestError(
+          `Pick a date and time for the ${payload.disposition === 'SALES_CALLBACK' ? 'callback' : 'follow-up'}.`
+        );
       }
     }
 

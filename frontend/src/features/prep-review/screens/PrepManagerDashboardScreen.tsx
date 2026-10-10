@@ -171,7 +171,7 @@ export const PrepManagerDashboardScreen: React.FC = () => {
       {/* 1. Header & Time Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-xl font-bold text-slate-900 tracking-tight">
             Tax Prep &amp; Review Operations Command Center
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
@@ -228,18 +228,18 @@ export const PrepManagerDashboardScreen: React.FC = () => {
       </div>
 
       {/* 2. Top 4 High-Impact KPI Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Metric 1: Pipeline Volume */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Pipeline Caseload</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{totalInPipeline}</span>
+              <span className="text-xl font-bold text-slate-900">{totalInPipeline}</span>
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                 {allocatedPercent}% Allocated
               </span>
@@ -257,16 +257,16 @@ export const PrepManagerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Metric 2: QA First-Time Pass Rate */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">First-Time QA Pass Rate</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{stats.firstTimePassRate}%</span>
+              <span className="text-xl font-bold text-slate-900">{stats.firstTimePassRate}%</span>
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                 {readyForSales} Signed Off
               </span>
@@ -285,16 +285,16 @@ export const PrepManagerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Metric 3: Avg Turnaround Velocity */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Avg 1040 Turnaround</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{stats.avgPreparationTimeHrs}h</span>
+              <span className="text-xl font-bold text-slate-900">{stats.avgPreparationTimeHrs}h</span>
               <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
                 SLA: &lt; 6.0h
               </span>
@@ -309,16 +309,16 @@ export const PrepManagerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Metric 4: Revisions Pending */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Revisions &amp; Fixes</span>
-            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center">
               <RotateCcw className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{revisionsPending}</span>
+              <span className="text-xl font-bold text-slate-900">{revisionsPending}</span>
               <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
                 Reviewer Notes
               </span>
@@ -421,7 +421,7 @@ export const PrepManagerDashboardScreen: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight my-1">
+                <div className="text-xl font-bold text-slate-900 tracking-tight my-1">
                   {item.count}
                 </div>
                 <div className="text-[11px] text-slate-500 font-medium truncate">{item.sub}</div>

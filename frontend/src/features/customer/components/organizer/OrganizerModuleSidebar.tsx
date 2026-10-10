@@ -71,8 +71,8 @@ export const INDIVIDUAL_MODULES: ModuleDefinition[] = [
     id: 'm_review_draft',
     number: 6,
     section: 'Tax Return & E-Sign',
-    title: 'Review Tax Return Draft & E-Sign',
-    label: 'Review Draft & E-Sign',
+    title: 'E-Sign & Tax Returns',
+    label: 'E-Sign & Tax Returns',
     description: 'Inspect Form 1040 calculations, download return draft copy, and e-sign required deliverables',
     icon: FileCheck,
   },
@@ -128,8 +128,8 @@ export const BUSINESS_MODULES: ModuleDefinition[] = [
     id: 'm_review_draft',
     number: 6,
     section: 'Tax Return & E-Sign',
-    title: 'Review Tax Return Draft & E-Sign',
-    label: 'Review Draft & E-Sign',
+    title: 'E-Sign & Tax Returns',
+    label: 'E-Sign & Tax Returns',
     description: 'Inspect Form 1120 calculations, download return draft copy, and e-sign required deliverables',
     icon: FileCheck,
   },
@@ -148,14 +148,17 @@ interface OrganizerModuleSidebarProps {
   completedCount?: number;
   organizerData?: OrganizerData | null;
   filingType?: string;
+  /** Tabs not shown yet (e.g. E-Sign & Tax Returns before the draft is sent) */
+  hiddenModuleIds?: string[];
 }
 
 export const OrganizerModuleSidebar: React.FC<OrganizerModuleSidebarProps> = ({
   selectedModId,
   onSelectModule,
   filingType,
+  hiddenModuleIds = [],
 }) => {
-  const modules = getModulesForFilingType(filingType);
+  const modules = getModulesForFilingType(filingType).filter((m) => !hiddenModuleIds.includes(m.id));
 
   return (
     <AppTabs

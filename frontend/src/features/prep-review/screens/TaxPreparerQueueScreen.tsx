@@ -42,7 +42,8 @@ export const TaxPreparerQueueScreen: React.FC<{ view?: PreparerQueueView }> = ({
       : view === 'PREPARATION'
       ? [
           { id: 'ALL', label: 'All', count: preparationCounts.all },
-          { id: 'DRAFTING', label: 'In progress', count: preparationCounts.inProgress },
+          { id: 'ASSIGNED', label: 'Assigned leads', count: preparationCounts.assigned },
+          { id: 'DRAFTING', label: 'In preparation', count: preparationCounts.inProgress },
           { id: 'REVISIONS', label: 'Revisions needed', count: preparationCounts.revisions },
           { id: 'REVERTED', label: 'Reverted files', count: preparationCounts.reverted },
         ]

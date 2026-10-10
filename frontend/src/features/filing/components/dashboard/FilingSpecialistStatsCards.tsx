@@ -15,19 +15,19 @@ export const FilingSpecialistStatsCards: React.FC<FilingSpecialistStatsCardsProp
   const periodLabel = stats.periodSuffix || 'Today';
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {/* 1. Assigned Returns */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             My Assigned Returns
           </span>
-          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
             <Send className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-3">
-          <div className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="text-xl font-black text-slate-900 tracking-tight">
             {stats.assignedReturns}
           </div>
           <div className="text-[11px] text-blue-600 font-semibold mt-1">
@@ -37,17 +37,17 @@ export const FilingSpecialistStatsCards: React.FC<FilingSpecialistStatsCardsProp
       </div>
 
       {/* 2. Ready to Transmit */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             Ready to Transmit
           </span>
-          <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
             <Zap className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-3">
-          <div className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="text-xl font-black text-slate-900 tracking-tight">
             {stats.readyToTransmit}
           </div>
           <div className="text-[11px] text-amber-600 font-semibold mt-1">
@@ -57,17 +57,17 @@ export const FilingSpecialistStatsCards: React.FC<FilingSpecialistStatsCardsProp
       </div>
 
       {/* 3. Accepted by IRS in Period */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             Accepted by IRS ({periodLabel})
           </span>
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center">
             <CheckCircle2 className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-3">
-          <div className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="text-xl font-black text-slate-900 tracking-tight">
             {stats.acceptedCount}
           </div>
           <div className="text-[11px] text-[#16A34A] font-semibold mt-1">
@@ -77,17 +77,17 @@ export const FilingSpecialistStatsCards: React.FC<FilingSpecialistStatsCardsProp
       </div>
 
       {/* 4. My Acceptance Rate */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
             My Acceptance Rate
           </span>
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-[#16A34A] flex items-center justify-center">
             <ShieldCheck className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-3">
-          <div className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="text-xl font-black text-slate-900 tracking-tight">
             {stats.acceptanceRate}
           </div>
           <div className="text-[11px] text-slate-500 font-semibold mt-1">

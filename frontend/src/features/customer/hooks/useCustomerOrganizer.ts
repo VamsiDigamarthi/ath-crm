@@ -25,7 +25,9 @@ import toast from 'react-hot-toast';
 export const useCustomerOrganizer = (
   taxYearParam?: string,
   filingTypeParam?: string,
-  leadIdParam?: string
+  leadIdParam?: string,
+  /** E-Sign & Tax Returns tab shows only after sales sends the draft to the client */
+  showReviewDraft: boolean = true
 ) => {
   const isBusiness = filingTypeParam?.toUpperCase() === 'BUSINESS';
   const defaultModId = isBusiness ? 'b1_companyInfo' : 'm1';
@@ -42,10 +44,11 @@ export const useCustomerOrganizer = (
   const [validationErrors, setValidationErrors] = useState<ValidationErrorMap>({});
 
   const moduleIds = useMemo(() => {
-    return isBusiness
+    const ids = isBusiness
       ? ['b1_companyInfo', 'b2_businessIncome', 'b3_businessExpenses', 'm7', 'm_vault', 'm_review_draft']
       : ['m1', 'm_income', 'm_expenses', 'm7', 'm_vault', 'm_review_draft'];
-  }, [isBusiness]);
+    return showReviewDraft ? ids : ids.filter((id) => id !== 'm_review_draft');
+  }, [isBusiness, showReviewDraft]);
 
   const currentModIndex = moduleIds.indexOf(selectedModId);
 

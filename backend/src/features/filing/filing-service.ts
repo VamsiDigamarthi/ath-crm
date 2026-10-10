@@ -12,6 +12,7 @@ import {
   NotificationPriority 
 } from '@prisma/client';
 import type { FilingLeadItem, FilingStaffMember, FilingManagerStats } from './filing-types.js';
+import { StorageService } from '../../utils/storage-service.js';
 
 export class FilingService {
   /**
@@ -777,6 +778,82 @@ export class FilingService {
    * (Returned Status → Rejected returns) and marks the transmission REJECTED,
    * so the specialist can fix it and transmit again (reprocessing).
    */
+  /**
+   * Upload the filed return copy after the IRS accepted it. The client sees it under "E-Sign & Tax Returns".
+   */
+  public static async uploadFiledCopy(applicationId: string, userId: string, file?: Express.Multer.File) {
+    if (!file) throw new BadRequestError('Choose the filed return file to upload.');
+    const app = await prisma.taxApplication.findUnique({ where: { id: applicationId }, include: { customer: true } });
+    if (!app) throw new NotFoundError('Tax application not found');
+    if (app.currentStage !== ApplicationStage.FILING_SUCCESS) {
+      throw new BadRequestError('The filed copy can be uploaded only after the IRS accepts the return.');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Filing Specialist' : 'Filing Specialist';
+
+    const storageResult = await StorageService.saveFile(file, `taxpayer_${app.customerId}_ty${app.taxYear || 2025}/filed`);
+    const document = await prisma.taxDocument.create({
+      data: {
+        applicationId,
+        uploadedByUserId: userId,
+        fileName: file.originalname,
+        filePath: storageResult.filePath,
+        documentCategory: 'FILED_RETURN_COPY',
+        verificationStatus: 'VERIFIED',
+      },
+    });
+
+    const filedReturnCopy = {
+      id: document.id,
+      fileName: file.originalname,
+      fileUrl: storageResult.fileUrl,
+      filePath: storageResult.filePath,
+      fileSize: storageResult.fileSize || file.size,
+      uploadedAt: new Date().toISOString(),
+      uploadedByUserId: userId,
+      uploadedByName: actorName,
+      uploadedByRole: user?.role || 'FILE_OP_AGENT',
+    };
+    const currentDraft: any = app.taxDraftSummary || {};
+    const updatedSummary = { ...currentDraft, filedReturnCopy, updatedAt: new Date().toISOString() };
+    await prisma.taxApplication.update({ where: { id: applicationId }, data: { taxDraftSummary: updatedSummary } });
+
+    await prisma.auditLog
+      .create({
+        data: {
+          applicationId,
+          actorId: userId,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'FILE_OP_AGENT',
+          action: AuditActionType.DOCUMENT_UPLOAD,
+          moduleKey: 'FILING',
+          details: { documentId: document.id, fileName: file.originalname, remarks: `${actorName} uploaded the filed return copy "${file.originalname}".` },
+        },
+      })
+      .catch((err) => console.error('Failed to audit filed copy upload:', err));
+
+    if (app.customer?.userId) {
+      await prisma.notification
+        .create({
+          data: {
+            recipientUserId: app.customer.userId,
+            applicationId,
+            category: NotificationCategory.SYSTEM,
+            priority: NotificationPriority.NORMAL,
+            title: `Your filed tax return (TY ${app.taxYear}) is ready`,
+            message: 'The IRS accepted your return. Download your filed copy from E-Sign & Tax Returns.',
+            actionUrl: `/customer/organizer?taxYear=${app.taxYear}&tab=m_review_draft`,
+            actionLabel: 'View filed return',
+          },
+        })
+        .catch((err) => console.error('Failed to notify client of filed copy:', err));
+    }
+
+    return { success: true, filedReturnCopy, taxDraftSummary: updatedSummary };
+  }
+
   public static async markIrsRejected(applicationId: string, userId: string, reason: string) {
     const app = await prisma.taxApplication.findUnique({ where: { id: applicationId } });
     if (!app) throw new NotFoundError('Application not found');

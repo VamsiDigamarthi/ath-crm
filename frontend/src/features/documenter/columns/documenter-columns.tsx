@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/shared/components/Button';
-import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell, makeRevertedColumn } from '@/shared/components/table';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
 import { PriorityEditMenu } from '@/shared/components/PriorityEditMenu';
 import {
@@ -9,6 +9,7 @@ import {
   UserCheck,
   Eye,
   FilePlus2,
+  Undo2,
 } from 'lucide-react';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 import { ClientHistoryTag } from '@/shared/components/table';
@@ -24,6 +25,8 @@ export interface GetDocumenterColumnsProps {
   isAdmin?: boolean;
   /** My Leads: show "View" only when the last call was Connected – interested */
   viewOnlyWhenInterested?: boolean;
+  /** My Leads → Not interested / Invalid tabs: send the lead back to the admin pool */
+  onReturnToAdmin?: (lead: DocumenterLeadItem) => void;
 }
 
 export const isDirectSignupLead = (item: DocumenterLeadItem): boolean => {
@@ -148,6 +151,7 @@ export const getDocumenterColumns = ({
   isManagerView = false,
   isAdmin: isAdminProp = false,
   viewOnlyWhenInterested = false,
+  onReturnToAdmin,
 }: GetDocumenterColumnsProps): ColumnDef<DocumenterLeadItem, any>[] => {
   const isAdmin = isManagerView || isAdminProp;
 
@@ -267,6 +271,8 @@ export const getDocumenterColumns = ({
     });
   }
 
+  cols.push(makeRevertedColumn<DocumenterLeadItem>((r) => r.taxDraftSummary));
+
   cols.push({
     id: 'actions',
     header: '',
@@ -283,6 +289,19 @@ export const getDocumenterColumns = ({
 
       return (
         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {onReturnToAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onReturnToAdmin(item)}
+              className="h-7 px-2 text-[11px] font-normal border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 flex items-center gap-1 cursor-pointer"
+              title="Send this lead back to the admin pool"
+            >
+              <Undo2 className="w-3 h-3 text-rose-500" />
+              <span>Return to admin</span>
+            </Button>
+          )}
+
           {canConfig && onOpenStartFilingModal && (
             <Button
               size="sm"

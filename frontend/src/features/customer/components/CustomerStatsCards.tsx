@@ -104,19 +104,19 @@ export const CustomerStatsCards: React.FC<CustomerStatsCardsProps> = ({
   }, [effectiveYear, filings, totalRefund, totalBalanceDue]);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {/* Card 1: Active Filings */}
-      <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs flex flex-col justify-between min-h-[115px]">
+      <div className="bg-white px-3.5 py-3 rounded-md border border-slate-300 shadow-2xs flex flex-col justify-between">
         <div className="flex items-start justify-between">
           <div>
             <span className="text-xs font-bold text-black block">
               Active Filings
             </span>
-            <div className="text-2xl sm:text-3xl font-bold text-black mt-1 tracking-tight">
+            <div className="text-xl font-bold text-black mt-1 tracking-tight">
               {activeFilingsCount}
             </div>
           </div>
-          <div className="w-9 h-9 rounded-md bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold border border-emerald-300 shrink-0">
+          <div className="w-7 h-7 rounded-md bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold border border-emerald-300 shrink-0">
             <Clock className="w-4 h-4 text-emerald-700" />
           </div>
         </div>
@@ -128,13 +128,13 @@ export const CustomerStatsCards: React.FC<CustomerStatsCardsProps> = ({
       </div>
 
       {/* Card 2: Total Estimated Refund */}
-      <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs flex flex-col justify-between min-h-[115px]">
+      <div className="bg-white px-3.5 py-3 rounded-md border border-slate-300 shadow-2xs flex flex-col justify-between">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <span className="text-xs font-bold text-black block truncate">
               Total Estimated Refund
             </span>
-            <div className={`text-2xl sm:text-3xl font-bold mt-1 tracking-tight truncate ${
+            <div className={`text-xl font-bold mt-1 tracking-tight truncate ${
               filteredRefund > 0 ? 'text-[#16A34A]' : 'text-slate-900'
             }`}>
               ${filteredRefund.toLocaleString()}
@@ -169,13 +169,13 @@ export const CustomerStatsCards: React.FC<CustomerStatsCardsProps> = ({
       </div>
 
       {/* Card 3: Dues / Amount Client Has to Pay */}
-      <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs flex flex-col justify-between min-h-[115px]">
+      <div className="bg-white px-3.5 py-3 rounded-md border border-slate-300 shadow-2xs flex flex-col justify-between">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <span className="text-xs font-bold text-black block truncate">
               Dues
             </span>
-            <div className={`text-2xl sm:text-3xl font-bold mt-1 tracking-tight truncate ${
+            <div className={`text-xl font-bold mt-1 tracking-tight truncate ${
               filteredDue > 0 ? 'text-amber-700' : 'text-slate-900'
             }`}>
               ${filteredDue.toLocaleString()}
@@ -210,17 +210,17 @@ export const CustomerStatsCards: React.FC<CustomerStatsCardsProps> = ({
       </div>
 
       {/* Card 4: Completed Filings */}
-      <div className="bg-white p-4 rounded-md border border-slate-300 shadow-2xs flex flex-col justify-between min-h-[115px]">
+      <div className="bg-white px-3.5 py-3 rounded-md border border-slate-300 shadow-2xs flex flex-col justify-between">
         <div className="flex items-start justify-between">
           <div>
             <span className="text-xs font-bold text-black block">
               Completed Filings
             </span>
-            <div className="text-2xl sm:text-3xl font-bold text-black mt-1 tracking-tight">
+            <div className="text-xl font-bold text-black mt-1 tracking-tight">
               {completedFilingsCount}
             </div>
           </div>
-          <div className="w-9 h-9 rounded-md bg-blue-50 text-blue-700 flex items-center justify-center font-bold border border-blue-300 shrink-0">
+          <div className="w-7 h-7 rounded-md bg-blue-50 text-blue-700 flex items-center justify-center font-bold border border-blue-300 shrink-0">
             <CheckCircle2 className="w-4 h-4 text-blue-700" />
           </div>
         </div>

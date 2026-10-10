@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/shared/components/Button';
-import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell, makeRevertedColumn } from '@/shared/components/table';
 import { ArrowRight, FolderOpen, UserCheck } from 'lucide-react';
 import type { FilingLeadItem } from '../types/filing.types';
 import { SYSTEM_PAYMENT_STATUSES, SYSTEM_STAGES } from '@/shared/constants/system-enums';
@@ -146,6 +146,7 @@ export function getFilingColumns({
         );
       },
     },
+    makeRevertedColumn<FilingLeadItem>((r) => (r as any).taxDraftSummary),
     {
       id: 'actions',
       header: 'ACTION',

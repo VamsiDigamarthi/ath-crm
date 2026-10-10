@@ -1321,7 +1321,9 @@ export const validateEntireOrganizer = (
     }
 
     // 2. Income
-    const e4 = validateModule4(organizerData.m4_wages, taxYear);
+    // W-2 Wages section is hidden in the form, so it is no longer required
+    // const e4 = validateModule4(organizerData.m4_wages, taxYear);
+    const e4 = {};
     const e5 = validateModule5(organizerData.m5_interest, taxYear);
     const e10 = validateModule10Retirement(organizerData.m10_retirement, taxYear);
     const e6 = validateModule6(organizerData.m6_stocks, taxYear);

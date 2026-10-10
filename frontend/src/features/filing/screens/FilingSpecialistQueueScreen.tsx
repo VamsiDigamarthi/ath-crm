@@ -11,7 +11,7 @@ import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
-import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
+// import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
 import { getFilingColumns } from '../columns/filing-columns';
 import { useFilingQueue } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
@@ -134,7 +134,8 @@ export const FilingSpecialistQueueScreen: React.FC<{ view?: FilingView }> = ({ v
         </div>
       </div>
 
-      {/* 2. Live Transmission KPI Cards (legacy queue only) */}
+      {/* Stat cards hidden on table pages (client: keep tables compact) */}
+      {/*
       {view === 'ALL' && (
       <FilingManagerMetrics
         readyCount={counts.ready}
@@ -144,6 +145,7 @@ export const FilingSpecialistQueueScreen: React.FC<{ view?: FilingView }> = ({ v
         totalCount={counts.all}
       />
       )}
+      */}
 
       {/* 3. Navigation Tabs */}
       {view === 'ALL' && (

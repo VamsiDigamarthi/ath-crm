@@ -434,6 +434,8 @@ export class DocumenterService {
         where.callLogs = {
           some: {
             callbackScheduledAt: { not: null },
+            // Follow-ups can carry a date too; they are not callbacks
+            disposition: { not: 'FALLBACK' },
           },
         };
         where.currentStage = { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] };
@@ -640,6 +642,8 @@ export class DocumenterService {
           callLogs: {
             some: {
               callbackScheduledAt: { not: null },
+              // Follow-ups can carry a date too; they are not callbacks
+              disposition: { not: 'FALLBACK' },
             },
           },
         },
@@ -676,6 +680,7 @@ export class DocumenterService {
         where: {
           ...(currentUserRole === Role.DOC_AGENT && currentUserId ? { agentId: currentUserId } : {}),
           callbackScheduledAt: { gte: new Date() },
+          disposition: { not: 'FALLBACK' },
           application: {
             currentStage: { in: [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH] },
           },

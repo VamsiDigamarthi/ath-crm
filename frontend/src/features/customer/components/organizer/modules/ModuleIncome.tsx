@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { Module4Wages } from './Module4Wages';
+// import { Module4Wages } from './Module4Wages'; // W-2 section hidden
 import { Module5Interest } from './Module5Interest';
 import { Module10Retirement } from './Module10Retirement';
 import { Module6Stocks } from './Module6Stocks';
@@ -25,18 +25,18 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
   clearError,
 }) => {
   // Collapsed / Open states for each individual income section
-  const [isOpenWages, setIsOpenWages] = useState<boolean>(false);
+  // const [isOpenWages, setIsOpenWages] = useState<boolean>(false); // W-2 section hidden
   const [isOpenInterest, setIsOpenInterest] = useState<boolean>(false);
   const [isOpenRetirement, setIsOpenRetirement] = useState<boolean>(false);
   const [isOpenStocks, setIsOpenStocks] = useState<boolean>(false);
   const [isOpenRentals, setIsOpenRentals] = useState<boolean>(false);
 
-  // 1. W-2 Data summary
-  const w2Data: Partial<OrganizerData['m4_wages']> = organizerData?.m4_wages || {};
-  const hasW2Data = Boolean(
-    w2Data.employerName || 
-    (w2Data.estimatedWages !== undefined && w2Data.estimatedWages !== null && w2Data.estimatedWages > 0)
-  );
+  // // 1. W-2 Data summary
+  // const w2Data: Partial<OrganizerData['m4_wages']> = organizerData?.m4_wages || {};
+  // const hasW2Data = Boolean(
+  //   w2Data.employerName || 
+  //   (w2Data.estimatedWages !== undefined && w2Data.estimatedWages !== null && w2Data.estimatedWages > 0)
+  // );
 
   // 2. Interest/Dividends Data summary
   const interestData: Partial<OrganizerData['m5_interest']> = organizerData?.m5_interest || {};
@@ -74,7 +74,8 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
 
   return (
     <div className="space-y-4 font-sans">
-      {/* 1. Form W-2 Wages & Taxable Earnings */}
+      {/* W-2 Wages section hidden (client request): W-2 comes in through Upload Documents
+      {/ * 1. Form W-2 Wages & Taxable Earnings * /}
       {!isOpenWages ? (
         <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -135,13 +136,15 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
         </div>
       )}
 
+      */}
+
       {/* 2. 1099 Interest & Dividends */}
       {!isOpenInterest ? (
         <div className="p-4 rounded-md border border-slate-200 bg-slate-50/50 hover:border-slate-300 transition-all">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                <span>2. 1099-INT / DIV / OID Interest &amp; Dividends</span>
+                <span>1. 1099-INT / DIV / OID Interest &amp; Dividends</span>
                 {hasInterestData && (
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] font-medium border border-emerald-200">
                     Added: {interestData.bankName || 'Interest/Dividends'}
@@ -169,7 +172,7 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h4 className="text-xs font-semibold text-gray-700">
-                <span>2. 1099-INT / DIV / OID Interest &amp; Dividends</span>
+                <span>1. 1099-INT / DIV / OID Interest &amp; Dividends</span>
               </h4>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 High-yield savings interest, dividends &amp; Original Issue Discount
@@ -202,7 +205,7 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                <span>3. Form 1099-R IRA &amp; Retirement Distributions / Early Withdrawals</span>
+                <span>2. Form 1099-R IRA &amp; Retirement Distributions / Early Withdrawals</span>
                 {hasRetirementData && (
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] font-medium border border-emerald-200">
                     Added: {retirementData.payerName || '1099-R Distribution'}
@@ -230,7 +233,7 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h4 className="text-xs font-semibold text-gray-700">
-                <span>3. Form 1099-R IRA &amp; Retirement Distributions / Early Withdrawals</span>
+                <span>2. Form 1099-R IRA &amp; Retirement Distributions / Early Withdrawals</span>
               </h4>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Traditional / Roth IRA, 401(k), 403(b), pension distributions &amp; early withdrawal penalty exceptions (Form 5329)
@@ -263,7 +266,7 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                <span>4. 1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</span>
+                <span>3. 1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</span>
                 {hasStocksData && (
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] font-medium border border-emerald-200">
                     {stockList.length} Added
@@ -291,7 +294,7 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h4 className="text-xs font-semibold text-gray-700">
-                <span>4. 1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</span>
+                <span>3. 1099-B Stocks, ESPP, RSU &amp; Capital Gains / Losses</span>
               </h4>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Brokerage statements, equity compensation, crypto &amp; carryforward capital losses
@@ -324,7 +327,7 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-                <span>5. Rental Property Income &amp; Expenses (Schedule E)</span>
+                <span>4. Rental Property Income &amp; Expenses (Schedule E)</span>
                 {hasRentalData && (
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] font-medium border border-emerald-200">
                     {rentalList.length} Added
@@ -352,7 +355,7 @@ export const ModuleIncome: React.FC<ModuleIncomeProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <div>
               <h4 className="text-xs font-semibold text-gray-700">
-                <span>5. Rental Property Income &amp; Expenses (Schedule E)</span>
+                <span>4. Rental Property Income &amp; Expenses (Schedule E)</span>
               </h4>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Report rental real estate properties, gross rental income &amp; itemized Schedule E expenses

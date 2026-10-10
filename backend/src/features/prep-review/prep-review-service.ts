@@ -336,6 +336,13 @@ export class PrepReviewService {
         assignedFileOp: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
+        // When the return was last assigned to a preparer (drives the 1-day Pending rule)
+        stageHistories: {
+          where: { remarks: { startsWith: 'Assigned to Tax Preparer' } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { createdAt: true },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -443,6 +450,7 @@ export class PrepReviewService {
         })),
         totalTaxYears: visibleApplications.length,
         currentStage: primaryApp.currentStage,
+        prepAssignedAt: (primaryApp as any).stageHistories?.[0]?.createdAt || null,
         prepStage: stage,
         priority: primaryApp.priority,
         assignedDocAgent: primaryApp.assignedDocAgent ? {
@@ -1242,11 +1250,18 @@ export class PrepReviewService {
       uploadedAt: new Date().toISOString(),
       uploadedByUserId: userId,
       uploadedByName: actorName,
+      uploadedByRole: user?.role || 'TAX_PREPARER',
+      draftVersion: currentDraft.draftVersion || 1,
     };
 
+    // Replacing a draft keeps the old one in history (drafts get revised many times)
+    const draftHistory: any[] = Array.isArray(currentDraft.drakeTaxFileHistory) ? currentDraft.drakeTaxFileHistory : [];
     const updatedSummary = {
       ...currentDraft,
       drakeTaxFile,
+      drakeTaxFileHistory: currentDraft.drakeTaxFile
+        ? [{ ...currentDraft.drakeTaxFile, replacedAt: new Date().toISOString() }, ...draftHistory]
+        : draftHistory,
       updatedAt: new Date().toISOString(),
     };
 

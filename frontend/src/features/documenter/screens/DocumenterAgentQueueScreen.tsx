@@ -1,4 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
+import { documenterService } from '../services/documenter-service';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { StartFilingModal } from '../components/StartFilingModal';
@@ -11,7 +14,6 @@ import { useMyLeadsTabs, type MyLeadsTab } from '../hooks/useMyLeadsTabs';
 
 export const DocumenterAgentQueueScreen: React.FC = () => {
   const {
-    leads,
     agents,
     isLoading,
     isActionLoading,
@@ -28,8 +30,50 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     handleUpdatePriority,
   } = useDocumenterWorkspace('OUTREACH');
 
-  // Quick tabs: All · Not connected · Interested · Invalid number
-  const { activeTab, setActiveTab, tabs, visibleLeads } = useMyLeadsTabs(leads);
+  // Client tabs: Assigned leads · Pending · Voicemail · Callbacks · Follow-ups · Not interested
+  const { activeTab, setActiveTab, tabs, visibleLeads, isLoading: isTabsLoading, refresh: refreshTabs } = useMyLeadsTabs();
+
+  // Not interested / Invalid tabs: agent sends the lead back to the admin pool (never automatic)
+  const canReturnToAdmin = activeTab === 'NOT_INTERESTED' || activeTab === 'INVALID';
+  const [leadToReturn, setLeadToReturn] = useState<DocumenterLeadItem | null>(null);
+  const [isReturning, setIsReturning] = useState(false);
+
+  const handleConfirmReturn = async () => {
+    if (!leadToReturn) return;
+    setIsReturning(true);
+    try {
+      await documenterService.returnLeadsToPool({
+        applicationIds: [leadToReturn.id],
+        reason:
+          activeTab === 'INVALID'
+            ? 'Invalid / disconnected number - Returned to Admin Pool'
+            : 'Not Interested - Returned to Admin Pool for Redistribution',
+      });
+      toast.success('Lead returned to admin');
+      setLeadToReturn(null);
+      refreshTabs();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to return lead');
+    } finally {
+      setIsReturning(false);
+    }
+  };
+
+  // Keep tab counts in sync after any change made from this page
+  const handleUpdatePriorityAndRefresh = async (applicationId: string, priority: string) => {
+    await handleUpdatePriority(applicationId, priority);
+    refreshTabs();
+  };
+  const handleSaveDispositionAndRefresh: typeof handleSaveCallDisposition = async (...args) => {
+    const result = await handleSaveCallDisposition(...args);
+    refreshTabs();
+    return result;
+  };
+  const handleStartFilingAndRefresh: typeof handleStartFiling = async (...args) => {
+    const result = await handleStartFiling(...args);
+    refreshTabs();
+    return result;
+  };
 
   const columns = useMemo(
     () =>
@@ -37,13 +81,15 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         onOpenCallModal: handleOpenCallModal,
         onOpenAssignModal: handleOpenAssignModal,
         onOpenStartFilingModal: handleOpenStartFilingModal,
-        onUpdatePriority: handleUpdatePriority,
+        onUpdatePriority: handleUpdatePriorityAndRefresh,
         hideAssignedStaff: true,
         isManagerView: false,
         isAdmin: false,
         viewOnlyWhenInterested: true,
+        onReturnToAdmin: canReturnToAdmin ? setLeadToReturn : undefined,
       }),
-    [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal, handleUpdatePriority]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal, handleUpdatePriority, canReturnToAdmin]
   );
 
   const handleExport = () => {
@@ -71,11 +117,22 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         subtitle="Active pipeline of prospective taxpayers assigned to you for intake outreach and qualification."
         data={visibleLeads}
         columns={columns}
-        isLoading={isLoading}
+        isLoading={isLoading || isTabsLoading}
         searchPlaceholder="Search leads by name, email, phone..."
         onExportExcel={handleExport}
         // No row click here: a lead opens only through the "View" button (shown for interested calls)
         emptyText="No assigned leads in your outreach queue."
+      />
+
+      <AppConfirmDialog
+        isOpen={Boolean(leadToReturn)}
+        onClose={() => setLeadToReturn(null)}
+        onConfirm={handleConfirmReturn}
+        title="Return lead to admin?"
+        description={`${leadToReturn?.customer?.fullName || 'This lead'} will be removed from your list and go to the admin's Returned Leads for reassignment.`}
+        confirmLabel="Return to admin"
+        variant="warning"
+        isLoading={isReturning}
       />
 
       {/* Call Outreach & Disposition Modal */}
@@ -84,7 +141,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         onClose={handleCloseModals}
         lead={activeLeadForCall}
         isManager={false}
-        onSaveDisposition={handleSaveCallDisposition}
+        onSaveDisposition={handleSaveDispositionAndRefresh}
         isLoading={isActionLoading}
       />
 
@@ -94,7 +151,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
         onClose={handleCloseModals}
         lead={activeLeadForStartFiling}
         agents={agents}
-        onConfirmStartFiling={handleStartFiling}
+        onConfirmStartFiling={handleStartFilingAndRefresh}
         isLoading={isActionLoading}
       />
     </div>

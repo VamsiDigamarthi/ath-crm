@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useSalesManagerQueue, type SalesManagerTab } from '../hooks/useSalesManagerQueue';
-import { SalesManagerMetrics } from '../components/manager/SalesManagerMetrics';
+// import { SalesManagerMetrics } from '../components/manager/SalesManagerMetrics';
 import { getSalesColumns } from '../columns/sales-columns';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { AppSearchInput } from '@/shared/components/AppSearchInput';
@@ -94,7 +94,8 @@ export const SalesDepartmentScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top Metric Cards (5 Sales Domain KPI Cards) */}
+      {/* Stat cards hidden on table pages (client: keep tables compact) */}
+      {/*
       <SalesManagerMetrics
         awaitingPitchCount={counts.awaitingPitch}
         pitchingCount={counts.inPitch}
@@ -103,6 +104,7 @@ export const SalesDepartmentScreen: React.FC = () => {
         filingReadyCount={counts.filingReady}
         unassignedCount={counts.unassigned}
       />
+      */}
 
       {/* 3. Dedicated Tabs & Multi-Filter Card */}
       <div className="rounded-xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">

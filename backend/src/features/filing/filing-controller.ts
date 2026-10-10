@@ -74,6 +74,16 @@ export class FilingController {
     }
   }
 
+  public static async uploadFiledCopy(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const result = await FilingService.uploadFiledCopy(id, req.currentUser?.id || '', req.file);
+      res.json(result);
+    } catch (err: any) {
+      res.status(err.statusCode || 400).json({ message: err.message || 'Failed to upload filed copy' });
+    }
+  }
+
   public static async markRejected(req: Request, res: Response) {
     try {
       const id = req.params.id as string;

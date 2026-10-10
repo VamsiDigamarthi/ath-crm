@@ -1,18 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
-import { PhoneCall, ArrowRight, RotateCcw } from 'lucide-react';
+import { PhoneCall, ArrowRight, RotateCcw, Phone } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
 import { PriorityEditMenu } from '@/shared/components/PriorityEditMenu';
-import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell, makeRevertedColumn } from '@/shared/components/table';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import { ClientTypeBadge, CLIENT_TYPE_FILTER_OPTIONS } from '../common/ClientTypeBadge';
 import { SalesReturnToAdminModal } from '../common/SalesReturnToAdminModal';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { SYSTEM_PAYMENT_STATUSES } from '@/shared/constants/system-enums';
 import type { SalesLeadItem } from '../../types/sales.types';
+import { useSalesCallOutcome } from '../../hooks/useSalesCallOutcome';
+import { SalesCallOutcomeModal } from '../pitch/SalesCallOutcomeModal';
+import { SalesRowActionsMenu } from './SalesRowActionsMenu';
+import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
+import { SALES_SEND_BACK_TARGETS, getSendBackBlockedReason } from '../../constants/sales-send-back';
 
 interface SalesAgentQueueTableProps {
   leads: SalesLeadItem[];
@@ -36,6 +41,14 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
   const navigate = useNavigate();
   const [selectedLeadForReturn, setSelectedLeadForReturn] = useState<SalesLeadItem | null>(null);
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [selectedLeadForRevision, setSelectedLeadForRevision] = useState<SalesLeadItem | null>(null);
+
+  // "Call" in the row: log the call result here, same as the documenter's call option
+  const callOutcome = useSalesCallOutcome(undefined, onRefresh);
+  const openCallRef = useRef(callOutcome.open);
+  useEffect(() => {
+    openCallRef.current = callOutcome.open;
+  });
 
   const columns = useMemo<ColumnDef<SalesLeadItem, any>[]>(
     () => [
@@ -210,6 +223,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
         },
         cell: ({ row }) => <SalesStageBadge stage={row.original.currentStage} />,
       },
+      makeRevertedColumn<SalesLeadItem>((r) => (r as any).taxDraftSummary),
       {
         id: 'actions',
         header: 'ACTION',
@@ -230,15 +244,12 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setSelectedLeadForReturn(lead);
-                  setIsReturnModalOpen(true);
-                }}
-                className="h-7 px-2 text-[11px] font-normal border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                title="Return lead to Super Admin"
+                onClick={() => openCallRef.current({ applicationId: lead.id || lead.applicationId })}
+                className="h-7 px-2 text-[11px] font-normal border-slate-200 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 cursor-pointer"
+                title="Log a call with this client"
               >
-                <RotateCcw className="w-3 h-3 text-rose-500" />
-                <span className="hidden xl:inline">Return</span>
+                <Phone className="w-3 h-3 text-emerald-600" />
+                <span className="hidden xl:inline">Call</span>
               </Button>
 
               {onUpdatePriority && (
@@ -259,6 +270,15 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
                 <span>{isReverted ? 'View Filings' : 'Pitch Returns'}</span>
                 <ArrowRight className="w-3 h-3" />
               </Button>
+
+              <SalesRowActionsMenu
+                revisionBlockedReason={getSendBackBlockedReason(lead)}
+                onNeedRevision={() => setSelectedLeadForRevision(lead)}
+                onRevertToAdmin={() => {
+                  setSelectedLeadForReturn(lead);
+                  setIsReturnModalOpen(true);
+                }}
+              />
             </div>
           );
         },
@@ -322,6 +342,50 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
         onExportExcel={handleExportExcel}
         onRowClick={(item) => navigate(`/sales/agent/client/${item.taxpayerId || item.id || item.applicationId}${fromQuery}`)}
       />
+
+      <SalesCallOutcomeModal
+        isOpen={callOutcome.isOpen}
+        onClose={callOutcome.close}
+        outcome={callOutcome.outcome}
+        onOutcomeChange={callOutcome.setOutcome}
+        callbackDate={callOutcome.callbackDate}
+        onCallbackDateChange={callOutcome.setCallbackDate}
+        callbackTime={callOutcome.callbackTime}
+        onCallbackTimeChange={callOutcome.setCallbackTime}
+        reason={callOutcome.reason}
+        onReasonChange={callOutcome.setReason}
+        note={callOutcome.note}
+        onNoteChange={callOutcome.setNote}
+        error={callOutcome.error}
+        isSaving={callOutcome.isSaving}
+        onSave={callOutcome.save}
+      />
+
+      {/* Need revision: send back to Preparer / Documenter (same popup as the pitch workspace) */}
+      {selectedLeadForRevision && (
+        <SendBackLeadModal
+          isOpen
+          onClose={() => setSelectedLeadForRevision(null)}
+          applicationId={selectedLeadForRevision.id || selectedLeadForRevision.applicationId}
+          taxpayerName={selectedLeadForRevision.taxpayerName}
+          taxYear={selectedLeadForRevision.taxYear || 2025}
+          currentDepartment="SALES"
+          assignedPreparerName={
+            (selectedLeadForRevision.taxDraftSummary as any)?.preparerName ||
+            (selectedLeadForRevision as any).assignedPrepAgent?.name ||
+            (selectedLeadForRevision as any).assignedPrepAgentName
+          }
+          assignedDocumenterName={
+            (selectedLeadForRevision as any).assignedDocAgent?.name || (selectedLeadForRevision as any).assignedDocAgentName
+          }
+          availableTargetDepartments={SALES_SEND_BACK_TARGETS}
+          defaultTargetDepartment="PREPARATION"
+          onRevertSuccess={() => {
+            setSelectedLeadForRevision(null);
+            onRefresh?.();
+          }}
+        />
+      )}
 
       {/* Return to Admin Modal */}
       {selectedLeadForReturn && (
