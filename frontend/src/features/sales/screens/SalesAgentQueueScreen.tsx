@@ -2,26 +2,33 @@ import React, { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { PhoneCall, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { SalesAgentStatsCards } from '../components/agent/SalesAgentStatsCards';
 import { SalesAgentQueueTable } from '../components/agent/SalesAgentQueueTable';
-import { useSalesAgentQueue, type SalesAgentTab } from '../hooks/useSalesAgentQueue';
+import {
+  useSalesAgentQueue,
+  type SalesAgentTab,
+  type SalesAgentView,
+} from '../hooks/useSalesAgentQueue';
 
 export interface SalesAgentQueueScreenProps {
   initialTab?: SalesAgentTab;
+  view?: SalesAgentView;
 }
 
-export const SalesAgentQueueScreen: React.FC<SalesAgentQueueScreenProps> = ({ initialTab }) => {
+export const SalesAgentQueueScreen: React.FC<SalesAgentQueueScreenProps> = ({
+  initialTab,
+  view: propView,
+}) => {
   const location = useLocation();
 
-  const routeTab = useMemo<SalesAgentTab>(() => {
-    if (initialTab) return initialTab;
+  const effectiveView = useMemo<SalesAgentView>(() => {
+    if (propView) return propView;
     const path = location.pathname;
     if (path.includes('/sales/agent/pending')) return 'PENDING';
     if (path.includes('/sales/agent/callbacks')) return 'CALLBACKS';
     if (path.includes('/sales/agent/follow-ups')) return 'FOLLOW_UPS';
     if (path.includes('/sales/agent/converted')) return 'CONVERTED';
-    return 'ALL';
-  }, [initialTab, location.pathname]);
+    return 'MY';
+  }, [propView, location.pathname]);
 
   const {
     isLoading,
@@ -29,37 +36,36 @@ export const SalesAgentQueueScreen: React.FC<SalesAgentQueueScreenProps> = ({ in
     allLeads,
     counts,
     clientRows,
-    stats,
-    activeTab,
     handleRefresh,
     handleUpdatePriority,
     handleOpenNextPriority,
-  } = useSalesAgentQueue(routeTab);
+    fromQuery,
+  } = useSalesAgentQueue(effectiveView, initialTab);
 
   const getHeaderInfo = () => {
-    switch (activeTab) {
+    switch (effectiveView) {
       case 'PENDING':
         return {
           title: 'Pending Prospects (pending Leads)',
-          subtitle: `${counts.pending || 0} QA-approved prospects awaiting initial outreach and fee pitch`,
+          subtitle: `${clientRows.length} QA-approved prospects awaiting initial outreach and fee pitch`,
           emptyText: 'No pending prospects awaiting outreach.',
         };
       case 'CALLBACKS':
         return {
           title: 'Scheduled Callbacks',
-          subtitle: `${counts.callbacks || 0} scheduled callbacks and consultation appointments`,
+          subtitle: `${clientRows.length} scheduled callbacks and consultation appointments`,
           emptyText: 'No scheduled callbacks pending at this time.',
         };
       case 'FOLLOW_UPS':
         return {
           title: 'Follow-Ups',
-          subtitle: `${counts.followUps || 0} active fee quotations and payment checkouts awaiting client completion`,
+          subtitle: `${clientRows.length} active fee quotations and payment checkouts awaiting client completion`,
           emptyText: 'No active follow-ups required.',
         };
       case 'CONVERTED':
         return {
           title: 'Converted Clients',
-          subtitle: `${counts.converted || 0} closed deals with payment collected and authorization complete`,
+          subtitle: `${clientRows.length} closed deals with payment collected and authorization complete`,
           emptyText: 'No converted clients recorded in this view.',
         };
       default:
@@ -110,16 +116,15 @@ export const SalesAgentQueueScreen: React.FC<SalesAgentQueueScreenProps> = ({ in
         </div>
       </div>
 
-      {/* 2. Top KPI Cards */}
-      <SalesAgentStatsCards stats={stats} />
-
-      {/* 3. My Active Queue Table (Grouped by Client) */}
+      {/* 2. My Active Queue Table (Grouped by Client) */}
       <SalesAgentQueueTable
         leads={clientRows}
         isLoading={isLoading}
         onRefresh={handleRefresh}
         onUpdatePriority={handleUpdatePriority}
         emptyText={headerInfo.emptyText}
+        fromQuery={fromQuery}
+        showCallback={effectiveView === 'CALLBACKS'}
       />
     </div>
   );

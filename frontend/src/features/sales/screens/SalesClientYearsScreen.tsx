@@ -79,9 +79,10 @@ export const SalesClientYearsScreen: React.FC = () => {
     (lead: SalesLeadItem) => {
       const targetId = lead.id || lead.applicationId;
       const pitchPath = isManager ? `/sales/manager/pitch/${targetId}` : `/sales/agent/pitch/${targetId}`;
-      navigate(pitchPath);
+      // Keep ?from= so the sidebar stays on the page this client came from
+      navigate(`${pitchPath}${location.search}`);
     },
-    [navigate, isManager]
+    [navigate, isManager, location.search]
   );
 
   const columns = useMemo<ColumnDef<SalesLeadItem, unknown>[]>(

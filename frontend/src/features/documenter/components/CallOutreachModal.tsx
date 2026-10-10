@@ -255,7 +255,9 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
     }
   };
 
-  const isCallbackRequired = selectedDisposition === 'CONNECTED_CALLBACK' || selectedSubDisposition === 'Callback';
+  // Follow-ups also need a date so they can be tracked as due / missed / completed
+  const isFollowUp = selectedDisposition === 'FALLBACK';
+  const isCallbackRequired = selectedDisposition === 'CONNECTED_CALLBACK' || selectedSubDisposition === 'Callback' || isFollowUp;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -582,7 +584,7 @@ export const CallOutreachModal: React.FC<CallOutreachModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Callback Date & Time *
+                  {isFollowUp ? 'Follow-up Date & Time *' : 'Callback Date & Time *'}
                 </label>
                 <input
                   type="datetime-local"

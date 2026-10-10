@@ -9,7 +9,7 @@ const EDIT_PRICE_PERMISSION = "PREP_EDIT_ITEM_PRICE";
 
 // Sales negotiate fees, so they can always set a return's unit price; prep staff need the admin permission.
 // Only the item on this return changes, never the catalog price.
-const SALES_PRICE_ROLES: string[] = [Role.SALES_AGENT, Role.SALES_TEAM_LEAD, Role.SALES_MANAGER];
+const SALES_PRICE_ROLES: string[] = [Role.SALES_AGENT, Role.SALES_MANAGER];
 
 const canEditItemPrice = async (user: CurrentUserLike) =>
   user.role === Role.ADMIN ||

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { filterNavItemsByPermissions } from '@/shared/constants/sidebar-catalog';
+import { getPreparerOrigin, getReviewerOrigin } from '../utils/preparer-origin';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
 import { prepReviewService } from '../services/prep-review-service';
 import toast from 'react-hot-toast';
@@ -37,25 +38,28 @@ export const PrepReviewLayout: React.FC = () => {
     }
   };
 
-  const currentPath = location.pathname;
-  const isManager = user?.role === 'PREP_MANAGER' || (user?.role === 'ADMIN' && currentPath.startsWith('/prep-review/manager'));
-  const isReviewerOnly = user?.role === 'TAX_REVIEWER' || (user?.role === 'ADMIN' && currentPath.startsWith('/prep-review/reviewer'));
+  const isManager =
+    user?.role === 'PREP_MANAGER' ||
+    user?.role === 'ADMIN' ||
+    user?.role === 'SALES_MANAGER' ||
+    user?.role === 'DOC_MANAGER';
 
-  // Live count badges for Preparer Pipeline
-  const [prepCounts, setPrepCounts] = React.useState<{
-    working?: number;
-    pending?: number;
-    underReview?: number;
-    completed?: number;
-  }>({});
+  const isReviewerOnly = user?.role === 'TAX_REVIEWER';
 
-  // Live count badges for Reviewer Pipeline
-  const [reviewerCounts, setReviewerCounts] = React.useState<{
-    assigned?: number;
-    pending?: number;
-    revisions?: number;
-    approved?: number;
-  }>({});
+  // Live badge counters for assigned leads
+  const [prepCounts, setPrepCounts] = React.useState({
+    working: 0,
+    pending: 0,
+    underReview: 0,
+    completed: 0,
+  });
+
+  const [reviewerCounts, setReviewerCounts] = React.useState({
+    assigned: 0,
+    pending: 0,
+    revisions: 0,
+    approved: 0,
+  });
 
   React.useEffect(() => {
     if (isManager) return;
@@ -81,21 +85,47 @@ export const PrepReviewLayout: React.FC = () => {
         let completed = 0;
 
         myLeads.forEach((lead) => {
-          const isReverted = (lead.prepStage as any) === 'REVERTED_TO_DOC' || (lead.prepStage as any) === 'REVERTED_TO_DOCUMENTER' || lead.currentStage === 'DOC_OUTREACH' || lead.taxDraftSummary?.status === 'REVERTED_TO_DOCUMENTER';
-          const isApproved = !isReverted && (lead.prepStage === 'QA_APPROVED' || lead.taxDraftSummary?.status === 'QA_APPROVED' || ['QA_APPROVED', 'SALES_PITCH_QUEUE', 'SALES_PITCHING', 'FILING_QUEUE', 'FILING_IN_PROGRESS', 'FILING_SUCCESS'].includes(lead.currentStage));
-          const isRevision = !isReverted && (lead.prepStage === 'QA_REVISION_REQUESTED' || lead.currentStage === 'QA_REVISION_REQUESTED' || lead.currentStage === 'CORRECTION_NEEDED' || lead.taxDraftSummary?.status === 'REVISION_REQUESTED');
-          const isSubmitted = !isReverted && (lead.prepStage === 'QA_IN_REVIEW' || lead.currentStage === 'QA_IN_REVIEW' || lead.currentStage === 'QA_REVIEW_QUEUE' || lead.taxDraftSummary?.status === 'SUBMITTED_FOR_QA');
-          
+          const isReverted =
+            (lead.prepStage as any) === 'REVERTED_TO_DOC' ||
+            (lead.prepStage as any) === 'REVERTED_TO_DOCUMENTER' ||
+            lead.currentStage === 'DOC_OUTREACH' ||
+            lead.taxDraftSummary?.status === 'REVERTED_TO_DOCUMENTER';
+          const isApproved =
+            !isReverted &&
+            (lead.prepStage === 'QA_APPROVED' ||
+              lead.taxDraftSummary?.status === 'QA_APPROVED' ||
+              [
+                'QA_APPROVED',
+                'SALES_PITCH_QUEUE',
+                'SALES_PITCHING',
+                'FILING_QUEUE',
+                'FILING_IN_PROGRESS',
+                'FILING_SUCCESS',
+              ].includes(lead.currentStage));
+          const isRevision =
+            !isReverted &&
+            (lead.prepStage === 'QA_REVISION_REQUESTED' ||
+              lead.currentStage === 'QA_REVISION_REQUESTED' ||
+              lead.currentStage === 'CORRECTION_NEEDED' ||
+              lead.taxDraftSummary?.status === 'REVISION_REQUESTED');
+          const isSubmitted =
+            !isReverted &&
+            (lead.prepStage === 'QA_IN_REVIEW' ||
+              lead.currentStage === 'QA_IN_REVIEW' ||
+              lead.currentStage === 'QA_REVIEW_QUEUE' ||
+              lead.taxDraftSummary?.status === 'SUBMITTED_FOR_QA');
+
           const hasStarted = Boolean((lead as any).prepStartedAt);
           const draftSummary = lead.taxDraftSummary as any;
           const hasDraftContent = Boolean(
             draftSummary?.status === 'DRAFTING' ||
-            draftSummary?.w2Wages ||
-            draftSummary?.grossIncome ||
-            draftSummary?.updatedAt ||
-            (draftSummary?.calculations && Object.keys(draftSummary.calculations).length > 0)
+              draftSummary?.w2Wages ||
+              draftSummary?.grossIncome ||
+              draftSummary?.updatedAt ||
+              (draftSummary?.calculations && Object.keys(draftSummary.calculations).length > 0)
           );
-          const isPendingItem = !isReverted && !isApproved && !isRevision && !isSubmitted && (lead.prepStage === 'PREP_ASSIGNED' || (!hasStarted && !hasDraftContent));
+          const isPendingItem =
+            !isReverted && !isApproved && !isRevision && !isSubmitted && (lead.prepStage === 'PREP_ASSIGNED' || (!hasStarted && !hasDraftContent));
 
           if (isApproved) completed++;
           else if (isSubmitted) underReview++;
@@ -122,29 +152,28 @@ export const PrepReviewLayout: React.FC = () => {
         let revApproved = 0;
 
         myReviewLeads.forEach((lead) => {
-          const isRevision = (
+          const isRevision =
             lead.prepStage === 'QA_REVISION_REQUESTED' ||
             lead.currentStage === 'QA_REVISION_REQUESTED' ||
             lead.currentStage === 'CORRECTION_NEEDED' ||
-            lead.taxDraftSummary?.status === 'REVISION_REQUESTED'
-          );
-          const isApproved = (
-            lead.prepStage === 'QA_APPROVED' ||
-            lead.taxDraftSummary?.status === 'QA_APPROVED' ||
-            Boolean(lead.taxDraftSummary?.qaApprovedByUserId) ||
-            Boolean(lead.taxDraftSummary?.qaApprovedAt) ||
-            [
-              'QA_APPROVED',
-              'SALES_PITCH_QUEUE',
-              'SALES_PITCHING',
-              'QUOTATION_SENT',
-              'PAYMENT_PENDING',
-              'PAID_AND_AUTHORIZED',
-              'FILING_QUEUE',
-              'FILING_IN_PROGRESS',
-              'FILING_SUCCESS',
-            ].includes(lead.currentStage)
-          );
+            lead.taxDraftSummary?.status === 'REVISION_REQUESTED';
+          const isApproved =
+            !isRevision &&
+            (lead.prepStage === 'QA_APPROVED' ||
+              lead.taxDraftSummary?.status === 'QA_APPROVED' ||
+              Boolean(lead.taxDraftSummary?.qaApprovedByUserId) ||
+              Boolean(lead.taxDraftSummary?.qaApprovedAt) ||
+              [
+                'QA_APPROVED',
+                'SALES_PITCH_QUEUE',
+                'SALES_PITCHING',
+                'QUOTATION_SENT',
+                'PAYMENT_PENDING',
+                'PAID_AND_AUTHORIZED',
+                'FILING_QUEUE',
+                'FILING_IN_PROGRESS',
+                'FILING_SUCCESS',
+              ].includes(lead.currentStage));
 
           if (isRevision) {
             revRevisions++;
@@ -198,23 +227,41 @@ export const PrepReviewLayout: React.FC = () => {
   const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');
   const navItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
 
+  const currentPath = location.pathname;
+
   const getActiveId = () => {
     if (currentPath.includes('/prep-review/notifications')) return 'notifications';
     if (currentPath.includes('/prep-review/manager/staff')) return 'staff';
     if (currentPath.includes('/prep-review/manager/queue')) return 'caseload';
     if (currentPath.includes('/prep-review/manager')) return 'dashboard';
 
+    // Client / workspace screens highlight the page they were opened from
+    if (currentPath.includes('/prep-review/preparer/client/') || currentPath.includes('/prep-review/preparer/workspace/')) {
+      const origin = getPreparerOrigin(location.search);
+      if (origin === 'pending') return 'preparer_pending';
+      if (origin === 'under-review') return 'preparer_under_review';
+      if (origin === 'completed') return 'preparer_completed';
+      return 'preparer_working';
+    }
+    if (currentPath.includes('/prep-review/reviewer/client/') || currentPath.includes('/prep-review/reviewer/audit/') || currentPath.includes('/prep-review/reviewer/workspace/')) {
+      const origin = getReviewerOrigin(location.search);
+      if (origin === 'reviewer-pending') return 'reviewer_pending';
+      if (origin === 'revisions') return 'reviewer_revisions';
+      if (origin === 'approved') return 'reviewer_approved';
+      return 'reviewer_assigned';
+    }
+
     // Preparer paths
     if (currentPath.includes('/prep-review/preparer/pending')) return 'preparer_pending';
     if (currentPath.includes('/prep-review/preparer/under-review')) return 'preparer_under_review';
     if (currentPath.includes('/prep-review/preparer/completed')) return 'preparer_completed';
-    if (currentPath.includes('/prep-review/preparer/working') || currentPath === '/prep-review/preparer' || currentPath.includes('/prep-review/preparer/workspace') || currentPath.includes('/prep-review/preparer/client')) return 'preparer_working';
+    if (currentPath.includes('/prep-review/preparer/working') || currentPath === '/prep-review/preparer' || currentPath.includes('/prep-review/preparer/client')) return 'preparer_working';
 
     // Reviewer paths
     if (currentPath.includes('/prep-review/reviewer/pending')) return 'reviewer_pending';
     if (currentPath.includes('/prep-review/reviewer/revisions')) return 'reviewer_revisions';
     if (currentPath.includes('/prep-review/reviewer/approved')) return 'reviewer_approved';
-    if (currentPath.includes('/prep-review/reviewer/assigned') || currentPath === '/prep-review/reviewer' || currentPath.includes('/prep-review/reviewer/queue') || currentPath.includes('/prep-review/reviewer/audit') || currentPath.includes('/prep-review/reviewer/client') || currentPath.includes('/prep-review/reviewer/workspace')) return 'reviewer_assigned';
+    if (currentPath.includes('/prep-review/reviewer/assigned') || currentPath === '/prep-review/reviewer' || currentPath.includes('/prep-review/reviewer/queue')) return 'reviewer_assigned';
 
     if (currentPath.includes('/prep-review/dashboard')) return 'specialist_hub';
     return isManager ? 'dashboard' : 'specialist_hub';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 // ShieldCheck, ChevronDown, ChevronUp, CheckCircle2 and useState are needed again if the QA card is restored
 import { ArrowLeft, Mail, Phone, MapPin, RotateCcw, UserCheck } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/store/auth-store';
@@ -19,6 +19,7 @@ interface PitchTaxpayerHeaderProps {
 
 export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, onOpenSendBack, onOpenReturnToAdmin, extraActions }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
 
@@ -26,7 +27,7 @@ export const PitchTaxpayerHeader: React.FC<PitchTaxpayerHeaderProps> = ({ lead, 
   const backPath = lead.taxpayerId
     ? isManager
       ? `/sales/manager/client/${lead.taxpayerId}`
-      : `/sales/agent/client/${lead.taxpayerId}`
+      : `/sales/agent/client/${lead.taxpayerId}${location.search}`
     : isManager
     ? '/sales/manager/queue'
     : '/sales/agent/queue';

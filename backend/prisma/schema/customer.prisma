@@ -25,7 +25,8 @@ model CustomerProfile {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  applications TaxApplication[]
+  applications TaxApplication[]
+  invoices            Invoice[]
   couponUsages CouponUsage[]
 
   @@index([ssnTin])

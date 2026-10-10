@@ -4,6 +4,7 @@ import { useAuthStore } from '@/features/auth/store/auth-store';
 import { prepReviewService } from '../services/prep-review-service';
 import type { PrepReviewLead } from '../types/prep-review.types';
 import toast from 'react-hot-toast';
+import { VIEW_TO_ORIGIN } from '../utils/preparer-origin';
 
 export type PreparerQueueTab = 
   | 'WORKING' 
@@ -11,15 +12,45 @@ export type PreparerQueueTab =
   | 'UNDER_REVIEW' 
   | 'COMPLETED' 
   | 'ALL' 
+  | 'ASSIGNED'
   | 'DRAFTING' 
   | 'QA_SUBMITTED' 
   | 'QA_APPROVED' 
   | 'REVISIONS' 
   | 'REVERTED';
 
-export function useTaxPreparerQueue(defaultTab: PreparerQueueTab = 'WORKING') {
+/**
+ * Preparer sidebar pages. Each return lands in exactly one page:
+ * - PENDING: assigned more than 1 day ago and preparer has not saved any work yet
+ * - PREPARATION: work in hand (assigned < 1 day, in progress, revisions requested by QA, reverted to documenter) shown as tabs
+ * - UNDER_REVIEW: submitted to QA, waiting for the reviewer
+ * - COMPLETED: QA approved and moved on (sales / filing)
+ * - ALL: legacy workbench view with every return and all tabs
+ */
+export type PreparerQueueView = 'ALL' | 'PREPARATION' | 'PENDING' | 'UNDER_REVIEW' | 'COMPLETED';
+
+type PreparerBucket = 'ASSIGNED' | 'PENDING' | 'IN_PROGRESS' | 'REVISIONS' | 'REVERTED' | 'UNDER_REVIEW' | 'COMPLETED';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function useTaxPreparerQueue(
+  viewOrTab: PreparerQueueView | PreparerQueueTab = 'ALL',
+  defaultTabProp?: PreparerQueueTab
+) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+
+  const view: PreparerQueueView = 
+    viewOrTab === 'PREPARATION' || viewOrTab === 'PENDING' || viewOrTab === 'UNDER_REVIEW' || viewOrTab === 'COMPLETED'
+      ? viewOrTab
+      : 'ALL';
+
+  const defaultTab: PreparerQueueTab = 
+    defaultTabProp 
+      ? defaultTabProp 
+      : viewOrTab === 'PREPARATION'
+      ? 'ALL'
+      : (viewOrTab as PreparerQueueTab);
 
   const [activeTab, setActiveTab] = useState<PreparerQueueTab>(defaultTab);
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,9 +243,51 @@ export function useTaxPreparerQueue(defaultTab: PreparerQueueTab = 'WORKING') {
     };
   }, [allLeads.length, counts]);
 
+  // One bucket per return; a saved workspace draft marks the preparer as started
+  const bucketOf = (lead: PrepReviewLead): PreparerBucket => {
+    if (isReturnReverted(lead)) return 'REVERTED';
+    if (isReturnRevision(lead)) return 'REVISIONS';
+    if (isReturnApproved(lead)) return 'COMPLETED';
+    if (isReturnSubmittedToQA(lead)) return 'UNDER_REVIEW';
+    if (lead.taxDraftSummary?.status === 'DRAFT_SAVED') return 'IN_PROGRESS';
+    // Not started: stays in "Assigned leads" for 1 day, then moves to Pending Returns
+    const assignedAt = lead.prepAssignedAt ? new Date(lead.prepAssignedAt).getTime() : 0;
+    return assignedAt && Date.now() - assignedAt < DAY_MS ? 'ASSIGNED' : 'PENDING';
+  };
+
+  const VIEW_BUCKETS: Record<PreparerQueueView, PreparerBucket[] | null> = {
+    ALL: null,
+    PREPARATION: ['ASSIGNED', 'IN_PROGRESS', 'REVISIONS', 'REVERTED'],
+    PENDING: ['PENDING'],
+    UNDER_REVIEW: ['UNDER_REVIEW'],
+    COMPLETED: ['COMPLETED'],
+  };
+
+  // Returns that belong to the current sidebar page
+  const viewLeads = useMemo(() => {
+    const buckets = VIEW_BUCKETS[view];
+    return buckets ? allLeads.filter((l) => buckets.includes(bucketOf(l))) : allLeads;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allLeads, view]);
+
+  // Tab counts for the Return Preparation page
+  const preparationCounts = useMemo(() => {
+    const c = { all: 0, assigned: 0, inProgress: 0, revisions: 0, reverted: 0 };
+    viewLeads.forEach((l) => {
+      const b = bucketOf(l);
+      c.all++;
+      if (b === 'ASSIGNED') c.assigned++;
+      if (b === 'IN_PROGRESS') c.inProgress++;
+      if (b === 'REVISIONS') c.revisions++;
+      if (b === 'REVERTED') c.reverted++;
+    });
+    return c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewLeads]);
+
   // Filtered Leads
   const filteredReturns = useMemo(() => {
-    return allLeads.filter((item) => {
+    return viewLeads.filter((item) => {
       const reverted = isReturnReverted(item);
       const approved = !reverted && isReturnApproved(item);
       const revision = !reverted && isReturnRevision(item);
@@ -227,7 +300,9 @@ export function useTaxPreparerQueue(defaultTab: PreparerQueueTab = 'WORKING') {
       if (activeTab === 'PENDING' && !pending) return false;
       if ((activeTab === 'UNDER_REVIEW' || activeTab === 'QA_SUBMITTED') && !submitted) return false;
       if ((activeTab === 'COMPLETED' || activeTab === 'QA_APPROVED') && !approved) return false;
-      if (activeTab === 'DRAFTING' && !drafting) return false;
+      if (activeTab === 'ASSIGNED' && bucketOf(item) !== 'ASSIGNED') return false;
+      // Return Preparation page: "In preparation" = draft saved (new ones sit under Assigned leads)
+      if (activeTab === 'DRAFTING' && (!drafting || (view === 'PREPARATION' && bucketOf(item) !== 'IN_PROGRESS'))) return false;
       if (activeTab === 'REVISIONS' && !revision) return false;
       if (activeTab === 'REVERTED' && !reverted) return false;
 
@@ -245,7 +320,8 @@ export function useTaxPreparerQueue(defaultTab: PreparerQueueTab = 'WORKING') {
       }
       return true;
     });
-  }, [allLeads, activeTab, complexityFilter, priorityFilter, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewLeads, activeTab, complexityFilter, priorityFilter, searchQuery, view]);
 
   const clientRows = useMemo(() => {
     const seen = new Set<string>();
@@ -257,13 +333,16 @@ export function useTaxPreparerQueue(defaultTab: PreparerQueueTab = 'WORKING') {
     });
   }, [filteredReturns]);
 
+  // ?from= keeps the right sidebar item highlighted on the client / workspace screens
+  const fromQuery = `?from=${VIEW_TO_ORIGIN[view]}`;
+
   const handleOpenClient = (lead: PrepReviewLead) => {
-    navigate(`/prep-review/preparer/client/${lead.taxpayerId || lead.id}`);
+    navigate(`/prep-review/preparer/client/${lead.taxpayerId || lead.id}${fromQuery}`);
   };
 
   const handleOpenNextReturn = () => {
     if (filteredReturns.length > 0) {
-      navigate(`/prep-review/preparer/workspace/${filteredReturns[0].id || filteredReturns[0].applicationId}`);
+      navigate(`/prep-review/preparer/workspace/${filteredReturns[0].id || filteredReturns[0].applicationId}${fromQuery}`);
     } else {
       toast('No active tax returns in queue', { icon: 'ℹ️' });
     }
@@ -273,6 +352,7 @@ export function useTaxPreparerQueue(defaultTab: PreparerQueueTab = 'WORKING') {
     isLoading,
     allLeads,
     counts,
+    preparationCounts,
     stats,
     filteredReturns,
     clientRows,

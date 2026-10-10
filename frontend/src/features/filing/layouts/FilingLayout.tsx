@@ -140,7 +140,7 @@ export const FilingLayout: React.FC = () => {
   const getActiveId = () => {
     if (currentPath.includes('/filing/notifications')) return 'notifications';
     if (currentPath.includes('/filing/manager/staff')) return 'team';
-    if (currentPath.includes('/filing/manager/queue')) return 'queue';
+    if (currentPath.includes('/filing/manager/queue') || currentPath.includes('/filing/manager/client')) return 'queue';
     if (currentPath.includes('/filing/manager')) return 'dashboard';
 
     // Filing Specialist items
@@ -148,7 +148,22 @@ export const FilingLayout: React.FC = () => {
     if (currentPath.includes('/filing/agent/on-hold')) return 'filing_on_hold';
     if (currentPath.includes('/filing/agent/rejected')) return 'filing_rejected';
     if (currentPath.includes('/filing/agent/filed')) return 'filing_filed';
-    if (currentPath.includes('/filing/agent/queue') || currentPath.includes('/filing/agent/ready') || currentPath.includes('/filing/workspace')) return 'filing_ready';
+
+    // Workspace / Client view keeps the page it was opened from (?from=)
+    if (currentPath.includes('/filing/workspace') || currentPath.includes('/filing/agent/client')) {
+      const from = new URLSearchParams(location.search).get('from');
+      const byFrom: Record<string, string> = {
+        pending: 'filing_pending',
+        'on-hold': 'filing_on_hold',
+        rejected: 'filing_rejected',
+        filed: 'filing_filed',
+        queue: 'filing_ready',
+        ready: 'filing_ready',
+      };
+      return (from && byFrom[from]) || 'filing_ready';
+    }
+
+    if (currentPath.includes('/filing/agent/queue') || currentPath.includes('/filing/agent/ready')) return 'filing_ready';
     if (currentPath === '/filing/agent' || currentPath === '/filing/agent/') return 'filing_dashboard';
     return isManager ? 'dashboard' : 'filing_ready';
   };

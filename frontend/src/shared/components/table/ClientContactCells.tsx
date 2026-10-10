@@ -1,11 +1,14 @@
 import React from 'react';
 import { AppCopyButton } from '@/shared/components/AppCopyButton';
+import { ClientHistoryTag, type ClientHistoryStatus } from './ClientHistoryTag';
 
 interface ClientNameCellProps {
   name: string;
   subText?: string;
   badge?: React.ReactNode;
   className?: string;
+  /** New / Paid / Unpaid client-history chip shown under the name (email lives in its own column) */
+  status?: ClientHistoryStatus | null;
 }
 
 export const ClientNameCell: React.FC<ClientNameCellProps> = ({
@@ -13,9 +16,10 @@ export const ClientNameCell: React.FC<ClientNameCellProps> = ({
   subText,
   badge,
   className = '',
+  status,
 }) => {
-  return (
-    <div className={`flex items-center gap-1.5 min-w-0 ${className}`}>
+  const nameRow = (
+    <div className={`flex items-center gap-1.5 min-w-0 ${status === undefined ? className : ''}`}>
       <span className="text-xs font-semibold text-slate-900 truncate">
         {name || '—'}
       </span>
@@ -23,6 +27,15 @@ export const ClientNameCell: React.FC<ClientNameCellProps> = ({
         <span className="text-[11px] text-slate-400 truncate">({subText})</span>
       )}
       {badge}
+    </div>
+  );
+
+  if (status === undefined) return nameRow;
+
+  return (
+    <div className={`flex flex-col gap-0.5 min-w-0 ${className}`}>
+      {nameRow}
+      <ClientHistoryTag status={status} />
     </div>
   );
 };

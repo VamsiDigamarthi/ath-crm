@@ -61,6 +61,7 @@ import { FilingManagerQueueScreen } from '@/features/filing/screens/FilingManage
 import { FilingStaffScorecardsScreen } from '@/features/filing/screens/FilingStaffScorecardsScreen';
 import { FilingSpecialistDashboardScreen } from '@/features/filing/screens/FilingSpecialistDashboardScreen';
 import { FilingSpecialistQueueScreen } from '@/features/filing/screens/FilingSpecialistQueueScreen';
+import { FilingClientYearsScreen } from '@/features/filing/screens/FilingClientYearsScreen';
 import { FilingTransmissionWorkspaceScreen } from '@/features/filing/screens/FilingTransmissionWorkspaceScreen';
 import { AdminSettingsScreen } from '@/features/admin/screens/AdminSettingsScreen';
 import { CustomerLayout } from '@/features/customer/layouts/CustomerLayout';
@@ -427,29 +428,30 @@ export const router = createBrowserRouter([
             element: <TaxSpecialistDashboardScreen />,
           },
           // Tax Preparer Routes
+          // Preparer sidebar pages (key resets tabs/search when switching pages)
           {
             path: 'preparer',
-            element: <TaxPreparerQueueScreen initialTab="WORKING" />,
+            element: <TaxPreparerQueueScreen key="preparation" view="PREPARATION" />,
           },
           {
             path: 'preparer/working',
-            element: <TaxPreparerQueueScreen initialTab="WORKING" />,
-          },
-          {
-            path: 'preparer/pending',
-            element: <TaxPreparerQueueScreen initialTab="PENDING" />,
-          },
-          {
-            path: 'preparer/under-review',
-            element: <TaxPreparerQueueScreen initialTab="UNDER_REVIEW" />,
-          },
-          {
-            path: 'preparer/completed',
-            element: <TaxPreparerQueueScreen initialTab="COMPLETED" />,
+            element: <TaxPreparerQueueScreen key="preparation-working" view="PREPARATION" />,
           },
           {
             path: 'preparer/queue',
-            element: <TaxPreparerQueueScreen />,
+            element: <TaxPreparerQueueScreen key="preparation-queue" view="PREPARATION" />,
+          },
+          {
+            path: 'preparer/pending',
+            element: <TaxPreparerQueueScreen key="pending" view="PENDING" />,
+          },
+          {
+            path: 'preparer/under-review',
+            element: <TaxPreparerQueueScreen key="under-review" view="UNDER_REVIEW" />,
+          },
+          {
+            path: 'preparer/completed',
+            element: <TaxPreparerQueueScreen key="completed" view="COMPLETED" />,
           },
           {
             path: 'preparer/workspace/:id',
@@ -462,27 +464,27 @@ export const router = createBrowserRouter([
           // QA Compliance Reviewer Routes
           {
             path: 'reviewer',
-            element: <TaxReviewerQueueScreen initialTab="ALL" />,
+            element: <TaxReviewerQueueScreen key="assigned" view="ASSIGNED" />,
           },
           {
             path: 'reviewer/assigned',
-            element: <TaxReviewerQueueScreen initialTab="ALL" />,
-          },
-          {
-            path: 'reviewer/pending',
-            element: <TaxReviewerQueueScreen initialTab="PENDING" />,
-          },
-          {
-            path: 'reviewer/revisions',
-            element: <TaxReviewerQueueScreen initialTab="REVISIONS" />,
-          },
-          {
-            path: 'reviewer/approved',
-            element: <TaxReviewerQueueScreen initialTab="APPROVED" />,
+            element: <TaxReviewerQueueScreen key="assigned-named" view="ASSIGNED" />,
           },
           {
             path: 'reviewer/queue',
-            element: <TaxReviewerQueueScreen />,
+            element: <TaxReviewerQueueScreen key="assigned-queue" view="ASSIGNED" />,
+          },
+          {
+            path: 'reviewer/pending',
+            element: <TaxReviewerQueueScreen key="reviewer-pending" view="PENDING" />,
+          },
+          {
+            path: 'reviewer/revisions',
+            element: <TaxReviewerQueueScreen key="revisions" view="REVISIONS" />,
+          },
+          {
+            path: 'reviewer/approved',
+            element: <TaxReviewerQueueScreen key="approved" view="APPROVED" />,
           },
           {
             path: 'reviewer/audit/:id',
@@ -588,27 +590,28 @@ export const router = createBrowserRouter([
           },
           {
             path: 'agent/queue',
-            element: <SalesAgentQueueScreen initialTab="ALL" />,
+            element: <SalesAgentQueueScreen key="prospects" view="MY" />,
           },
           {
             path: 'agent/prospects',
-            element: <SalesAgentQueueScreen initialTab="ALL" />,
+            element: <SalesAgentQueueScreen key="prospects-named" view="MY" />,
           },
+          // Sales sidebar pages (key resets search / tabs when switching pages)
           {
             path: 'agent/pending',
-            element: <SalesAgentQueueScreen initialTab="PENDING" />,
+            element: <SalesAgentQueueScreen key="pending" view="PENDING" />,
           },
           {
             path: 'agent/callbacks',
-            element: <SalesAgentQueueScreen initialTab="CALLBACKS" />,
+            element: <SalesAgentQueueScreen key="callbacks" view="CALLBACKS" />,
           },
           {
             path: 'agent/follow-ups',
-            element: <SalesAgentQueueScreen initialTab="FOLLOW_UPS" />,
+            element: <SalesAgentQueueScreen key="follow-ups" view="FOLLOW_UPS" />,
           },
           {
             path: 'agent/converted',
-            element: <SalesAgentQueueScreen initialTab="CONVERTED" />,
+            element: <SalesAgentQueueScreen key="converted" view="CONVERTED" />,
           },
           {
             path: 'agent/pitch/:id',
@@ -675,35 +678,49 @@ export const router = createBrowserRouter([
           },
           {
             path: 'agent/queue',
-            element: <FilingSpecialistQueueScreen initialTab="READY" />,
+            element: <FilingSpecialistQueueScreen key="ready" view="READY" />,
           },
           {
             path: 'agent/ready',
-            element: <FilingSpecialistQueueScreen initialTab="READY" />,
+            element: <FilingSpecialistQueueScreen key="ready-named" view="READY" />,
           },
+          // Filing sidebar pages (key resets tabs when switching pages)
           {
             path: 'agent/pending',
-            element: <FilingSpecialistQueueScreen initialTab="PENDING" />,
+            element: <FilingSpecialistQueueScreen key="pending" view="PENDING" />,
           },
           {
             path: 'agent/on-hold',
-            element: <FilingSpecialistQueueScreen initialTab="ON_HOLD" />,
+            element: <FilingSpecialistQueueScreen key="on-hold" view="ON_HOLD" />,
           },
           {
             path: 'agent/rejected',
-            element: <FilingSpecialistQueueScreen initialTab="REJECTED" />,
+            element: <FilingSpecialistQueueScreen key="rejected" view="RETURNED" />,
+          },
+          {
+            path: 'agent/returned',
+            element: <FilingSpecialistQueueScreen key="returned" view="RETURNED" />,
           },
           {
             path: 'agent/filed',
-            element: <FilingSpecialistQueueScreen initialTab="FILED" />,
+            element: <FilingSpecialistQueueScreen key="filed" view="FILED" />,
           },
           {
             path: 'queue',
-            element: <FilingSpecialistQueueScreen initialTab="READY" />,
+            element: <FilingSpecialistQueueScreen key="queue-legacy" view="READY" />,
           },
           {
             path: 'workspace/:id',
             element: <FilingTransmissionWorkspaceScreen />,
+          },
+          // Client tax years (customer → years → View opens the workspace)
+          {
+            path: 'manager/client/:customerId',
+            element: <FilingClientYearsScreen />,
+          },
+          {
+            path: 'agent/client/:customerId',
+            element: <FilingClientYearsScreen />,
           },
           {
             path: 'notifications',

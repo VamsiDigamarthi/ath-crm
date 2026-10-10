@@ -12,7 +12,7 @@ export const createAdminCustomerColumns = (
     id: 'name',
     header: 'NAME',
     accessorKey: 'fullName',
-    cell: ({ row }) => <ClientNameCell name={row.original.fullName} />,
+    cell: ({ row }) => <ClientNameCell name={row.original.fullName} status={row.original.clientPaymentStatus} />,
   },
   {
     id: 'email',

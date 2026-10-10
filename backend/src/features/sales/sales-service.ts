@@ -1,4 +1,5 @@
 import { prisma } from "../../config/db.js";
+import { computeClientHistoryStatus } from "../../utils/client-history.js";
 import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType, CouponStatus, Prisma } from "@prisma/client";
 import { StorageService } from "../../utils/storage-service.js";
 import { ApplicationNoteService } from "../application-notes/application-note-service.js";
@@ -7,6 +8,19 @@ import { NotFoundError } from "../../errors/not-found-error.js";
 import { BadRequestError } from "../../errors/bad-request-error.js";
 
 export type ClientType = 'PAID' | 'UNPAID' | 'NEW_COLD_CALLING' | 'NEW_REFERRAL';
+
+/**
+ * Sales call results. Stored only on CallLog; they never change the application stage,
+ * so prep / review / filing flows are unaffected. The SALES_ prefix keeps them apart
+ * from documenter dispositions in the same table.
+ */
+export const SALES_CALL_OUTCOMES = [
+  'SALES_CONNECTED',
+  'SALES_CALLBACK',
+  'SALES_FOLLOW_UP',
+  'SALES_NO_ANSWER',
+  'SALES_NOT_INTERESTED',
+] as const;
 
 const isAppPaid = (a: any) =>
   a.currentStage === ApplicationStage.FILING_SUCCESS ||
@@ -210,6 +224,12 @@ export class SalesService {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
+        // Latest sales call result drives the Scheduled Callbacks / Follow-Ups pages
+        callLogs: {
+          where: { disposition: { in: [...SALES_CALL_OUTCOMES] } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -235,26 +255,7 @@ export class SalesService {
         visibleApplications = allCustomerApps.filter((a: any) => a.assignedSalesAgentId === currentUserId);
       }
 
-      const isPaidClient = Boolean(
-        customer?.isConvertedCustomer ||
-        allCustomerApps.some((a: any) =>
-          a.currentStage === ApplicationStage.FILING_SUCCESS ||
-          a.currentStage === ApplicationStage.FILING_QUEUE ||
-          a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
-          a.quotes?.some((q: any) => q.status === 'PAID') ||
-          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-          (a as any).taxDraftSummary?.paidAmount > 0
-        )
-      );
-
-      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-      if (isPaidClient) {
-        clientPaymentStatus = 'PAID';
-      } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-        clientPaymentStatus = 'NEW';
-      } else {
-        clientPaymentStatus = 'UNPAID';
-      }
+      const clientPaymentStatus = computeClientHistoryStatus(app.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
       const fullName = customer
         ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'
@@ -381,6 +382,14 @@ export class SalesService {
         currentStage,
         clientPaymentStatus,
         clientType: computeClientType(app.taxYear, app.filingType, allCustomerApps, customer),
+        salesCallOutcome: (app as any).callLogs?.[0]
+          ? {
+              disposition: (app as any).callLogs[0].disposition,
+              callbackScheduledAt: (app as any).callLogs[0].callbackScheduledAt,
+              callSummary: (app as any).callLogs[0].callSummary,
+              createdAt: (app as any).callLogs[0].createdAt,
+            }
+          : null,
         allApplications: visibleApplications.map((a: any) => ({
           id: a.id,
           taxYear: a.taxYear,
@@ -1055,23 +1064,7 @@ export class SalesService {
     }
 
     const customer = app.customer;
-    const isPaidClient = Boolean(
-      customer?.isConvertedCustomer ||
-      allCustomerApps.some((a: any) =>
-        a.currentStage === ApplicationStage.FILING_SUCCESS ||
-        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-        (a as any).taxDraftSummary?.paidAmount > 0
-      )
-    );
-
-    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-    if (isPaidClient) {
-      clientPaymentStatus = 'PAID';
-    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-      clientPaymentStatus = 'NEW';
-    } else {
-      clientPaymentStatus = 'UNPAID';
-    }
+    const clientPaymentStatus = computeClientHistoryStatus(app.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
     const fullName = customer
       ? `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.email || '-'
@@ -1766,9 +1759,22 @@ export class SalesService {
       notes: string;
       disposition?: string;
       callDuration?: number;
+      callbackScheduledAt?: string | null;
     },
     userId: string
   ) {
+    const isSalesOutcome = (SALES_CALL_OUTCOMES as readonly string[]).includes(payload.disposition || '');
+    let callbackScheduledAt: Date | null = null;
+    // Callback and follow-up both need the date the client should be called again
+    if (payload.disposition === 'SALES_CALLBACK' || payload.disposition === 'SALES_FOLLOW_UP') {
+      callbackScheduledAt = payload.callbackScheduledAt ? new Date(payload.callbackScheduledAt) : null;
+      if (!callbackScheduledAt || isNaN(callbackScheduledAt.getTime())) {
+        throw new BadRequestError(
+          `Pick a date and time for the ${payload.disposition === 'SALES_CALLBACK' ? 'callback' : 'follow-up'}.`
+        );
+      }
+    }
+
     const app = await prisma.taxApplication.findUnique({
       where: { id: applicationId },
       include: { customer: true },
@@ -1782,15 +1788,17 @@ export class SalesService {
     const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email : 'Sales Closer';
 
     // A finished call is always logged, even when the closer typed no note, so it shows under Outreach Calls
-    if (!notes && payload.disposition === 'CALL_LOGGED' && userId) {
+    // A finished call or a call result is always logged, even with no note typed
+    if (!notes && (payload.disposition === 'CALL_LOGGED' || isSalesOutcome) && userId) {
       const seconds = Math.max(0, Math.round(Number(payload.callDuration) || 0));
       const duration = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
       await prisma.callLog.create({
         data: {
           applicationId,
           agentId: userId,
-          disposition: 'CALL_LOGGED',
+          disposition: payload.disposition as string,
           callSummary: `Sales call by ${actorName} (${duration})`,
+          callbackScheduledAt,
         },
       });
       await prisma.auditLog
@@ -1803,7 +1811,12 @@ export class SalesService {
             actorRole: user?.role || 'SALES_AGENT',
             action: AuditActionType.DISPOSITION_LOG,
             moduleKey: 'SALES',
-            details: { disposition: 'CALL_LOGGED', callDuration: seconds, remarks: `Sales call logged by ${actorName} (${duration})` },
+            details: {
+              disposition: payload.disposition,
+              callDuration: seconds,
+              callbackScheduledAt,
+              remarks: `Sales call logged by ${actorName} (${duration})`,
+            },
           },
         })
         .catch((err) => console.error('Failed to audit sales call:', err));
@@ -1851,6 +1864,7 @@ export class SalesService {
             agentId: userId,
             disposition: payload.disposition || 'SALES_CALL_LOGGED',
             callSummary: notes,
+            callbackScheduledAt,
           },
         });
       } catch (err) {

@@ -12,7 +12,7 @@ import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
-import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
+// import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
 import { FilingFloatingActionBar } from '../components/manager/FilingFloatingActionBar';
 import { FilingLeadAssignmentModal } from '../components/manager/FilingLeadAssignmentModal';
 import { getFilingColumns } from '../columns/filing-columns';
@@ -31,7 +31,7 @@ export const FilingManagerQueueScreen: React.FC = () => {
     activeLeadForAssign,
     staffList,
     fetchQueue,
-    handleOpenWorkspace,
+    handleOpenClient,
     handleOpenAssignModal,
     handleCloseAssignModal,
     handleDirectAssign,
@@ -58,12 +58,12 @@ export const FilingManagerQueueScreen: React.FC = () => {
   const columns = useMemo(
     () =>
       getFilingColumns({
-        onOpenWorkspace: (lead) => handleOpenWorkspace(lead.id),
+        onOpenWorkspace: (lead) => handleOpenClient(lead),
         onOpenAssignModal: handleOpenAssignModal,
         isSpecialist: false,
         isAdmin: true,
       }),
-    [handleOpenWorkspace, handleOpenAssignModal]
+    [handleOpenClient, handleOpenAssignModal]
   );
 
   const tabs = [
@@ -132,7 +132,8 @@ export const FilingManagerQueueScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Metrics Cards */}
+      {/* Stat cards hidden on table pages (client: keep tables compact) */}
+      {/*
       <FilingManagerMetrics
         readyCount={stats.readyForTransmission}
         inProgressCount={stats.transmittingMeF}
@@ -140,6 +141,7 @@ export const FilingManagerQueueScreen: React.FC = () => {
         failedCount={stats.rejectedToday}
         totalCount={stats.totalDepartmentLeads}
       />
+      */}
 
       {/* 3. Navigation Tabs */}
       <AppTabs
@@ -155,6 +157,7 @@ export const FilingManagerQueueScreen: React.FC = () => {
         data={leads}
         columns={columns}
         enableSelection={true}
+        onRowClick={(item) => handleOpenClient(item)}
         selectedRows={selectedRows}
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}

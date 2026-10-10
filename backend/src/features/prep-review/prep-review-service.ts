@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db.js';
+import { computeClientHistoryStatus } from "../../utils/client-history.js";
 import { ApplicationStage, Role, NotificationCategory, NotificationPriority, AuditActorType, AuditActionType } from '@prisma/client';
 import { StorageService } from '../../utils/storage-service.js';
 import { NotFoundError } from '../../errors/not-found-error.js';
@@ -335,6 +336,13 @@ export class PrepReviewService {
         assignedFileOp: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
+        // When the return was last assigned to a preparer (drives the 1-day Pending rule)
+        stageHistories: {
+          where: { remarks: { startsWith: 'Assigned to Tax Preparer' } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { createdAt: true },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -393,26 +401,7 @@ export class PrepReviewService {
         visibleApplications = allCustomerApps.filter((a: any) => a.assignedReviewAgentId === currentUserId);
       }
 
-      const isPaidClient = Boolean(
-        profile?.isConvertedCustomer ||
-        allCustomerApps.some((a: any) =>
-          a.currentStage === ApplicationStage.FILING_SUCCESS ||
-          a.currentStage === ApplicationStage.FILING_QUEUE ||
-          a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
-          a.quotes?.some((q: any) => q.status === 'PAID') ||
-          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-          (a as any).taxDraftSummary?.paidAmount > 0
-        )
-      );
-
-      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-      if (isPaidClient) {
-        clientPaymentStatus = 'PAID';
-      } else if (allCustomerApps.length <= 1 && (primaryApp.currentStage === ApplicationStage.RAW_PROSPECT || primaryApp.currentStage === ApplicationStage.DOC_OUTREACH)) {
-        clientPaymentStatus = 'NEW';
-      } else {
-        clientPaymentStatus = 'UNPAID';
-      }
+      const clientPaymentStatus = computeClientHistoryStatus(primaryApp.taxYear, allCustomerApps, profile?.isConvertedCustomer);
 
       const taxpayerName = profile
         ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Taxpayer'
@@ -461,6 +450,7 @@ export class PrepReviewService {
         })),
         totalTaxYears: visibleApplications.length,
         currentStage: primaryApp.currentStage,
+        prepAssignedAt: (primaryApp as any).stageHistories?.[0]?.createdAt || null,
         prepStage: stage,
         priority: primaryApp.priority,
         assignedDocAgent: primaryApp.assignedDocAgent ? {
@@ -981,23 +971,7 @@ export class PrepReviewService {
       }
     }
 
-    const isPaidClient = Boolean(
-      app.customer?.isConvertedCustomer ||
-      allCustomerApps.some((a: any) =>
-        a.currentStage === ApplicationStage.FILING_SUCCESS ||
-        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-        (a as any).taxDraftSummary?.paidAmount > 0
-      )
-    );
-
-    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-    if (isPaidClient) {
-      clientPaymentStatus = 'PAID';
-    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-      clientPaymentStatus = 'NEW';
-    } else {
-      clientPaymentStatus = 'UNPAID';
-    }
+    const clientPaymentStatus = computeClientHistoryStatus(app.taxYear, allCustomerApps, app.customer?.isConvertedCustomer);
 
     const customer = app.customer;
     const fullName = customer
@@ -1276,11 +1250,18 @@ export class PrepReviewService {
       uploadedAt: new Date().toISOString(),
       uploadedByUserId: userId,
       uploadedByName: actorName,
+      uploadedByRole: user?.role || 'TAX_PREPARER',
+      draftVersion: currentDraft.draftVersion || 1,
     };
 
+    // Replacing a draft keeps the old one in history (drafts get revised many times)
+    const draftHistory: any[] = Array.isArray(currentDraft.drakeTaxFileHistory) ? currentDraft.drakeTaxFileHistory : [];
     const updatedSummary = {
       ...currentDraft,
       drakeTaxFile,
+      drakeTaxFileHistory: currentDraft.drakeTaxFile
+        ? [{ ...currentDraft.drakeTaxFile, replacedAt: new Date().toISOString() }, ...draftHistory]
+        : draftHistory,
       updatedAt: new Date().toISOString(),
     };
 

@@ -7,6 +7,8 @@ import { getDocumenterColumns } from '../columns/documenter-columns';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { DocumenterLeadItem } from '../types/documenter.types';
+import { useScheduleStats } from '../hooks/useScheduleStats';
+import { ScheduleStatCards } from '../components/ScheduleStatCards';
 
 export const DocumenterAgentCallbacksScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -26,6 +28,13 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
     handleCloseModals,
     handleSaveCallDisposition,
   } = useDocumenterWorkspace('CALLBACKS');
+
+  const { stats: scheduleStats, refresh: refreshStats } = useScheduleStats('CALLBACKS');
+  const handleSaveDispositionAndRefresh: typeof handleSaveCallDisposition = async (...args) => {
+    const result = await handleSaveCallDisposition(...args);
+    refreshStats();
+    return result;
+  };
 
   const columns = useMemo(
     () =>
@@ -50,6 +59,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
         { header: 'Priority', key: 'priority' },
         { header: 'Stage', key: 'stage', format: (r) => r.currentStage },
         { header: 'Last Call Status', key: 'callStatus', format: (r) => r.lastCallLog?.disposition || 'No calls' },
+        { header: 'Comment', key: 'comment', format: (r) => r.lastCallLog?.callSummary || '' },
       ],
       'documenter_callbacks_queue'
     );
@@ -57,6 +67,8 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+      <ScheduleStatCards label="callbacks" stats={scheduleStats} />
+
       <UnifiedTable<DocumenterLeadItem>
         title="SCHEDULED CALLBACKS QUEUE"
         subtitle="Manage leads with scheduled callback commitments and follow-up requests."
@@ -75,7 +87,7 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
         onClose={handleCloseModals}
         lead={activeLeadForCall}
         isManager={false}
-        onSaveDisposition={handleSaveCallDisposition}
+        onSaveDisposition={handleSaveDispositionAndRefresh}
         isLoading={isActionLoading}
       />
 

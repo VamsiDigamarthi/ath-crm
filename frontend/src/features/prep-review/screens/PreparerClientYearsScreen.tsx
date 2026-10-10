@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { preparerOriginPath } from '../utils/preparer-origin';
 import type { ColumnDef } from '@tanstack/react-table';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Calculator } from 'lucide-react';
@@ -88,11 +89,13 @@ const usePreparerClientYears = (taxpayerId?: string) => {
 export const PreparerClientYearsScreen: React.FC = () => {
   const { taxpayerId } = useParams<{ taxpayerId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { years, client, isLoading } = usePreparerClientYears(taxpayerId);
 
+  // Carry ?from= so the sidebar keeps the page this client was opened from
   const openYear = useCallback(
-    (lead: PrepReviewLead) => navigate(`/prep-review/preparer/workspace/${lead.id || lead.applicationId}`),
-    [navigate]
+    (lead: PrepReviewLead) => navigate(`/prep-review/preparer/workspace/${lead.id || lead.applicationId}${location.search}`),
+    [navigate, location.search]
   );
 
   const columns = useMemo<ColumnDef<PrepReviewLead, unknown>[]>(
@@ -164,7 +167,7 @@ export const PreparerClientYearsScreen: React.FC = () => {
     <div className="space-y-6 pb-12 font-sans">
       <div className="flex items-center gap-3">
         <button
-          onClick={() => navigate('/prep-review/preparer')}
+          onClick={() => navigate(preparerOriginPath(location.search))}
           className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
           title="Back to queue"
         >

@@ -1,5 +1,8 @@
 import { prisma } from '../../config/db.js';
 import { irsConfig } from '../../config/irs-config.js';
+import { computeClientHistoryStatus } from '../../utils/client-history.js';
+import { NotFoundError } from '../../errors/not-found-error.js';
+import { BadRequestError } from '../../errors/bad-request-error.js';
 import { 
   ApplicationStage, 
   Role, 
@@ -9,6 +12,7 @@ import {
   NotificationPriority 
 } from '@prisma/client';
 import type { FilingLeadItem, FilingStaffMember, FilingManagerStats } from './filing-types.js';
+import { StorageService } from '../../utils/storage-service.js';
 
 export class FilingService {
   /**
@@ -23,28 +27,8 @@ export class FilingService {
     const customer = app.customer || {};
     const allCustomerApps = (customer as any)?.applications || [];
 
-    const isPaidClient = Boolean(
-      customer?.isConvertedCustomer ||
-      allCustomerApps.some((a: any) =>
-        a.currentStage === ApplicationStage.FILING_SUCCESS ||
-        a.currentStage === ApplicationStage.FILING_QUEUE ||
-        a.currentStage === ApplicationStage.FILING_IN_PROGRESS ||
-        a.quotes?.some((q: any) => q.status === 'PAID') ||
-        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-        (a as any).taxDraftSummary?.paidAmount > 0
-      )
-    );
-
-    let effectivePaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = clientPaymentStatus || 'UNPAID';
-    if (!clientPaymentStatus) {
-      if (isPaidClient) {
-        effectivePaymentStatus = 'PAID';
-      } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-        effectivePaymentStatus = 'NEW';
-      } else {
-        effectivePaymentStatus = 'UNPAID';
-      }
-    }
+    const effectivePaymentStatus: 'PAID' | 'NEW' | 'UNPAID' =
+      clientPaymentStatus || computeClientHistoryStatus(app.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
     const firstName = customer.firstName || 'Taxpayer';
     const lastName = customer.lastName || 'Client';
@@ -154,6 +138,8 @@ export class FilingService {
       totalRefundOrDue,
       paymentStatus: draft.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID',
       clientPaymentStatus: effectivePaymentStatus,
+      // Filing on hold is a flag only; it never changes the stage
+      filingHold: draft.filingHold || null,
       allApplications: visibleApplications ? visibleApplications.map((a: any) => ({
         id: a.id,
         taxYear: a.taxYear,
@@ -418,23 +404,7 @@ export class FilingService {
         visibleApplications = allCustomerApps.filter((a: any) => a.assignedFileOpId === currentUserId);
       }
 
-      const isPaidClient = Boolean(
-        customer?.isConvertedCustomer ||
-        allCustomerApps.some((a: any) =>
-          a.currentStage === ApplicationStage.FILING_SUCCESS ||
-          (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-          (a as any).taxDraftSummary?.paidAmount > 0
-        )
-      );
-
-      let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-      if (isPaidClient) {
-        clientPaymentStatus = 'PAID';
-      } else if (allCustomerApps.length <= 1 && (primaryApp.currentStage === ApplicationStage.RAW_PROSPECT || primaryApp.currentStage === ApplicationStage.DOC_OUTREACH)) {
-        clientPaymentStatus = 'NEW';
-      } else {
-        clientPaymentStatus = 'UNPAID';
-      }
+      const clientPaymentStatus = computeClientHistoryStatus(primaryApp.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
       groupedLeads.push(this.mapDbAppToFilingLead(primaryApp, visibleApplications, clientPaymentStatus));
     }
@@ -529,23 +499,7 @@ export class FilingService {
     }
 
     const customer = app.customer;
-    const isPaidClient = Boolean(
-      customer?.isConvertedCustomer ||
-      allCustomerApps.some((a: any) =>
-        a.currentStage === ApplicationStage.FILING_SUCCESS ||
-        (a as any).taxDraftSummary?.paymentStatus === 'PAID' ||
-        (a as any).taxDraftSummary?.paidAmount > 0
-      )
-    );
-
-    let clientPaymentStatus: 'PAID' | 'NEW' | 'UNPAID' = 'UNPAID';
-    if (isPaidClient) {
-      clientPaymentStatus = 'PAID';
-    } else if (allCustomerApps.length <= 1 && (app.currentStage === ApplicationStage.RAW_PROSPECT || app.currentStage === ApplicationStage.DOC_OUTREACH)) {
-      clientPaymentStatus = 'NEW';
-    } else {
-      clientPaymentStatus = 'UNPAID';
-    }
+    const clientPaymentStatus = computeClientHistoryStatus(app.taxYear, allCustomerApps, customer?.isConvertedCustomer);
 
     const item = this.mapDbAppToFilingLead(app, availableApplications, clientPaymentStatus);
     item.availableApplications = availableApplications.map((a: any) => ({
@@ -774,6 +728,194 @@ export class FilingService {
   /**
    * Transmit Return via IRS MeF Gateway
    */
+  /**
+   * Put a return on hold (or release it). Stored on taxDraftSummary.filingHold only;
+   * the stage is untouched, and transmitToIRS refuses while the hold is on.
+   */
+  public static async setFilingHold(applicationId: string, userId: string, onHold: boolean, reason?: string) {
+    const app = await prisma.taxApplication.findUnique({ where: { id: applicationId } });
+    if (!app) throw new NotFoundError('Application not found');
+    if (onHold && app.currentStage === ApplicationStage.FILING_SUCCESS) {
+      throw new BadRequestError('This return is already filed and accepted, so it cannot be put on hold.');
+    }
+
+    const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Filing Specialist' : 'Filing Specialist';
+    const draft: any = app.taxDraftSummary || {};
+
+    const filingHold = onHold
+      ? { onHold: true, reason: reason?.trim() || null, byName: actorName, byUserId: user?.id || null, at: new Date().toISOString() }
+      : null;
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: { taxDraftSummary: { ...draft, filingHold } },
+    });
+
+    await prisma.auditLog
+      .create({
+        data: {
+          applicationId,
+          actorId: user?.id || null,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'FILE_OP_AGENT',
+          action: AuditActionType.TAX_DRAFT_SAVE,
+          moduleKey: 'FILING_HOLD',
+          details: {
+            actionDescription: onHold ? `Filing put on hold${reason ? `: ${reason}` : ''}` : 'Filing hold released',
+            reason: reason || null,
+          },
+        },
+      })
+      .catch((err) => console.error('Failed to audit filing hold:', err));
+
+    return { onHold, filingHold };
+  }
+
+  /**
+   * Record an IRS rejection after transmission. Moves the return to FILING_FAILED
+   * (Returned Status → Rejected returns) and marks the transmission REJECTED,
+   * so the specialist can fix it and transmit again (reprocessing).
+   */
+  /**
+   * Upload the filed return copy after the IRS accepted it. The client sees it under "E-Sign & Tax Returns".
+   */
+  public static async uploadFiledCopy(applicationId: string, userId: string, file?: Express.Multer.File) {
+    if (!file) throw new BadRequestError('Choose the filed return file to upload.');
+    const app = await prisma.taxApplication.findUnique({ where: { id: applicationId }, include: { customer: true } });
+    if (!app) throw new NotFoundError('Tax application not found');
+    if (app.currentStage !== ApplicationStage.FILING_SUCCESS) {
+      throw new BadRequestError('The filed copy can be uploaded only after the IRS accepts the return.');
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Filing Specialist' : 'Filing Specialist';
+
+    const storageResult = await StorageService.saveFile(file, `taxpayer_${app.customerId}_ty${app.taxYear || 2025}/filed`);
+    const document = await prisma.taxDocument.create({
+      data: {
+        applicationId,
+        uploadedByUserId: userId,
+        fileName: file.originalname,
+        filePath: storageResult.filePath,
+        documentCategory: 'FILED_RETURN_COPY',
+        verificationStatus: 'VERIFIED',
+      },
+    });
+
+    const filedReturnCopy = {
+      id: document.id,
+      fileName: file.originalname,
+      fileUrl: storageResult.fileUrl,
+      filePath: storageResult.filePath,
+      fileSize: storageResult.fileSize || file.size,
+      uploadedAt: new Date().toISOString(),
+      uploadedByUserId: userId,
+      uploadedByName: actorName,
+      uploadedByRole: user?.role || 'FILE_OP_AGENT',
+    };
+    const currentDraft: any = app.taxDraftSummary || {};
+    const updatedSummary = { ...currentDraft, filedReturnCopy, updatedAt: new Date().toISOString() };
+    await prisma.taxApplication.update({ where: { id: applicationId }, data: { taxDraftSummary: updatedSummary } });
+
+    await prisma.auditLog
+      .create({
+        data: {
+          applicationId,
+          actorId: userId,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'FILE_OP_AGENT',
+          action: AuditActionType.DOCUMENT_UPLOAD,
+          moduleKey: 'FILING',
+          details: { documentId: document.id, fileName: file.originalname, remarks: `${actorName} uploaded the filed return copy "${file.originalname}".` },
+        },
+      })
+      .catch((err) => console.error('Failed to audit filed copy upload:', err));
+
+    if (app.customer?.userId) {
+      await prisma.notification
+        .create({
+          data: {
+            recipientUserId: app.customer.userId,
+            applicationId,
+            category: NotificationCategory.SYSTEM,
+            priority: NotificationPriority.NORMAL,
+            title: `Your filed tax return (TY ${app.taxYear}) is ready`,
+            message: 'The IRS accepted your return. Download your filed copy from E-Sign & Tax Returns.',
+            actionUrl: `/customer/organizer?taxYear=${app.taxYear}&tab=m_review_draft`,
+            actionLabel: 'View filed return',
+          },
+        })
+        .catch((err) => console.error('Failed to notify client of filed copy:', err));
+    }
+
+    return { success: true, filedReturnCopy, taxDraftSummary: updatedSummary };
+  }
+
+  public static async markIrsRejected(applicationId: string, userId: string, reason: string) {
+    const app = await prisma.taxApplication.findUnique({ where: { id: applicationId } });
+    if (!app) throw new NotFoundError('Application not found');
+    if (app.currentStage !== ApplicationStage.FILING_IN_PROGRESS && app.currentStage !== ApplicationStage.FILING_SUCCESS) {
+      throw new BadRequestError('Only a transmitted return can be marked as rejected by the IRS.');
+    }
+
+    const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
+    const actorName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Filing Specialist' : 'Filing Specialist';
+    const draft: any = app.taxDraftSummary || {};
+    const rejectedAt = new Date().toISOString();
+
+    await prisma.taxApplication.update({
+      where: { id: applicationId },
+      data: {
+        currentStage: ApplicationStage.FILING_FAILED,
+        taxDraftSummary: {
+          ...draft,
+          transmissionInfo: {
+            ...(draft.transmissionInfo || {}),
+            status: 'REJECTED',
+            irsAckCode: 'REJECTED',
+            acceptanceCertificateId: null,
+            rejectedAt,
+          },
+          irsRejection: { reason: reason.trim(), byName: actorName, at: rejectedAt },
+        },
+      },
+    });
+
+    if (user) {
+      await prisma.stageHistory
+        .create({
+          data: {
+            applicationId,
+            fromStage: app.currentStage,
+            toStage: ApplicationStage.FILING_FAILED,
+            movedByUserId: user.id,
+            remarks: `IRS rejected the return: ${reason.trim()}`,
+          },
+        })
+        .catch((err) => console.error('Failed to record IRS rejection stage:', err));
+    }
+
+    await prisma.auditLog
+      .create({
+        data: {
+          applicationId,
+          actorId: user?.id || null,
+          actorType: AuditActorType.AGENT,
+          actorName,
+          actorRole: user?.role || 'FILE_OP_AGENT',
+          action: AuditActionType.TAX_DRAFT_SAVE,
+          moduleKey: 'FILING_IRS_REJECTED',
+          details: { actionDescription: `Marked as rejected by the IRS: ${reason.trim()}`, reason: reason.trim() },
+        },
+      })
+      .catch((err) => console.error('Failed to audit IRS rejection:', err));
+
+    return { currentStage: ApplicationStage.FILING_FAILED, rejectedAt };
+  }
+
   public static async transmitToIRS(
     applicationId: string,
     options: {
@@ -793,6 +935,10 @@ export class FilingService {
     }
 
     const currentDraft: any = app.taxDraftSummary || {};
+
+    if (currentDraft.filingHold?.onHold) {
+      throw new Error('This return is on hold. Release the hold before transmitting to the IRS.');
+    }
 
     // Gate verification: Require service fee payment and Form 8879 e-sign
     if (currentDraft.paymentStatus !== 'PAID') {
@@ -820,6 +966,8 @@ export class FilingService {
     const updatedDraft = {
       ...currentDraft,
       transmissionInfo: updatedTransmission,
+      // A successful (re)transmission clears any earlier IRS rejection
+      irsRejection: null,
       transmittedAt: timestamp,
       acceptedAt: timestamp,
       acceptanceCertificateId: certificateId,

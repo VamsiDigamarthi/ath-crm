@@ -4,7 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Sparkles, PhoneCall, UserCheck } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell, makeRevertedColumn } from '@/shared/components/table';
 import { SalesStageBadge } from '../common/SalesStageBadge';
 import { SalesLeadAssignmentModal } from './SalesLeadAssignmentModal';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
@@ -36,7 +36,7 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
         header: 'NAME',
         accessorFn: (row) => row.taxpayerName || '—',
         cell: ({ row }) => (
-          <ClientNameCell name={row.original.taxpayerName} />
+          <ClientNameCell name={row.original.taxpayerName} status={row.original.clientPaymentStatus} />
         ),
       },
       {
@@ -175,6 +175,7 @@ export const SalesManagerPipelineTable: React.FC<SalesManagerPipelineTableProps>
           );
         },
       },
+      makeRevertedColumn<SalesLeadItem>((r) => (r as any).taxDraftSummary),
       {
         id: 'actions',
         header: 'ACTION',

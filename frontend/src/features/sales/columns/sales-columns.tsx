@@ -1,6 +1,6 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/shared/components/Button';
-import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell, makeRevertedColumn } from '@/shared/components/table';
 import { SalesStageBadge } from '../components/common/SalesStageBadge';
 import { ClientTypeBadge, CLIENT_TYPE_FILTER_OPTIONS } from '../components/common/ClientTypeBadge';
 import { PhoneCall, UserCheck } from 'lucide-react';
@@ -35,6 +35,7 @@ export function getSalesColumns({
                 </span>
               ) : undefined
             }
+            status={item.clientPaymentStatus}
           />
         );
       },
@@ -195,6 +196,8 @@ export function getSalesColumns({
       },
     },
   ];
+
+  columns.push(makeRevertedColumn<SalesLeadItem>((r) => (r as any).taxDraftSummary));
 
   if (!isAdmin) {
     columns.push({

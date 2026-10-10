@@ -18,20 +18,20 @@ export const SpecialistKpiCards: React.FC<SpecialistKpiCardsProps> = ({ stats })
   const periodLabel = stats.periodSuffix || 'This Month';
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {/* 1. Assigned as Preparer */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
             Assigned as Preparer
           </span>
-          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+          <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
             <Calculator className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <span className="text-xl font-bold text-slate-900 tracking-tight">
               {stats.prepActiveDrafts || 0}
             </span>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
@@ -46,18 +46,18 @@ export const SpecialistKpiCards: React.FC<SpecialistKpiCardsProps> = ({ stats })
       </div>
 
       {/* 2. Assigned as QA Reviewer */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
             Assigned as QA Reviewer
           </span>
-          <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
+          <div className="w-7 h-7 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
             <ShieldCheck className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <span className="text-xl font-bold text-slate-900 tracking-tight">
               {stats.qaPendingAudits || 0}
             </span>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
@@ -72,18 +72,18 @@ export const SpecialistKpiCards: React.FC<SpecialistKpiCardsProps> = ({ stats })
       </div>
 
       {/* 3. Passed QA in Period */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
             Passed QA ({periodLabel})
           </span>
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
+          <div className="w-7 h-7 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
             <CheckCircle2 className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <span className="text-xl font-bold text-slate-900 tracking-tight">
               {stats.qaApprovedToday || 0}
             </span>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-[#16A34A] border border-emerald-200">
@@ -98,18 +98,18 @@ export const SpecialistKpiCards: React.FC<SpecialistKpiCardsProps> = ({ stats })
       </div>
 
       {/* 4. Revisions / Fixes */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-rose-300 transition-all flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200 shadow-xs hover:border-rose-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
             Revisions / Fixes
           </span>
-          <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
+          <div className="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
             <RotateCcw className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            <span className="text-xl font-bold text-slate-900 tracking-tight">
               {stats.correctionsPending || 0}
             </span>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">

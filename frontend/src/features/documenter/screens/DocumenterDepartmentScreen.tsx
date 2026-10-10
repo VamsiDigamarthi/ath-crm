@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
-import { DocumenterMetrics } from '../components/DocumenterMetrics';
+// import { DocumenterMetrics } from '../components/DocumenterMetrics';
 import { FloatingActionBar } from '../components/FloatingActionBar';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { CallOutreachModal } from '../components/CallOutreachModal';
@@ -115,13 +115,15 @@ export const DocumenterDepartmentScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* Top Metric Cards */}
+      {/* Stat cards hidden on table pages (client: keep tables compact) */}
+      {/*
       <DocumenterMetrics
         stats={stats}
         onQuickAutoDistribute={() => handleAutoRoundRobin()}
         isDistributing={isActionLoading}
         showMyLeads={isAgent}
       />
+      */}
 
       {/* Super Admin Supervision Tabs */}
       <AppTabs

@@ -4,37 +4,37 @@ import { RefreshCw } from 'lucide-react';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { Button } from '@/shared/components/Button';
-import { FilingManagerMetrics } from '../components/manager/FilingManagerMetrics';
 import { getFilingColumns } from '../columns/filing-columns';
 import { useFilingQueue, type FilingSpecialistTab } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
 
 export interface FilingSpecialistQueueScreenProps {
   initialTab?: FilingSpecialistTab;
+  view?: string;
 }
 
-export const FilingSpecialistQueueScreen: React.FC<FilingSpecialistQueueScreenProps> = ({ initialTab }) => {
+export const FilingSpecialistQueueScreen: React.FC<FilingSpecialistQueueScreenProps> = ({ initialTab, view }) => {
   const location = useLocation();
 
-  // Deduce tab from current path
+  // Deduce tab from current path or props
   const routeTab = useMemo<FilingSpecialistTab>(() => {
     const path = location.pathname;
-    if (path.includes('/filing/agent/pending')) return 'PENDING';
-    if (path.includes('/filing/agent/on-hold')) return 'ON_HOLD';
-    if (path.includes('/filing/agent/rejected')) return 'REJECTED';
-    if (path.includes('/filing/agent/filed')) return 'FILED';
+    if (path.includes('/filing/agent/pending') || view === 'PENDING') return 'PENDING';
+    if (path.includes('/filing/agent/on-hold') || view === 'ON_HOLD') return 'ON_HOLD';
+    if (path.includes('/filing/agent/rejected') || view === 'RETURNED') return 'REJECTED';
+    if (path.includes('/filing/agent/filed') || view === 'FILED') return 'FILED';
     if (initialTab) return initialTab;
     return 'READY';
-  }, [location.pathname, initialTab]);
+  }, [location.pathname, initialTab, view]);
 
   const {
     isLoading,
-    counts,
     categorizedLeads,
     activeTab,
     setActiveTab,
     fetchQueue,
     handleOpenWorkspace,
+    handleOpenClient,
   } = useFilingQueue(true, routeTab);
 
   useEffect(() => {
@@ -43,13 +43,34 @@ export const FilingSpecialistQueueScreen: React.FC<FilingSpecialistQueueScreenPr
     }
   }, [routeTab, activeTab, setActiveTab]);
 
+  const fromKey = useMemo(() => {
+    switch (activeTab) {
+      case 'PENDING':
+        return 'pending';
+      case 'ON_HOLD':
+        return 'on-hold';
+      case 'REJECTED':
+        return 'rejected';
+      case 'FILED':
+        return 'filed';
+      default:
+        return 'queue';
+    }
+  }, [activeTab]);
+
   const columns = useMemo(
     () =>
       getFilingColumns({
-        onOpenWorkspace: (lead) => handleOpenWorkspace(lead.id),
+        onOpenWorkspace: (lead) => {
+          if (handleOpenClient) {
+            handleOpenClient(lead, fromKey);
+          } else {
+            handleOpenWorkspace(lead.id, fromKey);
+          }
+        },
         isSpecialist: true,
       }),
-    [handleOpenWorkspace]
+    [handleOpenClient, handleOpenWorkspace, fromKey]
   );
 
   const viewConfig = useMemo(() => {
@@ -97,7 +118,7 @@ export const FilingSpecialistQueueScreen: React.FC<FilingSpecialistQueueScreenPr
             {viewConfig.title}
           </h2>
           <p className="text-xs sm:text-sm text-zinc-500 mt-1 font-normal max-w-3xl">
-            {viewConfig.subtitle}
+            {categorizedLeads.length} returns · {viewConfig.subtitle}
           </p>
         </div>
 
@@ -115,16 +136,7 @@ export const FilingSpecialistQueueScreen: React.FC<FilingSpecialistQueueScreenPr
         </div>
       </div>
 
-      {/* 2. Live Transmission KPI Cards */}
-      <FilingManagerMetrics
-        readyCount={counts.ready}
-        inProgressCount={counts.pending}
-        acceptedCount={counts.filed}
-        failedCount={counts.rejected}
-        totalCount={counts.all}
-      />
-
-      {/* 3. Unified Table for the Selected Queue */}
+      {/* 2. Unified Table for the Selected Queue */}
       <UnifiedTable<FilingLeadItem>
         title={viewConfig.title.toUpperCase()}
         subtitle={viewConfig.subtitle}
@@ -148,7 +160,13 @@ export const FilingSpecialistQueueScreen: React.FC<FilingSpecialistQueueScreenPr
             `filing_${activeTab.toLowerCase()}_returns`
           );
         }}
-        onRowClick={(item) => handleOpenWorkspace(item.id)}
+        onRowClick={(item) => {
+          if (handleOpenClient) {
+            handleOpenClient(item, fromKey);
+          } else {
+            handleOpenWorkspace(item.id, fromKey);
+          }
+        }}
         emptyText={viewConfig.emptyText}
       />
     </div>

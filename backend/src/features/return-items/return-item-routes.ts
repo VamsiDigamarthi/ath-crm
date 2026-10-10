@@ -29,7 +29,6 @@ const EDIT_ROLES = [
   Role.TAX_PREPARER,
   Role.TAX_REVIEWER,
   Role.SALES_MANAGER,
-  Role.SALES_TEAM_LEAD,
   Role.SALES_AGENT,
 ];
 

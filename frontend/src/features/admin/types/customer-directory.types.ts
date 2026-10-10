@@ -9,6 +9,8 @@ export interface CustomerApplicationSummary {
 }
 
 export interface AdminCustomerItem {
+  /** New / Paid / Unpaid chip under the name (from earlier tax years) */
+  clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
   id: string;
   customerId: string;
   fullName: string;

@@ -4,12 +4,44 @@ import { useAuthStore } from '@/features/auth/store/auth-store';
 import { prepReviewService } from '../services/prep-review-service';
 import type { PrepReviewLead } from '../types/prep-review.types';
 import toast from 'react-hot-toast';
+import type { ReviewerOrigin } from '../utils/preparer-origin';
 
 export type ReviewerQueueTab = 'ALL' | 'PENDING' | 'REVISIONS' | 'APPROVED';
 
-export function useTaxReviewerQueue(defaultTab: ReviewerQueueTab = 'ALL') {
+/**
+ * Reviewer sidebar pages. Each return lands in exactly one page:
+ * - ASSIGNED: submitted by the preparer and waiting for this reviewer's audit
+ * - PENDING: reviewer is assigned but the preparer has not submitted it yet
+ * - REVISIONS: reviewer sent it back for any revision, waiting on the preparer
+ * - APPROVED: QA signed off
+ * - ALL: legacy queue with every return and the old tabs
+ */
+export type ReviewerQueueView = 'ALL' | 'ASSIGNED' | 'PENDING' | 'REVISIONS' | 'APPROVED';
+
+const VIEW_TO_REVIEWER_ORIGIN: Record<ReviewerQueueView, ReviewerOrigin> = {
+  ALL: 'assigned',
+  ASSIGNED: 'assigned',
+  PENDING: 'reviewer-pending',
+  REVISIONS: 'revisions',
+  APPROVED: 'approved',
+};
+
+export function useTaxReviewerQueue(
+  viewOrTab: ReviewerQueueView | ReviewerQueueTab = 'ALL',
+  defaultTabProp?: ReviewerQueueTab
+) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+
+  const view: ReviewerQueueView =
+    viewOrTab === 'ASSIGNED' || viewOrTab === 'PENDING' || viewOrTab === 'REVISIONS' || viewOrTab === 'APPROVED'
+      ? viewOrTab
+      : 'ALL';
+
+  const defaultTab: ReviewerQueueTab =
+    defaultTabProp
+      ? defaultTabProp
+      : (viewOrTab as ReviewerQueueTab);
 
   const [activeTab, setActiveTab] = useState<ReviewerQueueTab>(defaultTab);
   const [searchQuery, setSearchQuery] = useState('');
@@ -121,9 +153,30 @@ export function useTaxReviewerQueue(defaultTab: ReviewerQueueTab = 'ALL') {
     };
   }, [counts]);
 
+  // Submitted by the preparer and waiting for the reviewer's decision
+  const isReturnSubmitted = (lead: PrepReviewLead) =>
+    lead.prepStage === 'QA_IN_REVIEW' ||
+    lead.prepStage === 'QA_REVIEW_QUEUE' ||
+    lead.currentStage === 'QA_IN_REVIEW' ||
+    lead.currentStage === 'QA_REVIEW_QUEUE' ||
+    lead.taxDraftSummary?.status === 'SUBMITTED_FOR_QA';
+
+  const bucketOf = (lead: PrepReviewLead): Exclude<ReviewerQueueView, 'ALL'> => {
+    if (isReturnRevision(lead)) return 'REVISIONS';
+    if (isReturnSignedOff(lead)) return 'APPROVED';
+    return isReturnSubmitted(lead) ? 'ASSIGNED' : 'PENDING';
+  };
+
+  // Returns that belong to the current sidebar page
+  const viewLeads = useMemo(
+    () => (view === 'ALL' ? allLeads : allLeads.filter((l) => bucketOf(l) === view)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allLeads, view]
+  );
+
   // Filtered QA returns based on tab and search
   const filteredReturns = useMemo(() => {
-    return allLeads.filter((item) => {
+    return viewLeads.filter((item) => {
       const revision = isReturnRevision(item);
       const signedOff = !revision && isReturnSignedOff(item);
       const pending = !signedOff && !revision;
@@ -142,7 +195,7 @@ export function useTaxReviewerQueue(defaultTab: ReviewerQueueTab = 'ALL') {
       }
       return true;
     });
-  }, [allLeads, activeTab, searchQuery]);
+  }, [viewLeads, activeTab, searchQuery]);
 
   const clientRows = useMemo(() => {
     const seen = new Set<string>();
@@ -154,13 +207,16 @@ export function useTaxReviewerQueue(defaultTab: ReviewerQueueTab = 'ALL') {
     });
   }, [filteredReturns]);
 
+  // ?from= keeps the right sidebar item highlighted on the client / audit screens
+  const fromQuery = `?from=${VIEW_TO_REVIEWER_ORIGIN[view]}`;
+
   const handleOpenAudit = (lead: PrepReviewLead) => {
-    navigate(`/prep-review/reviewer/client/${lead.taxpayerId || lead.id}`);
+    navigate(`/prep-review/reviewer/client/${lead.taxpayerId || lead.id}${fromQuery}`);
   };
 
   const handleStartPriorityAudit = () => {
     if (filteredReturns.length > 0) {
-      navigate(`/prep-review/reviewer/audit/${filteredReturns[0].id || filteredReturns[0].applicationId}`);
+      navigate(`/prep-review/reviewer/audit/${filteredReturns[0].id || filteredReturns[0].applicationId}${fromQuery}`);
     } else {
       toast('No returns in this queue', { icon: 'ℹ️' });
     }

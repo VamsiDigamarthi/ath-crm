@@ -141,7 +141,7 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
       {/* Header & Quick Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-xl font-bold text-slate-900 tracking-tight">
             Documenter Operations Command Center
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
@@ -184,18 +184,18 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
       </div>
 
       {/* 2. Top 4 High-Impact KPI Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Metric 1 */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Department Leads</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">
+              <span className="text-xl font-bold text-slate-900">
                 {stats.totalDepartment || (stats.unassigned + stats.activeOutreach + stats.inPrep) || 0}
               </span>
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -215,16 +215,16 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Metric 2 */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Outreach Contact Rate</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
               <PhoneCall className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">
+              <span className="text-xl font-bold text-slate-900">
                 {stats.contactRatePct ? `${stats.contactRatePct}%` : '0.0%'}
               </span>
               <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
@@ -245,16 +245,16 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Metric 3 */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Tax Prep Active Pipeline</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{stats.inPrep || 0}</span>
+              <span className="text-xl font-bold text-slate-900">{stats.inPrep || 0}</span>
               <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                 DOC_PREP Active
               </span>
@@ -269,16 +269,16 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
         </div>
 
         {/* Metric 4 */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+        <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500">Scheduled Callbacks</span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center">
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{stats.callbacks || 0}</span>
+              <span className="text-xl font-bold text-slate-900">{stats.callbacks || 0}</span>
               <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
                 {stats.nextCallbackAt ? `Next: ${new Date(stats.nextCallbackAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'No Callbacks'}
               </span>
@@ -405,7 +405,7 @@ export const DocumenterManagerDashboardScreen: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight my-1">
+                  <div className="text-xl font-bold text-slate-900 tracking-tight my-1">
                     {item.count}
                   </div>
                   <div className="text-[11px] text-slate-500 font-medium truncate">

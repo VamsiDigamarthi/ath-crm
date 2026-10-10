@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   LayoutGrid,
   PhoneCall,
-  Clock,
   RotateCcw,
   FileCheck2,
   Bell,
@@ -52,8 +51,7 @@ export const DocumenterLayout: React.FC = () => {
     : [
       { id: 'agent_dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
       { id: 'agent_queue', label: 'My Leads', icon: PhoneCall, section: 'Calling Workspace', path: '/documenter/agent/queue' },
-      { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', path: '/documenter/agent/callbacks' },
-      { id: 'agent_fallback', label: 'Follow Ups', icon: RotateCcw, section: 'Calling Workspace', path: '/documenter/agent/fallback' },
+      { id: 'agent_fallback', label: 'Follow-Ups', icon: RotateCcw, section: 'Calling Workspace', path: '/documenter/agent/fallback' },
       { id: 'agent_documents', label: 'Completed Files', icon: FileCheck2, section: 'My Filings', path: '/documenter/agent/documents' },
       // { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'My Filings', path: '/documenter/agent/audit-logs' },
       { id: 'notifications', label: 'Notifications', icon: Bell, section: 'My Filings', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
@@ -69,6 +67,10 @@ export const DocumenterLayout: React.FC = () => {
 
   // Track the last active tab in sessionStorage whenever user is on a top-level route
   React.useEffect(() => {
+    // Opening a lead's tax years from another list keeps that list as the remembered tab
+    if (/\/documenter\/agent\/documents\/[^/]+/.test(currentPath) && (fromQuery || locationState?.from)) {
+      return;
+    }
     if (currentPath.includes('/documenter/agent/documents') || currentPath.includes('/documenter/agent/prep')) {
       sessionStorage.setItem('doc_last_tab', 'agent_documents');
     } else if (currentPath.includes('/documenter/agent/queue')) {
@@ -92,9 +94,28 @@ export const DocumenterLayout: React.FC = () => {
     } else if (currentPath === '/documenter/manager' || currentPath === '/documenter/manager/') {
       sessionStorage.setItem('doc_last_tab', 'dashboard');
     }
-  }, [currentPath]);
+  }, [currentPath, fromQuery, locationState?.from]);
+
+  // Which sidebar item a detail page was opened from (?from=… or navigation state)
+  const getOriginId = (): string | null => {
+    const origin = fromQuery || locationState?.from;
+    if (origin === 'documents' || origin === 'agent_documents') return 'agent_documents';
+    if (origin === 'queue' || origin === 'agent_queue') return 'agent_queue';
+    if (origin === 'callbacks' || origin === 'agent_callbacks') return 'agent_callbacks';
+    if (origin === 'fallback' || origin === 'agent_fallback') return 'agent_fallback';
+    if (origin === 'audit_logs' || origin === 'audit-logs') return 'audit_logs';
+    if (origin === 'caseload') return 'caseload';
+    return null;
+  };
+
+  // Tax-years page (/documenter/agent/documents/:id) is shared by every list, unlike the list itself
+  const isTaxYearsDetail = /\/documenter\/agent\/documents\/[^/]+/.test(currentPath);
 
   const getActiveId = () => {
+    if (isTaxYearsDetail) {
+      const origin = getOriginId();
+      if (origin) return origin;
+    }
     if (currentPath.includes('/audit-logs')) return 'audit_logs';
     if (currentPath.includes('/documenter/notifications')) return 'notifications';
     if (currentPath.includes('/documenter/manager/scorecards')) return 'scorecards';

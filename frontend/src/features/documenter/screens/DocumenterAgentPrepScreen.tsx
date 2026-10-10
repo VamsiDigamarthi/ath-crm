@@ -7,6 +7,7 @@ import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { Button } from '@/shared/components/Button';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { DocumenterLeadItem } from '../types/documenter.types';
+import { ClientHistoryTag } from '@/shared/components/table';
 import { Eye } from 'lucide-react';
 
 export const DocumenterAgentPrepScreen: React.FC = () => {
@@ -24,7 +25,12 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
         accessorFn: (row) => row.customer.fullName || `${row.customer.firstName || ''} ${row.customer.lastName || ''}`.trim() || '—',
         cell: ({ row }) => {
           const name = row.original.customer.fullName || `${row.original.customer.firstName || ''} ${row.original.customer.lastName || ''}`.trim() || '—';
-          return <ClientNameCell name={name} />;
+          return (
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <ClientNameCell name={name} />
+              <ClientHistoryTag status={row.original.clientPaymentStatus} />
+            </div>
+          );
         },
       },
       {

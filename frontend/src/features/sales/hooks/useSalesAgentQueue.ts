@@ -7,9 +7,40 @@ import toast from 'react-hot-toast';
 
 export type SalesAgentTab = 'ALL' | 'PENDING' | 'CALLBACKS' | 'FOLLOW_UPS' | 'CONVERTED';
 
-export function useSalesAgentQueue(defaultTab: SalesAgentTab = 'ALL') {
+/**
+ * Sales sidebar pages:
+ * - MY: every lead assigned to me (My Prospects, keeps its tabs)
+ * - PENDING: pending leads
+ * - CALLBACKS: scheduled callbacks
+ * - FOLLOW_UPS: follow-ups
+ * - CONVERTED: converted clients
+ */
+export type SalesAgentView = 'MY' | 'PENDING' | 'CALLBACKS' | 'FOLLOW_UPS' | 'CONVERTED';
+
+/** ?from= value per page so the client / pitch screens keep the right sidebar item */
+export const SALES_VIEW_FROM: Record<SalesAgentView, string> = {
+  MY: 'prospects',
+  PENDING: 'pending',
+  CALLBACKS: 'callbacks',
+  FOLLOW_UPS: 'follow-ups',
+  CONVERTED: 'converted',
+};
+
+export function useSalesAgentQueue(
+  viewOrTab: SalesAgentView | SalesAgentTab = 'MY',
+  defaultTabProp?: SalesAgentTab
+) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+
+  const view: SalesAgentView =
+    viewOrTab === 'MY' || viewOrTab === 'PENDING' || viewOrTab === 'CALLBACKS' || viewOrTab === 'FOLLOW_UPS' || viewOrTab === 'CONVERTED'
+      ? viewOrTab
+      : 'MY';
+
+  const defaultTab: SalesAgentTab = defaultTabProp
+    ? defaultTabProp
+    : (viewOrTab === 'MY' ? 'ALL' : (viewOrTab as SalesAgentTab));
 
   const [activeTab, setActiveTab] = useState<SalesAgentTab>(defaultTab);
   const [searchQuery, setSearchQuery] = useState('');
@@ -193,13 +224,34 @@ export function useSalesAgentQueue(defaultTab: SalesAgentTab = 'ALL') {
     };
   }, [allLeads, counts]);
 
+  const bucketOf = (lead: SalesLeadItem): Exclude<SalesAgentView, 'MY'> | 'REVERTED' => {
+    if (isReturnReverted(lead)) return 'REVERTED';
+    if (isLeadConverted(lead)) return 'CONVERTED';
+    if (isLeadCallback(lead)) return 'CALLBACKS';
+    if (isLeadFollowUp(lead)) return 'FOLLOW_UPS';
+    return 'PENDING';
+  };
+
+  // Leads that belong to the current sidebar page (callbacks soonest first)
+  const viewLeads = useMemo(() => {
+    if (view === 'MY') return allLeads;
+    const scoped = allLeads.filter((l) => bucketOf(l) === view);
+    if (view === 'CALLBACKS') {
+      const at = (l: SalesLeadItem) => new Date(l.salesCallOutcome?.callbackScheduledAt || 0).getTime();
+      return [...scoped].sort((a, b) => at(a) - at(b));
+    }
+    return scoped;
+  }, [allLeads, view]);
+
   // Filtered Leads
   const filteredLeads = useMemo(() => {
-    return allLeads.filter((lead) => {
-      if (activeTab === 'PENDING' && !isLeadPending(lead)) return false;
-      if (activeTab === 'CALLBACKS' && !isLeadCallback(lead)) return false;
-      if (activeTab === 'FOLLOW_UPS' && !isLeadFollowUp(lead)) return false;
-      if (activeTab === 'CONVERTED' && !isLeadConverted(lead)) return false;
+    return viewLeads.filter((lead) => {
+      if (view === 'MY') {
+        if (activeTab === 'PENDING' && !isLeadPending(lead)) return false;
+        if (activeTab === 'CALLBACKS' && !isLeadCallback(lead)) return false;
+        if (activeTab === 'FOLLOW_UPS' && !isLeadFollowUp(lead)) return false;
+        if (activeTab === 'CONVERTED' && !isLeadConverted(lead)) return false;
+      }
 
       // Priority Filter
       if (priorityFilter !== 'ALL' && (lead.priority || 'NO_PRIORITY') !== priorityFilter) return false;
@@ -215,7 +267,7 @@ export function useSalesAgentQueue(defaultTab: SalesAgentTab = 'ALL') {
       }
       return true;
     });
-  }, [allLeads, activeTab, priorityFilter, searchQuery]);
+  }, [viewLeads, view, activeTab, priorityFilter, searchQuery]);
 
   const clientRows = useMemo(() => {
     const seen = new Set<string>();
@@ -231,10 +283,12 @@ export function useSalesAgentQueue(defaultTab: SalesAgentTab = 'ALL') {
     navigate(`/sales/agent/pitch/${leadId}`);
   };
 
+  const fromQuery = `?from=${SALES_VIEW_FROM[view] || 'prospects'}`;
+
   const handleOpenNextPriority = () => {
     if (filteredLeads.length > 0) {
       const next = filteredLeads[0];
-      navigate(`/sales/agent/client/${next.taxpayerId || next.id || next.applicationId}`);
+      navigate(`/sales/agent/client/${next.taxpayerId || next.id || next.applicationId}${fromQuery}`);
     } else {
       toast('No pending returns in pitch queue', { icon: 'ℹ️' });
     }
@@ -255,8 +309,11 @@ export function useSalesAgentQueue(defaultTab: SalesAgentTab = 'ALL') {
     priorityFilter,
     setPriorityFilter,
     handleRefresh,
+    refreshData: handleRefresh,
     handleUpdatePriority,
     handleOpenPitch,
     handleOpenNextPriority,
+    fromQuery,
+    view,
   };
 }

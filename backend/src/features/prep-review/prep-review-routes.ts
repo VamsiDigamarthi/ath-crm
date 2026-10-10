@@ -32,6 +32,11 @@ const PREP_ROLES = [
   Role.TAX_PREPARER,
 ];
 
+// Return draft & e-sign documents (E-Sign & Tax Returns tab): sales closers add Form 8879 etc. too
+const DRAFT_FILE_ROLES = [...PREP_ROLES, Role.SALES_MANAGER, Role.SALES_AGENT];
+// Filing can also add a missing Form 8879 before transmitting (but not change the prepared draft)
+const DELIVERABLE_ROLES = [...DRAFT_FILE_ROLES, Role.FILE_OP_MANAGER, Role.FILE_OP_AGENT];
+
 // 1. Get staff matrix & caseload capacity for Tax Prep & Review Department
 router.get('/staff', requireAuth, authorize(...PREP_ROLES), getPrepReviewStaff);
 
@@ -49,11 +54,11 @@ router.get('/workspace/:id', requireAuth, authorize(...PREP_ROLES), getPrepRevie
 router.post('/workspace/:id/save-draft', requireAuth, authorize(...PREP_ROLES), savePrepReviewWorkspaceDraft);
 router.post('/workspace/:id/submit-qa', requireAuth, authorize(...PREP_ROLES), submitPrepReviewWorkspaceToQA);
 router.post('/workspace/:id/revert', requireAuth, authorize(...PREP_ROLES), revertPrepReviewWorkspace);
-router.post('/workspace/:id/upload-drake-file', requireAuth, authorize(...PREP_ROLES), uploadTaxDocument.single('file'), uploadDrakeTaxFile);
-router.delete('/workspace/:id/drake-file/:docId', requireAuth, authorize(...PREP_ROLES), deleteDrakeTaxFile);
-router.post('/workspace/:id/deliverable-document', requireAuth, authorize(...PREP_ROLES), uploadTaxDocument.single('file'), uploadDeliverableDocument);
-router.delete('/workspace/:id/deliverable-document/:docId', requireAuth, authorize(...PREP_ROLES), deleteDeliverableDocument);
-router.patch('/workspace/:id/deliverable-document/:docId', requireAuth, authorize(...PREP_ROLES), toggleDeliverableEsign);
+router.post('/workspace/:id/upload-drake-file', requireAuth, authorize(...DRAFT_FILE_ROLES), uploadTaxDocument.single('file'), uploadDrakeTaxFile);
+router.delete('/workspace/:id/drake-file/:docId', requireAuth, authorize(...DRAFT_FILE_ROLES), deleteDrakeTaxFile);
+router.post('/workspace/:id/deliverable-document', requireAuth, authorize(...DELIVERABLE_ROLES), uploadTaxDocument.single('file'), uploadDeliverableDocument);
+router.delete('/workspace/:id/deliverable-document/:docId', requireAuth, authorize(...DELIVERABLE_ROLES), deleteDeliverableDocument);
+router.patch('/workspace/:id/deliverable-document/:docId', requireAuth, authorize(...DELIVERABLE_ROLES), toggleDeliverableEsign);
 
 // 6. Document View & Download
 router.get('/documents/:id/view', requireAuth, authorize(...PREP_ROLES), viewPrepReviewDocument);

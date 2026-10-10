@@ -1,7 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/shared/components/Button';
-import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
-import { ArrowRight, Send } from 'lucide-react';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell, makeRevertedColumn } from '@/shared/components/table';
+import { ArrowRight, FolderOpen, UserCheck } from 'lucide-react';
 import type { FilingLeadItem } from '../types/filing.types';
 import { SYSTEM_PAYMENT_STATUSES, SYSTEM_STAGES } from '@/shared/constants/system-enums';
 
@@ -14,14 +14,15 @@ export interface FilingColumnsOptions {
 
 export function getFilingColumns({
   onOpenWorkspace,
+  onOpenAssignModal,
 }: FilingColumnsOptions): ColumnDef<FilingLeadItem, any>[] {
-  return [
+  const columns: ColumnDef<FilingLeadItem, any>[] = [
     {
       id: 'name',
       header: 'NAME',
       accessorFn: (row) => row.taxpayerName || '—',
       cell: ({ row }) => (
-        <ClientNameCell name={row.original.taxpayerName} />
+        <ClientNameCell name={row.original.taxpayerName} status={row.original.clientPaymentStatus} />
       ),
     },
     {
@@ -145,6 +146,7 @@ export function getFilingColumns({
         );
       },
     },
+    makeRevertedColumn<FilingLeadItem>((r) => (r as any).taxDraftSummary),
     {
       id: 'actions',
       header: 'ACTION',
@@ -161,12 +163,51 @@ export function getFilingColumns({
             onClick={() => onOpenWorkspace(row.original)}
             className="h-7 px-2.5 text-[11px] font-medium bg-[#16A34A] hover:bg-[#15803D] text-white flex items-center gap-1 shadow-2xs cursor-pointer"
           >
-            <Send className="w-3 h-3" />
-            <span>Transmit</span>
+            <FolderOpen className="w-3 h-3" />
+            <span>View filings</span>
             <ArrowRight className="w-3 h-3" />
           </Button>
         </div>
       ),
     },
   ];
+
+  // Manager view: who has the return, and a per-row Assign button before the actions
+  if (onOpenAssignModal) {
+    const assignedCol: ColumnDef<FilingLeadItem, any> = {
+      id: 'assignedTo',
+      header: 'ASSIGNED TO',
+      accessorFn: (row) => row.assignedFilingAgent?.name || 'Unassigned',
+      cell: ({ row }) =>
+        row.original.assignedFilingAgent ? (
+          <span className="text-xs text-slate-800">{row.original.assignedFilingAgent.name || row.original.assignedFilingAgent.email}</span>
+        ) : (
+          <span className="text-xs text-slate-400">Unassigned</span>
+        ),
+    };
+    const assignCol: ColumnDef<FilingLeadItem, any> = {
+      id: 'assign',
+      header: '',
+      enableSorting: false,
+      enableHiding: false,
+      meta: { disableMenu: true, disableFilter: true },
+      cell: ({ row }) => (
+        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onOpenAssignModal(row.original)}
+            className="h-7 px-2 text-[11px] font-normal border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center gap-1 cursor-pointer"
+          >
+            <UserCheck className="w-3 h-3 text-slate-500" />
+            <span>{row.original.assignedFilingAgent ? 'Reassign' : 'Assign'}</span>
+          </Button>
+        </div>
+      ),
+    };
+    const actionsIdx = columns.findIndex((c) => c.id === 'actions');
+    columns.splice(actionsIdx, 0, assignedCol, assignCol);
+  }
+
+  return columns;
 }

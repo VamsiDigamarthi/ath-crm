@@ -15,6 +15,7 @@ export const createSelfSignupColumns = (
     cell: ({ row }) => (
       <ClientNameCell
         name={`${row.original.customer?.firstName || ''} ${row.original.customer?.lastName || ''}`.trim() || 'Taxpayer'}
+        status={row.original.clientPaymentStatus}
       />
     ),
   },

@@ -92,6 +92,18 @@ export const filingService = {
   /**
    * Transmit Return to IRS E-Filing Gateway
    */
+  /** Record an IRS rejection; the return moves to Returned Status → Rejected returns */
+  async markIrsRejected(id: string, reason: string) {
+    const response: any = await apiClient.post(`/filing/leads/${id}/irs-reject`, { reason });
+    return response?.data || response;
+  },
+
+  /** Put a return on hold or release it (flag only, stage unchanged) */
+  async setHold(id: string, onHold: boolean, reason?: string) {
+    const response: any = await apiClient.post(`/filing/leads/${id}/hold`, { onHold, reason });
+    return response?.data || response;
+  },
+
   async transmitToIRS(
     id: string,
     data?: {

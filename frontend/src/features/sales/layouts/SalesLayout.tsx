@@ -169,7 +169,7 @@ export const SalesLayout: React.FC = () => {
       { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Management', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/sales/notifications' },
     ]
     : [
-      { id: 'agent_dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Closer Workspace', path: '/sales/agent' },
+      { id: 'sales_agent_hub', label: 'Dashboard', icon: LayoutDashboard, section: 'Closer Workspace', path: '/sales/agent' },
       { id: 'sales_my_prospects', label: 'My Prospects (My leads)', icon: PhoneCall, section: 'Active Operations', badge: salesCounts.all ? String(salesCounts.all) : undefined, path: '/sales/agent/queue' },
       { id: 'sales_pending_prospects', label: 'Pending Prospects (pending Leads)', icon: Clock, section: 'Active Operations', badge: salesCounts.pending ? String(salesCounts.pending) : undefined, path: '/sales/agent/pending' },
       { id: 'sales_callbacks', label: 'Scheduled Callbacks', icon: Calendar, section: 'Active Operations', badge: salesCounts.callbacks ? String(salesCounts.callbacks) : undefined, path: '/sales/agent/callbacks' },
@@ -190,13 +190,30 @@ export const SalesLayout: React.FC = () => {
     if (currentPath.includes('/sales/manager/pitch') || currentPath.includes('/sales/manager/queue')) return 'pipeline';
     if (currentPath === '/sales/manager' || currentPath === '/sales/manager/') return 'dashboard';
 
+    if (isManager && (currentPath.includes('/sales/agent/pitch') || currentPath.includes('/sales/pitch') || currentPath.includes('/sales/agent/queue'))) return 'pipeline';
+
     // Closer items
     if (currentPath.includes('/sales/agent/pending')) return 'sales_pending_prospects';
     if (currentPath.includes('/sales/agent/callbacks')) return 'sales_callbacks';
     if (currentPath.includes('/sales/agent/follow-ups')) return 'sales_follow_ups';
     if (currentPath.includes('/sales/agent/converted')) return 'sales_converted';
-    if (currentPath.includes('/sales/agent/queue') || currentPath.includes('/sales/agent/prospects') || currentPath.includes('/sales/agent/pitch') || currentPath.includes('/sales/agent/client')) return 'sales_my_prospects';
-    if (currentPath === '/sales/agent' || currentPath === '/sales/agent/') return 'agent_dashboard';
+
+    // Client / pitch screens highlight the page they were opened from (?from=)
+    if (currentPath.includes('/sales/agent/client/') || currentPath.includes('/sales/agent/pitch')) {
+      const from = new URLSearchParams(location.search).get('from');
+      const byFrom: Record<string, string> = {
+        pending: 'sales_pending_prospects',
+        callbacks: 'sales_callbacks',
+        'follow-ups': 'sales_follow_ups',
+        converted: 'sales_converted',
+        prospects: 'sales_my_prospects',
+      };
+      if (from && byFrom[from]) return byFrom[from];
+      return 'sales_my_prospects';
+    }
+
+    if (currentPath.includes('/sales/agent/queue') || currentPath.includes('/sales/agent/prospects')) return 'sales_my_prospects';
+    if (currentPath === '/sales/agent' || currentPath === '/sales/agent/') return 'sales_agent_hub';
 
     return isManager ? 'pipeline' : 'sales_my_prospects';
   };

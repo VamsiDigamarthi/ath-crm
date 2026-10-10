@@ -1,4 +1,5 @@
 import { prisma } from "../../config/db.js";
+import { computeClientHistoryStatus } from "../../utils/client-history.js";
 import { ApplicationStage } from "@prisma/client";
 import { BadRequestError } from "../../errors/bad-request-error.js";
 import { Role } from "../../types/index.js";
@@ -303,6 +304,7 @@ export class CustomerDirectoryService {
       return {
         id: p.id,
         customerId: p.id,
+        clientPaymentStatus: computeClientHistoryStatus(activeApp?.taxYear ?? 0, p.applications || [], p.isConvertedCustomer),
         fullName: `${p.firstName} ${p.lastName || ''}`.trim(),
         firstName: p.firstName,
         lastName: p.lastName,

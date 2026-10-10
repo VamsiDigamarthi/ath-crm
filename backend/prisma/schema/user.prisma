@@ -55,6 +55,7 @@ model User {
   orgRoles          UserOrgRole[]
   editAccessRequests EditAccessRequest[] @relation("RequestedEditAccess")
   reviewedEditAccess EditAccessRequest[] @relation("ReviewedEditAccess")
+  issuedInvoices     Invoice[] @relation("IssuedInvoices")
 
   @@index([email])
   @@index([mobile])

@@ -11,6 +11,7 @@ import {
   Bell,
   User,
   Plus,
+  Receipt,
 } from 'lucide-react';
 import { NotificationBellPopover } from '@/features/notifications/components/NotificationBellPopover';
 import { useNotificationStore } from '@/features/notifications/store/notification-store';
@@ -76,6 +77,12 @@ export const CustomerLayout: React.FC = () => {
       icon: FileText, 
       path: '/customer/filings' 
     },
+    {
+      id: 'customer_billing',
+      label: 'Billing & Invoices',
+      icon: Receipt,
+      path: '/customer/billing',
+    },
     { 
       id: 'customer_notifications', 
       label: 'Notifications', 
@@ -88,6 +95,7 @@ export const CustomerLayout: React.FC = () => {
   const currentPath = location.pathname;
   const getActiveId = () => {
     if (currentPath.includes('/customer/notifications')) return 'customer_notifications';
+    if (currentPath.includes('/customer/billing')) return 'customer_billing';
     if (currentPath.includes('/customer/filings')) return 'customer_filings';
     if (currentPath.includes('/customer/organizer')) return 'customer_filings';
     return 'customer_dashboard';

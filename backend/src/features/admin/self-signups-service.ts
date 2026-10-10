@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db.js';
+import { computeClientHistoryStatus } from "../../utils/client-history.js";
 import { ApplicationStage, Role, AuditActorType, AuditActionType, NotificationCategory, NotificationPriority } from '@prisma/client';
 import { BadRequestError } from '../../errors/bad-request-error.js';
 
@@ -341,6 +342,11 @@ export class SelfSignupsService {
 
       return {
         ...lead,
+        clientPaymentStatus: computeClientHistoryStatus(
+          lead.taxYear,
+          lead.customer?.applications || [],
+          lead.customer?.isConvertedCustomer
+        ),
         previousDocAgent,
         stageHistories: formattedStageHistories,
         callLogs: formattedCallLogs,

@@ -35,6 +35,7 @@ export const AdminMasterTaxpayerDirectoryScreen: React.FC = () => {
         cell: ({ row }) => (
           <ClientNameCell
             name={`${row.original.firstName} ${row.original.lastName}`.trim() || 'Taxpayer'}
+            status={row.original.clientPaymentStatus}
           />
         ),
       },

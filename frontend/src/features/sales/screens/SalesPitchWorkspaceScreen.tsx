@@ -5,15 +5,16 @@ import { useAuthStore } from '@/features/auth/store/auth-store';
 import { PitchTaxpayerHeader } from '../components/pitch/PitchTaxpayerHeader';
 // import { PitchNegotiationBar } from '../components/pitch/PitchNegotiationBar';
 import { ReturnItemsPanel } from '@/features/prep-review/components/workspace/ReturnItemsPanel';
+import { RaiseInvoiceControl } from '@/features/invoices/components/RaiseInvoiceControl';
 import { PitchFeeCalculator } from '../components/pitch/PitchFeeCalculator';
 import { PitchCallAssistant } from '../components/pitch/PitchCallAssistant';
 import { PitchPaymentAndEsignModals } from '../components/pitch/PitchPaymentAndEsignModals';
 import { TaxPrepOrganizerReview } from '@/features/documenter/components/prep/TaxPrepOrganizerReview';
-import { LeadAuditTrailSection } from '@/features/documenter/components/LeadAuditTrailSection';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { SendBackLeadModal } from '@/shared/components/workflow/SendBackLeadModal';
+import { SALES_SEND_BACK_TARGETS } from '../constants/sales-send-back';
 import { SalesReturnToAdminModal } from '../components/common/SalesReturnToAdminModal';
-import { ApplicationNotesPanel } from '@/features/application-notes/components/ApplicationNotesPanel';
+import { TaxApplicationNotesAndAuditTab } from '@/shared/components/workflow/TaxApplicationNotesAndAuditTab';
 import { useMyEditAccess } from '@/features/edit-access/hooks/useMyEditAccess';
 import { RequestEditAccessButton } from '@/features/edit-access/components/RequestEditAccessButton';
 import { salesService } from '../services/sales-service';
@@ -458,6 +459,16 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
                   form8879SendCount={lead.form8879SendCount}
                   form8879LastSentAt={lead.form8879LastSentAt}
                   applicationId={lead.id || lead.applicationId}
+                  invoiceSlot={
+                    <RaiseInvoiceControl
+                      applicationId={lead.id || lead.applicationId}
+                      customerName={lead.taxpayerName}
+                      customerEmail={lead.taxpayerEmail}
+                      taxYear={lead.taxYear}
+                      disabled={isLocked}
+                      disabledReason={lockReason || 'Invoices can be raised once the return is with sales'}
+                    />
+                  }
                   customerId={lead.taxpayerId || (lead as any).customerId}
                   isLocked={isLocked}
                   lockReason={lockReason}
@@ -485,23 +496,25 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
                     setIsDispatchConfirmOpen(true);
                   }}
                 />
-
-                <LeadAuditTrailSection
-                  leadId={lead.id || lead.applicationId}
-                  taxpayerName={lead.taxpayerName}
-                  taxpayerEmail={lead.taxpayerEmail}
-                  currentStage={lead.currentStage}
-                  stageHistories={(lead.stageHistories as any) || []}
-                  callLogs={(lead.callLogs as any) || []}
-                  auditLogs={(lead.auditLogs as any) || []}
-                />
+                {/* Audit trail moved to the shared "Notes & Audit" tab */}
               </div>
             ),
           },
           {
             id: 'NOTES',
-            label: 'Notes',
-            content: <ApplicationNotesPanel applicationId={appId} />,
+            label: 'Notes & Audit',
+            content: (
+              <TaxApplicationNotesAndAuditTab
+                applicationId={appId}
+                taxpayerName={lead.taxpayerName}
+                taxpayerEmail={lead.taxpayerEmail}
+                currentStage={lead.currentStage}
+                taxYear={lead.taxYear}
+                stageHistories={(lead.stageHistories as any) || []}
+                callLogs={(lead.callLogs as any) || []}
+                auditLogs={(lead.auditLogs as any) || []}
+              />
+            ),
           },
         ]}
       />
@@ -549,20 +562,7 @@ export const SalesPitchWorkspaceScreen: React.FC = () => {
           (lead as any).assignedDocAgent?.name ||
           (lead as any).assignedDocAgentName
         }
-        availableTargetDepartments={[
-          {
-            key: 'PREPARATION',
-            label: 'Tax Preparation Department (CPA / Preparer)',
-            badge: 'CORRECTION_NEEDED',
-            description: 'Send back to assigned Tax Preparer to recalculate Form 1040 deductions, tax credits, or filing status as requested by client.',
-          },
-          {
-            key: 'DOCUMENTER',
-            label: 'Documenter Department (Intake & Verification)',
-            badge: 'DOC_OUTREACH',
-            description: 'Send back to Documenter agent to collect missing paperwork, additional W-2/1099s, or clarify client intake.',
-          },
-        ]}
+        availableTargetDepartments={SALES_SEND_BACK_TARGETS}
         defaultTargetDepartment="PREPARATION"
         onRevertSuccess={() => {
           navigate(backQueuePath);

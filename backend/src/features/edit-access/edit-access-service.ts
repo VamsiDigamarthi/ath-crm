@@ -7,7 +7,7 @@ import { NotAllowedError } from "../../errors/not-allowed-error.js";
 // Stages where the documenter still owns the return and can edit without asking
 const DOCUMENTER_OPEN_STAGES: ApplicationStage[] = [ApplicationStage.RAW_PROSPECT, ApplicationStage.DOC_OUTREACH];
 
-const DOCUMENTER_ROLES: Role[] = [Role.DOC_AGENT, Role.DOC_TEAM_LEAD, Role.DOC_MANAGER];
+const DOCUMENTER_ROLES: Role[] = [Role.DOC_AGENT, Role.DOC_MANAGER];
 // Stages where the return has left sales (sent back or dispatched), so sales can't ask to edit
 const SALES_CLOSED_STAGES: ApplicationStage[] = [
   ApplicationStage.CORRECTION_NEEDED,
@@ -19,7 +19,7 @@ const SALES_CLOSED_STAGES: ApplicationStage[] = [
 ];
 
 // Sales never edit tax data by default, so they request access while the return is with them
-const SALES_ROLES: Role[] = [Role.SALES_AGENT, Role.SALES_TEAM_LEAD, Role.SALES_MANAGER];
+const SALES_ROLES: Role[] = [Role.SALES_AGENT, Role.SALES_MANAGER];
 
 export const EDIT_ACCESS_REQUESTER_ROLES: Role[] = [...DOCUMENTER_ROLES, ...SALES_ROLES];
 

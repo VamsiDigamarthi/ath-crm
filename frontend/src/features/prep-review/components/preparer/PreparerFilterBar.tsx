@@ -23,6 +23,8 @@ interface PreparerFilterBarProps {
     revisions: number;
     reverted?: number;
   };
+  /** Custom tab list for a sidebar page; an empty array hides the tabs */
+  tabs?: { id: PreparerQueueTab; label: string; count: number }[];
 }
 
 export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
@@ -33,23 +35,30 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
   priorityFilter = 'ALL',
   onPriorityChange,
   counts,
+  tabs,
 }) => {
+  const tabItems = tabs ?? [
+    { id: 'WORKING' as const, label: 'Return Preparation', count: counts.working ?? counts.drafting ?? 0 },
+    { id: 'PENDING' as const, label: 'Pending Returns', count: counts.pending ?? 0 },
+    { id: 'UNDER_REVIEW' as const, label: 'Under Review', count: counts.underReview ?? counts.qaSubmitted ?? 0 },
+    { id: 'COMPLETED' as const, label: 'Completed Returns', count: counts.completed ?? counts.qaApproved ?? 0 },
+    { id: 'REVISIONS' as const, label: 'Revisions', count: counts.revisions || 0 },
+    { id: 'ALL' as const, label: 'All', count: counts.all || 0 },
+  ];
+
   return (
     <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
-      <AppTabs
-        tabs={[
-          { id: 'WORKING', label: 'Return Preparation', count: counts.working ?? counts.drafting ?? 0 },
-          { id: 'PENDING', label: 'Pending Returns', count: counts.pending ?? 0 },
-          { id: 'UNDER_REVIEW', label: 'Under Review', count: counts.underReview ?? counts.qaSubmitted ?? 0 },
-          { id: 'COMPLETED', label: 'Completed Returns', count: counts.completed ?? counts.qaApproved ?? 0 },
-          { id: 'REVISIONS', label: 'Revisions', count: counts.revisions || 0 },
-          { id: 'ALL', label: 'All', count: counts.all || 0 },
-        ]}
-        activeTab={activeTab}
-        onChange={(tab) => onTabChange(tab as PreparerQueueTab)}
-        size="sm"
-        className="flex-1"
-      />
+      {tabItems.length > 0 ? (
+        <AppTabs
+          tabs={tabItems}
+          activeTab={activeTab}
+          onChange={(tab) => onTabChange(tab as PreparerQueueTab)}
+          size="sm"
+          className="flex-1"
+        />
+      ) : (
+        <div className="flex-1" />
+      )}
 
       <div className="flex items-center gap-2 flex-wrap lg:pb-1.5">
         {onPriorityChange && <PriorityFilterSelect value={priorityFilter} onChange={onPriorityChange} />}

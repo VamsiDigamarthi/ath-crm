@@ -24,18 +24,18 @@ export const AgentStatsCards: React.FC<AgentStatsCardsProps> = ({ stats }) => {
   const quotaPct = Math.min(100, Math.round((todayDials / assignedTarget) * 100));
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {/* Card 1: Today's Dials vs Assigned Leads */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500">Today's Outreach Dials</span>
-          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold">
+          <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold">
             <PhoneCall className="w-4 h-4" />
           </div>
         </div>
         <div className="my-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-900">{todayDials}</span>
+            <span className="text-xl font-bold text-slate-900">{todayDials}</span>
             <span className="text-xs text-slate-500 font-semibold">/ {assignedTarget} Assigned Leads</span>
           </div>
           <p className="text-xs text-blue-600 mt-1 font-bold flex items-center gap-1">
@@ -52,16 +52,16 @@ export const AgentStatsCards: React.FC<AgentStatsCardsProps> = ({ stats }) => {
       </div>
 
       {/* Card 2: Contact Reach Rate (Connected calls / total dials) */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500">Contact Rate (Picked Up)</span>
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold">
+          <div className="w-7 h-7 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center font-bold">
             <CheckCircle2 className="w-4 h-4" />
           </div>
         </div>
         <div className="my-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-900">{contactRatePct}%</span>
+            <span className="text-xl font-bold text-slate-900">{contactRatePct}%</span>
             <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
               {todayConnected} Connected
             </span>
@@ -80,16 +80,16 @@ export const AgentStatsCards: React.FC<AgentStatsCardsProps> = ({ stats }) => {
       </div>
 
       {/* Card 3: Tax Prep Conversions */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500">Transferred to Tax Prep</span>
-          <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center font-bold">
+          <div className="w-7 h-7 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center font-bold">
             <FileCheck2 className="w-4 h-4" />
           </div>
         </div>
         <div className="my-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-900">{inPrepCount}</span>
+            <span className="text-xl font-bold text-slate-900">{inPrepCount}</span>
             <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
               {todayDials > 0 ? Math.round((inPrepCount / todayDials) * 100) : 0}% Conv
             </span>
@@ -107,16 +107,16 @@ export const AgentStatsCards: React.FC<AgentStatsCardsProps> = ({ stats }) => {
       </div>
 
       {/* Card 4: Scheduled Callbacks */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
+      <div className="bg-white px-3.5 py-3 rounded-xl border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all flex flex-col justify-between">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500">Callbacks Pending</span>
-          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center font-bold">
+          <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center font-bold">
             <PhoneForwarded className="w-4 h-4" />
           </div>
         </div>
         <div className="my-3">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-slate-900">{callbacksCount}</span>
+            <span className="text-xl font-bold text-slate-900">{callbacksCount}</span>
             <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
               Scheduled
             </span>

@@ -165,6 +165,7 @@ export const salesService = {
     notes: string;
     disposition?: string;
     callDuration?: number;
+    callbackScheduledAt?: string | null;
   }) {
     return apiClient.post(`/sales/leads/${id}/notes`, payload);
   },

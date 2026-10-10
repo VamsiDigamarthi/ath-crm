@@ -3,7 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { ShieldCheck, ArrowRight } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
+import { ClientNameCell, ClientEmailCell, ClientPhoneCell, makeRevertedColumn } from '@/shared/components/table';
 import { PrepStageBadge } from '../common/PrepStageBadge';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { PrepReviewLead } from '../../types/prep-review.types';
@@ -32,7 +32,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
         header: 'Name',
         accessorFn: (row) => row.taxpayerName || '—',
         cell: ({ row }) => (
-          <ClientNameCell name={row.original.taxpayerName} />
+          <ClientNameCell name={row.original.taxpayerName} status={row.original.clientPaymentStatus} />
         ),
       },
       {
@@ -143,6 +143,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
         },
         cell: ({ row }) => <PrepStageBadge stage={row.original.currentStage} />,
       },
+      makeRevertedColumn<PrepReviewLead>((r) => (r as any).taxDraftSummary),
       {
         id: 'actions',
         header: '',

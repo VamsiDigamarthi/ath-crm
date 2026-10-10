@@ -12,7 +12,8 @@ import {
   Eye,
   CheckSquare,
   Square,
-  Send
+  Send,
+  BadgeCheck,
 } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { AppModal } from '@/shared/components/AppModal';
@@ -76,6 +77,11 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
   const [rejectReason, setRejectReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
   const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+  const [isUploadingFiled, setIsUploadingFiled] = useState(false);
+  const filedFileInputRef = useRef<HTMLInputElement>(null);
+  const isFilingTeam = user?.role === 'FILE_OP_AGENT' || user?.role === 'FILE_OP_MANAGER' || user?.role === 'ADMIN';
+  // Filing staff can't change the prepared draft (only preparer / sales / admin can)
+  const canEditDraft = isStaff && user?.role !== 'FILE_OP_AGENT' && user?.role !== 'FILE_OP_MANAGER';
 
   const fetchDraftReview = useCallback(async () => {
     if (isDocumenter) {
@@ -105,6 +111,12 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
   const draftVersion = draftData?.draftVersion || draft.draftVersion || 1;
   const clientReviewStatus = draftData?.clientReviewStatus || draft.clientReviewStatus || 'NOT_SENT';
   const clientRevisionNotes = draftData?.clientRevisionNotes || draft.clientRevisionNotes || '';
+  // Earlier drafts (each replace keeps the old one), the draft the client accepted, and the filed copy
+  const draftHistory: any[] = Array.isArray(draft.drakeTaxFileHistory) ? draft.drakeTaxFileHistory : [];
+  const finalEstimation = draft.finalEstimation || null;
+  const filedReturnCopy = draft.filedReturnCopy || null;
+  const currentStage = draftData?.currentStage || '';
+  const isFinalEstimation = (file?: { id?: string } | null) => Boolean(file?.id && finalEstimation?.id === file.id);
 
   // Staff Handlers: 1. Tax Draft Upload
   const handleUploadTaxDraft = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,6 +216,28 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
       toast.error(err?.response?.data?.message || 'Failed to send draft to client', { id: toastId });
     } finally {
       setIsSendingDraft(false);
+    }
+  };
+
+  // Filing team: upload the filed return copy after IRS acceptance
+  const handleUploadFiledCopy = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !effectiveLeadId) return;
+    setIsUploadingFiled(true);
+    const toastId = toast.loading(`Uploading filed copy "${file.name}"...`);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await apiClient.post(`/filing/leads/${effectiveLeadId}/filed-copy`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      toast.success('Filed copy uploaded. Client notified.', { id: toastId });
+      await fetchDraftReview();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to upload filed copy', { id: toastId });
+    } finally {
+      setIsUploadingFiled(false);
     }
   };
 
@@ -371,6 +405,21 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
     }
   };
 
+  const formatDate = (iso?: string) =>
+    iso ? new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+
+  /** "Client" / "Staff" tag so client uploads and staff uploads are easy to tell apart */
+  const renderUploaderTag = (byClient: boolean, name?: string) => (
+    <span
+      className={`px-1.5 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${
+        byClient ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-600 border-slate-200'
+      }`}
+      title={name ? `Uploaded by ${name}` : undefined}
+    >
+      {byClient ? 'Uploaded by client' : 'Uploaded by staff'}
+    </span>
+  );
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes || bytes === 0) return '—';
     if (bytes < 1024) return `${bytes} B`;
@@ -405,7 +454,7 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
             v{draftVersion}
           </span>
           <h3 className="text-sm font-bold text-slate-900">
-            Review Draft &amp; E-Sign
+            E-Sign &amp; Tax Returns
           </h3>
           <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
             clientReviewStatus === 'CLIENT_APPROVED'
@@ -493,6 +542,18 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
               <span className="text-[11px] text-slate-500">
                 ({formatFileSize(drakeFile.fileSize)})
               </span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                v{drakeFile.draftVersion || draftVersion}
+              </span>
+              {isFinalEstimation(drakeFile) && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1 whitespace-nowrap">
+                  <BadgeCheck className="w-3 h-3" /> Final estimation
+                </span>
+              )}
+              {drakeFile.uploadedAt && (
+                <span className="text-[11px] text-slate-400 whitespace-nowrap">Uploaded {formatDate(drakeFile.uploadedAt)}</span>
+              )}
+              {renderUploaderTag(false, drakeFile.uploadedByName)}
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -518,7 +579,7 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
                 <Eye className="w-3 h-3 text-slate-500" />
                 <span>View</span>
               </Button>
-              {isStaff && (
+              {canEditDraft && (
                 <>
                   <input
                     ref={draftFileInputRef}
@@ -557,7 +618,7 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
                 ? 'No tax return draft uploaded yet. Click upload to attach the prepared Form 1040/1120 or Drake file.'
                 : 'Your tax return draft is currently being finalized by your preparer.'}
             </span>
-            {isStaff && (
+            {canEditDraft && (
               <div>
                 <input
                   ref={draftFileInputRef}
@@ -581,6 +642,33 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
           </div>
         )}
       </div>
+
+      {/* Earlier draft versions (kept when the draft is replaced) */}
+      {draftHistory.length > 0 && (
+        <div className="space-y-1 -mt-3">
+          <p className="text-[11px] font-semibold text-slate-500">Earlier drafts ({draftHistory.length})</p>
+          {draftHistory.map((h, i) => (
+            <div key={h.id || i} className="flex items-center justify-between gap-2 py-1 text-xs text-slate-600">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">{h.fileName}</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">v{h.draftVersion || 1}</span>
+                {isFinalEstimation(h) && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 whitespace-nowrap">Final estimation</span>
+                )}
+                {h.uploadedAt && <span className="text-[11px] text-slate-400 whitespace-nowrap">Uploaded {formatDate(h.uploadedAt)}</span>}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleViewFile(h)}
+                className="text-[11px] text-slate-600 hover:text-slate-900 flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Eye className="w-3 h-3" /> View
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 3. SECTION 2: Client Deliverable Documents & E-Sign Requirements */}
       <div className="space-y-3 pt-3 border-t border-slate-200">
@@ -668,10 +756,14 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
                     <span className="text-[11px] text-slate-400">
                       ({formatFileSize(doc.fileSize)})
                     </span>
+                    {doc.uploadedAt && (
+                      <span className="text-[11px] text-slate-400 whitespace-nowrap">Added {formatDate(doc.uploadedAt)}</span>
+                    )}
+                    {renderUploaderTag(false, doc.uploadedByName)}
                     {isSigningRequired ? (
                       isSigned ? (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          ✓ Signed
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 whitespace-nowrap">
+                          ✓ Signed{doc.signedDocument?.uploadedAt ? ` ${formatDate(doc.signedDocument.uploadedAt)}` : ''}
                         </span>
                       ) : (
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900">
@@ -685,7 +777,16 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {/* Signed copy: its own file name and who uploaded it */}
+                    {doc.signedDocument && (
+                      <span className="flex items-center gap-1.5 min-w-0 max-w-[280px]">
+                        <span className="truncate text-[11px] text-slate-600" title={doc.signedDocument.fileName}>
+                          {doc.signedDocument.fileName}
+                        </span>
+                        {renderUploaderTag(doc.signedDocument.uploadedByClient !== false, doc.signedDocument.uploadedByName)}
+                      </span>
+                    )}
                     <Button
                       type="button"
                       variant="outline"
@@ -793,6 +894,50 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
           </div>
         )}
       </div>
+
+      {/* SECTION 3: Filed return copy (uploaded by filing after IRS acceptance) */}
+      {(filedReturnCopy || (isFilingTeam && currentStage === 'FILING_SUCCESS')) && (
+        <div className="space-y-2 pt-3 border-t border-slate-200">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">3. Filed Tax Return (IRS Accepted)</h4>
+          {filedReturnCopy ? (
+            <div className="flex items-center justify-between py-2 text-xs gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="font-semibold text-slate-900 truncate">{filedReturnCopy.fileName}</span>
+                <span className="text-[11px] text-slate-400 whitespace-nowrap">Uploaded {formatDate(filedReturnCopy.uploadedAt)}</span>
+                {renderUploaderTag(false, filedReturnCopy.uploadedByName)}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button type="button" variant="outline" size="sm" onClick={() => handleDownloadFile(filedReturnCopy)} className="h-7 text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                  <Download className="w-3 h-3 text-slate-500" />
+                  <span>Download</span>
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => handleViewFile(filedReturnCopy)} className="h-7 text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                  <Eye className="w-3 h-3 text-slate-500" />
+                  <span>View</span>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">IRS accepted this return. Upload the filed copy so the client can download it.</p>
+          )}
+          {isFilingTeam && currentStage === 'FILING_SUCCESS' && (
+            <div>
+              <input ref={filedFileInputRef} type="file" className="hidden" onChange={handleUploadFiledCopy} accept=".pdf,.png,.jpg,.jpeg" />
+              <Button
+                type="button"
+                size="sm"
+                disabled={isUploadingFiled}
+                onClick={() => filedFileInputRef.current?.click()}
+                className="h-8 px-4 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>{isUploadingFiled ? 'Uploading...' : filedReturnCopy ? 'Replace filed copy' : 'Upload filed copy'}</span>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 4. Client Review & Approval Footer */}
       {clientReviewStatus === 'SENT_TO_CLIENT' && (isClient || isSalesTeam) && (

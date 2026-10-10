@@ -28,9 +28,11 @@ const roleToTeam = (role?: string): string => {
     case Role.PREP_MANAGER:
       return "PREP_MANAGER";
     case Role.SALES_AGENT:
-    case Role.SALES_TEAM_LEAD:
     case Role.SALES_MANAGER:
       return "SALES";
+    case Role.FILE_OP_AGENT:
+    case Role.FILE_OP_MANAGER:
+      return "FILING";
     case Role.ADMIN:
       return "ADMIN";
     default:
