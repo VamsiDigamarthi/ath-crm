@@ -35,27 +35,27 @@ model User {
   assignedSalesApps  TaxApplication[] @relation("SalesAgentApps")
   assignedFileApps   TaxApplication[] @relation("FileOpApps")
 
-  stageHistories StageHistory[]
-  callLogs       CallLog[]
-  uploadedDocs   TaxDocument[]
-  salesQuotes    SalesQuote[]
-  auditLogs      AuditLog[]
-  notifications  Notification[]  @relation("UserNotifications")
-  emailTemplates EmailTemplate[]
-  sentEmails     SentEmail[]
-  createdCoupons DiscountCoupon[] @relation("CreatedCoupons")
-  approvedCoupons DiscountCoupon[] @relation("ApprovedCoupons")
-  appliedCouponUsages CouponUsage[] @relation("AppliedCouponUsages")
-  createdProducts Product[] @relation("CreatedProducts")
-  permissions       UserPermission[] @relation("UserPermissions")
-  grantedPermissions UserPermission[] @relation("GrantedPermissions")
-  addedReturnItems  TaxApplicationItem[] @relation("AddedReturnItems")
-  authoredNotes     ApplicationNote[] @relation("AuthoredApplicationNotes")
-  activeOrgRoleId   String?
-  orgRoles          UserOrgRole[]
-  editAccessRequests EditAccessRequest[] @relation("RequestedEditAccess")
-  reviewedEditAccess EditAccessRequest[] @relation("ReviewedEditAccess")
-  issuedInvoices     Invoice[] @relation("IssuedInvoices")
+  stageHistories      StageHistory[]
+  callLogs            CallLog[]
+  uploadedDocs        TaxDocument[]
+  salesQuotes         SalesQuote[]
+  auditLogs           AuditLog[]
+  notifications       Notification[]       @relation("UserNotifications")
+  emailTemplates      EmailTemplate[]
+  sentEmails          SentEmail[]
+  createdCoupons      DiscountCoupon[]     @relation("CreatedCoupons")
+  approvedCoupons     DiscountCoupon[]     @relation("ApprovedCoupons")
+  appliedCouponUsages CouponUsage[]        @relation("AppliedCouponUsages")
+  createdProducts     Product[]            @relation("CreatedProducts")
+  permissions         UserPermission[]     @relation("UserPermissions")
+  grantedPermissions  UserPermission[]     @relation("GrantedPermissions")
+  addedReturnItems    TaxApplicationItem[] @relation("AddedReturnItems")
+  authoredNotes       ApplicationNote[]    @relation("AuthoredApplicationNotes")
+  activeOrgRoleId     String?
+  orgRoles            UserOrgRole[]
+  editAccessRequests  EditAccessRequest[]  @relation("RequestedEditAccess")
+  reviewedEditAccess  EditAccessRequest[]  @relation("ReviewedEditAccess")
+  issuedInvoices      Invoice[]            @relation("IssuedInvoices")
 
   @@index([email])
   @@index([mobile])

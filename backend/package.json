@@ -10,6 +10,7 @@
     "seed": "tsx src/scripts/seed-employees.ts",
     "seed:staff": "tsx src/scripts/seed-staff.ts",
     "seed:roles": "tsx src/scripts/seed-roles.ts",
+    "db:fix-prod": "tsx src/scripts/fix-prod-db.ts",
     "db:clear-clients": "tsx src/scripts/clear-clients.ts",
     "db:clear-staff": "tsx src/scripts/clear-staff.ts",
     "backfill:referral-codes": "tsx src/scripts/backfill-referral-codes.ts",
