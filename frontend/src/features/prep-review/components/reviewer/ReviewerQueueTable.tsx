@@ -14,6 +14,7 @@ interface ReviewerQueueTableProps {
   returns: PrepReviewLead[];
   isLoading: boolean;
   onOpenAudit: (lead: PrepReviewLead) => void;
+  emptyText?: string;
 }
 
 export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
@@ -22,6 +23,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
   returns,
   isLoading,
   onOpenAudit,
+  emptyText,
 }) => {
   const columns = useMemo<ColumnDef<PrepReviewLead, any>[]>(
     () => [
@@ -195,7 +197,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
       onSearchChange={onSearchChange}
       onExportExcel={handleExportExcel}
       onRowClick={(item) => onOpenAudit(item)}
-      emptyText="No returns awaiting Senior QA compliance review. Great job!"
+      emptyText={emptyText || "No returns awaiting Senior QA compliance review. Great job!"}
     />
   );
 };

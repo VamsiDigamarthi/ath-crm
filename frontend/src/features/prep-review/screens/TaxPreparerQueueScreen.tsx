@@ -1,20 +1,30 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Calculator, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { useTaxPreparerQueue, type PreparerQueueView, type PreparerQueueTab } from '../hooks/useTaxPreparerQueue';
 import { PreparerFilterBar } from '../components/preparer/PreparerFilterBar';
 import { PreparerQueueTable } from '../components/preparer/PreparerQueueTable';
 
-// Title and subtitle for each preparer sidebar page
-const VIEW_COPY: Record<PreparerQueueView, { title: string; subtitle: string }> = {
-  ALL: { title: 'Preparer Queue', subtitle: '' },
-  PREPARATION: { title: 'Return Preparation', subtitle: 'Returns you are working on, including revisions and reverted files' },
-  PENDING: { title: 'Pending Returns', subtitle: 'Assigned to you and not started yet' },
-  UNDER_REVIEW: { title: 'Under Review', subtitle: 'Sent to QA and waiting for the reviewer' },
-  COMPLETED: { title: 'Completed Returns', subtitle: 'QA approved and moved on to sales or filing' },
-};
 
-export const TaxPreparerQueueScreen: React.FC<{ view?: PreparerQueueView }> = ({ view = 'ALL' }) => {
+export interface TaxPreparerQueueScreenProps {
+  initialTab?: PreparerQueueTab;
+  view?: PreparerQueueView;
+}
+
+export const TaxPreparerQueueScreen: React.FC<TaxPreparerQueueScreenProps> = ({ initialTab, view: propView }) => {
+  const location = useLocation();
+
+  const effectiveView = useMemo<PreparerQueueView>(() => {
+    if (propView) return propView;
+    const path = location.pathname;
+    if (path.includes('/prep-review/preparer/pending')) return 'PENDING';
+    if (path.includes('/prep-review/preparer/under-review')) return 'UNDER_REVIEW';
+    if (path.includes('/prep-review/preparer/completed')) return 'COMPLETED';
+    if (path.includes('/prep-review/preparer/working') || path === '/prep-review/preparer') return 'PREPARATION';
+    return 'ALL';
+  }, [propView, location.pathname]);
+
   const {
     filteredReturns,
     clientRows,
@@ -32,14 +42,45 @@ export const TaxPreparerQueueScreen: React.FC<{ view?: PreparerQueueView }> = ({
     setPriorityFilter,
     refreshData,
     handleOpenNextReturn,
-  } = useTaxPreparerQueue(view);
+  } = useTaxPreparerQueue(effectiveView, initialTab);
 
-  const copy = VIEW_COPY[view];
-  // Only Return Preparation has tabs; the legacy workbench keeps its full tab list
+  const getHeaderInfo = () => {
+    switch (effectiveView) {
+      case 'PENDING':
+        return {
+          title: 'Pending Returns',
+          subtitle: `${filteredReturns.length} returns assigned to you awaiting draft initiation`,
+        };
+      case 'UNDER_REVIEW':
+        return {
+          title: 'Under Review',
+          subtitle: `${filteredReturns.length} returns currently submitted for QA compliance audit`,
+        };
+      case 'COMPLETED':
+        return {
+          title: 'Completed Returns',
+          subtitle: `${filteredReturns.length} returns with passed and approved QA compliance audits`,
+        };
+      case 'PREPARATION':
+        return {
+          title: 'Return Preparation',
+          subtitle: `${filteredReturns.length} working returns (${preparationCounts.inProgress || 0} in preparation · ${preparationCounts.revisions || 0} revisions)`,
+        };
+      default:
+        return {
+          title: 'Preparer Queue',
+          subtitle: `${filteredReturns.length} total returns · ${counts.working || 0} in preparation · ${counts.pending || 0} pending`,
+        };
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
+
+  // Only Return Preparation has tabs; other pages hide tabs
   const pageTabs: { id: PreparerQueueTab; label: string; count: number }[] | undefined =
-    view === 'ALL'
+    effectiveView === 'ALL'
       ? undefined
-      : view === 'PREPARATION'
+      : effectiveView === 'PREPARATION'
       ? [
           { id: 'ALL', label: 'All', count: preparationCounts.all },
           { id: 'ASSIGNED', label: 'Assigned leads', count: preparationCounts.assigned },
@@ -51,17 +92,15 @@ export const TaxPreparerQueueScreen: React.FC<{ view?: PreparerQueueView }> = ({
 
   return (
     <div className="space-y-6 pb-12 font-sans">
-      {/* Header */}
+      {/* Header with Title and Unified Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{copy.title}</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{headerInfo.title}</h2>
           <p className="text-sm text-slate-500 mt-1">
-            {view === 'ALL'
-              ? `${counts.all || 0} returns · ${counts.drafting || 0} drafting · ${counts.revisions || 0} need revisions`
-              : `${filteredReturns.length} returns · ${copy.subtitle}`}
+            {headerInfo.subtitle}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           <Button variant="outline" size="md" onClick={refreshData} disabled={isLoading} title="Refresh" className="px-3 cursor-pointer">
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
@@ -77,7 +116,7 @@ export const TaxPreparerQueueScreen: React.FC<{ view?: PreparerQueueView }> = ({
         </div>
       </div>
 
-      {/* 3. Search & Tab Filter Bar (Unified Box with Real Counts) */}
+      {/* Search & Tab Filter Bar */}
       <PreparerFilterBar
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -89,7 +128,7 @@ export const TaxPreparerQueueScreen: React.FC<{ view?: PreparerQueueView }> = ({
         tabs={pageTabs}
       />
 
-      {/* 4. Queue Table Card (100% Real API Data) */}
+      {/* Queue Table Card (100% Real API Data) */}
       <PreparerQueueTable
         returns={clientRows}
         isLoading={isLoading}

@@ -464,6 +464,10 @@ export class SalesService {
         esignStatus,
         form8879SendCount: Array.isArray(draft.form8879SendHistory) ? draft.form8879SendHistory.length : 0,
         form8879LastSentAt: draft.form8879SendHistory?.[0]?.sentAt || null,
+        callbackScheduledAt: (app as any).callbackScheduledAt ? (app as any).callbackScheduledAt.toISOString() : ((draft as any).callbackScheduledAt || null),
+        callDisposition: (app as any).callDisposition || (draft as any).callDisposition || null,
+        pitchStatus: (app as any).pitchStatus || (draft as any).pitchStatus || (draft as any).salesPitch?.pitchStatus || null,
+        closerCallNotes: (draft as any).closerCallNotes || (app as any).closerCallNotes || null,
         createdAt: app.createdAt.toISOString(),
         updatedAt: app.updatedAt.toISOString(),
       });

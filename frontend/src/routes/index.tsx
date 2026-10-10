@@ -91,7 +91,7 @@ const PrepReviewIndexRedirect: React.FC = () => {
 const SalesIndexRedirect: React.FC = () => {
   const { user } = useAuthStore();
   const isManager = user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN';
-  return <Navigate to={isManager ? '/sales/manager/queue' : '/sales/agent/queue'} replace />;
+  return <Navigate to={isManager ? '/sales/manager/queue' : '/sales/agent'} replace />;
 };
 
 const FilingIndexRedirect: React.FC = () => {
@@ -434,8 +434,12 @@ export const router = createBrowserRouter([
             element: <TaxPreparerQueueScreen key="preparation" view="PREPARATION" />,
           },
           {
+            path: 'preparer/working',
+            element: <TaxPreparerQueueScreen key="preparation-working" view="PREPARATION" />,
+          },
+          {
             path: 'preparer/queue',
-            element: <TaxPreparerQueueScreen key="preparation" view="PREPARATION" />,
+            element: <TaxPreparerQueueScreen key="preparation-queue" view="PREPARATION" />,
           },
           {
             path: 'preparer/pending',
@@ -463,8 +467,12 @@ export const router = createBrowserRouter([
             element: <TaxReviewerQueueScreen key="assigned" view="ASSIGNED" />,
           },
           {
+            path: 'reviewer/assigned',
+            element: <TaxReviewerQueueScreen key="assigned-named" view="ASSIGNED" />,
+          },
+          {
             path: 'reviewer/queue',
-            element: <TaxReviewerQueueScreen key="assigned" view="ASSIGNED" />,
+            element: <TaxReviewerQueueScreen key="assigned-queue" view="ASSIGNED" />,
           },
           {
             path: 'reviewer/pending',
@@ -584,6 +592,10 @@ export const router = createBrowserRouter([
             path: 'agent/queue',
             element: <SalesAgentQueueScreen key="prospects" view="MY" />,
           },
+          {
+            path: 'agent/prospects',
+            element: <SalesAgentQueueScreen key="prospects-named" view="MY" />,
+          },
           // Sales sidebar pages (key resets search / tabs when switching pages)
           {
             path: 'agent/pending',
@@ -668,6 +680,10 @@ export const router = createBrowserRouter([
             path: 'agent/queue',
             element: <FilingSpecialistQueueScreen key="ready" view="READY" />,
           },
+          {
+            path: 'agent/ready',
+            element: <FilingSpecialistQueueScreen key="ready-named" view="READY" />,
+          },
           // Filing sidebar pages (key resets tabs when switching pages)
           {
             path: 'agent/pending',
@@ -676,6 +692,10 @@ export const router = createBrowserRouter([
           {
             path: 'agent/on-hold',
             element: <FilingSpecialistQueueScreen key="on-hold" view="ON_HOLD" />,
+          },
+          {
+            path: 'agent/rejected',
+            element: <FilingSpecialistQueueScreen key="rejected" view="RETURNED" />,
           },
           {
             path: 'agent/returned',
@@ -687,7 +707,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'queue',
-            element: <FilingSpecialistQueueScreen />,
+            element: <FilingSpecialistQueueScreen key="queue-legacy" view="READY" />,
           },
           {
             path: 'workspace/:id',

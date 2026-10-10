@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   LayoutGrid,
   PhoneCall,
-  Clock,
   RotateCcw,
   FileCheck2,
   Bell,
@@ -52,11 +51,10 @@ export const DocumenterLayout: React.FC = () => {
     : [
       { id: 'agent_dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
       { id: 'agent_queue', label: 'My Leads', icon: PhoneCall, section: 'Calling Workspace', path: '/documenter/agent/queue' },
-      { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', path: '/documenter/agent/callbacks' },
       { id: 'agent_fallback', label: 'Follow-Ups', icon: RotateCcw, section: 'Calling Workspace', path: '/documenter/agent/fallback' },
-      { id: 'agent_documents', label: 'Completed Files', icon: FileCheck2, section: 'Intake Pipeline', path: '/documenter/agent/documents' },
-      // { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'Intake Pipeline', path: '/documenter/agent/audit-logs' },
-      { id: 'notifications', label: 'Notifications', icon: Bell, section: 'Calling Workspace', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
+      { id: 'agent_documents', label: 'Completed Files', icon: FileCheck2, section: 'My Filings', path: '/documenter/agent/documents' },
+      // { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'My Filings', path: '/documenter/agent/audit-logs' },
+      { id: 'notifications', label: 'Notifications', icon: Bell, section: 'My Filings', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/documenter/notifications' },
     ];
 
   const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');

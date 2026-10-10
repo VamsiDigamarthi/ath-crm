@@ -44,14 +44,14 @@ export const TaxSpecialistDashboardScreen: React.FC = () => {
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
               <LayoutDashboard className="w-3 h-3 text-blue-600" />
-              <span>Specialist Unified Operations Deck</span>
+              <span>Operations Dashboard</span>
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            My Operations Hub
+            Dashboard
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            Unified cockpit for Form 1040 preparation drafting, 4-Eyes compliance audits, and daily throughput tracking.
+            Unified operational overview for Form 1040 preparation drafting, QA review velocity, and caseload tracking.
           </p>
         </div>
 

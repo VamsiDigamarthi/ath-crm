@@ -13,6 +13,10 @@ interface PreparerFilterBarProps {
   onPriorityChange?: (priority: string) => void;
   counts: {
     all: number;
+    working?: number;
+    pending?: number;
+    underReview?: number;
+    completed?: number;
     drafting: number;
     qaSubmitted: number;
     qaApproved?: number;
@@ -34,12 +38,12 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
   tabs,
 }) => {
   const tabItems = tabs ?? [
+    { id: 'WORKING' as const, label: 'Return Preparation', count: counts.working ?? counts.drafting ?? 0 },
+    { id: 'PENDING' as const, label: 'Pending Returns', count: counts.pending ?? 0 },
+    { id: 'UNDER_REVIEW' as const, label: 'Under Review', count: counts.underReview ?? counts.qaSubmitted ?? 0 },
+    { id: 'COMPLETED' as const, label: 'Completed Returns', count: counts.completed ?? counts.qaApproved ?? 0 },
+    { id: 'REVISIONS' as const, label: 'Revisions', count: counts.revisions || 0 },
     { id: 'ALL' as const, label: 'All', count: counts.all || 0 },
-    { id: 'DRAFTING' as const, label: 'Drafting', count: counts.drafting || 0 },
-    { id: 'QA_SUBMITTED' as const, label: 'Sent to QA', count: counts.qaSubmitted || 0 },
-    { id: 'QA_APPROVED' as const, label: 'QA approved', count: counts.qaApproved || 0 },
-    { id: 'REVISIONS' as const, label: 'Revisions needed', count: counts.revisions || 0 },
-    { id: 'REVERTED' as const, label: 'Reverted to docs', count: counts.reverted || 0 },
   ];
 
   return (

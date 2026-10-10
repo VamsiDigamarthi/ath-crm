@@ -1,17 +1,73 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import { filingService } from '../services/filing-service';
 import type { FilingLeadItem, FilingStaffMember } from '../types/filing.types';
 import toast from 'react-hot-toast';
 
-export function useFilingQueue(filterAssignedOnly = false) {
+export type FilingSpecialistTab =
+  | 'READY'         // Ready for Filing
+  | 'PENDING'       // Filing Pending
+  | 'ON_HOLD'       // Filing on Hold
+  | 'REJECTED'      // Rejected Returns
+  | 'FILED'         // Filed Returns
+  | 'ALL';          // All Returns
+
+export const isReturnOnHold = (l: FilingLeadItem): boolean => {
+  if (Boolean(l.lastRevert && !l.lastRevert.resolved)) return true;
+  if (
+    ['CORRECTION_NEEDED', 'DOC_OUTREACH', 'DOC_PREP', 'SALES_PITCH_QUEUE', 'SALES_PITCHING', 'QA_REVISION_REQUESTED'].includes(
+      l.currentStage
+    )
+  ) {
+    return true;
+  }
+  if ((l.taxDraftSummary as any)?.status === 'ON_HOLD') return true;
+  return false;
+};
+
+export const isReturnRejected = (l: FilingLeadItem): boolean => {
+  if (isReturnOnHold(l)) return false;
+  if (l.currentStage === 'FILING_FAILED') return true;
+  if (l.transmissionInfo?.status === 'REJECTED' || l.transmissionInfo?.status === 'FAILED') return true;
+  if (
+    Boolean(l.transmissionInfo?.irsAckCode) &&
+    l.transmissionInfo?.irsAckCode !== '0000_ACCEPTED' &&
+    l.currentStage !== 'FILING_SUCCESS'
+  ) {
+    return true;
+  }
+  return false;
+};
+
+export const isReturnFiled = (l: FilingLeadItem): boolean => {
+  if (isReturnOnHold(l) || isReturnRejected(l)) return false;
+  if (l.currentStage === 'FILING_SUCCESS') return true;
+  if (l.transmissionInfo?.status === 'ACCEPTED') return true;
+  if (Boolean(l.transmissionInfo?.acceptanceCertificateId || l.transmissionInfo?.acceptedAt)) return true;
+  return false;
+};
+
+export const isReturnPending = (l: FilingLeadItem): boolean => {
+  if (isReturnOnHold(l) || isReturnRejected(l) || isReturnFiled(l)) return false;
+  if (l.currentStage === 'FILING_IN_PROGRESS') return true;
+  if (l.transmissionInfo?.status === 'TRANSMITTING' || l.transmissionInfo?.status === 'VALIDATING') return true;
+  return false;
+};
+
+export const isReturnReady = (l: FilingLeadItem): boolean => {
+  if (isReturnOnHold(l) || isReturnRejected(l) || isReturnFiled(l) || isReturnPending(l)) return false;
+  return true;
+};
+
+export function useFilingQueue(filterAssignedOnly = false, initialTab: FilingSpecialistTab = 'READY') {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [leads, setLeads] = useState<FilingLeadItem[]>([]);
   const [total, setTotal] = useState(0);
 
+  const [activeTab, setActiveTab] = useState<FilingSpecialistTab>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState<'ALL' | 'FILING_QUEUE' | 'FILING_IN_PROGRESS' | 'FILING_SUCCESS' | 'REVERTED'>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
@@ -67,6 +123,48 @@ export function useFilingQueue(filterAssignedOnly = false) {
     fetchQueue();
     fetchStaff();
   }, [fetchQueue, fetchStaff]);
+
+  const counts = useMemo(() => {
+    let ready = 0;
+    let pending = 0;
+    let onHold = 0;
+    let rejected = 0;
+    let filed = 0;
+
+    leads.forEach((l) => {
+      if (isReturnOnHold(l)) {
+        onHold++;
+      } else if (isReturnRejected(l)) {
+        rejected++;
+      } else if (isReturnFiled(l)) {
+        filed++;
+      } else if (isReturnPending(l)) {
+        pending++;
+      } else {
+        ready++;
+      }
+    });
+
+    return {
+      ready,
+      pending,
+      onHold,
+      rejected,
+      filed,
+      all: leads.length,
+    };
+  }, [leads]);
+
+  const categorizedLeads = useMemo(() => {
+    return leads.filter((item) => {
+      if (activeTab === 'READY' && !isReturnReady(item)) return false;
+      if (activeTab === 'PENDING' && !isReturnPending(item)) return false;
+      if (activeTab === 'ON_HOLD' && !isReturnOnHold(item)) return false;
+      if (activeTab === 'REJECTED' && !isReturnRejected(item)) return false;
+      if (activeTab === 'FILED' && !isReturnFiled(item)) return false;
+      return true;
+    });
+  }, [leads, activeTab]);
 
   // from = sidebar page (e.g. "on-hold") so the workspace keeps it highlighted
   const handleOpenWorkspace = (leadId: string, from?: string) => {
@@ -135,6 +233,10 @@ export function useFilingQueue(filterAssignedOnly = false) {
     isLoading,
     leads,
     total,
+    activeTab,
+    setActiveTab,
+    counts,
+    categorizedLeads,
     searchQuery,
     setSearchQuery,
     stageFilter,

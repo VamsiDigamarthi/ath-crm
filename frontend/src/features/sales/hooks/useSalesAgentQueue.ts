@@ -5,14 +5,15 @@ import { salesService } from '../services/sales-service';
 import type { SalesLeadItem, SalesAgentStats } from '../types/sales.types';
 import toast from 'react-hot-toast';
 
-export type SalesAgentTab = 'ALL' | 'AWAITING' | 'QUOTED' | 'PAID' | 'REVERTED';
+export type SalesAgentTab = 'ALL' | 'PENDING' | 'CALLBACKS' | 'FOLLOW_UPS' | 'CONVERTED';
 
 /**
  * Sales sidebar pages:
- * - MY: every lead assigned to me (old My Leads, keeps its tabs)
- * - PENDING: not converted, not sent back, and no callback / follow-up booked
- * - CALLBACKS / FOLLOW_UPS: latest sales call result (call log only, stage untouched)
- * - CONVERTED: paid / sent to filing
+ * - MY: every lead assigned to me (My Prospects, keeps its tabs)
+ * - PENDING: pending leads
+ * - CALLBACKS: scheduled callbacks
+ * - FOLLOW_UPS: follow-ups
+ * - CONVERTED: converted clients
  */
 export type SalesAgentView = 'MY' | 'PENDING' | 'CALLBACKS' | 'FOLLOW_UPS' | 'CONVERTED';
 
@@ -25,16 +26,35 @@ export const SALES_VIEW_FROM: Record<SalesAgentView, string> = {
   CONVERTED: 'converted',
 };
 
-export function useSalesAgentQueue(view: SalesAgentView = 'MY') {
+export function useSalesAgentQueue(
+  viewOrTab: SalesAgentView | SalesAgentTab = 'MY',
+  defaultTabProp?: SalesAgentTab
+) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<SalesAgentTab>('ALL');
+  const view: SalesAgentView =
+    viewOrTab === 'MY' || viewOrTab === 'PENDING' || viewOrTab === 'CALLBACKS' || viewOrTab === 'FOLLOW_UPS' || viewOrTab === 'CONVERTED'
+      ? viewOrTab
+      : 'MY';
+
+  const defaultTab: SalesAgentTab = defaultTabProp
+    ? defaultTabProp
+    : (viewOrTab === 'MY' ? 'ALL' : (viewOrTab as SalesAgentTab));
+
+  const [activeTab, setActiveTab] = useState<SalesAgentTab>(defaultTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [allLeads, setAllLeads] = useState<SalesLeadItem[]>([]);
+
+  // Keep activeTab in sync if defaultTab changes on route change
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab]);
 
   // Fetch real leads strictly assigned to current Sales Closer
   const fetchAgentLeads = useCallback(async () => {
@@ -100,51 +120,81 @@ export function useSalesAgentQueue(view: SalesAgentView = 'MY') {
     );
   };
 
-  const isPaidOrClosed = (lead: SalesLeadItem) => {
+  // 1. Converted Clients: Paid, authorized, or transferred to filing
+  const isLeadConverted = (lead: SalesLeadItem) => {
     if (isReturnReverted(lead)) return false;
     return (
       lead.paymentStatus === 'PAID' ||
       lead.currentStage === 'PAID_AND_AUTHORIZED' ||
       lead.currentStage === 'FILING_QUEUE' ||
       lead.currentStage === 'FILING_IN_PROGRESS' ||
-      lead.currentStage === 'FILING_SUCCESS'
+      lead.currentStage === 'FILING_SUCCESS' ||
+      lead.clientPaymentStatus === 'PAID'
     );
   };
 
-  const isQuotedOrPaymentPending = (lead: SalesLeadItem) => {
-    if (isReturnReverted(lead) || isPaidOrClosed(lead)) return false;
-    return (
-      lead.currentStage === 'QUOTATION_SENT' ||
+  // 2. Scheduled Callbacks: Explicit callback scheduled, callback disposition, or appointment notes
+  const isLeadCallback = (lead: SalesLeadItem) => {
+    if (isReturnReverted(lead) || isLeadConverted(lead)) return false;
+    const hasCallbackDate = Boolean(lead.callbackScheduledAt || (lead.taxDraftSummary as any)?.callbackScheduledAt);
+    const hasCallbackDisposition = ['CALLBACK', 'SCHEDULED_CALLBACK', 'PITCH_CALLBACK'].includes(lead.callDisposition || '');
+    const hasCallbackPitchStatus = lead.pitchStatus === 'NEED_CALL_WITH_CPA' || (lead.salesPitch?.pitchStatus === 'NEED_CALL_WITH_CPA');
+    const notes = `${lead.closerCallNotes || ''} ${lead.notes || ''} ${lead.salesPitch?.comment || ''}`.toLowerCase();
+    const hasCallbackNote = notes.includes('callback') || notes.includes('call back') || notes.includes('call at') || notes.includes('call tomorrow') || notes.includes('call scheduled');
+    return hasCallbackDate || hasCallbackDisposition || hasCallbackPitchStatus || hasCallbackNote;
+  };
+
+  // 3. Follow-Ups: Active quotation sent, payment pending, discount negotiation, or in-discussion review
+  const isLeadFollowUp = (lead: SalesLeadItem) => {
+    if (isReturnReverted(lead) || isLeadConverted(lead) || isLeadCallback(lead)) return false;
+    const hasQuoteSent = lead.currentStage === 'QUOTATION_SENT' || Boolean(lead.feeBreakdown?.isQuoted);
+    const isPaymentPending = (
       lead.currentStage === 'PAYMENT_PENDING' ||
+      lead.currentStage === 'SALES_PAYMENT_PENDING' ||
+      lead.currentStage === 'SALES_ESIGN_PENDING' ||
       lead.paymentStatus === 'PAYMENT_LINK_SENT' ||
-      Boolean(lead.feeBreakdown?.isQuoted)
+      lead.paymentStatus === 'PARTIALLY_PAID'
     );
+    const hasNegotiation = (
+      lead.pitchStatus === 'NEED_TIME' ||
+      lead.pitchStatus === 'PRICING_ISSUE' ||
+      lead.salesPitch?.pitchStatus === 'NEED_TIME' ||
+      lead.salesPitch?.pitchStatus === 'PRICING_ISSUE' ||
+      Boolean(lead.negotiatedAmount) ||
+      (lead.feeBreakdown?.discountAmount || 0) > 0
+    );
+    const hasContactHistory = Boolean(lead.lastContactedAt || lead.closerCallNotes || (lead.closerNotesHistory && lead.closerNotesHistory.length > 0));
+    return hasQuoteSent || isPaymentPending || hasNegotiation || (lead.currentStage === 'SALES_PITCHING' && hasContactHistory);
   };
 
-  const isAwaitingPitch = (lead: SalesLeadItem) => {
-    if (isReturnReverted(lead) || isPaidOrClosed(lead) || isQuotedOrPaymentPending(lead)) return false;
+  // 4. Pending Prospects: Untouched, fresh from QA, awaiting initial outreach call
+  const isLeadPending = (lead: SalesLeadItem) => {
+    if (isReturnReverted(lead) || isLeadConverted(lead) || isLeadCallback(lead) || isLeadFollowUp(lead)) return false;
     return true;
   };
 
   // Compute live tab counts
   const counts = useMemo(() => {
-    let awaiting = 0;
-    let quoted = 0;
-    let paid = 0;
+    let pending = 0;
+    let callbacks = 0;
+    let followUps = 0;
+    let converted = 0;
     let reverted = 0;
 
     allLeads.forEach((lead) => {
       if (isReturnReverted(lead)) reverted++;
-      else if (isPaidOrClosed(lead)) paid++;
-      else if (isQuotedOrPaymentPending(lead)) quoted++;
-      else awaiting++;
+      else if (isLeadConverted(lead)) converted++;
+      else if (isLeadCallback(lead)) callbacks++;
+      else if (isLeadFollowUp(lead)) followUps++;
+      else pending++;
     });
 
     return {
       all: allLeads.length,
-      awaiting,
-      quoted,
-      paid,
+      pending,
+      callbacks,
+      followUps,
+      converted,
       reverted,
     };
   }, [allLeads]);
@@ -154,20 +204,20 @@ export function useSalesAgentQueue(view: SalesAgentView = 'MY') {
     let revenueToday = 0;
 
     allLeads.forEach((lead) => {
-      if (isPaidOrClosed(lead)) {
+      if (isLeadConverted(lead)) {
         const fee = Number(lead.feeBreakdown?.totalServiceFee) || 0;
         revenueToday += fee;
       }
     });
 
     const total = allLeads.length;
-    const conversionRate = total > 0 ? Math.round((counts.paid / total) * 100) : 0;
+    const conversionRate = total > 0 ? Math.round((counts.converted / total) * 100) : 0;
 
     return {
-      assignedLeads: counts.awaiting,
-      pitchInProgress: counts.awaiting,
-      paymentsPending: counts.quoted,
-      dealsClosedToday: counts.paid,
+      assignedLeads: counts.pending,
+      pitchInProgress: counts.pending,
+      paymentsPending: counts.followUps,
+      dealsClosedToday: counts.converted,
       myRevenueToday: revenueToday,
       myConversionRate: conversionRate,
       revertedLeads: counts.reverted,
@@ -176,10 +226,9 @@ export function useSalesAgentQueue(view: SalesAgentView = 'MY') {
 
   const bucketOf = (lead: SalesLeadItem): Exclude<SalesAgentView, 'MY'> | 'REVERTED' => {
     if (isReturnReverted(lead)) return 'REVERTED';
-    if (isPaidOrClosed(lead)) return 'CONVERTED';
-    const outcome = lead.salesCallOutcome?.disposition;
-    if (outcome === 'SALES_CALLBACK') return 'CALLBACKS';
-    if (outcome === 'SALES_FOLLOW_UP') return 'FOLLOW_UPS';
+    if (isLeadConverted(lead)) return 'CONVERTED';
+    if (isLeadCallback(lead)) return 'CALLBACKS';
+    if (isLeadFollowUp(lead)) return 'FOLLOW_UPS';
     return 'PENDING';
   };
 
@@ -192,16 +241,17 @@ export function useSalesAgentQueue(view: SalesAgentView = 'MY') {
       return [...scoped].sort((a, b) => at(a) - at(b));
     }
     return scoped;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allLeads, view]);
 
   // Filtered Leads
   const filteredLeads = useMemo(() => {
     return viewLeads.filter((lead) => {
-      if (activeTab === 'AWAITING' && !isAwaitingPitch(lead)) return false;
-      if (activeTab === 'QUOTED' && !isQuotedOrPaymentPending(lead)) return false;
-      if (activeTab === 'PAID' && !isPaidOrClosed(lead)) return false;
-      if (activeTab === 'REVERTED' && !isReturnReverted(lead)) return false;
+      if (view === 'MY') {
+        if (activeTab === 'PENDING' && !isLeadPending(lead)) return false;
+        if (activeTab === 'CALLBACKS' && !isLeadCallback(lead)) return false;
+        if (activeTab === 'FOLLOW_UPS' && !isLeadFollowUp(lead)) return false;
+        if (activeTab === 'CONVERTED' && !isLeadConverted(lead)) return false;
+      }
 
       // Priority Filter
       if (priorityFilter !== 'ALL' && (lead.priority || 'NO_PRIORITY') !== priorityFilter) return false;
@@ -217,7 +267,7 @@ export function useSalesAgentQueue(view: SalesAgentView = 'MY') {
       }
       return true;
     });
-  }, [viewLeads, activeTab, priorityFilter, searchQuery]);
+  }, [viewLeads, view, activeTab, priorityFilter, searchQuery]);
 
   const clientRows = useMemo(() => {
     const seen = new Set<string>();
@@ -233,7 +283,7 @@ export function useSalesAgentQueue(view: SalesAgentView = 'MY') {
     navigate(`/sales/agent/pitch/${leadId}`);
   };
 
-  const fromQuery = `?from=${SALES_VIEW_FROM[view]}`;
+  const fromQuery = `?from=${SALES_VIEW_FROM[view] || 'prospects'}`;
 
   const handleOpenNextPriority = () => {
     if (filteredLeads.length > 0) {
@@ -259,9 +309,11 @@ export function useSalesAgentQueue(view: SalesAgentView = 'MY') {
     priorityFilter,
     setPriorityFilter,
     handleRefresh,
+    refreshData: handleRefresh,
     handleUpdatePriority,
     handleOpenPitch,
     handleOpenNextPriority,
     fromQuery,
+    view,
   };
 }

@@ -76,14 +76,14 @@ export function AppSidebar({
   const theme = THEMES[variant]
 
   const sections: { label?: string; items: typeof items }[] = []
-  const seen = new Set<string>()
   for (const item of items) {
     const sec = item.section ?? ''
-    if (!seen.has(sec)) {
-      seen.add(sec)
-      sections.push({ label: sec || undefined, items: [] })
+    let sectionObj = sections.find((s) => (s.label ?? '') === sec)
+    if (!sectionObj) {
+      sectionObj = { label: sec || undefined, items: [] }
+      sections.push(sectionObj)
     }
-    sections[sections.length - 1].items.push(item)
+    sectionObj.items.push(item)
   }
 
   return (

@@ -6,7 +6,18 @@ import type { PrepReviewLead } from '../types/prep-review.types';
 import toast from 'react-hot-toast';
 import { VIEW_TO_ORIGIN } from '../utils/preparer-origin';
 
-export type PreparerQueueTab = 'ALL' | 'ASSIGNED' | 'DRAFTING' | 'QA_SUBMITTED' | 'QA_APPROVED' | 'REVISIONS' | 'REVERTED';
+export type PreparerQueueTab = 
+  | 'WORKING' 
+  | 'PENDING' 
+  | 'UNDER_REVIEW' 
+  | 'COMPLETED' 
+  | 'ALL' 
+  | 'ASSIGNED'
+  | 'DRAFTING' 
+  | 'QA_SUBMITTED' 
+  | 'QA_APPROVED' 
+  | 'REVISIONS' 
+  | 'REVERTED';
 
 /**
  * Preparer sidebar pages. Each return lands in exactly one page:
@@ -22,16 +33,38 @@ type PreparerBucket = 'ASSIGNED' | 'PENDING' | 'IN_PROGRESS' | 'REVISIONS' | 'RE
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
+export function useTaxPreparerQueue(
+  viewOrTab: PreparerQueueView | PreparerQueueTab = 'ALL',
+  defaultTabProp?: PreparerQueueTab
+) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<PreparerQueueTab>('ALL');
+  const view: PreparerQueueView = 
+    viewOrTab === 'PREPARATION' || viewOrTab === 'PENDING' || viewOrTab === 'UNDER_REVIEW' || viewOrTab === 'COMPLETED'
+      ? viewOrTab
+      : 'ALL';
+
+  const defaultTab: PreparerQueueTab = 
+    defaultTabProp 
+      ? defaultTabProp 
+      : viewOrTab === 'PREPARATION'
+      ? 'ALL'
+      : (viewOrTab as PreparerQueueTab);
+
+  const [activeTab, setActiveTab] = useState<PreparerQueueTab>(defaultTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [complexityFilter, setComplexityFilter] = useState('ALL');
   const [priorityFilter, setPriorityFilter] = useState('ALL');
   const [isLoading, setIsLoading] = useState(true);
   const [allLeads, setAllLeads] = useState<PrepReviewLead[]>([]);
+
+  // Keep activeTab in sync if defaultTab changes (e.g. navigation across routes)
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab]);
 
   // Fetch real leads strictly assigned to current Preparer from backend
   const fetchPreparerLeads = useCallback(async () => {
@@ -116,8 +149,37 @@ export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
     );
   };
 
+  const isReturnPending = (lead: PrepReviewLead) => {
+    if (isReturnReverted(lead) || isReturnRevision(lead) || isReturnApproved(lead) || isReturnSubmittedToQA(lead)) {
+      return false;
+    }
+    if (lead.prepStage === 'PREP_ASSIGNED') return true;
+    const hasStarted = Boolean((lead as any).prepStartedAt);
+    const draftSummary = lead.taxDraftSummary as any;
+    const hasDraftContent = Boolean(
+      draftSummary?.status === 'DRAFTING' ||
+      draftSummary?.w2Wages ||
+      draftSummary?.grossIncome ||
+      draftSummary?.updatedAt ||
+      (draftSummary?.calculations && Object.keys(draftSummary.calculations).length > 0)
+    );
+    return !hasStarted && !hasDraftContent;
+  };
+
+  const isWorkingReturn = (lead: PrepReviewLead) => {
+    if (isReturnReverted(lead) || isReturnApproved(lead) || isReturnSubmittedToQA(lead)) {
+      return false;
+    }
+    if (isReturnRevision(lead)) return true;
+    return !isReturnPending(lead);
+  };
+
   // Compute live tab counts based on actual database stage
   const counts = useMemo(() => {
+    let working = 0;
+    let pending = 0;
+    let underReview = 0;
+    let completed = 0;
     let drafting = 0;
     let qaSubmitted = 0;
     let qaApproved = 0;
@@ -125,15 +187,38 @@ export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
     let reverted = 0;
 
     allLeads.forEach((lead) => {
-      if (isReturnReverted(lead)) reverted++;
-      else if (isReturnRevision(lead)) revisions++;
-      else if (isReturnApproved(lead)) qaApproved++;
-      else if (isReturnSubmittedToQA(lead)) qaSubmitted++;
-      else drafting++;
+      const isRev = isReturnReverted(lead);
+      const isApp = isReturnApproved(lead);
+      const isSub = isReturnSubmittedToQA(lead);
+      const isCorr = isReturnRevision(lead);
+      const isPend = isReturnPending(lead);
+      const isWork = isWorkingReturn(lead);
+
+      if (isRev) reverted++;
+      if (isCorr) revisions++;
+      if (isApp) {
+        qaApproved++;
+        completed++;
+      } else if (isSub) {
+        qaSubmitted++;
+        underReview++;
+      } else if (isPend) {
+        pending++;
+      } else {
+        drafting++;
+      }
+
+      if (isWork) {
+        working++;
+      }
     });
 
     return {
       all: allLeads.length,
+      working,
+      pending,
+      underReview,
+      completed,
       drafting,
       qaSubmitted,
       qaApproved,
@@ -146,6 +231,10 @@ export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
   const stats = useMemo(() => {
     return {
       totalAssigned: allLeads.length,
+      working: counts.working,
+      pending: counts.pending,
+      underReview: counts.underReview,
+      completed: counts.completed,
       inQA: counts.qaSubmitted,
       qaApproved: counts.qaApproved,
       revisions: counts.revisions,
@@ -203,15 +292,20 @@ export function useTaxPreparerQueue(view: PreparerQueueView = 'ALL') {
       const approved = !reverted && isReturnApproved(item);
       const revision = !reverted && isReturnRevision(item);
       const submitted = !reverted && isReturnSubmittedToQA(item);
-      const drafting = !reverted && !approved && !revision && !submitted;
+      const pending = !reverted && !approved && !submitted && !revision && isReturnPending(item);
+      const drafting = !reverted && !approved && !revision && !submitted && !pending;
+      const working = drafting || revision;
 
-      if (activeTab === 'REVERTED' && !reverted) return false;
+      if (activeTab === 'WORKING' && !working) return false;
+      if (activeTab === 'PENDING' && !pending) return false;
+      if ((activeTab === 'UNDER_REVIEW' || activeTab === 'QA_SUBMITTED') && !submitted) return false;
+      if ((activeTab === 'COMPLETED' || activeTab === 'QA_APPROVED') && !approved) return false;
       if (activeTab === 'ASSIGNED' && bucketOf(item) !== 'ASSIGNED') return false;
       // Return Preparation page: "In preparation" = draft saved (new ones sit under Assigned leads)
       if (activeTab === 'DRAFTING' && (!drafting || (view === 'PREPARATION' && bucketOf(item) !== 'IN_PROGRESS'))) return false;
-      if (activeTab === 'QA_SUBMITTED' && !submitted) return false;
-      if (activeTab === 'QA_APPROVED' && !approved) return false;
       if (activeTab === 'REVISIONS' && !revision) return false;
+      if (activeTab === 'REVERTED' && !reverted) return false;
+
       if (complexityFilter !== 'ALL' && item.complexity !== complexityFilter) return false;
       if (priorityFilter !== 'ALL' && (item.priority || 'NO_PRIORITY') !== priorityFilter) return false;
 

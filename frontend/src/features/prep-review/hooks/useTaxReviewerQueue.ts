@@ -26,14 +26,34 @@ const VIEW_TO_REVIEWER_ORIGIN: Record<ReviewerQueueView, ReviewerOrigin> = {
   APPROVED: 'approved',
 };
 
-export function useTaxReviewerQueue(view: ReviewerQueueView = 'ALL') {
+export function useTaxReviewerQueue(
+  viewOrTab: ReviewerQueueView | ReviewerQueueTab = 'ALL',
+  defaultTabProp?: ReviewerQueueTab
+) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<ReviewerQueueTab>('ALL');
+  const view: ReviewerQueueView =
+    viewOrTab === 'ASSIGNED' || viewOrTab === 'PENDING' || viewOrTab === 'REVISIONS' || viewOrTab === 'APPROVED'
+      ? viewOrTab
+      : 'ALL';
+
+  const defaultTab: ReviewerQueueTab =
+    defaultTabProp
+      ? defaultTabProp
+      : (viewOrTab as ReviewerQueueTab);
+
+  const [activeTab, setActiveTab] = useState<ReviewerQueueTab>(defaultTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [allLeads, setAllLeads] = useState<PrepReviewLead[]>([]);
+
+  // Keep activeTab in sync if defaultTab changes
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab]);
 
   // Fetch real leads strictly assigned to QA Review for THIS user
   const fetchReviewerLeads = useCallback(async () => {
@@ -157,8 +177,8 @@ export function useTaxReviewerQueue(view: ReviewerQueueView = 'ALL') {
   // Filtered QA returns based on tab and search
   const filteredReturns = useMemo(() => {
     return viewLeads.filter((item) => {
-      const signedOff = isReturnSignedOff(item);
       const revision = isReturnRevision(item);
+      const signedOff = !revision && isReturnSignedOff(item);
       const pending = !signedOff && !revision;
 
       if (activeTab === 'PENDING' && !pending) return false;
@@ -198,7 +218,7 @@ export function useTaxReviewerQueue(view: ReviewerQueueView = 'ALL') {
     if (filteredReturns.length > 0) {
       navigate(`/prep-review/reviewer/audit/${filteredReturns[0].id || filteredReturns[0].applicationId}${fromQuery}`);
     } else {
-      toast('No pending returns in QA audit queue', { icon: 'ℹ️' });
+      toast('No returns in this queue', { icon: 'ℹ️' });
     }
   };
 

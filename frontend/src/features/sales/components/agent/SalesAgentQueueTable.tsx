@@ -4,7 +4,6 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { PhoneCall, ArrowRight, RotateCcw, Phone } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { TaxpayerCell } from '@/shared/components/table/TaxpayerCell';
 import { PriorityEditMenu } from '@/shared/components/PriorityEditMenu';
 import { ClientNameCell, ClientEmailCell, ClientPhoneCell, makeRevertedColumn } from '@/shared/components/table';
 import { SalesStageBadge } from '../common/SalesStageBadge';
@@ -24,6 +23,7 @@ interface SalesAgentQueueTableProps {
   isLoading?: boolean;
   onRefresh?: () => void;
   onUpdatePriority?: (applicationId: string, priority: string) => void;
+  emptyText?: string;
   /** ?from= carried into client / pitch screens so the sidebar keeps the right page */
   fromQuery?: string;
   /** Scheduled Callbacks page: show the callback time */
@@ -35,6 +35,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
   isLoading = false,
   onRefresh,
   onUpdatePriority,
+  emptyText,
   fromQuery = '',
   showCallback = false,
 }) => {
@@ -341,6 +342,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
         searchPlaceholder="Search taxpayer, email, state, status..."
         onExportExcel={handleExportExcel}
         onRowClick={(item) => navigate(`/sales/agent/client/${item.taxpayerId || item.id || item.applicationId}${fromQuery}`)}
+        emptyText={emptyText || "No leads found in this queue."}
       />
 
       <SalesCallOutcomeModal

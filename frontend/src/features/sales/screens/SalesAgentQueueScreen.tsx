@@ -1,32 +1,83 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { PhoneCall, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-// import { SalesAgentStatsCards } from '../components/agent/SalesAgentStatsCards';
 import { SalesAgentQueueTable } from '../components/agent/SalesAgentQueueTable';
-import { useSalesAgentQueue, type SalesAgentView } from '../hooks/useSalesAgentQueue';
+import {
+  useSalesAgentQueue,
+  type SalesAgentTab,
+  type SalesAgentView,
+} from '../hooks/useSalesAgentQueue';
 
-// Title and subtitle for each sales sidebar page
-const VIEW_COPY: Record<Exclude<SalesAgentView, 'MY'>, { title: string; subtitle: string }> = {
-  PENDING: { title: 'Pending Prospects', subtitle: 'Not converted yet and no callback or follow-up booked' },
-  CALLBACKS: { title: 'Scheduled Callbacks', subtitle: 'Clients who asked to be called at a set time, soonest first' },
-  FOLLOW_UPS: { title: 'Follow-Ups', subtitle: 'Clients to contact again later' },
-  CONVERTED: { title: 'Converted Clients', subtitle: 'Paid and sent on to filing' },
-};
+export interface SalesAgentQueueScreenProps {
+  initialTab?: SalesAgentTab;
+  view?: SalesAgentView;
+}
 
-export const SalesAgentQueueScreen: React.FC<{ view?: SalesAgentView }> = ({ view = 'MY' }) => {
+export const SalesAgentQueueScreen: React.FC<SalesAgentQueueScreenProps> = ({
+  initialTab,
+  view: propView,
+}) => {
+  const location = useLocation();
+
+  const effectiveView = useMemo<SalesAgentView>(() => {
+    if (propView) return propView;
+    const path = location.pathname;
+    if (path.includes('/sales/agent/pending')) return 'PENDING';
+    if (path.includes('/sales/agent/callbacks')) return 'CALLBACKS';
+    if (path.includes('/sales/agent/follow-ups')) return 'FOLLOW_UPS';
+    if (path.includes('/sales/agent/converted')) return 'CONVERTED';
+    return 'MY';
+  }, [propView, location.pathname]);
+
   const {
     isLoading,
     isRefreshing,
     allLeads,
+    counts,
     clientRows,
-    // stats, (top cards hidden)
     handleRefresh,
     handleUpdatePriority,
     handleOpenNextPriority,
     fromQuery,
-  } = useSalesAgentQueue(view);
+  } = useSalesAgentQueue(effectiveView, initialTab);
 
-  const copy = view === 'MY' ? null : VIEW_COPY[view];
+  const getHeaderInfo = () => {
+    switch (effectiveView) {
+      case 'PENDING':
+        return {
+          title: 'Pending Prospects (pending Leads)',
+          subtitle: `${clientRows.length} QA-approved prospects awaiting initial outreach and fee pitch`,
+          emptyText: 'No pending prospects awaiting outreach.',
+        };
+      case 'CALLBACKS':
+        return {
+          title: 'Scheduled Callbacks',
+          subtitle: `${clientRows.length} scheduled callbacks and consultation appointments`,
+          emptyText: 'No scheduled callbacks pending at this time.',
+        };
+      case 'FOLLOW_UPS':
+        return {
+          title: 'Follow-Ups',
+          subtitle: `${clientRows.length} active fee quotations and payment checkouts awaiting client completion`,
+          emptyText: 'No active follow-ups required.',
+        };
+      case 'CONVERTED':
+        return {
+          title: 'Converted Clients',
+          subtitle: `${clientRows.length} closed deals with payment collected and authorization complete`,
+          emptyText: 'No converted clients recorded in this view.',
+        };
+      default:
+        return {
+          title: 'My Prospects (My leads)',
+          subtitle: `${counts.all || 0} total assigned prospects (${counts.pending || 0} pending · ${counts.callbacks || 0} callbacks · ${counts.followUps || 0} follow-ups · ${counts.converted || 0} converted)`,
+          emptyText: 'No prospects assigned to your queue.',
+        };
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -34,12 +85,10 @@ export const SalesAgentQueueScreen: React.FC<{ view?: SalesAgentView }> = ({ vie
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            {copy ? copy.title : 'My Prospects'}
+            {headerInfo.title}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            {copy
-              ? `${clientRows.length} clients · ${copy.subtitle}`
-              : 'Call QA-approved taxpayers, pitch certified Form 1040 deductions, quote custom filing fees, and collect payment checkouts.'}
+            {headerInfo.subtitle}
           </p>
         </div>
 
@@ -67,19 +116,15 @@ export const SalesAgentQueueScreen: React.FC<{ view?: SalesAgentView }> = ({ vie
         </div>
       </div>
 
-      {/* Stat cards hidden on table pages (client: keep tables compact) */}
-      {/*
-      {view === 'MY' && <SalesAgentStatsCards stats={stats} />}
-      */}
-
-      {/* 3. My Active Queue Table (Grouped by Client) */}
+      {/* 2. My Active Queue Table (Grouped by Client) */}
       <SalesAgentQueueTable
         leads={clientRows}
         isLoading={isLoading}
         onRefresh={handleRefresh}
         onUpdatePriority={handleUpdatePriority}
+        emptyText={headerInfo.emptyText}
         fromQuery={fromQuery}
-        showCallback={view === 'CALLBACKS'}
+        showCallback={effectiveView === 'CALLBACKS'}
       />
     </div>
   );

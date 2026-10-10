@@ -1,24 +1,39 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ShieldCheck, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
-import { useTaxReviewerQueue, type ReviewerQueueView } from '../hooks/useTaxReviewerQueue';
-// import { ReviewerStatsCards } from '../components/reviewer/ReviewerStatsCards';
+import {
+  useTaxReviewerQueue,
+  type ReviewerQueueTab,
+  type ReviewerQueueView,
+} from '../hooks/useTaxReviewerQueue';
 import { ReviewerFilterBar } from '../components/reviewer/ReviewerFilterBar';
 import { ReviewerQueueTable } from '../components/reviewer/ReviewerQueueTable';
 
-// Title and subtitle for each reviewer sidebar page
-const VIEW_COPY: Record<Exclude<ReviewerQueueView, 'ALL'>, { title: string; subtitle: string }> = {
-  ASSIGNED: { title: 'Assigned Returns', subtitle: 'Submitted by the preparer and waiting for your review' },
-  PENDING: { title: 'Pending Returns', subtitle: 'Assigned to you but still with the preparer' },
-  REVISIONS: { title: 'Revision Required', subtitle: 'Sent back to the preparer for any revision' },
-  APPROVED: { title: 'Approved Returns', subtitle: 'Signed off by QA' },
-};
+export interface TaxReviewerQueueScreenProps {
+  initialTab?: ReviewerQueueTab;
+  view?: ReviewerQueueView;
+}
 
-export const TaxReviewerQueueScreen: React.FC<{ view?: ReviewerQueueView }> = ({ view = 'ALL' }) => {
+export const TaxReviewerQueueScreen: React.FC<TaxReviewerQueueScreenProps> = ({
+  initialTab,
+  view: propView,
+}) => {
+  const location = useLocation();
+
+  const effectiveView = useMemo<ReviewerQueueView>(() => {
+    if (propView) return propView;
+    const path = location.pathname;
+    if (path.includes('/prep-review/reviewer/assigned')) return 'ASSIGNED';
+    if (path.includes('/prep-review/reviewer/pending')) return 'PENDING';
+    if (path.includes('/prep-review/reviewer/revisions')) return 'REVISIONS';
+    if (path.includes('/prep-review/reviewer/approved')) return 'APPROVED';
+    return 'ALL';
+  }, [propView, location.pathname]);
+
   const {
     filteredReturns,
     clientRows,
-    // stats,
     counts,
     isLoading,
     activeTab,
@@ -28,24 +43,64 @@ export const TaxReviewerQueueScreen: React.FC<{ view?: ReviewerQueueView }> = ({
     refreshData,
     handleStartPriorityAudit,
     handleOpenAudit,
-  } = useTaxReviewerQueue(view);
+  } = useTaxReviewerQueue(effectiveView, initialTab);
 
-  const copy = view === 'ALL' ? null : VIEW_COPY[view];
+  const getHeaderInfo = () => {
+    switch (effectiveView) {
+      case 'PENDING':
+        return {
+          title: 'Pending Returns',
+          subtitle: `${filteredReturns.length} returns assigned to you but still with the preparer`,
+          emptyText: 'No pending returns currently in processing awaiting QA audit.',
+        };
+      case 'REVISIONS':
+        return {
+          title: 'Revision Required',
+          subtitle: `${filteredReturns.length} returns sent back to preparers for corrections`,
+          emptyText: 'No returns currently requiring revisions from preparers.',
+        };
+      case 'APPROVED':
+        return {
+          title: 'Approved Returns',
+          subtitle: `${filteredReturns.length} returns signed off by QA`,
+          emptyText: 'No approved returns found in this period.',
+        };
+      case 'ASSIGNED':
+        return {
+          title: 'Assigned Returns',
+          subtitle: `${filteredReturns.length} returns submitted by preparers awaiting your QA review`,
+          emptyText: 'No assigned returns waiting for your review. Great job!',
+        };
+      default:
+        return {
+          title: 'Assigned Returns',
+          subtitle: `${counts.all || 0} total returns (${counts.pending || 0} in processing · ${counts.revisions || 0} revisions · ${counts.signedOff || 0} approved)`,
+          emptyText: 'No assigned returns in this queue. Great job!',
+        };
+    }
+  };
+
+  const headerInfo = getHeaderInfo();
 
   return (
     <div className="w-full space-y-6 pb-12 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{copy ? copy.title : 'QA Audit Queue'}</h2>
-          <p className="text-sm text-slate-500 mt-1">
-            {copy
-              ? `${filteredReturns.length} returns · ${copy.subtitle}`
-              : `${counts.all || 0} in review · ${counts.pending || 0} pending audit · ${counts.revisions || 0} revisions sent`}
-          </p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            {headerInfo.title}
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">{headerInfo.subtitle}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="md" onClick={refreshData} disabled={isLoading} title="Refresh" className="px-3 cursor-pointer">
+          <Button
+            variant="outline"
+            size="md"
+            onClick={refreshData}
+            disabled={isLoading}
+            title="Refresh"
+            className="px-3 cursor-pointer"
+          >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           <Button
@@ -60,13 +115,8 @@ export const TaxReviewerQueueScreen: React.FC<{ view?: ReviewerQueueView }> = ({
         </div>
       </div>
 
-      {/* Summary KPI cards (hidden for now)
-      <ReviewerStatsCards stats={stats} />
-      */}
-
-      {/* 3. Search & Tab Filter Bar */}
-      {/* Old tabs only on the legacy queue; each sidebar page is already one status */}
-      {view === 'ALL' && (
+      {/* Legacy Filter Bar only if effectiveView === 'ALL' and on legacy queue */}
+      {effectiveView === 'ALL' && (
         <ReviewerFilterBar
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -74,13 +124,14 @@ export const TaxReviewerQueueScreen: React.FC<{ view?: ReviewerQueueView }> = ({
         />
       )}
 
-      {/* 4. Queue Table Card (100% Real API Data) */}
+      {/* Queue Table Card (100% Real API Data) */}
       <ReviewerQueueTable
         returns={clientRows}
         isLoading={isLoading}
         onOpenAudit={handleOpenAudit}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        emptyText={headerInfo.emptyText}
       />
     </div>
   );

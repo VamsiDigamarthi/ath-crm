@@ -280,7 +280,7 @@ export const MASTER_SIDEBAR_CATALOG: SidebarItemDefinition[] = [
     department: 'DOC',
     departmentLabel: 'Documenter Dept',
     path: '/documenter/agent/documents',
-    section: 'Intake Pipeline',
+    section: 'My Filings',
     description: 'Incoming taxpayer paperwork (W-2, 1099, Passports) awaiting review.',
   },
   {
@@ -290,7 +290,7 @@ export const MASTER_SIDEBAR_CATALOG: SidebarItemDefinition[] = [
     department: 'DOC',
     departmentLabel: 'Documenter Dept',
     path: '/documenter/notifications',
-    section: 'Calling Workspace',
+    section: 'My Filings',
     description: 'Documenter alerts and calling queue updates.',
   },
 
@@ -338,7 +338,7 @@ export const MASTER_SIDEBAR_CATALOG: SidebarItemDefinition[] = [
   {
     id: 'prep_specialist_hub',
     legacyId: 'specialist_hub',
-    label: 'My Operations Hub',
+    label: 'Dashboard',
     department: 'PREP_REVIEW',
     departmentLabel: 'Tax Prep & Review',
     path: '/prep-review/dashboard',
@@ -348,22 +348,82 @@ export const MASTER_SIDEBAR_CATALOG: SidebarItemDefinition[] = [
   {
     id: 'prep_preparer',
     legacyId: 'preparer',
-    label: 'Preparer Workbench',
+    label: 'Return Preparation',
     department: 'PREP_REVIEW',
     departmentLabel: 'Tax Prep & Review',
     path: '/prep-review/preparer',
     section: 'Active Operations',
-    description: 'Form 1040 tax drafting cases actively assigned to you.',
+    description: 'Active working Form 1040 tax drafting returns actively assigned to you.',
+  },
+  {
+    id: 'prep_pending_returns',
+    legacyId: 'preparer_pending',
+    label: 'Pending Returns',
+    department: 'PREP_REVIEW',
+    departmentLabel: 'Tax Prep & Review',
+    path: '/prep-review/preparer/pending',
+    section: 'Active Operations',
+    description: 'Returns assigned to you awaiting draft initiation.',
+  },
+  {
+    id: 'prep_under_review',
+    legacyId: 'preparer_under_review',
+    label: 'Under Review',
+    department: 'PREP_REVIEW',
+    departmentLabel: 'Tax Prep & Review',
+    path: '/prep-review/preparer/under-review',
+    section: 'Active Operations',
+    description: 'Returns submitted and currently under four-eyes QA compliance review.',
+  },
+  {
+    id: 'prep_completed_returns',
+    legacyId: 'preparer_completed',
+    label: 'Completed Returns',
+    department: 'PREP_REVIEW',
+    departmentLabel: 'Tax Prep & Review',
+    path: '/prep-review/preparer/completed',
+    section: 'My Filings',
+    description: 'Returns that successfully passed QA compliance review and sign-off.',
   },
   {
     id: 'prep_reviewer',
     legacyId: 'reviewer',
-    label: 'QA Audit Deck',
+    label: 'Assigned Returns',
     department: 'PREP_REVIEW',
     departmentLabel: 'Tax Prep & Review',
     path: '/prep-review/reviewer',
     section: 'Active Operations',
-    description: 'Four-eyes compliance review queue for quality assurance and compliance sign-off.',
+    description: 'All Form 1040 returns assigned to you for four-eyes QA compliance review.',
+  },
+  {
+    id: 'prep_reviewer_pending',
+    legacyId: 'reviewer_pending',
+    label: 'Pending Returns',
+    department: 'PREP_REVIEW',
+    departmentLabel: 'Tax Prep & Review',
+    path: '/prep-review/reviewer/pending',
+    section: 'Active Operations',
+    description: 'Returns awaiting QA compliance review in processing.',
+  },
+  {
+    id: 'prep_reviewer_revisions',
+    legacyId: 'reviewer_revisions',
+    label: 'Revision Required',
+    department: 'PREP_REVIEW',
+    departmentLabel: 'Tax Prep & Review',
+    path: '/prep-review/reviewer/revisions',
+    section: 'Active Operations',
+    description: 'Returns sent back to preparers with correction instructions.',
+  },
+  {
+    id: 'prep_reviewer_approved',
+    legacyId: 'reviewer_approved',
+    label: 'Approved Returns',
+    department: 'PREP_REVIEW',
+    departmentLabel: 'Tax Prep & Review',
+    path: '/prep-review/reviewer/approved',
+    section: 'My Filings',
+    description: 'Returns that successfully passed QA review and compliance sign-off.',
   },
   {
     id: 'prep_specialist_notifications',
@@ -372,7 +432,7 @@ export const MASTER_SIDEBAR_CATALOG: SidebarItemDefinition[] = [
     department: 'PREP_REVIEW',
     departmentLabel: 'Tax Prep & Review',
     path: '/prep-review/notifications',
-    section: 'Specialist Workspace',
+    section: 'My Filings',
     description: 'Revision requests, QA approvals, and handoff alerts.',
   },
 
@@ -439,23 +499,63 @@ export const MASTER_SIDEBAR_CATALOG: SidebarItemDefinition[] = [
   },
   {
     id: 'sales_agent_hub',
-    legacyId: 'agent_hub',
-    label: 'Closer Hub',
+    legacyId: 'agent_dashboard',
+    label: 'Dashboard',
     department: 'SALES',
     departmentLabel: 'Sales Dept',
     path: '/sales/agent',
     section: 'Closer Workspace',
-    description: 'Pitching pipeline, closed deals today, and pending authorizations.',
+    description: 'Sales closer operational dashboard, performance KPIs, and conversion metrics.',
   },
   {
-    id: 'sales_pitch_queue',
+    id: 'sales_my_prospects',
     legacyId: 'pitch_queue',
-    label: 'Outreach Pending',
+    label: 'My Prospects (My leads)',
     department: 'SALES',
     departmentLabel: 'Sales Dept',
     path: '/sales/agent/queue',
     section: 'Active Operations',
-    description: 'Returns assigned to you for client pricing negotiation and payment.',
+    description: 'All assigned taxpayer prospects and leads across sales pipeline.',
+  },
+  {
+    id: 'sales_pending_prospects',
+    legacyId: 'pending_prospects',
+    label: 'Pending Prospects (pending Leads)',
+    department: 'SALES',
+    departmentLabel: 'Sales Dept',
+    path: '/sales/agent/pending',
+    section: 'Active Operations',
+    description: 'QA-approved taxpayer leads awaiting initial sales outreach and pitch.',
+  },
+  {
+    id: 'sales_callbacks',
+    legacyId: 'scheduled_callbacks',
+    label: 'Scheduled Callbacks',
+    department: 'SALES',
+    departmentLabel: 'Sales Dept',
+    path: '/sales/agent/callbacks',
+    section: 'Active Operations',
+    description: 'Taxpayers with scheduled callback appointments and timed consultations.',
+  },
+  {
+    id: 'sales_follow_ups',
+    legacyId: 'follow_ups',
+    label: 'Follow-Ups',
+    department: 'SALES',
+    departmentLabel: 'Sales Dept',
+    path: '/sales/agent/follow-ups',
+    section: 'Active Operations',
+    description: 'Active quotations and payment checkouts awaiting client completion.',
+  },
+  {
+    id: 'sales_converted',
+    legacyId: 'converted_clients',
+    label: 'Converted Clients',
+    department: 'SALES',
+    departmentLabel: 'Sales Dept',
+    path: '/sales/agent/converted',
+    section: 'My Filings',
+    description: 'Deals closed, payment collected, and Form 8879 authorizations completed.',
   },
   {
     id: 'sales_agent_notifications',
@@ -464,7 +564,7 @@ export const MASTER_SIDEBAR_CATALOG: SidebarItemDefinition[] = [
     department: 'SALES',
     departmentLabel: 'Sales Dept',
     path: '/sales/notifications',
-    section: 'Closer Workspace',
+    section: 'My Filings',
     description: 'Client quote acceptances, payments, and sign-offs.',
   },
 
@@ -510,24 +610,64 @@ export const MASTER_SIDEBAR_CATALOG: SidebarItemDefinition[] = [
     description: 'Filing manager alerts and IRS batch notices.',
   },
   {
-    id: 'filing_agent_hub',
-    legacyId: 'agent_hub',
-    label: 'Filing Hub',
+    id: 'filing_agent_dashboard',
+    legacyId: 'filing_dashboard',
+    label: 'Dashboard',
     department: 'FILE_OP',
     departmentLabel: 'Filing Operations',
     path: '/filing/agent',
     section: 'Filing Workspace',
-    description: 'Specialist hub for generation of Drake XML and IRS submission packages.',
+    description: 'Specialist operations overview, daily velocity, and gateway health.',
   },
   {
-    id: 'filing_transmission_queue',
-    legacyId: 'agent_queue',
-    label: 'Transmission Queue',
+    id: 'filing_ready',
+    legacyId: 'filing_transmission_queue',
+    label: 'Ready for Filing',
     department: 'FILE_OP',
     departmentLabel: 'Filing Operations',
     path: '/filing/agent/queue',
     section: 'Active Operations',
-    description: 'Returns assigned to you for Drake XML generation and IRS e-file submission.',
+    description: 'Returns approved and authorized for IRS MeF batch transmission.',
+  },
+  {
+    id: 'filing_pending',
+    legacyId: 'agent_pending',
+    label: 'Filing Pending',
+    department: 'FILE_OP',
+    departmentLabel: 'Filing Operations',
+    path: '/filing/agent/pending',
+    section: 'Active Operations',
+    description: 'Returns actively validating schemas or transmitting across the IRS MeF gateway.',
+  },
+  {
+    id: 'filing_on_hold',
+    legacyId: 'agent_on_hold',
+    label: 'Filing on Hold',
+    department: 'FILE_OP',
+    departmentLabel: 'Filing Operations',
+    path: '/filing/agent/on-hold',
+    section: 'Active Operations',
+    description: 'Returns temporarily paused or reverted to previous departments.',
+  },
+  {
+    id: 'filing_rejected',
+    legacyId: 'agent_rejected',
+    label: 'Rejected Returns',
+    department: 'FILE_OP',
+    departmentLabel: 'Filing Operations',
+    path: '/filing/agent/rejected',
+    section: 'Active Operations',
+    description: 'Returns rejected by IRS or State agencies requiring diagnostic fixes.',
+  },
+  {
+    id: 'filing_filed',
+    legacyId: 'agent_filed',
+    label: 'Filed Returns',
+    department: 'FILE_OP',
+    departmentLabel: 'Filing Operations',
+    path: '/filing/agent/filed',
+    section: 'My Filings',
+    description: 'Returns officially acknowledged and accepted with Acceptance Certificates.',
   },
   {
     id: 'filing_agent_notifications',
@@ -536,7 +676,7 @@ export const MASTER_SIDEBAR_CATALOG: SidebarItemDefinition[] = [
     department: 'FILE_OP',
     departmentLabel: 'Filing Operations',
     path: '/filing/notifications',
-    section: 'Filing Workspace',
+    section: 'My Filings',
     description: 'IRS reject notices, transmission acceptances, and refund acknowledgements.',
   },
 ];
@@ -584,6 +724,38 @@ export function filterNavItemsByPermissions<T extends { id: string; path?: strin
       ) {
         return true;
       }
+    }
+
+    // 3. Preparer sub-queues inherit preparer permission
+    if (
+      (item.id.startsWith('preparer') || item.id.startsWith('prep_preparer') || item.id.startsWith('prep_pending') || item.id.startsWith('prep_under_review') || item.id.startsWith('prep_completed')) &&
+      (permSet.has('preparer') || permSet.has('prep_preparer'))
+    ) {
+      return true;
+    }
+
+    // 4. Reviewer sub-queues inherit reviewer permission
+    if (
+      (item.id.startsWith('reviewer') || item.id.startsWith('prep_reviewer')) &&
+      (permSet.has('reviewer') || permSet.has('prep_reviewer'))
+    ) {
+      return true;
+    }
+
+    // 5. Sales Closer sub-queues inherit sales permissions
+    if (
+      (item.id.startsWith('sales_') || item.id === 'agent_dashboard' || item.id === 'pitch_queue' || item.id === 'agent_hub') &&
+      (permSet.has('sales') || permSet.has('sales_agent') || permSet.has('pitch_queue') || permSet.has('agent_hub') || permSet.has('sales_pitch_queue') || permSet.has('sales_agent_hub'))
+    ) {
+      return true;
+    }
+
+    // 6. Filing Specialist sub-queues inherit filing permissions
+    if (
+      (item.id.startsWith('filing_') || item.id === 'agent_hub' || item.id === 'agent_queue') &&
+      (permSet.has('filing') || permSet.has('filing_agent') || permSet.has('agent_queue') || permSet.has('agent_hub') || permSet.has('filing_transmission_queue') || permSet.has('filing_agent_hub'))
+    ) {
+      return true;
     }
 
     return false;
