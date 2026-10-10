@@ -12,6 +12,10 @@ import {
   Bell,
   Sparkles,
   Tag,
+  Clock,
+  RotateCcw,
+  Hourglass,
+  BadgeCheck,
 } from 'lucide-react';
 import { filterNavItemsByPermissions } from '@/shared/constants/sidebar-catalog';
 import { salesService } from '../services/sales-service';
@@ -87,7 +91,20 @@ export const SalesLayout: React.FC = () => {
     ];
 
   const isRootAdmin = user?.role === 'ADMIN' && (!activeOrgRole || activeOrgRole.systemRole === 'ADMIN');
-  const navItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
+  const permittedItems = filterNavItemsByPermissions(rawNavItems, sidebarPermissions, isRootAdmin);
+
+  // The My Leads permission unlocks all five sales prospect pages
+  const navItems = permittedItems.flatMap((item) =>
+    item.id === 'pitch_queue'
+      ? [
+          { ...item, label: 'My Prospects' },
+          { id: 'sales_pending', label: 'Pending Prospects', icon: Hourglass, section: item.section, path: '/sales/agent/pending' },
+          { id: 'sales_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: item.section, path: '/sales/agent/callbacks' },
+          { id: 'sales_follow_ups', label: 'Follow-Ups', icon: RotateCcw, section: item.section, path: '/sales/agent/follow-ups' },
+          { id: 'sales_converted', label: 'Converted Clients', icon: BadgeCheck, section: item.section, path: '/sales/agent/converted' },
+        ]
+      : [item]
+  );
 
   const currentPath = location.pathname;
   const getActiveId = () => {
@@ -98,7 +115,18 @@ export const SalesLayout: React.FC = () => {
     if (currentPath.includes('/sales/manager/pitch') || currentPath.includes('/sales/manager/queue')) return 'pipeline';
     if (currentPath === '/sales/manager' || currentPath === '/sales/manager/') return 'dashboard';
     if (isManager && (currentPath.includes('/sales/agent/pitch') || currentPath.includes('/sales/pitch') || currentPath.includes('/sales/agent/queue'))) return 'pipeline';
-    if (currentPath.includes('/sales/agent/queue') || currentPath.includes('/sales/agent/pitch')) return 'pitch_queue';
+    if (currentPath.includes('/sales/agent/pending')) return 'sales_pending';
+    if (currentPath.includes('/sales/agent/callbacks')) return 'sales_callbacks';
+    if (currentPath.includes('/sales/agent/follow-ups')) return 'sales_follow_ups';
+    if (currentPath.includes('/sales/agent/converted')) return 'sales_converted';
+    // Client / pitch screens highlight the page they were opened from (?from=)
+    if (currentPath.includes('/sales/agent/client/') || currentPath.includes('/sales/agent/pitch')) {
+      const from = new URLSearchParams(location.search).get('from');
+      const byFrom: Record<string, string> = { pending: 'sales_pending', callbacks: 'sales_callbacks', 'follow-ups': 'sales_follow_ups', converted: 'sales_converted' };
+      if (from && byFrom[from]) return byFrom[from];
+      return 'pitch_queue';
+    }
+    if (currentPath.includes('/sales/agent/queue')) return 'pitch_queue';
     if (currentPath.includes('/sales/agent')) return 'agent_hub';
     return isManager ? 'pipeline' : 'pitch_queue';
   };

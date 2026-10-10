@@ -1,6 +1,21 @@
 export type SalesFilingType = 'INDIVIDUAL' | 'BUSINESS' | 'EXPAT_FBAR';
 
 /** Relationship based on the previous tax year (computed by the backend) */
+/** Sales call results, stored on the call log only */
+export type SalesCallDisposition =
+  | 'SALES_CONNECTED'
+  | 'SALES_CALLBACK'
+  | 'SALES_FOLLOW_UP'
+  | 'SALES_NO_ANSWER'
+  | 'SALES_NOT_INTERESTED';
+
+export interface SalesCallOutcome {
+  disposition: SalesCallDisposition | string;
+  callbackScheduledAt?: string | null;
+  callSummary?: string | null;
+  createdAt: string;
+}
+
 export type ClientType = 'PAID' | 'UNPAID' | 'NEW_COLD_CALLING' | 'NEW_REFERRAL';
 
 export type SalesLeadStage = 
@@ -94,6 +109,8 @@ export interface SalesLeadItem extends Record<string, unknown> {
   currentStage: SalesLeadStage;
   clientPaymentStatus?: 'PAID' | 'NEW' | 'UNPAID';
   clientType?: ClientType;
+  /** Latest sales call result (never changes the stage) */
+  salesCallOutcome?: SalesCallOutcome | null;
   totalTaxYears?: number;
   allApplications?: Array<{
     id: string;

@@ -7,7 +7,25 @@ import toast from 'react-hot-toast';
 
 export type SalesAgentTab = 'ALL' | 'AWAITING' | 'QUOTED' | 'PAID' | 'REVERTED';
 
-export function useSalesAgentQueue() {
+/**
+ * Sales sidebar pages:
+ * - MY: every lead assigned to me (old My Leads, keeps its tabs)
+ * - PENDING: not converted, not sent back, and no callback / follow-up booked
+ * - CALLBACKS / FOLLOW_UPS: latest sales call result (call log only, stage untouched)
+ * - CONVERTED: paid / sent to filing
+ */
+export type SalesAgentView = 'MY' | 'PENDING' | 'CALLBACKS' | 'FOLLOW_UPS' | 'CONVERTED';
+
+/** ?from= value per page so the client / pitch screens keep the right sidebar item */
+export const SALES_VIEW_FROM: Record<SalesAgentView, string> = {
+  MY: 'prospects',
+  PENDING: 'pending',
+  CALLBACKS: 'callbacks',
+  FOLLOW_UPS: 'follow-ups',
+  CONVERTED: 'converted',
+};
+
+export function useSalesAgentQueue(view: SalesAgentView = 'MY') {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
@@ -156,9 +174,30 @@ export function useSalesAgentQueue() {
     };
   }, [allLeads, counts]);
 
+  const bucketOf = (lead: SalesLeadItem): Exclude<SalesAgentView, 'MY'> | 'REVERTED' => {
+    if (isReturnReverted(lead)) return 'REVERTED';
+    if (isPaidOrClosed(lead)) return 'CONVERTED';
+    const outcome = lead.salesCallOutcome?.disposition;
+    if (outcome === 'SALES_CALLBACK') return 'CALLBACKS';
+    if (outcome === 'SALES_FOLLOW_UP') return 'FOLLOW_UPS';
+    return 'PENDING';
+  };
+
+  // Leads that belong to the current sidebar page (callbacks soonest first)
+  const viewLeads = useMemo(() => {
+    if (view === 'MY') return allLeads;
+    const scoped = allLeads.filter((l) => bucketOf(l) === view);
+    if (view === 'CALLBACKS') {
+      const at = (l: SalesLeadItem) => new Date(l.salesCallOutcome?.callbackScheduledAt || 0).getTime();
+      return [...scoped].sort((a, b) => at(a) - at(b));
+    }
+    return scoped;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allLeads, view]);
+
   // Filtered Leads
   const filteredLeads = useMemo(() => {
-    return allLeads.filter((lead) => {
+    return viewLeads.filter((lead) => {
       if (activeTab === 'AWAITING' && !isAwaitingPitch(lead)) return false;
       if (activeTab === 'QUOTED' && !isQuotedOrPaymentPending(lead)) return false;
       if (activeTab === 'PAID' && !isPaidOrClosed(lead)) return false;
@@ -178,7 +217,7 @@ export function useSalesAgentQueue() {
       }
       return true;
     });
-  }, [allLeads, activeTab, priorityFilter, searchQuery]);
+  }, [viewLeads, activeTab, priorityFilter, searchQuery]);
 
   const clientRows = useMemo(() => {
     const seen = new Set<string>();
@@ -194,10 +233,12 @@ export function useSalesAgentQueue() {
     navigate(`/sales/agent/pitch/${leadId}`);
   };
 
+  const fromQuery = `?from=${SALES_VIEW_FROM[view]}`;
+
   const handleOpenNextPriority = () => {
     if (filteredLeads.length > 0) {
       const next = filteredLeads[0];
-      navigate(`/sales/agent/client/${next.taxpayerId || next.id || next.applicationId}`);
+      navigate(`/sales/agent/client/${next.taxpayerId || next.id || next.applicationId}${fromQuery}`);
     } else {
       toast('No pending returns in pitch queue', { icon: 'ℹ️' });
     }
@@ -221,5 +262,6 @@ export function useSalesAgentQueue() {
     handleUpdatePriority,
     handleOpenPitch,
     handleOpenNextPriority,
+    fromQuery,
   };
 }

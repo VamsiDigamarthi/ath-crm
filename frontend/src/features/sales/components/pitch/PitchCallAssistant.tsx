@@ -16,6 +16,8 @@ import type { SalesLeadItem, SalesPaymentStatus, CloserNoteItem } from '../../ty
 import toast from 'react-hot-toast';
 
 import { salesService } from '../../services/sales-service';
+import { useSalesCallOutcome } from '../../hooks/useSalesCallOutcome';
+import { SalesCallOutcomeModal } from './SalesCallOutcomeModal';
 
 interface PitchCallAssistantProps {
   lead: SalesLeadItem;
@@ -147,8 +149,24 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
     }
   };
 
-  const handleEndCall = async () => {
+  // Call result popup (Callback / Follow-up / ...): only writes a call log, never changes the stage
+  const callOutcome = useSalesCallOutcome(appId, () => {
+    setNewNoteText('');
+    onNotesSaved?.();
+  });
+
+  const handleEndCall = () => {
     setIsCalling(false);
+    callOutcome.open({ duration: callDuration, note: newNoteText });
+  };
+
+  // Popup closed without choosing a result: still log the call as before
+  const handleOutcomeDismiss = async () => {
+    callOutcome.close();
+    await logPlainCall();
+  };
+
+  const logPlainCall = async () => {
     if (newNoteText.trim()) {
       // Saves the note and logs the call (disposition CALL_LOGGED) in one request
       await handleSaveNotes();
@@ -250,17 +268,45 @@ export const PitchCallAssistant: React.FC<PitchCallAssistantProps> = ({
                 </Button>
               </>
             ) : (
-              <Button
-                size="sm"
-                onClick={handleStartCall}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Call Client</span>
-              </Button>
+              <>
+                {/* For calls made outside the softphone */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => callOutcome.open({ note: newNoteText })}
+                  className="text-xs font-medium border-slate-200 bg-white text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Log result
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleStartCall}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  <span>Call Client</span>
+                </Button>
+              </>
             )}
           </div>
         </div>
+
+        <SalesCallOutcomeModal
+          isOpen={callOutcome.isOpen}
+          onClose={handleOutcomeDismiss}
+          durationLabel={callDuration > 0 ? formatTime(callDuration) : undefined}
+          outcome={callOutcome.outcome}
+          onOutcomeChange={callOutcome.setOutcome}
+          callbackDate={callOutcome.callbackDate}
+          onCallbackDateChange={callOutcome.setCallbackDate}
+          callbackTime={callOutcome.callbackTime}
+          onCallbackTimeChange={callOutcome.setCallbackTime}
+          note={callOutcome.note}
+          onNoteChange={callOutcome.setNote}
+          error={callOutcome.error}
+          isSaving={callOutcome.isSaving}
+          onSave={callOutcome.save}
+        />
       </div>
 
       {/* 2. Recommended Talking Points */}

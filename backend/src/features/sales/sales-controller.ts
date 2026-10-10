@@ -131,7 +131,7 @@ export class SalesController {
       const result = await SalesService.saveCloserNotes(id, req.body, userId);
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ message: err.message || 'Failed to save closer call notes' });
+      res.status(err.statusCode || 500).json({ message: err.message || 'Failed to save closer call notes' });
     }
   }
 

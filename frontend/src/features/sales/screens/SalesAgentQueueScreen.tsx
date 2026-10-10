@@ -3,9 +3,17 @@ import { PhoneCall, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { SalesAgentStatsCards } from '../components/agent/SalesAgentStatsCards';
 import { SalesAgentQueueTable } from '../components/agent/SalesAgentQueueTable';
-import { useSalesAgentQueue } from '../hooks/useSalesAgentQueue';
+import { useSalesAgentQueue, type SalesAgentView } from '../hooks/useSalesAgentQueue';
 
-export const SalesAgentQueueScreen: React.FC = () => {
+// Title and subtitle for each sales sidebar page
+const VIEW_COPY: Record<Exclude<SalesAgentView, 'MY'>, { title: string; subtitle: string }> = {
+  PENDING: { title: 'Pending Prospects', subtitle: 'Not converted yet and no callback or follow-up booked' },
+  CALLBACKS: { title: 'Scheduled Callbacks', subtitle: 'Clients who asked to be called at a set time, soonest first' },
+  FOLLOW_UPS: { title: 'Follow-Ups', subtitle: 'Clients to contact again later' },
+  CONVERTED: { title: 'Converted Clients', subtitle: 'Paid and sent on to filing' },
+};
+
+export const SalesAgentQueueScreen: React.FC<{ view?: SalesAgentView }> = ({ view = 'MY' }) => {
   const {
     isLoading,
     isRefreshing,
@@ -15,7 +23,10 @@ export const SalesAgentQueueScreen: React.FC = () => {
     handleRefresh,
     handleUpdatePriority,
     handleOpenNextPriority,
-  } = useSalesAgentQueue();
+    fromQuery,
+  } = useSalesAgentQueue(view);
+
+  const copy = view === 'MY' ? null : VIEW_COPY[view];
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -23,10 +34,12 @@ export const SalesAgentQueueScreen: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            My Active Sales &amp; Fee Quotation Outreach Pending
+            {copy ? copy.title : 'My Prospects'}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-            Call QA-approved taxpayers, pitch certified Form 1040 deductions, quote custom filing fees, and collect payment checkouts.
+            {copy
+              ? `${clientRows.length} clients · ${copy.subtitle}`
+              : 'Call QA-approved taxpayers, pitch certified Form 1040 deductions, quote custom filing fees, and collect payment checkouts.'}
           </p>
         </div>
 
@@ -54,8 +67,8 @@ export const SalesAgentQueueScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top KPI Cards */}
-      <SalesAgentStatsCards stats={stats} />
+      {/* 2. Top KPI Cards (My Prospects only) */}
+      {view === 'MY' && <SalesAgentStatsCards stats={stats} />}
 
       {/* 3. My Active Queue Table (Grouped by Client) */}
       <SalesAgentQueueTable
@@ -63,6 +76,8 @@ export const SalesAgentQueueScreen: React.FC = () => {
         isLoading={isLoading}
         onRefresh={handleRefresh}
         onUpdatePriority={handleUpdatePriority}
+        fromQuery={fromQuery}
+        showCallback={view === 'CALLBACKS'}
       />
     </div>
   );

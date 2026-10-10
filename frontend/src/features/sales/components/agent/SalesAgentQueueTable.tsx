@@ -19,6 +19,10 @@ interface SalesAgentQueueTableProps {
   isLoading?: boolean;
   onRefresh?: () => void;
   onUpdatePriority?: (applicationId: string, priority: string) => void;
+  /** ?from= carried into client / pitch screens so the sidebar keeps the right page */
+  fromQuery?: string;
+  /** Scheduled Callbacks page: show the callback time */
+  showCallback?: boolean;
 }
 
 export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
@@ -26,6 +30,8 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
   isLoading = false,
   onRefresh,
   onUpdatePriority,
+  fromQuery = '',
+  showCallback = false,
 }) => {
   const navigate = useNavigate();
   const [selectedLeadForReturn, setSelectedLeadForReturn] = useState<SalesLeadItem | null>(null);
@@ -244,7 +250,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
 
               <Button
                 size="sm"
-                onClick={() => navigate(`/sales/agent/client/${lead.taxpayerId || lead.id || lead.applicationId}`)}
+                onClick={() => navigate(`/sales/agent/client/${lead.taxpayerId || lead.id || lead.applicationId}${fromQuery}`)}
                 className={`h-7 px-2.5 text-[11px] text-white font-medium flex items-center gap-1 shadow-2xs cursor-pointer ${
                   isReverted ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
                 }`}
@@ -258,8 +264,33 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
         },
       },
     ],
-    [navigate, onUpdatePriority]
+    [navigate, onUpdatePriority, fromQuery]
   );
+
+  // Scheduled Callbacks page: callback time column just before the actions
+  const tableColumns = useMemo<ColumnDef<SalesLeadItem, any>[]>(() => {
+    if (!showCallback) return columns;
+    const callbackCol: ColumnDef<SalesLeadItem, any> = {
+      id: 'callback',
+      header: 'CALLBACK',
+      accessorFn: (row) => row.salesCallOutcome?.callbackScheduledAt || '',
+      cell: ({ row }) => {
+        const at = row.original.salesCallOutcome?.callbackScheduledAt;
+        if (!at) return <span className="text-xs text-slate-400">—</span>;
+        const isOverdue = new Date(at).getTime() < Date.now();
+        return (
+          <span className={`text-xs whitespace-nowrap ${isOverdue ? 'text-rose-600 font-medium' : 'text-slate-700'}`}>
+            {new Date(at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+            {isOverdue ? ' · overdue' : ''}
+          </span>
+        );
+      },
+    };
+    const actionsIdx = columns.findIndex((c) => c.id === 'actions');
+    return actionsIdx < 0
+      ? [...columns, callbackCol]
+      : [...columns.slice(0, actionsIdx), callbackCol, ...columns.slice(actionsIdx)];
+  }, [columns, showCallback]);
 
   const handleExportExcel = () => {
     exportTableToExcel(
@@ -284,12 +315,12 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
   return (
     <>
       <UnifiedTable<SalesLeadItem>
-        columns={columns}
+        columns={tableColumns}
         data={leads}
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer, email, state, status..."
         onExportExcel={handleExportExcel}
-        onRowClick={(item) => navigate(`/sales/agent/client/${item.taxpayerId || item.id || item.applicationId}`)}
+        onRowClick={(item) => navigate(`/sales/agent/client/${item.taxpayerId || item.id || item.applicationId}${fromQuery}`)}
       />
 
       {/* Return to Admin Modal */}

@@ -581,7 +581,24 @@ export const router = createBrowserRouter([
           },
           {
             path: 'agent/queue',
-            element: <SalesAgentQueueScreen />,
+            element: <SalesAgentQueueScreen key="prospects" view="MY" />,
+          },
+          // Sales sidebar pages (key resets search / tabs when switching pages)
+          {
+            path: 'agent/pending',
+            element: <SalesAgentQueueScreen key="pending" view="PENDING" />,
+          },
+          {
+            path: 'agent/callbacks',
+            element: <SalesAgentQueueScreen key="callbacks" view="CALLBACKS" />,
+          },
+          {
+            path: 'agent/follow-ups',
+            element: <SalesAgentQueueScreen key="follow-ups" view="FOLLOW_UPS" />,
+          },
+          {
+            path: 'agent/converted',
+            element: <SalesAgentQueueScreen key="converted" view="CONVERTED" />,
           },
           {
             path: 'agent/pitch/:id',
