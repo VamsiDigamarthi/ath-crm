@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from 'react';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
 import toast from 'react-hot-toast';
 import { AppConfirmDialog } from '@/shared/components/AppConfirmDialog';
 import { documenterService } from '../services/documenter-service';
@@ -11,8 +13,13 @@ import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { useMyLeadsTabs, type MyLeadsTab } from '../hooks/useMyLeadsTabs';
+import { AppFilterFlyout, withoutAllValues } from '@/shared/components/AppFilterFlyout';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { useLeadFilters } from '../hooks/useLeadFilters';
 
 export const DocumenterAgentQueueScreen: React.FC = () => {
+  // Stat cards: shown by default, "Hide stats" button next to Filters
+  const { showStats, toggleStats } = useStatsVisibility('doc_my_leads');
   const {
     agents,
     isLoading,
@@ -28,10 +35,34 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
     handleCloseModals,
     handleSaveCallDisposition,
     handleUpdatePriority,
+    stats,
   } = useDocumenterWorkspace('OUTREACH');
 
   // Client tabs: Assigned leads · Pending · Voicemail · Callbacks · Follow-ups · Not interested
   const { activeTab, setActiveTab, tabs, visibleLeads, isLoading: isTabsLoading, refresh: refreshTabs } = useMyLeadsTabs();
+
+  // Filters (Priority, Visa type) applied on top of the active tab
+  const { filters, setFilters, filterCategories, filteredLeads } = useLeadFilters(visibleLeads);
+
+  // Top summary cards (compact, same size as Follow-Ups)
+  const assignedCount = tabs.find((t) => t.id === 'ASSIGNED')?.count ?? 0;
+  const summaryCards = [
+    { name: 'My assigned leads', value: stats.myLeads || assignedCount, hint: 'Active in your queue', tone: 'text-slate-900' },
+    {
+      name: "Today's dials",
+      value: stats.todayDials ?? 0,
+      hint: `${stats.contactRatePct ?? 0}% contact rate (${stats.todayConnected ?? 0} connected)`,
+      tone: 'text-emerald-700',
+    },
+    {
+      name: 'Pending callbacks',
+      value: stats.callbacks ?? 0,
+      hint: stats.nextCallbackAt
+        ? `Next: ${new Date(stats.nextCallbackAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : 'No pending callbacks',
+      tone: 'text-blue-700',
+    },
+  ];
 
   // Not interested / Invalid tabs: agent sends the lead back to the admin pool (never automatic)
   const canReturnToAdmin = activeTab === 'NOT_INTERESTED' || activeTab === 'INVALID';
@@ -94,7 +125,7 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
 
   const handleExport = () => {
     exportTableToExcel(
-      visibleLeads,
+      filteredLeads,
       [
         { header: 'Taxpayer', key: 'fullName', format: (r) => r.customer?.fullName || `${r.customer?.firstName || ''} ${r.customer?.lastName || ''}` },
         { header: 'Email', key: 'email', format: (r) => r.customer?.email || '—' },
@@ -110,16 +141,26 @@ export const DocumenterAgentQueueScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+      {showStats && (
+        <CompactStatCards cards={summaryCards} />
+      )}
+
       <AppTabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as MyLeadsTab)} size="sm" />
 
       <UnifiedTable<DocumenterLeadItem>
         title="DOCUMENTER OUTREACH & CALLING QUEUE"
         subtitle="Active pipeline of prospective taxpayers assigned to you for intake outreach and qualification."
-        data={visibleLeads}
+        data={filteredLeads}
         columns={columns}
         isLoading={isLoading || isTabsLoading}
         searchPlaceholder="Search leads by name, email, phone..."
         onExportExcel={handleExport}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         // No row click here: a lead opens only through the "View" button (shown for interested calls)
         emptyText="No assigned leads in your outreach queue."
       />

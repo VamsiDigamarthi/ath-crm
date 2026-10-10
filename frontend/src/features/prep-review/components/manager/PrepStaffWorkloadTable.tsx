@@ -11,11 +11,14 @@ import { ArrowRight } from 'lucide-react';
 interface PrepStaffWorkloadTableProps {
   staff: PrepStaffMember[];
   isLoading?: boolean;
+  /** Extra toolbar control (e.g. Filters) */
+  extraHeaderActions?: React.ReactNode;
 }
 
 export const PrepStaffWorkloadTable: React.FC<PrepStaffWorkloadTableProps> = ({
   staff,
   isLoading = false,
+  extraHeaderActions,
 }) => {
   const navigate = useNavigate();
 
@@ -121,6 +124,7 @@ export const PrepStaffWorkloadTable: React.FC<PrepStaffWorkloadTableProps> = ({
         searchPlaceholder="Search specialists by name, email..."
         onExportExcel={handleExport}
         emptyText="No tax preparers or reviewers found."
+        extraHeaderActions={extraHeaderActions}
       />
     </div>
   );

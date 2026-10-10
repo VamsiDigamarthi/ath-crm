@@ -49,6 +49,7 @@ export const usePrepManagerQueue = () => {
       const [leadsRes, dynamicStaff] = await Promise.all([
         prepReviewService.getPipelineLeads({
           tab: activeTab,
+          limit: 100, // server max; default was 50 clients
           search: debouncedSearch || undefined,
           staffId: staffIdFromUrl,
         }),

@@ -1,10 +1,23 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Calculator, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { useTaxPreparerQueue, type PreparerQueueView, type PreparerQueueTab } from '../hooks/useTaxPreparerQueue';
 import { PreparerFilterBar } from '../components/preparer/PreparerFilterBar';
 import { PreparerQueueTable } from '../components/preparer/PreparerQueueTable';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES } from '@/shared/constants/system-enums';
+
+const COMPLEXITY_OPTIONS = [
+  { label: 'Standard', value: 'STANDARD' },
+  { label: 'Multi-state', value: 'MULTI_STATE' },
+  { label: 'Investments (1099-B)', value: 'INVESTMENTS_1099B' },
+  { label: 'Foreign / FBAR', value: 'FOREIGN_FBAR' },
+  { label: 'Business (Sch C)', value: 'BUSINESS_SCH_C' },
+];
 
 
 export interface TaxPreparerQueueScreenProps {
@@ -31,6 +44,7 @@ export const TaxPreparerQueueScreen: React.FC<TaxPreparerQueueScreenProps> = ({ 
     handleOpenClient,
     counts,
     preparationCounts,
+    bucketCounts,
     isLoading,
     activeTab,
     setActiveTab,
@@ -76,6 +90,50 @@ export const TaxPreparerQueueScreen: React.FC<TaxPreparerQueueScreenProps> = ({ 
 
   const headerInfo = getHeaderInfo();
 
+  // Stat cards (shown by default, "Hide stats" next to Filters)
+  const { showStats, toggleStats } = useStatsVisibility('prep_preparer');
+  const statCards = [
+    { name: 'New assigned', value: bucketCounts.ASSIGNED, hint: 'Assigned in the last day', tone: 'text-slate-900' },
+    { name: 'Pending', value: bucketCounts.PENDING, hint: 'Over 1 day, not started', tone: 'text-amber-700' },
+    {
+      name: 'In preparation',
+      value: bucketCounts.IN_PROGRESS + bucketCounts.REVISIONS + bucketCounts.REVERTED,
+      hint: `${bucketCounts.REVISIONS} revisions · ${bucketCounts.REVERTED} reverted`,
+      tone: 'text-blue-700',
+    },
+    { name: 'Under review', value: bucketCounts.UNDER_REVIEW, hint: 'With QA reviewer', tone: 'text-purple-700' },
+    { name: 'Completed', value: bucketCounts.COMPLETED, hint: 'QA approved', tone: 'text-emerald-700' },
+  ];
+
+  // Filters: Priority, Complexity, Tax year, Filing type (on top of the page / tab)
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(() => {
+    const years = Array.from(new Set(clientRows.map((r) => r.taxYear).filter(Boolean))).sort((a, b) => b - a);
+    return [
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      { id: 'complexity', label: 'Complexity', options: COMPLEXITY_OPTIONS },
+      { id: 'taxYear', label: 'Tax year', options: years.map((y) => ({ label: `TY ${y}`, value: String(y) })) },
+      {
+        id: 'filingType',
+        label: 'Filing type',
+        options: [
+          { label: 'Individual (1040)', value: 'INDIVIDUAL' },
+          { label: 'Business', value: 'BUSINESS' },
+        ],
+      },
+    ];
+  }, [clientRows]);
+  const filteredRows = useMemo(() => {
+    const match = (key: string, value: string) => !filters[key]?.length || filters[key].includes(value);
+    return clientRows.filter(
+      (r) =>
+        match('priority', r.priority || 'NO_PRIORITY') &&
+        match('complexity', r.complexity || 'STANDARD') &&
+        match('taxYear', String(r.taxYear)) &&
+        match('filingType', String(r.filingType || 'INDIVIDUAL').toUpperCase())
+    );
+  }, [clientRows, filters]);
+
   // Only Return Preparation has tabs; other pages hide tabs
   const pageTabs: { id: PreparerQueueTab; label: string; count: number }[] | undefined =
     effectiveView === 'ALL'
@@ -116,6 +174,8 @@ export const TaxPreparerQueueScreen: React.FC<TaxPreparerQueueScreenProps> = ({ 
         </div>
       </div>
 
+      {showStats && <CompactStatCards cards={statCards} />}
+
       {/* Search & Tab Filter Bar */}
       <PreparerFilterBar
         activeTab={activeTab}
@@ -126,11 +186,18 @@ export const TaxPreparerQueueScreen: React.FC<TaxPreparerQueueScreenProps> = ({ 
         onPriorityChange={setPriorityFilter}
         counts={counts}
         tabs={pageTabs}
+        hideSelects
       />
 
       {/* Queue Table Card (100% Real API Data) */}
       <PreparerQueueTable
-        returns={clientRows}
+        returns={filteredRows}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         isLoading={isLoading}
         onOpenWorkspace={handleOpenClient}
         searchQuery={searchQuery}

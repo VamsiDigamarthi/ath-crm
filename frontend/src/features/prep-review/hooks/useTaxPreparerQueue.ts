@@ -255,6 +255,16 @@ export function useTaxPreparerQueue(
     return assignedAt && Date.now() - assignedAt < DAY_MS ? 'ASSIGNED' : 'PENDING';
   };
 
+  // Counts per bucket across all my returns (stat cards on every preparer page)
+  const bucketCounts = useMemo(() => {
+    const c: Record<PreparerBucket, number> = { ASSIGNED: 0, PENDING: 0, IN_PROGRESS: 0, REVISIONS: 0, REVERTED: 0, UNDER_REVIEW: 0, COMPLETED: 0 };
+    allLeads.forEach((l) => {
+      c[bucketOf(l)]++;
+    });
+    return c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allLeads]);
+
   const VIEW_BUCKETS: Record<PreparerQueueView, PreparerBucket[] | null> = {
     ALL: null,
     PREPARATION: ['ASSIGNED', 'IN_PROGRESS', 'REVISIONS', 'REVERTED'],
@@ -353,6 +363,7 @@ export function useTaxPreparerQueue(
     allLeads,
     counts,
     preparationCounts,
+    bucketCounts,
     stats,
     filteredReturns,
     clientRows,

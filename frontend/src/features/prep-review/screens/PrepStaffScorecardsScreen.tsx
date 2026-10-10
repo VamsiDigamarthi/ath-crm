@@ -1,11 +1,45 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
 import { usePrepStaffScorecards } from '../hooks/usePrepStaffScorecards';
 import { PrepStaffWorkloadTable } from '../components/manager/PrepStaffWorkloadTable';
 import { PrepAutoDistributeModal } from '../components/manager/PrepAutoDistributeModal';
 import { Button } from '@/shared/components/Button';
 import { RefreshCw, Zap } from 'lucide-react';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+
+const STAFF_FILTERS: FilterCategory[] = [
+  {
+    id: 'role',
+    label: 'Role',
+    options: [
+      { label: 'Tax preparer', value: 'PREPARER' },
+      { label: 'QA reviewer', value: 'REVIEWER' },
+    ],
+  },
+  {
+    id: 'workload',
+    label: 'Workload',
+    options: [
+      { label: 'No active cases (free)', value: 'NONE' },
+      { label: '1 – 5 cases', value: 'LOW' },
+      { label: 'More than 5 cases', value: 'HIGH' },
+    ],
+  },
+  {
+    id: 'availability',
+    label: 'Availability',
+    options: [
+      { label: 'Available', value: 'YES' },
+      { label: 'At capacity', value: 'NO' },
+    ],
+  },
+];
 
 export const PrepStaffScorecardsScreen: React.FC = () => {
+  // Stat cards: shown by default, "Hide stats" button next to Filters
+  const { showStats, toggleStats } = useStatsVisibility('prep_mgr_staff');
   const {
     staff,
     stats,
@@ -16,7 +50,22 @@ export const PrepStaffScorecardsScreen: React.FC = () => {
     setIsAutoDistributeOpen,
   } = usePrepStaffScorecards();
 
-  // const activeStaffCount = staff.filter((s) => s.role !== 'PREP_MANAGER').length;
+  const activeStaffCount = staff.filter((s) => s.role !== 'PREP_MANAGER').length;
+
+  // Filters: role, workload size, availability
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filteredStaff = useMemo(() => {
+    const match = (key: string, values: string[]) => !filters[key]?.length || values.some((v) => filters[key].includes(v));
+    return staff.filter((s) => {
+      const roles = [
+        ...((s.canPrepare ?? s.role === 'TAX_PREPARER') ? ['PREPARER'] : []),
+        ...((s.canReview ?? s.role === 'TAX_REVIEWER') ? ['REVIEWER'] : []),
+      ];
+      const n = Number(s.activeCaseload) || 0;
+      const load = n === 0 ? 'NONE' : n <= 5 ? 'LOW' : 'HIGH';
+      return match('role', roles) && match('workload', [load]) && match('availability', [s.isAvailable ? 'YES' : 'NO']);
+    });
+  }, [staff, filters]);
 
   return (
     <div className="space-y-6 pb-12 font-sans">
@@ -146,9 +195,27 @@ export const PrepStaffScorecardsScreen: React.FC = () => {
       </div>
       */}
 
+      {/* Summary cards (compact) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Active staff', value: activeStaffCount, hint: 'Preparers & QA reviewers' },
+            { name: 'Under preparation', value: stats.underPrep ?? 0, hint: 'Returns being drafted', tone: 'text-blue-700' },
+            { name: 'In QA review', value: stats.qaReview ?? 0, hint: 'Waiting for audit', tone: 'text-purple-700' },
+            { name: 'Total returns', value: stats.all ?? 0, hint: `${stats.unassigned ?? 0} unassigned`, tone: 'text-amber-700' },
+          ]}
+        />
+      )}
+
       {/* 3. Staff Workload & Capacity Table */}
       <PrepStaffWorkloadTable
-        staff={staff}
+        staff={filteredStaff}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={STAFF_FILTERS} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         isLoading={isLoading}
       />
 

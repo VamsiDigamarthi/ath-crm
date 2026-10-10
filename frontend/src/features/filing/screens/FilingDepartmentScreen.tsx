@@ -1,13 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { 
-  RefreshCw, 
-  Zap,
-  ListFilter,
-  Send,
-  CheckCircle2,
-  Clock,
-  ShieldCheck
-} from 'lucide-react';
+import { RefreshCw, Zap, ShieldCheck } from 'lucide-react';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppTabs } from '@/shared/components/AppTabs';
@@ -19,6 +11,11 @@ import { getFilingColumns } from '../columns/filing-columns';
 import { useFilingQueue } from '../hooks/useFilingQueue';
 import { useAuthStore } from '@/features/auth/store/auth-store';
 import type { FilingLeadItem } from '../types/filing.types';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES, SYSTEM_VISA_TYPES } from '@/shared/constants/system-enums';
 
 export type FilingTabType = 'ALL' | 'FILING_QUEUE' | 'FILING_IN_PROGRESS' | 'FILING_SUCCESS';
 
@@ -74,18 +71,59 @@ export const FilingDepartmentScreen: React.FC = () => {
     [handleOpenWorkspace, handleOpenAssignModal, isAdmin]
   );
 
+  // Stat cards (shown by default, "Hide stats" next to Filters)
+  const { showStats, toggleStats } = useStatsVisibility('admin_filing_dept');
+
+  // Filters: Specialist, Priority, Payment, 8879 sign, Tax year, Visa type
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(() => {
+    const years = Array.from(new Set(leads.map((r) => r.taxYear).filter(Boolean))).sort((a, b) => b - a);
+    return [
+      {
+        id: 'specialist',
+        label: 'Filing specialist',
+        options: [{ label: 'Unassigned', value: 'UNASSIGNED' }, ...staffList.map((s: any) => ({ label: s.name || s.email, value: s.id }))],
+      },
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      {
+        id: 'payment',
+        label: 'Payment',
+        options: [
+          { label: 'Paid', value: 'PAID' },
+          { label: 'Unpaid', value: 'UNPAID' },
+        ],
+      },
+      {
+        id: 'esign',
+        label: '8879 sign',
+        options: [
+          { label: 'Signed', value: 'SIGNED' },
+          { label: 'Not signed', value: 'PENDING' },
+        ],
+      },
+      { id: 'taxYear', label: 'Tax year', options: years.map((y) => ({ label: `TY ${y}`, value: String(y) })) },
+      { id: 'visa', label: 'Visa Type', options: SYSTEM_VISA_TYPES.map((v) => ({ label: v.label, value: v.value })) },
+    ];
+  }, [leads, staffList]);
   const filteredLeads = useMemo(() => {
-    return leads.filter((lead) => {
-      if (visaFilter !== 'ALL' && lead.visaType !== visaFilter) return false;
-      return true;
-    });
-  }, [leads, visaFilter]);
+    const match = (key: string, values: string[]) => !filters[key]?.length || values.some((v) => filters[key].includes(v));
+    return leads.filter(
+      (l) =>
+        (visaFilter === 'ALL' || l.visaType === visaFilter) &&
+        match('specialist', [l.assignedFilingAgent?.id || 'UNASSIGNED']) &&
+        match('priority', [l.priority || 'NO_PRIORITY']) &&
+        match('payment', [l.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID']) &&
+        match('esign', [l.esignStatus === 'SIGNED' ? 'SIGNED' : 'PENDING']) &&
+        match('taxYear', [String(l.taxYear)]) &&
+        match('visa', [l.visaType || ''])
+    );
+  }, [leads, filters, visaFilter]);
 
   const tabs = [
-    { id: 'FILING_QUEUE', label: '1. Awaiting Assignment / E-File', count: stats.readyForTransmission, icon: Send },
-    { id: 'FILING_IN_PROGRESS', label: '2. Transmitting to IRS MeF', count: stats.transmittingMeF, icon: Clock },
-    { id: 'FILING_SUCCESS', label: '3. IRS Accepted Filings', count: stats.acceptedToday, icon: CheckCircle2 },
-    { id: 'ALL', label: 'All Department Returns', count: stats.totalDepartmentLeads, icon: ListFilter },
+    { id: 'FILING_QUEUE', label: 'Awaiting e-file', count: stats.readyForTransmission },
+    { id: 'FILING_IN_PROGRESS', label: 'Transmitting', count: stats.transmittingMeF },
+    { id: 'FILING_SUCCESS', label: 'IRS accepted', count: stats.acceptedToday },
+    { id: 'ALL', label: 'All', count: stats.totalDepartmentLeads },
   ];
 
   const handleExport = () => {
@@ -158,6 +196,17 @@ export const FilingDepartmentScreen: React.FC = () => {
       />
       */}
 
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Awaiting e-file', value: stats.readyForTransmission, hint: `${leads.filter((l) => !l.assignedFilingAgent).length} unassigned`, tone: 'text-amber-700' },
+            { name: 'Transmitting', value: stats.transmittingMeF, hint: 'Sent, waiting for IRS', tone: 'text-blue-700' },
+            { name: 'IRS accepted', value: stats.acceptedToday, hint: 'Filed successfully', tone: 'text-emerald-700' },
+            { name: 'Acceptance rate', value: `${stats.acceptanceRatePct}%`, hint: `Of ${stats.totalDepartmentLeads} returns`, tone: 'text-purple-700' },
+          ]}
+        />
+      )}
+
       {/* 3. Navigation Tabs */}
       <AppTabs
         tabs={tabs}
@@ -176,6 +225,12 @@ export const FilingDepartmentScreen: React.FC = () => {
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer, phone, stage, specialist..."
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         onExportExcel={handleExport}
         emptyText={
           stageFilter === 'FILING_QUEUE'

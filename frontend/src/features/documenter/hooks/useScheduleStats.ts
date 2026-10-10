@@ -11,6 +11,13 @@ const PENDING_DISPOSITION: Record<ScheduleKind, string> = {
 
 const lastCall = (lead: DocumenterLeadItem) => lead.lastCallLog || (lead as any).callLogs?.[0] || null;
 
+// Still waiting: last call is still the callback / follow-up (old follow-ups may have no date)
+const isStillScheduled = (lead: DocumenterLeadItem, kind: ScheduleKind) => {
+  const call = lastCall(lead);
+  if (call?.disposition !== PENDING_DISPOSITION[kind]) return false;
+  return kind === 'FOLLOW_UPS' || Boolean(call?.callbackScheduledAt);
+};
+
 /**
  * Stat cards for Scheduled Callbacks / Follow-Ups, from my full list (not the 10-row page):
  * - Total: every lead that had one scheduled
@@ -20,6 +27,7 @@ const lastCall = (lead: DocumenterLeadItem) => lead.lastCallLog || (lead as any)
  */
 export const useScheduleStats = (kind: ScheduleKind) => {
   const [leads, setLeads] = useState<DocumenterLeadItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
@@ -27,6 +35,8 @@ export const useScheduleStats = (kind: ScheduleKind) => {
       setLeads(res.data?.leads || []);
     } catch {
       setLeads([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [kind]);
 
@@ -44,11 +54,11 @@ export const useScheduleStats = (kind: ScheduleKind) => {
     let completed = 0;
     leads.forEach((l) => {
       const call = lastCall(l);
-      const isStillScheduled = call?.disposition === PENDING_DISPOSITION[kind] && call?.callbackScheduledAt;
-      if (!isStillScheduled) {
+      if (!isStillScheduled(l, kind)) {
         completed++;
         return;
       }
+      if (!call?.callbackScheduledAt) return; // old follow-up without a date: pending, not due/missed
       const at = new Date(call.callbackScheduledAt).getTime();
       if (at < now) missed++;
       else if (at <= endOfToday.getTime()) due++;
@@ -56,5 +66,13 @@ export const useScheduleStats = (kind: ScheduleKind) => {
     return { total: leads.length, due, missed, completed };
   }, [leads, kind]);
 
-  return { stats, refresh };
+  // Still scheduled (not yet called back). Once a newer call is logged (e.g. Interested),
+  // the lead leaves this table and is only counted under "Completed"; it stays in My Leads.
+  const pendingLeads = useMemo(
+    () =>
+      leads.filter((l) => isStillScheduled(l, kind)),
+    [leads, kind]
+  );
+
+  return { stats, refresh, pendingLeads, isLoading };
 };

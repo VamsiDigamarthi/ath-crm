@@ -1432,6 +1432,9 @@ export class DocumenterService {
                 zipCode: p.zipCode,
                 paymentStatus: 'PENDING',
                 esignStatus: 'PENDING',
+                // Placeholder year only: the agent still has to Configure the real tax year / filing type
+                isReturnConfigured: false,
+                isRawIngested: true,
                 assignmentHistory: [
                   {
                     agentId: targetAgent.id,

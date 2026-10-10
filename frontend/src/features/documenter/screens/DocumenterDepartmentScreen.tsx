@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 // import { DocumenterMetrics } from '../components/DocumenterMetrics';
 import { FloatingActionBar } from '../components/FloatingActionBar';
@@ -9,17 +9,12 @@ import { getDocumenterColumns } from '../columns/documenter-columns';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
 import { AppTabs } from '@/shared/components/AppTabs';
-import {
-  Users,
-  PhoneCall,
-  FileCheck2,
-  Clock,
-  ListFilter,
-  Zap,
-  RefreshCw,
-  UserX,
-  UserPlus,
-} from 'lucide-react';
+import { Zap, RefreshCw } from 'lucide-react';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES, SYSTEM_VISA_TYPES } from '@/shared/constants/system-enums';
 import { Button } from '@/shared/components/Button';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
 
@@ -50,7 +45,43 @@ export const DocumenterDepartmentScreen: React.FC = () => {
     handleCloseModals,
     handleSaveCallDisposition,
     refreshData,
+    handleLimitChange,
   } = useDocumenterWorkspace();
+
+  // Load the whole tab (not just the first 10 rows) so the table, cards and filters are complete
+  useEffect(() => {
+    handleLimitChange(500);
+  }, [handleLimitChange]);
+
+  // Stat cards (shown by default, "Hide stats" next to Filters)
+  const { showStats, toggleStats } = useStatsVisibility('admin_documenter_dept');
+
+  // Filters: Priority, Visa type, Assigned agent
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(
+    () => [
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      { id: 'visa', label: 'Visa Type', options: SYSTEM_VISA_TYPES.map((v) => ({ label: v.label, value: v.value })) },
+      {
+        id: 'agent',
+        label: 'Assigned to',
+        options: [
+          { label: 'Unassigned', value: 'UNASSIGNED' },
+          ...agents.filter((a) => a.role === 'DOC_AGENT').map((a) => ({ label: a.name || a.email, value: a.id })),
+        ],
+      },
+    ],
+    [agents]
+  );
+  const filteredLeads = useMemo(() => {
+    const match = (key: string, value: string) => !filters[key]?.length || filters[key].includes(value);
+    return leads.filter(
+      (l) =>
+        match('priority', l.priority || 'NO_PRIORITY') &&
+        match('visa', l.customer?.visaType || '') &&
+        match('agent', l.assignedDocAgent?.id || l.assignedDocAgentId || 'UNASSIGNED')
+    );
+  }, [leads, filters]);
 
   const columns = useMemo(
     () =>
@@ -65,13 +96,13 @@ export const DocumenterDepartmentScreen: React.FC = () => {
   );
 
   const tabs = [
-    { id: 'RAW_PROSPECTS' as DocumenterTab, label: 'New Leads', count: stats.rawProspects || 0, icon: UserPlus },
-    { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned Pool', count: stats.unassigned, icon: Users },
-    { id: 'OUTREACH' as DocumenterTab, label: 'In Active Outreach', count: stats.activeOutreach, icon: PhoneCall },
-    { id: 'PREP' as DocumenterTab, label: 'In Tax Prep', count: stats.inPrep, icon: FileCheck2 },
-    { id: 'CALLBACKS' as DocumenterTab, label: 'Scheduled Callbacks', count: stats.callbacks, icon: Clock },
-    { id: 'NOT_INTERESTED' as DocumenterTab, label: 'Not Interested', count: stats.notInterested ?? stats.dropped ?? 0, icon: UserX },
-    { id: 'ALL' as DocumenterTab, label: 'All Department Leads', count: stats.totalDepartment, icon: ListFilter },
+    { id: 'RAW_PROSPECTS' as DocumenterTab, label: 'New leads', count: stats.rawProspects || 0 },
+    { id: 'UNASSIGNED' as DocumenterTab, label: 'Unassigned', count: stats.unassigned },
+    { id: 'OUTREACH' as DocumenterTab, label: 'In outreach', count: stats.activeOutreach },
+    { id: 'PREP' as DocumenterTab, label: 'In tax prep', count: stats.inPrep },
+    { id: 'CALLBACKS' as DocumenterTab, label: 'Callbacks', count: stats.callbacks },
+    { id: 'NOT_INTERESTED' as DocumenterTab, label: 'Not interested', count: stats.notInterested ?? stats.dropped ?? 0 },
+    { id: 'ALL' as DocumenterTab, label: 'All', count: stats.totalDepartment },
   ];
 
   return (
@@ -125,6 +156,18 @@ export const DocumenterDepartmentScreen: React.FC = () => {
       />
       */}
 
+      {/* Summary cards (compact) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Total leads', value: stats.totalDepartment || 0, hint: 'Whole department' },
+            { name: 'Unassigned', value: stats.unassigned || 0, hint: 'Waiting for an agent', tone: 'text-amber-700' },
+            { name: 'In outreach', value: stats.activeOutreach || 0, hint: 'Being called', tone: 'text-blue-700' },
+            { name: 'In tax prep', value: stats.inPrep || 0, hint: 'Handed to preparers', tone: 'text-emerald-700' },
+          ]}
+        />
+      )}
+
       {/* Super Admin Supervision Tabs */}
       <AppTabs
         tabs={tabs}
@@ -136,16 +179,22 @@ export const DocumenterDepartmentScreen: React.FC = () => {
       <UnifiedTable<DocumenterLeadItem>
         title="DOCUMENTER INTAKE & OUTREACH DIRECTORY"
         subtitle="Manage leads in active outreach, callback follow-up, and tax prep qualification."
-        data={leads}
+        data={filteredLeads}
         columns={columns}
         enableSelection={!isAgent}
         selectedRows={selectedRows}
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer by name, email, phone, stage..."
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         onExportExcel={() => {
           exportTableToExcel(
-            leads,
+            filteredLeads,
             [
               { header: 'Taxpayer Name', key: 'name', format: (l) => l.customer?.fullName || `${l.customer?.firstName} ${l.customer?.lastName}` },
               { header: 'Email', key: 'email', format: (l) => l.customer?.email || '' },

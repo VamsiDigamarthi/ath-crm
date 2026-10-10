@@ -28,6 +28,8 @@ interface SalesAgentQueueTableProps {
   fromQuery?: string;
   /** Scheduled Callbacks page: show the callback time */
   showCallback?: boolean;
+  /** Toolbar buttons (Filters, Hide stats) */
+  extraHeaderActions?: React.ReactNode;
 }
 
 export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
@@ -38,6 +40,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
   emptyText,
   fromQuery = '',
   showCallback = false,
+  extraHeaderActions,
 }) => {
   const navigate = useNavigate();
   const [selectedLeadForReturn, setSelectedLeadForReturn] = useState<SalesLeadItem | null>(null);
@@ -343,6 +346,7 @@ export const SalesAgentQueueTable: React.FC<SalesAgentQueueTableProps> = ({
         onExportExcel={handleExportExcel}
         onRowClick={(item) => navigate(`/sales/agent/client/${item.taxpayerId || item.id || item.applicationId}${fromQuery}`)}
         emptyText={emptyText || "No leads found in this queue."}
+        extraHeaderActions={extraHeaderActions}
       />
 
       <SalesCallOutcomeModal

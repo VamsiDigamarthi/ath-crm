@@ -26,6 +26,8 @@ export const computeClientHistoryStatus = (
   const earlier = (allCustomerApps || []).filter((a) => Number(a.taxYear) < Number(taxYear));
   if (earlier.some(isApplicationPaid)) return "PAID";
   if (earlier.length > 0) return "UNPAID";
-  // Imported existing clients carry this flag even without earlier rows in the system
-  return isConvertedCustomer ? "PAID" : "NEW";
+  // History only: the "converted" flag is set when THIS year's return gets filed,
+  // and this year's payment already shows in the Payment column, so it is not used here.
+  void isConvertedCustomer;
+  return "NEW";
 };

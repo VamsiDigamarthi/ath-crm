@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Send, 
   RefreshCw, 
@@ -18,6 +18,11 @@ import { FilingLeadAssignmentModal } from '../components/manager/FilingLeadAssig
 import { getFilingColumns } from '../columns/filing-columns';
 import { useFilingQueue } from '../hooks/useFilingQueue';
 import type { FilingLeadItem } from '../types/filing.types';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES, SYSTEM_VISA_TYPES } from '@/shared/constants/system-enums';
 
 export const FilingManagerQueueScreen: React.FC = () => {
   const {
@@ -73,9 +78,63 @@ export const FilingManagerQueueScreen: React.FC = () => {
     { id: 'ALL', label: 'All Department Returns', count: stats.totalDepartmentLeads, icon: ListFilter },
   ];
 
+  // Stat cards (shown by default, "Hide stats" next to Filters)
+  const { showStats, toggleStats } = useStatsVisibility('filing_mgr_queue');
+  const unassignedCount = leads.filter((l) => !l.assignedFilingAgent).length;
+  const statCards = [
+    { name: 'Awaiting e-file', value: stats.readyForTransmission, hint: `${unassignedCount} unassigned`, tone: 'text-amber-700' },
+    { name: 'Transmitting', value: stats.transmittingMeF, hint: 'Sent, waiting for IRS', tone: 'text-blue-700' },
+    { name: 'IRS accepted', value: stats.acceptedToday, hint: 'Filed successfully', tone: 'text-emerald-700' },
+    { name: 'Acceptance rate', value: `${stats.acceptanceRatePct}%`, hint: `Of ${stats.totalDepartmentLeads} returns`, tone: 'text-purple-700' },
+  ];
+
+  // Filters: Specialist, Priority, Payment, 8879 sign, Tax year, Visa type
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(() => {
+    const years = Array.from(new Set(leads.map((r) => r.taxYear).filter(Boolean))).sort((a, b) => b - a);
+    return [
+      {
+        id: 'specialist',
+        label: 'Filing specialist',
+        options: [{ label: 'Unassigned', value: 'UNASSIGNED' }, ...staffList.map((s: any) => ({ label: s.name || s.email, value: s.id }))],
+      },
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      {
+        id: 'payment',
+        label: 'Payment',
+        options: [
+          { label: 'Paid', value: 'PAID' },
+          { label: 'Unpaid', value: 'UNPAID' },
+        ],
+      },
+      {
+        id: 'esign',
+        label: '8879 sign',
+        options: [
+          { label: 'Signed', value: 'SIGNED' },
+          { label: 'Not signed', value: 'PENDING' },
+        ],
+      },
+      { id: 'taxYear', label: 'Tax year', options: years.map((y) => ({ label: `TY ${y}`, value: String(y) })) },
+      { id: 'visa', label: 'Visa Type', options: SYSTEM_VISA_TYPES.map((v) => ({ label: v.label, value: v.value })) },
+    ];
+  }, [leads, staffList]);
+  const filteredLeads = useMemo(() => {
+    const match = (key: string, values: string[]) => !filters[key]?.length || values.some((v) => filters[key].includes(v));
+    return leads.filter(
+      (l) =>
+        match('specialist', [l.assignedFilingAgent?.id || 'UNASSIGNED']) &&
+        match('priority', [l.priority || 'NO_PRIORITY']) &&
+        match('payment', [l.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID']) &&
+        match('esign', [l.esignStatus === 'SIGNED' ? 'SIGNED' : 'PENDING']) &&
+        match('taxYear', [String(l.taxYear)]) &&
+        match('visa', [l.visaType || ''])
+    );
+  }, [leads, filters]);
+
   const handleExport = () => {
     exportTableToExcel(
-      leads,
+      filteredLeads,
       [
         { header: 'Taxpayer Name', key: 'name', format: (l) => l.taxpayerName },
         { header: 'Email', key: 'email', format: (l) => l.taxpayerEmail },
@@ -143,6 +202,8 @@ export const FilingManagerQueueScreen: React.FC = () => {
       />
       */}
 
+      {showStats && <CompactStatCards cards={statCards} />}
+
       {/* 3. Navigation Tabs */}
       <AppTabs
         tabs={tabs}
@@ -154,7 +215,7 @@ export const FilingManagerQueueScreen: React.FC = () => {
       <UnifiedTable<FilingLeadItem>
         title="FILING MANAGER TRANSMISSION PIPELINE"
         subtitle="Manage returns awaiting transmission, transmitting batches, and accepted returns."
-        data={leads}
+        data={filteredLeads}
         columns={columns}
         enableSelection={true}
         onRowClick={(item) => handleOpenClient(item)}
@@ -162,6 +223,12 @@ export const FilingManagerQueueScreen: React.FC = () => {
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer, phone, stage, specialist..."
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         onExportExcel={handleExport}
         emptyText={
           stageFilter === 'FILING_QUEUE'

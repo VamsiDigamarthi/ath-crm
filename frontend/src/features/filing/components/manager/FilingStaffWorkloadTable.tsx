@@ -12,11 +12,14 @@ interface FilingStaffWorkloadTableProps {
   staffList: FilingStaffMember[];
   totalDepartmentLeads?: number;
   isLoading?: boolean;
+  /** Toolbar buttons (Filters, Hide stats) */
+  extraHeaderActions?: React.ReactNode;
 }
 
 export const FilingStaffWorkloadTable: React.FC<FilingStaffWorkloadTableProps> = ({
   staffList,
   isLoading = false,
+  extraHeaderActions,
 }) => {
   const navigate = useNavigate();
 
@@ -132,6 +135,7 @@ export const FilingStaffWorkloadTable: React.FC<FilingStaffWorkloadTableProps> =
         searchPlaceholder="Search specialists by name, email..."
         onExportExcel={handleExport}
         emptyText="No filing specialists found."
+        extraHeaderActions={extraHeaderActions}
       />
     </div>
   );

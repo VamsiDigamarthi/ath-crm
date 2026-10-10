@@ -1,13 +1,37 @@
-import React from 'react';
-import { 
-  Users, 
-  RefreshCw, 
-  Scale, 
-  Send, 
-  CheckCircle2, 
-  ShieldCheck, 
-  Sparkles 
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Users, RefreshCw, Scale } from 'lucide-react';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+
+const STAFF_FILTERS: FilterCategory[] = [
+  {
+    id: 'workload',
+    label: 'Workload',
+    options: [
+      { label: 'No active returns (free)', value: 'NONE' },
+      { label: '1 – 5 returns', value: 'LOW' },
+      { label: 'More than 5 returns', value: 'HIGH' },
+    ],
+  },
+  {
+    id: 'today',
+    label: 'Today',
+    options: [
+      { label: 'Transmitted today', value: 'ACTIVE' },
+      { label: 'No transmissions today', value: 'IDLE' },
+    ],
+  },
+  {
+    id: 'rejections',
+    label: 'IRS rejections',
+    options: [
+      { label: 'Has rejections', value: 'YES' },
+      { label: 'No rejections', value: 'NO' },
+    ],
+  },
+];
 import { Button } from '@/shared/components/Button';
 import { FilingStaffWorkloadTable } from '../components/manager/FilingStaffWorkloadTable';
 import { useFilingStaffMatrix } from '../hooks/useFilingStaffMatrix';
@@ -21,6 +45,21 @@ export const FilingStaffScorecardsScreen: React.FC = () => {
     fetchStaffData,
     handleBalancePool,
   } = useFilingStaffMatrix();
+
+  // Stat cards (shown by default) + filters on the specialists table
+  const { showStats, toggleStats } = useStatsVisibility('filing_mgr_staff');
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filteredStaff = useMemo(() => {
+    const match = (key: string, value: string) => !filters[key]?.length || filters[key].includes(value);
+    return staffList.filter((s) => {
+      const n = Number(s.activeCaseload) || 0;
+      return (
+        match('workload', n === 0 ? 'NONE' : n <= 5 ? 'LOW' : 'HIGH') &&
+        match('today', s.transmissionsCompletedToday > 0 ? 'ACTIVE' : 'IDLE') &&
+        match('rejections', s.rejectedCount > 0 ? 'YES' : 'NO')
+      );
+    });
+  }, [staffList, filters]);
 
   return (
     <div className="w-full space-y-6 font-sans">
@@ -63,92 +102,27 @@ export const FilingStaffScorecardsScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Active Specialists */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Active Filing Specialists</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 tracking-tight">
-              {kpiMetrics.activeSpecialists}
-            </div>
-            <div className="text-[11px] text-blue-600 font-semibold mt-1">
-              Authorized MeF Transmitters
-            </div>
-          </div>
-        </div>
-
-        {/* Ready for Transmission */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Ready for Transmission</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Send className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 tracking-tight">
-              {kpiMetrics.readyForTransmission}
-            </div>
-            <div className="text-[11px] text-amber-600 font-semibold mt-1">
-              Awaiting XML Dispatch
-            </div>
-          </div>
-        </div>
-
-        {/* Accepted Returns Today */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">IRS Accepted Returns</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 tracking-tight">
-              {kpiMetrics.acceptedToday}
-            </div>
-            <div className="text-[11px] text-[#16A34A] font-semibold mt-1 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Ack: 0000 Verified</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Acceptance Rate */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">IRS Acceptance Rate</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black text-slate-900 tracking-tight">
-              {kpiMetrics.acceptanceRate}
-            </div>
-            <div className="text-[11px] text-slate-500 font-semibold mt-1 flex items-center gap-1">
-              {kpiMetrics.acceptedToday > 0 ? (
-                <>
-                  <Sparkles className="w-3 h-3 text-amber-500" />
-                  <span className="text-[#16A34A]">Zero Schema Rejections</span>
-                </>
-              ) : (
-                <span>No Transmissions Yet</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 2. Summary cards (compact) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Active specialists', value: kpiMetrics.activeSpecialists, hint: 'Authorized e-file transmitters', tone: 'text-blue-700' },
+            { name: 'Ready for transmission', value: kpiMetrics.readyForTransmission, hint: 'Waiting to be sent', tone: 'text-amber-700' },
+            { name: 'IRS accepted', value: kpiMetrics.acceptedToday, hint: 'Filed successfully', tone: 'text-emerald-700' },
+            { name: 'Acceptance rate', value: kpiMetrics.acceptanceRate, hint: kpiMetrics.acceptedToday > 0 ? 'Accepted vs sent' : 'No transmissions yet', tone: 'text-purple-700' },
+          ]}
+        />
+      )}
 
       {/* 3. Filing Staff Workload Table */}
       <FilingStaffWorkloadTable
-        staffList={staffList}
+        staffList={filteredStaff}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={STAFF_FILTERS} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         totalDepartmentLeads={totalDepartmentLeads}
         isLoading={isLoading}
       />

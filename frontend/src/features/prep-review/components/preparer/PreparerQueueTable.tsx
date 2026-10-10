@@ -14,6 +14,8 @@ interface PreparerQueueTableProps {
   returns: PrepReviewLead[];
   isLoading: boolean;
   onOpenWorkspace: (lead: PrepReviewLead) => void;
+  /** Toolbar buttons (Filters, Hide stats) */
+  extraHeaderActions?: React.ReactNode;
 }
 
 export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
@@ -22,6 +24,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
   returns,
   isLoading,
   onOpenWorkspace,
+  extraHeaderActions,
 }) => {
   const columns = useMemo<ColumnDef<PrepReviewLead, any>[]>(
     () => [
@@ -120,7 +123,13 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
             { label: 'Correction Needed', value: 'CORRECTION_NEEDED' },
           ],
         },
-        cell: ({ row }) => <PrepStageBadge stage={row.original.currentStage} />,
+        cell: ({ row }) => (
+          <PrepStageBadge
+            stage={row.original.currentStage}
+            draftStatus={(row.original.taxDraftSummary as any)?.status}
+            assignedPreparerName={row.original.assignedPreparer?.name}
+          />
+        ),
       },
       makeRevertedColumn<PrepReviewLead>((r) => (r as any).taxDraftSummary),
       {
@@ -178,6 +187,7 @@ export const PreparerQueueTable: React.FC<PreparerQueueTableProps> = ({
       onExportExcel={handleExportExcel}
       onRowClick={(item) => onOpenWorkspace(item)}
       emptyText="No assigned returns in this queue. Great job!"
+      extraHeaderActions={extraHeaderActions}
     />
   );
 };

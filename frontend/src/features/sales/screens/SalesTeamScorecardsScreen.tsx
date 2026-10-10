@@ -1,14 +1,30 @@
-import React from 'react';
-import { 
-  Users, 
-  RefreshCw, 
-  Sparkles, 
-  ShieldCheck, 
-  DollarSign, 
-  CheckCircle2, 
-  TrendingUp, 
-  Flame 
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { RefreshCw, Sparkles, ShieldCheck } from 'lucide-react';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+
+const TEAM_FILTERS: FilterCategory[] = [
+  {
+    id: 'workload',
+    label: 'Workload',
+    options: [
+      { label: 'No active leads (free)', value: 'NONE' },
+      { label: '1 – 10 leads', value: 'LOW' },
+      { label: 'More than 10 leads', value: 'HIGH' },
+    ],
+  },
+  {
+    id: 'today',
+    label: 'Today',
+    options: [
+      { label: 'Closed a deal today', value: 'CLOSED' },
+      { label: 'Pitched today', value: 'PITCHED' },
+      { label: 'No activity today', value: 'IDLE' },
+    ],
+  },
+];
 import { Button } from '@/shared/components/Button';
 import { SalesClosersWorkloadTable } from '../components/manager/SalesClosersWorkloadTable';
 import { useSalesTeamScorecards } from '../hooks/useSalesTeamScorecards';
@@ -23,6 +39,23 @@ export const SalesTeamScorecardsScreen: React.FC = () => {
     handleRefresh,
     handleBalancePool,
   } = useSalesTeamScorecards();
+
+  // Stat cards (shown by default) + filters on the closers table
+  const { showStats, toggleStats } = useStatsVisibility('sales_mgr_team');
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filteredReps = useMemo(() => {
+    const match = (key: string, values: string[]) => !filters[key]?.length || values.some((v) => filters[key].includes(v));
+    return salesReps.filter((r) => {
+      const n = Number(r.activeLeads) || 0;
+      const load = n === 0 ? 'NONE' : n <= 10 ? 'LOW' : 'HIGH';
+      const today = [
+        ...(r.dealsClosedToday > 0 ? ['CLOSED'] : []),
+        ...(r.pitchesCompletedToday > 0 ? ['PITCHED'] : []),
+        ...(r.dealsClosedToday === 0 && r.pitchesCompletedToday === 0 ? ['IDLE'] : []),
+      ];
+      return match('workload', [load]) && match('today', today);
+    });
+  }, [salesReps, filters]);
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -67,94 +100,27 @@ export const SalesTeamScorecardsScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top 4 KPI Cards for Sales Operations */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Active Closers */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Active Sales Closers
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {kpiMetrics.activeClosers}
-            </div>
-            <div className="text-xs text-blue-600 font-medium mt-1">
-              Dedicated revenue closers
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Deals Closed Today */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Deals Closed Today
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {kpiMetrics.dealsClosedToday}
-            </div>
-            <div className="text-xs text-[#16A34A] font-medium mt-1 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>Paid &amp; E-Signed</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Revenue Generated Today */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Revenue Generated Today
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
-              <DollarSign className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              ${kpiMetrics.revenueGeneratedToday.toLocaleString()}
-            </div>
-            <div className="text-xs text-purple-600 font-medium mt-1">
-              Service fee receipts
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Team Conversion Rate */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Team Conversion Rate
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {kpiMetrics.teamConversionRate}
-            </div>
-            <div className="text-xs text-amber-600 font-medium mt-1 flex items-center gap-1">
-              <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
-              <span>Above 30% baseline</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 2. Summary cards (compact) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Active sales closers', value: kpiMetrics.activeClosers, hint: 'Dedicated revenue closers', tone: 'text-blue-700' },
+            { name: 'Deals closed today', value: kpiMetrics.dealsClosedToday, hint: 'Paid & e-signed', tone: 'text-emerald-700' },
+            { name: 'Revenue today', value: `${kpiMetrics.revenueGeneratedToday.toLocaleString()}`, hint: 'Service fee receipts', tone: 'text-purple-700' },
+            { name: 'Team conversion', value: kpiMetrics.teamConversionRate, hint: 'Pitches converted to paid', tone: 'text-amber-700' },
+          ]}
+        />
+      )}
 
       {/* 3. Closers Workload Table */}
       <SalesClosersWorkloadTable 
-        salesReps={salesReps} 
+        salesReps={filteredReps}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={TEAM_FILTERS} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         totalDepartmentLeads={totalDepartmentLeads}
         isLoading={isLoading} 
       />

@@ -1,20 +1,38 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
 import { useNavigate } from 'react-router-dom';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { AgentPerformanceTable, type AgentPerformanceRow } from '../components/AgentPerformanceTable';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
 import { Button } from '@/shared/components/Button';
-import { 
-  Users, 
-  RefreshCw, 
-  Zap, 
-  ShieldCheck, 
-  Activity, 
-  CheckCircle2,
-  PhoneCall
-} from 'lucide-react';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { RefreshCw, Zap, ShieldCheck } from 'lucide-react';
+
+const SCORECARD_FILTERS: FilterCategory[] = [
+  {
+    id: 'caseload',
+    label: 'Caseload',
+    options: [
+      { label: 'No leads (free)', value: 'NONE' },
+      { label: '1 – 10 leads', value: 'LOW' },
+      { label: 'More than 10 leads', value: 'HIGH' },
+    ],
+  },
+  {
+    id: 'calls',
+    label: 'Calls today',
+    options: [
+      { label: 'Calling today', value: 'ACTIVE' },
+      { label: 'No calls today', value: 'IDLE' },
+    ],
+  },
+];
 
 export const ManagerScorecardsScreen: React.FC = () => {
+  // Stat cards: shown by default, "Hide stats" button next to Filters
+  const { showStats, toggleStats } = useStatsVisibility('doc_mgr_scorecards');
   const navigate = useNavigate();
   const {
     agents,
@@ -73,6 +91,19 @@ export const ManagerScorecardsScreen: React.FC = () => {
     return callingAgents.reduce((sum, a) => sum + (Number(a.conv) || 0), 0);
   }, [callingAgents]);
 
+  // Filters: caseload size and calling activity today
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filteredAgents = useMemo(() => {
+    const load = filters.caseload || [];
+    const calls = filters.calls || [];
+    return agentPerformanceData.filter((a) => {
+      const n = Number(a.activeLoad) || 0;
+      const bucket = n === 0 ? 'NONE' : n <= 10 ? 'LOW' : 'HIGH';
+      const activity = a.callsToday > 0 ? 'ACTIVE' : 'IDLE';
+      return (load.length === 0 || load.includes(bucket)) && (calls.length === 0 || calls.includes(activity));
+    });
+  }, [agentPerformanceData, filters]);
+
   const teamContactRate = totalTeamDials > 0
     ? `${Math.round((totalConnected / totalTeamDials) * 100)}%`
     : '0%';
@@ -122,93 +153,27 @@ export const ManagerScorecardsScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top Metric Cards for Agent Operations */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Active Calling Staff */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-purple-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Active Calling Staff
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {activeAgentsCount}
-            </div>
-            <div className="text-xs text-purple-600 font-medium mt-1 flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-full bg-purple-500" />
-              <span>Documenter Calling Pool</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Today's Calling Activity */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-blue-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Today's Calling Activity
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-              <PhoneCall className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {totalTeamDials}
-            </div>
-            <div className="text-xs text-blue-600 font-medium mt-1">
-              {totalConnected} Connected ({teamContactRate})
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Tax Prep Conversions */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Tax Prep Conversions
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] flex items-center justify-center border border-emerald-100">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {totalPrepConversions}
-            </div>
-            <div className="text-xs text-[#16A34A] font-medium mt-1">
-              Transferred to Prep by Agents
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Total Assigned Leads */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">
-              Total Assigned Leads
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
-              <Activity className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              {totalAssignedLeads}
-            </div>
-            <div className="text-xs text-amber-600 font-medium mt-1">
-              Active in Agent Workloads
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 2. Top summary cards (compact) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Active calling staff', value: activeAgentsCount, hint: 'Documenter calling pool', tone: 'text-purple-700' },
+            { name: "Today's calls", value: totalTeamDials, hint: `${totalConnected} connected (${teamContactRate})`, tone: 'text-blue-700' },
+            { name: 'Sent to tax prep', value: totalPrepConversions, hint: 'Converted by agents', tone: 'text-emerald-700' },
+            { name: 'Assigned leads', value: totalAssignedLeads, hint: 'Active in agent workloads', tone: 'text-amber-700' },
+          ]}
+        />
+      )}
 
       {/* 3. Agent Performance Table */}
       <AgentPerformanceTable
-        agents={agentPerformanceData}
+        agents={filteredAgents}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={SCORECARD_FILTERS} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         totalDepartmentLeads={totalAssignedLeads}
         onFilterByAgent={(_agentId) => navigate('/documenter/manager/queue')}
         isLoading={isLoading}

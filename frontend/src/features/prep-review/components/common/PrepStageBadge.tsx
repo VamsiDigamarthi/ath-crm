@@ -17,14 +17,25 @@ interface PrepStageBadgeProps {
   assignedPreparerName?: string;
   assignedCloserName?: string;
   assignedFileOpName?: string;
+  /** taxDraftSummary.status: the real progress while the stage stays DOC_PREP / CORRECTION_NEEDED */
+  draftStatus?: string;
 }
 
 export const PrepStageBadge: React.FC<PrepStageBadgeProps> = ({
   stage,
   assignedPreparerName,
   assignedCloserName,
-  assignedFileOpName
+  assignedFileOpName,
+  draftStatus,
 }) => {
+  // Inside prep the stage stays DOC_PREP (or CORRECTION_NEEDED after a send-back); the draft status says where it really is
+  if (stage === 'DOC_PREP' || stage === 'DOC_PREP_COMPLETE' || stage === 'CORRECTION_NEEDED') {
+    if (draftStatus === 'SUBMITTED_FOR_QA') stage = 'QA_REVIEW_QUEUE';
+    else if (draftStatus === 'QA_APPROVED') stage = 'QA_APPROVED';
+    else if (draftStatus === 'REVISION_REQUESTED') stage = 'QA_REVISION_REQUESTED';
+    else if (draftStatus === 'DRAFT_SAVED' && stage !== 'CORRECTION_NEEDED') stage = 'PREP_IN_PROGRESS';
+  }
+
   // If stage is REVERTED_TO_DOC, REVERTED_TO_DOCUMENTER, or DOC_OUTREACH, always show Reverted badge
   if (
     stage === 'REVERTED_TO_DOC' ||

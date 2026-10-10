@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
-  Search, 
   RefreshCw, 
   CheckCircle2, 
   Clock, 
@@ -18,7 +17,11 @@ import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { PriorityBadge } from '@/shared/components/PriorityBadge';
-import { PriorityFilterSelect } from '@/shared/components/PriorityFilterSelect';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES } from '@/shared/constants/system-enums';
 import { Button } from '@/shared/components/Button';
 import toast from 'react-hot-toast';
 
@@ -129,6 +132,52 @@ export const SalesManagerDualRoleScreen: React.FC = () => {
       totalRevenue,
     };
   }, [leads]);
+
+  // Stat cards toggle + Filters flyout. The flyout drives the same single-value
+  // filter states as before (last picked value per category), so filtering logic is unchanged.
+  const { showStats, toggleStats } = useStatsVisibility('sales_mgr_dual');
+  const filterCategories = useMemo<FilterCategory[]>(
+    () => [
+      { id: 'agent', label: 'Calling agent', options: availableAgents.map((ag) => ({ label: ag.name, value: ag.id })) },
+      {
+        id: 'payment',
+        label: 'Payment',
+        options: [
+          { label: 'Fee paid', value: 'PAID' },
+          { label: 'Fee unpaid', value: 'UNPAID' },
+        ],
+      },
+      {
+        id: 'visa',
+        label: 'Visa Type',
+        options: [
+          { label: 'H-1B Speciality', value: 'H-1B' },
+          { label: 'L-1 Intra-Company', value: 'L-1' },
+          { label: 'F-1 Student (OPT)', value: 'F-1_OPT' },
+          { label: 'O-1 Extraordinary', value: 'O-1' },
+          { label: 'B1/B2 Visitor', value: 'B1_B2' },
+        ],
+      },
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+    ],
+    [availableAgents]
+  );
+  const selectedFilters = useMemo(
+    () => ({
+      agent: selectedAgent !== 'ALL' ? [selectedAgent] : [],
+      payment: paymentFilter !== 'ALL' ? [paymentFilter] : [],
+      visa: visaFilter !== 'ALL' ? [visaFilter] : [],
+      priority: priorityFilter !== 'ALL' ? [priorityFilter] : [],
+    }),
+    [selectedAgent, paymentFilter, visaFilter, priorityFilter]
+  );
+  const applyFilters = (f: Record<string, string[]>) => {
+    const last = (v?: string[]) => (v && v.length > 0 ? v[v.length - 1] : 'ALL');
+    setSelectedAgent(last(f.agent));
+    setPaymentFilter(last(f.payment) as 'ALL' | 'UNPAID' | 'PAID');
+    setVisaFilter(last(f.visa));
+    setPriorityFilter(last(f.priority));
+  };
 
   // Filtered Leads
   const filteredLeads = useMemo(() => {
@@ -346,8 +395,8 @@ export const SalesManagerDualRoleScreen: React.FC = () => {
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Dual Doc + Sales Closer Operations
             </h2>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-900 border border-indigo-200 shadow-2xs">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200">
+              <Sparkles className="w-3.5 h-3.5 text-slate-500" />
               Unified Intake + Closing Caseload
             </span>
           </div>
@@ -369,65 +418,21 @@ export const SalesManagerDualRoleScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top Summary KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {/* Total Dual Leads */}
-        <div className="bg-white p-4 rounded-xl border border-indigo-100 shadow-xs space-y-1">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total Dual Leads</span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-indigo-900">{metrics.total}</span>
-            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">All active</span>
-          </div>
-        </div>
-
-        {/* Document Intake */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Intake Active</span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-slate-800">{metrics.intakeCount}</span>
-            <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">Collecting docs</span>
-          </div>
-        </div>
-
-        {/* Under Tax Prep */}
-        <div className="bg-white p-4 rounded-xl border border-amber-200/80 shadow-xs space-y-1">
-          <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">With Preparer</span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-amber-950">{metrics.prepCount}</span>
-            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">CPA prep</span>
-          </div>
-        </div>
-
-        {/* Ready for Sales Pitch */}
-        <div className="bg-white p-4 rounded-xl border border-blue-200/80 shadow-xs space-y-1">
-          <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider block">Pitch Ready</span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-blue-950">{metrics.readyPitchCount}</span>
-            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">QA Approved</span>
-          </div>
-        </div>
-
-        {/* Paid & E-Signed */}
-        <div className="bg-white p-4 rounded-xl border border-emerald-200/80 shadow-xs space-y-1">
-          <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider block">Paid &amp; E-Signed</span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-emerald-950">{metrics.paidSignedCount}</span>
-            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Closed</span>
-          </div>
-        </div>
-
-        {/* In IRS Filing */}
-        <div className="bg-white p-4 rounded-xl border border-purple-200/80 shadow-xs space-y-1">
-          <span className="text-[11px] font-bold text-purple-900 uppercase tracking-wider block">In IRS Filing</span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-purple-950">{metrics.filingCount}</span>
-            <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">MeF Queue</span>
-          </div>
-        </div>
-      </div>
+      {/* 2. Summary cards (compact) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Total dual leads', value: metrics.total, hint: 'All active' },
+            { name: 'Intake active', value: metrics.intakeCount, hint: 'Collecting docs', tone: 'text-slate-700' },
+            { name: 'With preparer', value: metrics.prepCount, hint: 'CPA prep', tone: 'text-amber-700' },
+            { name: 'Pitch ready', value: metrics.readyPitchCount, hint: 'QA approved', tone: 'text-blue-700' },
+            { name: 'Paid & e-signed', value: metrics.paidSignedCount, hint: `${metrics.filingCount} in IRS filing`, tone: 'text-emerald-700' },
+          ]}
+        />
+      )}
 
       {/* 3. Workflow Phase Tabs */}
-      <div className="bg-white rounded-xl border border-slate-200 px-4 pt-1 shadow-xs">
+      <div>
         <AppTabs
           tabs={[
             { id: 'ALL', label: 'All Dual Leads', count: metrics.total, icon: Layers },
@@ -442,88 +447,6 @@ export const SalesManagerDualRoleScreen: React.FC = () => {
         />
       </div>
 
-      {/* 4. Search & Multi-Dimensional Filters Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        {/* Search */}
-        <div className="w-full sm:w-80">
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search dual leads by taxpayer, phone, agent..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all font-medium"
-            />
-          </div>
-        </div>
-
-        {/* Dropdown Filters */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Calling Agent Filter */}
-          {availableAgents.length > 0 && (
-            <select
-              value={selectedAgent}
-              onChange={(e) => setSelectedAgent(e.target.value)}
-              className="px-3 py-2 text-xs font-semibold border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 cursor-pointer shadow-2xs"
-            >
-              <option value="ALL">All Calling Agents</option>
-              {availableAgents.map((ag) => (
-                <option key={ag.id} value={ag.id}>
-                  Agent: {ag.name}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {/* Payment Status Filter */}
-          <select
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value as any)}
-            className="px-3 py-2 text-xs font-semibold border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 cursor-pointer shadow-2xs"
-          >
-            <option value="ALL">All Payments</option>
-            <option value="PAID">Fee Paid</option>
-            <option value="UNPAID">Fee Unpaid</option>
-          </select>
-
-          {/* Visa Filter */}
-          <select
-            value={visaFilter}
-            onChange={(e) => setVisaFilter(e.target.value)}
-            className="px-3 py-2 text-xs font-semibold border border-slate-200 rounded-lg bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 cursor-pointer shadow-2xs"
-          >
-            <option value="ALL">All Visas</option>
-            <option value="H-1B">H-1B Speciality</option>
-            <option value="L-1">L-1 Intra-Company</option>
-            <option value="F-1_OPT">F-1 Student (OPT)</option>
-            <option value="O-1">O-1 Extraordinary</option>
-            <option value="B1_B2">B1/B2 Visitor</option>
-          </select>
-
-          {/* Priority Filter */}
-          <PriorityFilterSelect
-            value={priorityFilter}
-            onChange={(val) => setPriorityFilter(val)}
-          />
-
-          {(searchQuery || priorityFilter !== 'ALL' || paymentFilter !== 'ALL' || visaFilter !== 'ALL' || selectedAgent !== 'ALL') && (
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setPriorityFilter('ALL');
-                setPaymentFilter('ALL');
-                setVisaFilter('ALL');
-                setSelectedAgent('ALL');
-              }}
-              className="text-xs font-bold text-rose-600 hover:text-rose-700 px-2 py-1 rounded hover:bg-rose-50 transition-colors cursor-pointer"
-            >
-              Reset Filters
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* 5. Dual-Role Leads Data Table */}
       <UnifiedTable<SalesLeadItem>
         columns={columns}
@@ -532,6 +455,12 @@ export const SalesManagerDualRoleScreen: React.FC = () => {
         searchPlaceholder="Search taxpayer, email, phone, agent..."
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={selectedFilters} onApply={applyFilters} onReset={() => applyFilters({})} />
+          </div>
+        }
         emptyText={
           activeTab === 'ALL'
             ? 'When the Documenter Manager assigns leads with "Also Assign as Sales Closer", they will automatically appear in this dedicated caseload.'

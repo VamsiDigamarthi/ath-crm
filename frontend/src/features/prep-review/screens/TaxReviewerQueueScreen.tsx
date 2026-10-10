@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ShieldCheck, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
@@ -9,6 +9,19 @@ import {
 } from '../hooks/useTaxReviewerQueue';
 import { ReviewerFilterBar } from '../components/reviewer/ReviewerFilterBar';
 import { ReviewerQueueTable } from '../components/reviewer/ReviewerQueueTable';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES } from '@/shared/constants/system-enums';
+
+const COMPLEXITY_OPTIONS = [
+  { label: 'Standard', value: 'STANDARD' },
+  { label: 'Multi-state', value: 'MULTI_STATE' },
+  { label: 'Investments (1099-B)', value: 'INVESTMENTS_1099B' },
+  { label: 'Foreign / FBAR', value: 'FOREIGN_FBAR' },
+  { label: 'Business (Sch C)', value: 'BUSINESS_SCH_C' },
+];
 
 export interface TaxReviewerQueueScreenProps {
   initialTab?: ReviewerQueueTab;
@@ -35,6 +48,7 @@ export const TaxReviewerQueueScreen: React.FC<TaxReviewerQueueScreenProps> = ({
     filteredReturns,
     clientRows,
     counts,
+    bucketCounts,
     isLoading,
     activeTab,
     setActiveTab,
@@ -82,6 +96,39 @@ export const TaxReviewerQueueScreen: React.FC<TaxReviewerQueueScreenProps> = ({
 
   const headerInfo = getHeaderInfo();
 
+  // Stat cards (shown by default, "Hide stats" next to Filters)
+  const { showStats, toggleStats } = useStatsVisibility('prep_reviewer');
+  const statCards = [
+    { name: 'Waiting for my review', value: bucketCounts.ASSIGNED, hint: 'Submitted by preparers', tone: 'text-blue-700' },
+    { name: 'Pending', value: bucketCounts.PENDING, hint: 'Still with the preparer', tone: 'text-amber-700' },
+    { name: 'Revision required', value: bucketCounts.REVISIONS, hint: 'Sent back for corrections', tone: 'text-rose-600' },
+    { name: 'Approved', value: bucketCounts.APPROVED, hint: 'Signed off by QA', tone: 'text-emerald-700' },
+  ];
+
+  // Filters: Preparer, Priority, Complexity, Tax year (options from live data)
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(() => {
+    const years = Array.from(new Set(clientRows.map((r) => r.taxYear).filter(Boolean))).sort((a, b) => b - a);
+    const preparers = new Map<string, string>();
+    clientRows.forEach((r) => r.assignedPreparer && preparers.set(r.assignedPreparer.id, r.assignedPreparer.name || r.assignedPreparer.email));
+    return [
+      { id: 'preparer', label: 'Preparer', options: Array.from(preparers, ([value, label]) => ({ label, value })) },
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      { id: 'complexity', label: 'Complexity', options: COMPLEXITY_OPTIONS },
+      { id: 'taxYear', label: 'Tax year', options: years.map((y) => ({ label: `TY ${y}`, value: String(y) })) },
+    ];
+  }, [clientRows]);
+  const filteredRows = useMemo(() => {
+    const match = (key: string, value: string) => !filters[key]?.length || filters[key].includes(value);
+    return clientRows.filter(
+      (r) =>
+        match('preparer', r.assignedPreparer?.id || '') &&
+        match('priority', r.priority || 'NO_PRIORITY') &&
+        match('complexity', r.complexity || 'STANDARD') &&
+        match('taxYear', String(r.taxYear))
+    );
+  }, [clientRows, filters]);
+
   return (
     <div className="w-full space-y-6 pb-12 font-sans">
       {/* Header */}
@@ -115,6 +162,8 @@ export const TaxReviewerQueueScreen: React.FC<TaxReviewerQueueScreenProps> = ({
         </div>
       </div>
 
+      {showStats && <CompactStatCards cards={statCards} />}
+
       {/* Legacy Filter Bar only if effectiveView === 'ALL' and on legacy queue */}
       {effectiveView === 'ALL' && (
         <ReviewerFilterBar
@@ -126,7 +175,13 @@ export const TaxReviewerQueueScreen: React.FC<TaxReviewerQueueScreenProps> = ({
 
       {/* Queue Table Card (100% Real API Data) */}
       <ReviewerQueueTable
-        returns={clientRows}
+        returns={filteredRows}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         isLoading={isLoading}
         onOpenAudit={handleOpenAudit}
         searchQuery={searchQuery}

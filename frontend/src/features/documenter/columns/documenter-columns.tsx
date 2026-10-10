@@ -284,7 +284,8 @@ export const getDocumenterColumns = ({
     },
     cell: ({ row }) => {
       const item = row.original;
-      const canView = viewOnlyWhenInterested ? isLeadInterested(item) : canViewLead(item);
+      // Raw lead (tax year not set yet): Configure first, View only after that
+      const canView = viewOnlyWhenInterested ? isLeadInterested(item) && !isRawLead(item) : canViewLead(item);
       const canConfig = canConfigureReturn(item);
 
       return (

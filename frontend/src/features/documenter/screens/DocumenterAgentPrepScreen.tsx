@@ -1,6 +1,11 @@
 import React, { useMemo } from 'react';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
 import { useNavigate } from 'react-router-dom';
-import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
+import { useDocumenterFullList } from '../hooks/useDocumenterFullList';
+import { useLeadFilters } from '../hooks/useLeadFilters';
+import { AppFilterFlyout, withoutAllValues } from '@/shared/components/AppFilterFlyout';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
 import { ClientNameCell, ClientEmailCell, ClientPhoneCell } from '@/shared/components/table';
 import { exportTableToExcel } from '@/shared/utils/export-excel';
@@ -11,11 +16,36 @@ import { ClientHistoryTag } from '@/shared/components/table';
 import { Eye } from 'lucide-react';
 
 export const DocumenterAgentPrepScreen: React.FC = () => {
+  // Stat cards: shown by default, "Hide stats" button next to Filters
+  const { showStats, toggleStats } = useStatsVisibility('doc_completed_files');
   const navigate = useNavigate();
-  const {
-    leads,
-    isLoading,
-  } = useDocumenterWorkspace('PREP');
+  // All my completed files (not just the first 10) + Priority / Visa filter
+  const { leads: rawLeads, isLoading } = useDocumenterFullList('PREP');
+  // Latest activity first, so a file that just moved (e.g. sent back and re-submitted) shows on top
+  const leads = useMemo(
+    () =>
+      [...rawLeads].sort(
+        (a, b) => new Date((b as any).updatedAt || 0).getTime() - new Date((a as any).updatedAt || 0).getTime()
+      ),
+    [rawLeads]
+  );
+  const { filters, setFilters, filterCategories, filteredLeads } = useLeadFilters(leads);
+
+  // Where my completed files are now
+  const statCards = useMemo(() => {
+    const inStage = (stages: string[]) => leads.filter((l) => stages.includes(l.currentStage)).length;
+    return [
+      { name: 'Total completed files', value: leads.length, hint: 'Handed over from outreach' },
+      { name: 'In tax preparation', value: inStage(['DOC_PREP', 'CORRECTION_NEEDED']), hint: 'With preparer / review', tone: 'text-blue-700' },
+      { name: 'With sales', value: inStage(['SALES_PITCH_QUEUE', 'SALES_PITCHING']), hint: 'Pitch & client approval', tone: 'text-amber-700' },
+      {
+        name: 'Filing / filed',
+        value: inStage(['FILING_QUEUE', 'FILING_IN_PROGRESS', 'FILING_FAILED', 'FILING_SUCCESS']),
+        hint: 'Sent to the IRS team',
+        tone: 'text-emerald-700',
+      },
+    ];
+  }, [leads]);
 
   const columns = useMemo<ColumnDef<DocumenterLeadItem, any>[]>(
     () => [
@@ -108,7 +138,7 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
 
   const handleExport = () => {
     exportTableToExcel(
-      leads,
+      filteredLeads,
       [
         { header: 'Taxpayer', key: 'fullName', format: (r) => r.customer?.fullName || `${r.customer?.firstName || ''} ${r.customer?.lastName || ''}` },
         { header: 'Email', key: 'email', format: (r) => r.customer?.email || '—' },
@@ -123,14 +153,24 @@ export const DocumenterAgentPrepScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
+      {showStats && (
+        <CompactStatCards cards={statCards} />
+      )}
+
       <UnifiedTable<DocumenterLeadItem>
         title="DOCUMENT GATHERING & INTAKE VAULT"
         subtitle="Manage leads in active document gathering, client intake, and tax organizer completion."
-        data={leads}
+        data={filteredLeads}
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Search taxpayers by name, email, phone..."
         onExportExcel={handleExport}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         onRowClick={(item) => navigate(`/documenter/agent/documents/${item.id}`)}
         emptyText="No leads currently in document preparation."
       />

@@ -222,10 +222,21 @@ export function useTaxReviewerQueue(
     }
   };
 
+  // Counts per sidebar page across all my returns (stat cards on every reviewer page)
+  const bucketCounts = useMemo(() => {
+    const c = { ASSIGNED: 0, PENDING: 0, REVISIONS: 0, APPROVED: 0 };
+    allLeads.forEach((l) => {
+      c[bucketOf(l)]++;
+    });
+    return c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allLeads]);
+
   return {
     isLoading,
     allLeads,
     counts,
+    bucketCounts,
     stats,
     filteredReturns,
     clientRows,

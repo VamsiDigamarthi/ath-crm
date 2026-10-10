@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSalesManagerQueue, type SalesManagerTab } from '../hooks/useSalesManagerQueue';
 // import { SalesManagerMetrics } from '../components/manager/SalesManagerMetrics';
@@ -11,6 +11,12 @@ import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { Users, Zap, RefreshCw } from 'lucide-react';
 import type { SalesLeadItem } from '../types/sales.types';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES, SYSTEM_VISA_TYPES } from '@/shared/constants/system-enums';
+import { CLIENT_TYPE_FILTER_OPTIONS } from '../components/common/ClientTypeBadge';
 
 /* Filter row is hidden for now; uncomment with the filter block in the screen
 interface FilterSelectProps {
@@ -83,6 +89,57 @@ export const SalesManagerQueueScreen: React.FC = () => {
     [navigate, handleOpenAssignModal]
   );
 
+  // Stat cards (shown by default, "Hide stats" next to Filters)
+  const { showStats, toggleStats } = useStatsVisibility('sales_mgr_queue');
+
+  // Filters (on top of the stage tab): closer, payment, refund / tax due, visa, priority, client type
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(
+    () => [
+      {
+        id: 'closer',
+        label: 'Assigned closer',
+        options: [{ label: 'Unassigned', value: 'UNASSIGNED' }, ...salesReps.map((r) => ({ label: r.name || r.email, value: r.id }))],
+      },
+      {
+        id: 'payment',
+        label: 'Payment',
+        options: [
+          { label: 'Paid', value: 'PAID' },
+          { label: 'Unpaid', value: 'UNPAID' },
+          { label: 'Payment link sent', value: 'PAYMENT_LINK_SENT' },
+        ],
+      },
+      {
+        id: 'balance',
+        label: '1040 balance',
+        options: [
+          { label: 'Refund', value: 'REFUND' },
+          { label: 'Tax due', value: 'TAX_DUE' },
+        ],
+      },
+      { id: 'clientType', label: 'Client type', options: CLIENT_TYPE_FILTER_OPTIONS },
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      { id: 'visa', label: 'Visa Type', options: SYSTEM_VISA_TYPES.map((v) => ({ label: v.label, value: v.value })) },
+    ],
+    [salesReps]
+  );
+  const filteredLeads = useMemo(() => {
+    const match = (key: string, values: string[]) => !filters[key]?.length || values.some((v) => filters[key].includes(v));
+    return leads.filter((l) => {
+      const payment = l.paymentStatus === 'PAID' ? 'PAID' : l.paymentStatus === 'PAYMENT_LINK_SENT' ? 'PAYMENT_LINK_SENT' : 'UNPAID';
+      const balance = [...(l.federalRefund > 0 ? ['REFUND'] : []), ...(l.balanceDue > 0 ? ['TAX_DUE'] : [])];
+      return (
+        match('closer', [l.assignedSalesAgent?.id || 'UNASSIGNED']) &&
+        match('payment', [payment]) &&
+        match('balance', balance) &&
+        match('clientType', [l.clientType || '']) &&
+        match('priority', [l.priority || 'NO_PRIORITY']) &&
+        match('visa', [l.visaType || ''])
+      );
+    });
+  }, [leads, filters]);
+
   // 6 Domain-Accurate Sales Workflow Tabs
   const tabs = [
     { id: 'AWAITING_PITCH' as SalesManagerTab, label: 'Awaiting Pitch', count: counts.awaitingPitch },
@@ -144,6 +201,19 @@ export const SalesManagerQueueScreen: React.FC = () => {
       />
       */}
 
+      {/* 2b. Summary cards (compact) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Unassigned', value: counts.unassigned, hint: 'Waiting for a closer', tone: 'text-amber-700' },
+            { name: 'Awaiting pitch', value: counts.awaitingPitch, hint: 'QA approved, not called', tone: 'text-slate-900' },
+            { name: 'In active pitch', value: counts.inPitch, hint: 'Closer talking to client', tone: 'text-blue-700' },
+            { name: 'Pending payment', value: counts.quoted, hint: 'Quote / invoice sent', tone: 'text-purple-700' },
+            { name: 'Paid & e-signed', value: counts.paidSigned, hint: `${counts.filingReady} in filing queue`, tone: 'text-emerald-700' },
+          ]}
+        />
+      )}
+
       <div className="space-y-4">
         {/* 3. Stage Tabs */}
         <AppTabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as SalesManagerTab)} />
@@ -204,7 +274,7 @@ export const SalesManagerQueueScreen: React.FC = () => {
 
         {/* 5. Table */}
         <UnifiedTable<SalesLeadItem>
-          data={leads}
+          data={filteredLeads}
           columns={columns}
           enableSelection={true}
           selectedRows={selectedRows}
@@ -215,7 +285,10 @@ export const SalesManagerQueueScreen: React.FC = () => {
           onSearchChange={setSearchQuery}
           onRowClick={(item) => navigate(`/sales/manager/client/${item.taxpayerId || item.id || item.applicationId}`)}
           extraHeaderActions={
-            selectedRows.length > 0 ? (
+            <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+            {selectedRows.length > 0 && (
               <Button
                 size="sm"
                 onClick={() => handleOpenAssignModal()}
@@ -224,7 +297,8 @@ export const SalesManagerQueueScreen: React.FC = () => {
                 <Users className="w-3.5 h-3.5" />
                 <span>Assign selected ({selectedRows.length})</span>
               </Button>
-            ) : undefined
+            )}
+            </div>
           }
           emptyText={
             activeTab === 'AWAITING_PITCH'

@@ -1,25 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useSalesManagerQueue, type SalesManagerTab } from '../hooks/useSalesManagerQueue';
 // import { SalesManagerMetrics } from '../components/manager/SalesManagerMetrics';
 import { getSalesColumns } from '../columns/sales-columns';
 import { UnifiedTable } from '@/shared/components/table/UnifiedTable';
-import { AppSearchInput } from '@/shared/components/AppSearchInput';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
-import { 
-  PhoneCall, 
-  ListFilter, 
-  RefreshCw, 
-  Globe, 
-  ShieldCheck, 
-  DollarSign, 
-  CheckCircle2, 
-  Rocket,
-  CreditCard,
-  Scale,
-  Sparkles
-} from 'lucide-react';
+import { RefreshCw, ShieldCheck } from 'lucide-react';
 import type { SalesLeadItem } from '../types/sales.types';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES, SYSTEM_VISA_TYPES } from '@/shared/constants/system-enums';
+import { CLIENT_TYPE_FILTER_OPTIONS } from '../components/common/ClientTypeBadge';
 
 export const SalesDepartmentScreen: React.FC = () => {
   const {
@@ -30,14 +23,6 @@ export const SalesDepartmentScreen: React.FC = () => {
     setActiveTab,
     searchQuery,
     setSearchQuery,
-    paymentFilter,
-    setPaymentFilter,
-    liabilityFilter,
-    setLiabilityFilter,
-    visaFilter,
-    setVisaFilter,
-    complexityFilter,
-    setComplexityFilter,
     refreshData,
   } = useSalesManagerQueue();
 
@@ -53,13 +38,61 @@ export const SalesDepartmentScreen: React.FC = () => {
 
   // 6 Domain-Accurate Sales Workflow Tabs
   const tabs = [
-    { id: 'AWAITING_PITCH' as SalesManagerTab, label: 'Awaiting Pitch', count: counts.awaitingPitch, icon: ShieldCheck },
-    { id: 'IN_PITCH' as SalesManagerTab, label: 'In Active Pitch', count: counts.inPitch, icon: PhoneCall },
-    { id: 'QUOTED' as SalesManagerTab, label: 'Pending Payment', count: counts.quoted, icon: DollarSign },
-    { id: 'PAID_SIGNED' as SalesManagerTab, label: 'Paid & E-Signed', count: counts.paidSigned, icon: CheckCircle2 },
-    { id: 'FILING_READY' as SalesManagerTab, label: 'In Filing Queue', count: counts.filingReady, icon: Rocket },
-    { id: 'ALL' as SalesManagerTab, label: 'All Pipeline Returns', count: counts.all, icon: ListFilter },
+    { id: 'AWAITING_PITCH' as SalesManagerTab, label: 'Awaiting Pitch', count: counts.awaitingPitch },
+    { id: 'IN_PITCH' as SalesManagerTab, label: 'In Active Pitch', count: counts.inPitch },
+    { id: 'QUOTED' as SalesManagerTab, label: 'Pending Payment', count: counts.quoted },
+    { id: 'PAID_SIGNED' as SalesManagerTab, label: 'Paid & E-Signed', count: counts.paidSigned },
+    { id: 'FILING_READY' as SalesManagerTab, label: 'In Filing Queue', count: counts.filingReady },
+    { id: 'ALL' as SalesManagerTab, label: 'All Returns', count: counts.all },
   ];
+
+  // Stat cards (shown by default, "Hide stats" next to Filters)
+  const { showStats, toggleStats } = useStatsVisibility('admin_sales_dept');
+
+  // Filters: closer, payment, 1040 balance, client type, priority, visa (replaces the old dropdown row)
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(() => {
+    const closers = new Map<string, string>();
+    leads.forEach((l) => l.assignedSalesAgent && closers.set(l.assignedSalesAgent.id, l.assignedSalesAgent.name || l.assignedSalesAgent.email || ''));
+    return [
+      { id: 'closer', label: 'Assigned closer', options: [{ label: 'Unassigned', value: 'UNASSIGNED' }, ...Array.from(closers, ([value, label]) => ({ label, value }))] },
+      {
+        id: 'payment',
+        label: 'Payment',
+        options: [
+          { label: 'Paid', value: 'PAID' },
+          { label: 'Unpaid', value: 'UNPAID' },
+          { label: 'Payment link sent', value: 'PAYMENT_LINK_SENT' },
+        ],
+      },
+      {
+        id: 'balance',
+        label: '1040 balance',
+        options: [
+          { label: 'Refund', value: 'REFUND' },
+          { label: 'Tax due', value: 'TAX_DUE' },
+        ],
+      },
+      { id: 'clientType', label: 'Client type', options: CLIENT_TYPE_FILTER_OPTIONS },
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      { id: 'visa', label: 'Visa Type', options: SYSTEM_VISA_TYPES.map((v) => ({ label: v.label, value: v.value })) },
+    ];
+  }, [leads]);
+  const filteredLeads = useMemo(() => {
+    const match = (key: string, values: string[]) => !filters[key]?.length || values.some((v) => filters[key].includes(v));
+    return leads.filter((l) => {
+      const payment = l.paymentStatus === 'PAID' ? 'PAID' : l.paymentStatus === 'PAYMENT_LINK_SENT' ? 'PAYMENT_LINK_SENT' : 'UNPAID';
+      const balance = [...(l.federalRefund > 0 ? ['REFUND'] : []), ...(l.balanceDue > 0 ? ['TAX_DUE'] : [])];
+      return (
+        match('closer', [l.assignedSalesAgent?.id || 'UNASSIGNED']) &&
+        match('payment', [payment]) &&
+        match('balance', balance) &&
+        match('clientType', [l.clientType || '']) &&
+        match('priority', [l.priority || 'NO_PRIORITY']) &&
+        match('visa', [l.visaType || ''])
+      );
+    });
+  }, [leads, filters]);
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
@@ -106,101 +139,31 @@ export const SalesDepartmentScreen: React.FC = () => {
       />
       */}
 
-      {/* 3. Dedicated Tabs & Multi-Filter Card */}
-      <div className="rounded-xl bg-white border border-slate-200/80 shadow-xs overflow-hidden">
-        {/* Navigation Tabs Header */}
-        <AppTabs
-          tabs={tabs}
-          activeTab={activeTab}
-          onChange={(id) => setActiveTab(id as any)}
-          className="px-6 pt-3"
+      {/* Summary cards (compact) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Unassigned', value: counts.unassigned, hint: 'Waiting for a closer', tone: 'text-amber-700' },
+            { name: 'Awaiting pitch', value: counts.awaitingPitch, hint: 'QA approved, not called' },
+            { name: 'In active pitch', value: counts.inPitch, hint: 'Closer talking to client', tone: 'text-blue-700' },
+            { name: 'Pending payment', value: counts.quoted, hint: 'Quote / invoice sent', tone: 'text-purple-700' },
+            { name: 'Paid & e-signed', value: counts.paidSigned, hint: `${counts.filingReady} in filing queue`, tone: 'text-emerald-700' },
+          ]}
         />
+      )}
 
-        {/* Multi-Filter & Search Bar */}
-        <div className="p-4 sm:p-5 bg-slate-50/50 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          <div className="w-full lg:w-72">
-            <AppSearchInput
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search by taxpayer, phone, email, closer..."
-              debounceMs={300}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Payment Status Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <CreditCard className="w-3.5 h-3.5 text-purple-500" />
-              <span>Payment:</span>
-              <select
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Payments</option>
-                <option value="UNPAID">Unpaid / Pitching</option>
-                <option value="PAYMENT_LINK_SENT">Link Sent</option>
-                <option value="PAID">Paid</option>
-              </select>
-            </div>
-
-            {/* Refund / Due Liability Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Scale className="w-3.5 h-3.5 text-emerald-500" />
-              <span>1040 Balance:</span>
-              <select
-                value={liabilityFilter}
-                onChange={(e) => setLiabilityFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Balances</option>
-                <option value="REFUND">Refund (+$)</option>
-                <option value="TAX_DUE">Tax Due (-$)</option>
-              </select>
-            </div>
-
-            {/* Visa Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Globe className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Visa:</span>
-              <select
-                value={visaFilter}
-                onChange={(e) => setVisaFilter(e.target.value)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Visas</option>
-                <option value="H-1B">H-1B</option>
-                <option value="L-1">L-1</option>
-                <option value="F-1 OPT">F-1 OPT</option>
-                <option value="H-4">H-4</option>
-                <option value="GREEN_CARD">Green Card</option>
-                <option value="US_CITIZEN">US Citizen</option>
-              </select>
-            </div>
-
-            {/* Return Complexity Filter */}
-            <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs text-xs font-medium text-slate-600">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Complexity:</span>
-              <select
-                value={complexityFilter}
-                onChange={(e) => setComplexityFilter(e.target.value as any)}
-                className="bg-transparent text-slate-800 font-bold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Complexities</option>
-                <option value="BASIC">🟢 Basic (1/4)</option>
-                <option value="MODERATE">🟡 Moderate (2/4)</option>
-                <option value="COMPLEX">🟠 Complex (3/4)</option>
-                <option value="SPECIALIZED_REVIEW">🔴 Specialized (4/4)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* 3. Stage tabs (plain, same as the other queue screens) */}
+      <AppTabs tabs={tabs} activeTab={activeTab} onChange={(id) => setActiveTab(id as any)} />
 
       {/* 4. Separate Dedicated Table Section (View-Only, No Checkboxes, No Action Buttons) */}
       <UnifiedTable<SalesLeadItem>
-        data={leads}
+        data={filteredLeads}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer, email, phone, state..."

@@ -25,6 +25,8 @@ interface PreparerFilterBarProps {
   };
   /** Custom tab list for a sidebar page; an empty array hides the tabs */
   tabs?: { id: PreparerQueueTab; label: string; count: number }[];
+  /** Hide the Priority / Complexity dropdowns (the table has a Filters button instead) */
+  hideSelects?: boolean;
 }
 
 export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
@@ -36,6 +38,7 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
   onPriorityChange,
   counts,
   tabs,
+  hideSelects = false,
 }) => {
   const tabItems = tabs ?? [
     { id: 'WORKING' as const, label: 'Return Preparation', count: counts.working ?? counts.drafting ?? 0 },
@@ -60,6 +63,7 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
         <div className="flex-1" />
       )}
 
+      {!hideSelects && (
       <div className="flex items-center gap-2 flex-wrap lg:pb-1.5">
         {onPriorityChange && <PriorityFilterSelect value={priorityFilter} onChange={onPriorityChange} />}
         <div className="w-48">
@@ -76,6 +80,7 @@ export const PreparerFilterBar: React.FC<PreparerFilterBarProps> = ({
           />
         </div>
       </div>
+      )}
     </div>
   );
 };

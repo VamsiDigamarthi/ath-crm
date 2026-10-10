@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePrepReviewManager } from '../hooks/usePrepReviewManager';
 import { PrepManagerQueueTable } from '../components/manager/PrepManagerQueueTable';
@@ -6,13 +6,14 @@ import { PrepAssignLeadDrawer } from '../components/manager/PrepAssignLeadDrawer
 import { PrepAutoDistributeModal } from '../components/manager/PrepAutoDistributeModal';
 import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES } from '@/shared/constants/system-enums';
 import {
   ShieldCheck,
-  CheckCircle2,
-  Clock,
-  RotateCcw,
   RefreshCw,
-  Users,
   BarChart3,
   ListFilter,
   AreaChart as AreaChartIcon,
@@ -64,6 +65,47 @@ export const PrepDepartmentScreen: React.FC = () => {
   const allocatedPercent = totalInPipeline > 0
     ? Math.round(((totalInPipeline - unassignedToPrep) / totalInPipeline) * 100)
     : 0;
+
+  // Stat cards (shown by default, "Hide stats" next to Filters)
+  const { showStats, toggleStats } = useStatsVisibility('admin_prep_dept');
+
+  // Filters: Preparer, QA reviewer, Priority, Complexity, Tax year (options from live data)
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(() => {
+    const years = Array.from(new Set(leads.map((l) => l.taxYear).filter(Boolean))).sort((a, b) => b - a);
+    const people = (pick: (s: (typeof staff)[number]) => boolean | undefined) => [
+      { label: 'Unassigned', value: 'UNASSIGNED' },
+      ...staff.filter(pick).map((s) => ({ label: s.name || s.email, value: s.id })),
+    ];
+    return [
+      { id: 'preparer', label: 'Preparer', options: people((s) => s.canPrepare ?? s.role === 'TAX_PREPARER') },
+      { id: 'reviewer', label: 'QA reviewer', options: people((s) => s.canReview ?? s.role === 'TAX_REVIEWER') },
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      {
+        id: 'complexity',
+        label: 'Complexity',
+        options: [
+          { label: 'Standard', value: 'STANDARD' },
+          { label: 'Multi-state', value: 'MULTI_STATE' },
+          { label: 'Investments (1099-B)', value: 'INVESTMENTS_1099B' },
+          { label: 'Foreign / FBAR', value: 'FOREIGN_FBAR' },
+          { label: 'Business (Sch C)', value: 'BUSINESS_SCH_C' },
+        ],
+      },
+      { id: 'taxYear', label: 'Tax year', options: years.map((y) => ({ label: `TY ${y}`, value: String(y) })) },
+    ];
+  }, [leads, staff]);
+  const filteredLeads = useMemo(() => {
+    const match = (key: string, value: string) => !filters[key]?.length || filters[key].includes(value);
+    return leads.filter(
+      (l) =>
+        match('preparer', l.assignedPreparer?.id || 'UNASSIGNED') &&
+        match('reviewer', l.assignedReviewer?.id || 'UNASSIGNED') &&
+        match('priority', l.priority || 'NO_PRIORITY') &&
+        match('complexity', l.complexity || 'STANDARD') &&
+        match('taxYear', String(l.taxYear))
+    );
+  }, [leads, filters]);
 
   // Chart Data: Hourly Velocity
   const hourlyPrepData = stats.hourlyVelocity && stats.hourlyVelocity.length > 0
@@ -140,116 +182,29 @@ export const PrepDepartmentScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Top 4 KPI Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1: Pipeline Volume */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Pipeline Caseload</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{totalInPipeline}</span>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                {allocatedPercent}% Allocated
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1 font-medium">
-              {unassignedToPrep} unassigned • {underPreparation} under prep
-            </p>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-[#16A34A] h-full rounded-full transition-all duration-300"
-              style={{ width: `${allocatedPercent}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Metric 2: QA First-Time Pass Rate */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">First-Time QA Pass Rate</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#16A34A] border border-emerald-200 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{stats.firstTimePassRate || 98.5}%</span>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                {readyForSales} Signed Off
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1 font-medium flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />
-              Zero-defect compliance accuracy
-            </p>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-[#16A34A] h-full rounded-full transition-all duration-300"
-              style={{ width: `${stats.firstTimePassRate || 98.5}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Metric 3: Avg Turnaround Velocity */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Avg 1040 Turnaround</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{stats.avgPreparationTimeHrs || 4.2}h</span>
-              <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                SLA: &lt; 6.0h
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1 font-medium">
-              Average intake-to-draft completion time
-            </p>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-blue-500 h-full rounded-full" style={{ width: '75%' }} />
-          </div>
-        </div>
-
-        {/* Metric 4: Revisions Pending */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Revisions &amp; Fixes</span>
-            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center">
-              <RotateCcw className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="my-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-slate-900">{revisionsPending}</span>
-              <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                Reviewer Notes
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1 font-medium">
-              Returns sent back for discrepancy fixes
-            </p>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-rose-500 h-full rounded-full" style={{ width: revisionsPending > 0 ? '60%' : '0%' }} />
-          </div>
-        </div>
-      </div>
+      {/* 2. Summary cards (compact, live counts per stage) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Unassigned', value: unassignedToPrep, hint: `${allocatedPercent}% of ${totalInPipeline} allocated`, tone: 'text-amber-700' },
+            { name: 'Under preparation', value: underPreparation, hint: 'Being drafted', tone: 'text-blue-700' },
+            { name: 'In QA review', value: inQualityReview, hint: 'Waiting for audit', tone: 'text-purple-700' },
+            { name: 'Revisions', value: revisionsPending, hint: 'Sent back to preparer', tone: 'text-rose-600' },
+            { name: 'Ready for sales', value: readyForSales, hint: 'QA signed off', tone: 'text-emerald-700' },
+          ]}
+        />
+      )}
 
       {/* 3. Render View based on toggle */}
       {viewMode === 'QUEUE' ? (
         <PrepManagerQueueTable
-          leads={leads}
+          leads={filteredLeads}
+          filterControl={
+            <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+          }
           tabStats={{
             all: totalInPipeline,
             unassigned: unassignedToPrep,

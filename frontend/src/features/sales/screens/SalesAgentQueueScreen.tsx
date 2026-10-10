@@ -1,8 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { PhoneCall, RefreshCw } from 'lucide-react';
 import { Button } from '@/shared/components/Button';
 import { SalesAgentQueueTable } from '../components/agent/SalesAgentQueueTable';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { SYSTEM_PRIORITIES } from '@/shared/constants/system-enums';
+import { CLIENT_TYPE_FILTER_OPTIONS } from '../components/common/ClientTypeBadge';
 import {
   useSalesAgentQueue,
   type SalesAgentTab,
@@ -79,6 +85,69 @@ export const SalesAgentQueueScreen: React.FC<SalesAgentQueueScreenProps> = ({
 
   const headerInfo = getHeaderInfo();
 
+  // Stat cards (same on every sales agent page) — shown by default, "Hide stats" next to Filters
+  const { showStats, toggleStats } = useStatsVisibility('sales_agent');
+  const statCards = [
+    { name: 'Pending prospects', value: counts.pending || 0, hint: 'Not called yet', tone: 'text-amber-700' },
+    { name: 'Callbacks', value: counts.callbacks || 0, hint: 'Call at a set time', tone: 'text-blue-700' },
+    { name: 'Follow-ups', value: counts.followUps || 0, hint: 'Need another touch', tone: 'text-purple-700' },
+    { name: 'Converted', value: counts.converted || 0, hint: 'Paid & signed', tone: 'text-emerald-700' },
+    { name: 'Sent back', value: counts.reverted || 0, hint: 'Reverted for revision', tone: 'text-rose-600' },
+  ];
+
+  // Filters: Payment, 8879 sign, 1040 balance, Client type, Priority, Tax year
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(() => {
+    const years = Array.from(new Set(clientRows.map((r) => r.taxYear).filter(Boolean))).sort((a, b) => b - a);
+    return [
+      {
+        id: 'payment',
+        label: 'Payment',
+        options: [
+          { label: 'Paid', value: 'PAID' },
+          { label: 'Unpaid', value: 'UNPAID' },
+          { label: 'Payment link sent', value: 'PAYMENT_LINK_SENT' },
+        ],
+      },
+      {
+        id: 'esign',
+        label: '8879 sign',
+        options: [
+          { label: 'Signed', value: 'SIGNED' },
+          { label: 'Sent, not signed', value: 'SENT' },
+          { label: 'Not sent', value: 'NOT_SENT' },
+        ],
+      },
+      {
+        id: 'balance',
+        label: '1040 balance',
+        options: [
+          { label: 'Refund', value: 'REFUND' },
+          { label: 'Tax due', value: 'TAX_DUE' },
+        ],
+      },
+      { id: 'clientType', label: 'Client type', options: CLIENT_TYPE_FILTER_OPTIONS },
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      { id: 'taxYear', label: 'Tax year', options: years.map((y) => ({ label: `TY ${y}`, value: String(y) })) },
+    ];
+  }, [clientRows]);
+  const filteredRows = useMemo(() => {
+    const match = (key: string, values: string[]) => !filters[key]?.length || values.some((v) => filters[key].includes(v));
+    return clientRows.filter((l) => {
+      const payment = l.paymentStatus === 'PAID' ? 'PAID' : l.paymentStatus === 'PAYMENT_LINK_SENT' ? 'PAYMENT_LINK_SENT' : 'UNPAID';
+      const esign = l.esignStatus === 'SIGNED' ? 'SIGNED' : l.esignStatus === 'SENT' || l.esignStatus === 'VIEWED' ? 'SENT' : 'NOT_SENT';
+      const balance = [...(l.federalRefund > 0 ? ['REFUND'] : []), ...(l.balanceDue > 0 ? ['TAX_DUE'] : [])];
+      return (
+        match('payment', [payment]) &&
+        match('esign', [esign]) &&
+        match('balance', balance) &&
+        match('clientType', [l.clientType || '']) &&
+        match('priority', [l.priority || 'NO_PRIORITY']) &&
+        match('taxYear', [String(l.taxYear)])
+      );
+    });
+  }, [clientRows, filters]);
+
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
       {/* 1. Header & Quick Action */}
@@ -116,9 +185,17 @@ export const SalesAgentQueueScreen: React.FC<SalesAgentQueueScreenProps> = ({
         </div>
       </div>
 
+      {showStats && <CompactStatCards cards={statCards} />}
+
       {/* 2. My Active Queue Table (Grouped by Client) */}
       <SalesAgentQueueTable
-        leads={clientRows}
+        leads={filteredRows}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         isLoading={isLoading}
         onRefresh={handleRefresh}
         onUpdatePriority={handleUpdatePriority}

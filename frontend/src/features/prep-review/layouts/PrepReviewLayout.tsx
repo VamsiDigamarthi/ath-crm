@@ -54,7 +54,8 @@ export const PrepReviewLayout: React.FC = () => {
     completed: 0,
   });
 
-  const [reviewerCounts, setReviewerCounts] = React.useState({
+  // Reviewer sidebar badges removed (client); counts kept in state in case they come back
+  const [, setReviewerCounts] = React.useState({
     assigned: 0,
     pending: 0,
     revisions: 0,
@@ -208,10 +209,10 @@ export const PrepReviewLayout: React.FC = () => {
     : isReviewerOnly
     ? [
         { id: 'specialist_hub', label: 'Dashboard', icon: LayoutDashboard, section: 'Reviewer Workspace', path: '/prep-review/dashboard' },
-        { id: 'reviewer_assigned', label: 'Assigned Returns', icon: ShieldCheck, section: 'Active Operations', badge: reviewerCounts.assigned ? String(reviewerCounts.assigned) : undefined, path: '/prep-review/reviewer' },
-        { id: 'reviewer_pending', label: 'Pending Returns', icon: Clock, section: 'Active Operations', badge: reviewerCounts.pending ? String(reviewerCounts.pending) : undefined, path: '/prep-review/reviewer/pending' },
-        { id: 'reviewer_revisions', label: 'Revision Required', icon: RotateCcw, section: 'Active Operations', badge: reviewerCounts.revisions ? String(reviewerCounts.revisions) : undefined, path: '/prep-review/reviewer/revisions' },
-        { id: 'reviewer_approved', label: 'Approved Returns', icon: CheckCircle2, section: 'My Filings', badge: reviewerCounts.approved ? String(reviewerCounts.approved) : undefined, path: '/prep-review/reviewer/approved' },
+        { id: 'reviewer_assigned', label: 'Assigned Returns', icon: ShieldCheck, section: 'Active Operations', path: '/prep-review/reviewer' },
+        { id: 'reviewer_pending', label: 'Pending Returns', icon: Clock, section: 'Active Operations', path: '/prep-review/reviewer/pending' },
+        { id: 'reviewer_revisions', label: 'Revision Required', icon: RotateCcw, section: 'Active Operations', path: '/prep-review/reviewer/revisions' },
+        { id: 'reviewer_approved', label: 'Approved Returns', icon: CheckCircle2, section: 'My Filings', path: '/prep-review/reviewer/approved' },
         { id: 'notifications', label: 'Notifications', icon: Bell, section: 'My Filings', badge: unreadCount > 0 ? String(unreadCount) : undefined, path: '/prep-review/notifications' },
       ]
     : [

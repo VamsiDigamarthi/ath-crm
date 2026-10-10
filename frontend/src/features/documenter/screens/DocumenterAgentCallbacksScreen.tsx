@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
+// import { useNavigate } from 'react-router-dom';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { CallOutreachModal } from '../components/CallOutreachModal';
 import { StartFilingModal } from '../components/StartFilingModal';
@@ -9,13 +11,15 @@ import { exportTableToExcel } from '@/shared/utils/export-excel';
 import type { DocumenterLeadItem } from '../types/documenter.types';
 import { useScheduleStats } from '../hooks/useScheduleStats';
 import { ScheduleStatCards } from '../components/ScheduleStatCards';
+import { useLeadFilters } from '../hooks/useLeadFilters';
+import { AppFilterFlyout, withoutAllValues } from '@/shared/components/AppFilterFlyout';
 
 export const DocumenterAgentCallbacksScreen: React.FC = () => {
-  const navigate = useNavigate();
+  // Stat cards: shown by default, "Hide stats" button next to Filters
+  const { showStats, toggleStats } = useStatsVisibility('doc_callbacks');
+  // const navigate = useNavigate(); // row click disabled
   const {
-    leads,
     agents,
-    isLoading,
     isActionLoading,
     isCallModalOpen,
     isStartFilingModalOpen,
@@ -29,7 +33,9 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
     handleSaveCallDisposition,
   } = useDocumenterWorkspace('CALLBACKS');
 
-  const { stats: scheduleStats, refresh: refreshStats } = useScheduleStats('CALLBACKS');
+  // Cards count every callback; the table lists only the ones still waiting (+ Priority / Visa filter)
+  const { stats: scheduleStats, refresh: refreshStats, pendingLeads, isLoading } = useScheduleStats('CALLBACKS');
+  const { filters, setFilters, filterCategories, filteredLeads } = useLeadFilters(pendingLeads);
   const handleSaveDispositionAndRefresh: typeof handleSaveCallDisposition = async (...args) => {
     const result = await handleSaveCallDisposition(...args);
     refreshStats();
@@ -45,13 +51,14 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
         hideAssignedStaff: true,
         isManagerView: false,
         isAdmin: false,
+        viewOnlyWhenInterested: true,
       }),
     [handleOpenCallModal, handleOpenAssignModal, handleOpenStartFilingModal]
   );
 
   const handleExport = () => {
     exportTableToExcel(
-      leads,
+      filteredLeads,
       [
         { header: 'Taxpayer', key: 'fullName', format: (r) => r.customer?.fullName || `${r.customer?.firstName || ''} ${r.customer?.lastName || ''}` },
         { header: 'Email', key: 'email', format: (r) => r.customer?.email || '—' },
@@ -67,17 +74,26 @@ export const DocumenterAgentCallbacksScreen: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-sans animate-in fade-in duration-150">
-      <ScheduleStatCards label="callbacks" stats={scheduleStats} />
+      {showStats && (
+        <ScheduleStatCards label="callbacks" stats={scheduleStats} />
+      )}
 
       <UnifiedTable<DocumenterLeadItem>
         title="SCHEDULED CALLBACKS QUEUE"
         subtitle="Manage leads with scheduled callback commitments and follow-up requests."
-        data={leads}
+        data={filteredLeads}
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Search scheduled callbacks by name, email, phone..."
         onExportExcel={handleExport}
-        onRowClick={(item) => navigate(`/documenter/agent/documents/${item.id}?from=callbacks`, { state: { from: 'agent_callbacks' } })}
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
+        // No row click: a lead opens only through "View" (shown for interested calls), same as My Leads
+        // onRowClick={(item) => navigate(`/documenter/agent/documents/${item.id}?from=callbacks`, { state: { from: 'agent_callbacks' } })}
         emptyText="No pending callback commitments in your queue."
       />
 

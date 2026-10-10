@@ -15,6 +15,8 @@ interface ReviewerQueueTableProps {
   isLoading: boolean;
   onOpenAudit: (lead: PrepReviewLead) => void;
   emptyText?: string;
+  /** Toolbar buttons (Filters, Hide stats) */
+  extraHeaderActions?: React.ReactNode;
 }
 
 export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
@@ -24,6 +26,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
   isLoading,
   onOpenAudit,
   emptyText,
+  extraHeaderActions,
 }) => {
   const columns = useMemo<ColumnDef<PrepReviewLead, any>[]>(
     () => [
@@ -141,7 +144,13 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
             { label: 'Sales Pitching', value: 'SALES_PITCHING' },
           ],
         },
-        cell: ({ row }) => <PrepStageBadge stage={row.original.currentStage} />,
+        cell: ({ row }) => (
+          <PrepStageBadge
+            stage={row.original.currentStage}
+            draftStatus={(row.original.taxDraftSummary as any)?.status}
+            assignedPreparerName={row.original.assignedPreparer?.name}
+          />
+        ),
       },
       makeRevertedColumn<PrepReviewLead>((r) => (r as any).taxDraftSummary),
       {
@@ -198,6 +207,7 @@ export const ReviewerQueueTable: React.FC<ReviewerQueueTableProps> = ({
       onExportExcel={handleExportExcel}
       onRowClick={(item) => onOpenAudit(item)}
       emptyText={emptyText || "No returns awaiting Senior QA compliance review. Great job!"}
+      extraHeaderActions={extraHeaderActions}
     />
   );
 };

@@ -1,4 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useStatsVisibility } from '@/shared/hooks/useStatsVisibility';
+import { StatsToggleButton } from '@/shared/components/StatsToggleButton';
 import { useDocumenterWorkspace } from '../hooks/useDocumenterWorkspace';
 import { FloatingActionBar } from '../components/FloatingActionBar';
 import { LeadAssignmentModal } from '../components/LeadAssignmentModal';
@@ -11,8 +13,13 @@ import { AppTabs } from '@/shared/components/AppTabs';
 import { Button } from '@/shared/components/Button';
 import { RefreshCw, Zap } from 'lucide-react';
 import type { DocumenterTab, DocumenterLeadItem } from '../types/documenter.types';
+import { CompactStatCards } from '@/shared/components/CompactStatCards';
+import { AppFilterFlyout, withoutAllValues, type FilterCategory } from '@/shared/components/AppFilterFlyout';
+import { SYSTEM_PRIORITIES, SYSTEM_VISA_TYPES } from '@/shared/constants/system-enums';
 
 export const ManagerQueueScreen: React.FC = () => {
+  // Stat cards: shown by default, "Hide stats" button next to Filters
+  const { showStats, toggleStats } = useStatsVisibility('doc_mgr_queue');
   const {
     isAgent,
     activeTab,
@@ -39,7 +46,42 @@ export const ManagerQueueScreen: React.FC = () => {
     handleCloseModals,
     handleSaveCallDisposition,
     refreshData,
+    handleLimitChange,
   } = useDocumenterWorkspace();
+
+  // Load the whole tab (not just the first 10 rows) so the table, cards and filters are complete
+  useEffect(() => {
+    handleLimitChange(500);
+  }, [handleLimitChange]);
+
+  // Filters: Priority, Visa type, Assigned agent
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+  const filterCategories = useMemo<FilterCategory[]>(
+    () => [
+      { id: 'priority', label: 'Priority', options: SYSTEM_PRIORITIES.map((p) => ({ label: p.label, value: p.value })) },
+      { id: 'visa', label: 'Visa Type', options: SYSTEM_VISA_TYPES.map((v) => ({ label: v.label, value: v.value })) },
+      {
+        id: 'agent',
+        label: 'Assigned to',
+        options: [
+          { label: 'Unassigned', value: 'UNASSIGNED' },
+          ...agents.filter((a) => a.role === 'DOC_AGENT').map((a) => ({ label: a.name || a.email, value: a.id })),
+        ],
+      },
+    ],
+    [agents]
+  );
+  const filteredLeads = useMemo(() => {
+    const pr = filters.priority || [];
+    const vi = filters.visa || [];
+    const ag = filters.agent || [];
+    return leads.filter(
+      (l) =>
+        (pr.length === 0 || pr.includes(l.priority || 'NO_PRIORITY')) &&
+        (vi.length === 0 || vi.includes(l.customer?.visaType || '')) &&
+        (ag.length === 0 || ag.includes(l.assignedDocAgent?.id || l.assignedDocAgentId || 'UNASSIGNED'))
+    );
+  }, [leads, filters]);
 
   const columns = useMemo(
     () =>
@@ -92,6 +134,18 @@ export const ManagerQueueScreen: React.FC = () => {
         </div>
       </div>
 
+      {/* Summary cards (compact) */}
+      {showStats && (
+        <CompactStatCards
+          cards={[
+            { name: 'Total leads', value: stats.totalDepartment || 0, hint: 'Whole department' },
+            { name: 'Unassigned', value: stats.unassigned || 0, hint: 'Waiting for an agent', tone: 'text-amber-700' },
+            { name: 'In outreach', value: stats.activeOutreach || 0, hint: 'Being called', tone: 'text-blue-700' },
+            { name: 'In tax prep', value: stats.inPrep || 0, hint: 'Handed to preparers', tone: 'text-emerald-700' },
+          ]}
+        />
+      )}
+
       {/* 3. Navigation Tabs */}
       <AppTabs
         tabs={tabs}
@@ -101,16 +155,22 @@ export const ManagerQueueScreen: React.FC = () => {
 
       {/* 4. Unified Table */}
       <UnifiedTable<DocumenterLeadItem>
-        data={leads}
+        data={filteredLeads}
         columns={columns}
         enableSelection={true}
         selectedRows={selectedRows}
         onSelectionChange={(selected) => setSelectedRows(selected)}
         isLoading={isLoading}
         searchPlaceholder="Search taxpayer, phone, stage, staff..."
+        extraHeaderActions={
+          <div className="flex items-center gap-2">
+            <StatsToggleButton visible={showStats} onToggle={toggleStats} />
+            <AppFilterFlyout categories={filterCategories} selectedFilters={filters} onApply={(f) => setFilters(withoutAllValues(f))} onReset={() => setFilters({})} />
+          </div>
+        }
         onExportExcel={() => {
           exportTableToExcel(
-            leads,
+            filteredLeads,
             [
               { header: 'Taxpayer Name', key: 'name', format: (l) => l.customer?.fullName || `${l.customer?.firstName} ${l.customer?.lastName}` },
               { header: 'Email', key: 'email', format: (l) => l.customer?.email || '' },

@@ -10,6 +10,7 @@ import {
   LayoutGrid,
   PhoneCall,
   RotateCcw,
+  Clock,
   FileCheck2,
   Bell,
   Globe,
@@ -51,6 +52,7 @@ export const DocumenterLayout: React.FC = () => {
     : [
       { id: 'agent_dashboard', label: 'Dashboard', icon: LayoutDashboard, section: 'Calling Workspace', path: '/documenter/agent' },
       { id: 'agent_queue', label: 'My Leads', icon: PhoneCall, section: 'Calling Workspace', path: '/documenter/agent/queue' },
+      { id: 'agent_callbacks', label: 'Scheduled Callbacks', icon: Clock, section: 'Calling Workspace', path: '/documenter/agent/callbacks' },
       { id: 'agent_fallback', label: 'Follow-Ups', icon: RotateCcw, section: 'Calling Workspace', path: '/documenter/agent/fallback' },
       { id: 'agent_documents', label: 'Completed Files', icon: FileCheck2, section: 'My Filings', path: '/documenter/agent/documents' },
       // { id: 'audit_logs', label: 'Audit logs', icon: History, section: 'My Filings', path: '/documenter/agent/audit-logs' },

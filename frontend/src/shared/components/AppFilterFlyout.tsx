@@ -8,6 +8,10 @@ export interface FilterOption {
   count?: number;
 }
 
+/** Drop the flyout's 'ALL' placeholder (set when the last option is unticked) so an empty category means no filter */
+export const withoutAllValues = (filters: Record<string, string[]>): Record<string, string[]> =>
+  Object.fromEntries(Object.entries(filters).map(([k, v]) => [k, (v || []).filter((x) => x && x !== 'ALL')]));
+
 export interface FilterCategory {
   id: string;
   label: string;

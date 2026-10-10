@@ -12,11 +12,14 @@ interface SalesClosersWorkloadTableProps {
   salesReps: SalesRepItem[];
   totalDepartmentLeads?: number;
   isLoading?: boolean;
+  /** Toolbar buttons (Filters, Hide stats) */
+  extraHeaderActions?: React.ReactNode;
 }
 
 export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps> = ({
   salesReps,
   isLoading = false,
+  extraHeaderActions,
 }) => {
   const navigate = useNavigate();
 
@@ -132,6 +135,7 @@ export const SalesClosersWorkloadTable: React.FC<SalesClosersWorkloadTableProps>
         searchPlaceholder="Search closers by name, email..."
         onExportExcel={handleExport}
         emptyText="No sales closers found."
+        extraHeaderActions={extraHeaderActions}
       />
     </div>
   );

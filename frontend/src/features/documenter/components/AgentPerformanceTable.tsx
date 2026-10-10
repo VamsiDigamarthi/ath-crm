@@ -23,12 +23,15 @@ export interface AgentPerformanceTableProps {
   totalDepartmentLeads?: number;
   onFilterByAgent: (agentId: string) => void;
   isLoading?: boolean;
+  /** Extra toolbar buttons (e.g. Filters) */
+  extraHeaderActions?: React.ReactNode;
 }
 
 export const AgentPerformanceTable: React.FC<AgentPerformanceTableProps> = ({
   agents,
   onFilterByAgent,
   isLoading = false,
+  extraHeaderActions,
 }) => {
   const columns = useMemo<ColumnDef<AgentPerformanceRow, any>[]>(
     () => [
@@ -134,6 +137,7 @@ export const AgentPerformanceTable: React.FC<AgentPerformanceTableProps> = ({
         searchPlaceholder="Search staff by name, email, or role..."
         onExportExcel={handleExport}
         emptyText="No documenter agents found."
+        extraHeaderActions={extraHeaderActions}
       />
     </div>
   );

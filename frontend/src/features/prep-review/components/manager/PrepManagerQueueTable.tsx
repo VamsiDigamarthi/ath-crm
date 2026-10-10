@@ -19,6 +19,8 @@ export interface PrepManagerQueueTableProps {
   isLoading?: boolean;
   onOpenAssignModal: (leadsToAssign: PrepReviewLead[]) => void;
   onViewLeadDetail: (lead: PrepReviewLead) => void;
+  /** Extra toolbar control (e.g. Filters) */
+  filterControl?: React.ReactNode;
 }
 
 export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
@@ -30,6 +32,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
   isLoading = false,
   onOpenAssignModal,
   onViewLeadDetail,
+  filterControl,
 }) => {
   const [selectedRows, setSelectedRows] = useState<PrepReviewLead[]>([]);
   const columns = useMemo<ColumnDef<PrepReviewLead, any>[]>(
@@ -141,7 +144,13 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
             { label: 'Sales Pitching', value: 'SALES_PITCHING' },
           ],
         },
-        cell: ({ row }) => <PrepStageBadge stage={row.original.currentStage} />,
+        cell: ({ row }) => (
+          <PrepStageBadge
+            stage={row.original.currentStage}
+            draftStatus={(row.original.taxDraftSummary as any)?.status}
+            assignedPreparerName={row.original.assignedPreparer?.name}
+          />
+        ),
       },
       makeRevertedColumn<PrepReviewLead>((r) => (r as any).taxDraftSummary),
       {
@@ -226,6 +235,7 @@ export const PrepManagerQueueTable: React.FC<PrepManagerQueueTableProps> = ({
         onRowClick={(item) => onViewLeadDetail(item)}
         extraHeaderActions={
           <div className="flex items-center gap-2">
+            {filterControl}
             {selectedRows.length > 0 && (
               <Button
                 size="sm"
