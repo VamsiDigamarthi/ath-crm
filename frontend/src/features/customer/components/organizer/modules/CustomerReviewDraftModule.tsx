@@ -80,6 +80,8 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
   const [isUploadingFiled, setIsUploadingFiled] = useState(false);
   const filedFileInputRef = useRef<HTMLInputElement>(null);
   const isFilingTeam = user?.role === 'FILE_OP_AGENT' || user?.role === 'FILE_OP_MANAGER' || user?.role === 'ADMIN';
+  // Filing staff can't change the prepared draft (only preparer / sales / admin can)
+  const canEditDraft = isStaff && user?.role !== 'FILE_OP_AGENT' && user?.role !== 'FILE_OP_MANAGER';
 
   const fetchDraftReview = useCallback(async () => {
     if (isDocumenter) {
@@ -577,7 +579,7 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
                 <Eye className="w-3 h-3 text-slate-500" />
                 <span>View</span>
               </Button>
-              {isStaff && (
+              {canEditDraft && (
                 <>
                   <input
                     ref={draftFileInputRef}
@@ -616,7 +618,7 @@ export const CustomerReviewDraftModule: React.FC<CustomerReviewDraftModuleProps>
                 ? 'No tax return draft uploaded yet. Click upload to attach the prepared Form 1040/1120 or Drake file.'
                 : 'Your tax return draft is currently being finalized by your preparer.'}
             </span>
-            {isStaff && (
+            {canEditDraft && (
               <div>
                 <input
                   ref={draftFileInputRef}
